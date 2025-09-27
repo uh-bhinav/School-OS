@@ -1,0 +1,38 @@
+[project]
+name = "schoolos-backend"
+version = "0.1.0"
+description = "Backend for SchoolOS"
+authors = [
+    {name = "Abhinav Mahesh Gurkar",email = "161326385+uh-bhinav@users.noreply.github.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi[all] (>=0.117.1,<0.118.0)",
+    "sqlalchemy[asyncpg] (>=2.0.43,<3.0.0)",
+    "psycopg2-binary (>=2.9.10,<3.0.0)",
+    "python-dotenv (>=1.1.1,<2.0.0)",
+    "supabase (>=2.20.0,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=8.4.2,<9.0.0)",
+    "pytest-asyncio (>=1.2.0,<2.0.0)",
+    "ruff (>=0.13.2,<0.14.0)",
+    "black (>=25.9.0,<26.0.0)",
+    "pre-commit (>=4.3.0,<5.0.0)"
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "I", "UP"] # Standard checks + isort + pyupgrade
