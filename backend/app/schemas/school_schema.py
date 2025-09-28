@@ -1,5 +1,5 @@
 # backend/app/schemas/school_schema.py
-from typing import Any, Dict, Optional
+from typing import Any, Optional  # We no longer need to import Dict
 
 from pydantic import BaseModel, EmailStr, HttpUrl
 
@@ -13,7 +13,7 @@ class SchoolCreate(BaseModel):
     phone_number: Optional[str] = None
     email: Optional[EmailStr] = None
     website: Optional[HttpUrl] = None
-    configuration: Optional[Dict[str, Any]] = None
+    configuration: Optional[dict[str, Any]] = None  # Changed from Dict to dict
 
 
 class SchoolUpdate(BaseModel):
@@ -26,7 +26,7 @@ class SchoolUpdate(BaseModel):
     phone_number: Optional[str] = None
     email: Optional[EmailStr] = None
     website: Optional[HttpUrl] = None
-    configuration: Optional[Dict[str, Any]] = None
+    configuration: Optional[dict[str, Any]] = None  # Changed from Dict to dict
     is_active: Optional[bool] = None
 
 
@@ -41,7 +41,7 @@ class SchoolOut(BaseModel):
     phone_number: Optional[str] = None
     email: Optional[EmailStr] = None
     website: Optional[str] = None
-    configuration: Optional[Dict[str, Any]] = None
+    configuration: Optional[dict[str, Any]] = None  # Changed from Dict to dict
     is_active: bool
 
     class Config:

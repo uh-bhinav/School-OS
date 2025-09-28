@@ -1,5 +1,5 @@
 # backend/app/services/period_service.py
-from typing import List, Optional
+from typing import Optional  # Still need Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -8,6 +8,7 @@ from app.models.period import Period
 from app.schemas.period_schema import PeriodCreate, PeriodUpdate
 
 
+# ... (create_period, get_period, update_period, delete_period are unchanged) ...
 async def create_period(db: AsyncSession, *, period_in: PeriodCreate) -> Period:
     db_obj = Period(**period_in.model_dump())
     db.add(db_obj)
@@ -22,14 +23,16 @@ async def get_period(db: AsyncSession, period_id: int) -> Optional[Period]:
     return result.scalars().first()
 
 
-async def get_all_periods_for_school(db: AsyncSession, school_id: int) -> List[Period]:
+async def get_all_periods_for_school(
+    db: AsyncSession, school_id: int
+) -> list[Period]:  # Changed from List to list
     stmt = (
         select(Period)
         .where(Period.school_id == school_id)
         .order_by(Period.period_number)
     )
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def update_period(

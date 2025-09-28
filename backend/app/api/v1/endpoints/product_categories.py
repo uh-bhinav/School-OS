@@ -1,10 +1,10 @@
 # backend/app/api/v1/endpoints/product_categories.py
-from typing import List
-
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_role
+
+# No longer need 'from typing import List'
 from app.db.session import get_db
 from app.schemas.product_category_schema import (
     ProductCategoryCreate,
@@ -34,7 +34,7 @@ async def create_new_product_category(
 
 @router.get(
     "/{school_id}/all",
-    response_model=List[ProductCategoryOut],
+    response_model=list[ProductCategoryOut],  # Changed from List to list
     dependencies=[Depends(require_role("Admin"))],
 )
 async def get_all_product_categories(

@@ -1,6 +1,4 @@
 # backend/app/services/product_category_service.py
-from typing import List
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -8,6 +6,7 @@ from app.models.product_category import ProductCategory
 from app.schemas.product_category_schema import ProductCategoryCreate
 
 
+# ... (create_product_category is unchanged) ...
 async def create_product_category(
     db: AsyncSession, *, category_in: ProductCategoryCreate
 ) -> ProductCategory:
@@ -20,7 +19,7 @@ async def create_product_category(
 
 async def get_all_product_categories_for_school(
     db: AsyncSession, school_id: int
-) -> List[ProductCategory]:
+) -> list[ProductCategory]:  # Changed from List to list
     stmt = select(ProductCategory).where(ProductCategory.school_id == school_id)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())

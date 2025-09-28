@@ -1,10 +1,10 @@
 # backend/app/api/v1/endpoints/periods.py
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_role
+
+# No longer need 'from typing import List'
 from app.db.session import get_db
 from app.schemas.period_schema import PeriodCreate, PeriodOut, PeriodUpdate
 from app.services import period_service
@@ -12,6 +12,7 @@ from app.services import period_service
 router = APIRouter()
 
 
+# ... (POST and PUT endpoints are unchanged) ...
 @router.post(
     "/",
     response_model=PeriodOut,
@@ -21,15 +22,12 @@ router = APIRouter()
 async def create_new_period(
     *, db: AsyncSession = Depends(get_db), period_in: PeriodCreate
 ):
-    """
-    Create a new period for a school day. Admin only.
-    """
     return await period_service.create_period(db=db, period_in=period_in)
 
 
 @router.get(
     "/{school_id}/all",
-    response_model=List[PeriodOut],
+    response_model=list[PeriodOut],  # Changed from List to list
     dependencies=[Depends(require_role("Admin"))],
 )
 async def get_all_periods(school_id: int, db: AsyncSession = Depends(get_db)):
@@ -47,9 +45,6 @@ async def get_all_periods(school_id: int, db: AsyncSession = Depends(get_db)):
 async def update_existing_period(
     period_id: int, *, db: AsyncSession = Depends(get_db), period_in: PeriodUpdate
 ):
-    """
-    Update a period.
-    """
     db_period = await period_service.get_period(db=db, period_id=period_id)
     if not db_period:
         raise HTTPException(

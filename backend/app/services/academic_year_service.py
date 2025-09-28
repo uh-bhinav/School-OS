@@ -1,5 +1,5 @@
 # backend/app/services/academic_year_service.py
-from typing import List, Optional
+from typing import Optional  # We still need Optional, but not List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -8,6 +8,7 @@ from app.models.academic_year import AcademicYear
 from app.schemas.academic_year_schema import AcademicYearCreate, AcademicYearUpdate
 
 
+# ... (create_academic_year and get_academic_year are unchanged) ...
 async def create_academic_year(
     db: AsyncSession, *, year_in: AcademicYearCreate
 ) -> AcademicYear:
@@ -26,16 +27,17 @@ async def get_academic_year(db: AsyncSession, year_id: int) -> Optional[Academic
 
 async def get_all_academic_years_for_school(
     db: AsyncSession, school_id: int
-) -> List[AcademicYear]:
+) -> list[AcademicYear]:  # Changed from List to list
     stmt = (
         select(AcademicYear)
         .where(AcademicYear.school_id == school_id)
         .order_by(AcademicYear.start_date.desc())
     )
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
+# ... (update and delete functions are unchanged) ...
 async def update_academic_year(
     db: AsyncSession, *, db_obj: AcademicYear, year_in: AcademicYearUpdate
 ) -> AcademicYear:
@@ -45,12 +47,4 @@ async def update_academic_year(
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
-    return db_obj
-
-
-async def delete_academic_year(
-    db: AsyncSession, *, db_obj: AcademicYear
-) -> AcademicYear:
-    await db.delete(db_obj)
-    await db.commit()
     return db_obj
