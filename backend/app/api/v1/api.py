@@ -3,11 +3,19 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     academic_years,
+    announcements,
+    carts,
     classes,
+    communication,
     employment_statuses,
     exam_types,
+    fee_templates,
+    invoices,
+    orders,
     periods,
     product_categories,
+    product_packages,
+    products,
     schools,
     subjects,
 )
@@ -22,7 +30,11 @@ api_router.include_router(
 api_router.include_router(classes.router, prefix="/classes", tags=["Classes"])
 api_router.include_router(subjects.router, prefix="/subjects", tags=["Subjects"])
 api_router.include_router(periods.router, prefix="/periods", tags=["Periods"])
-
+# Include fee management endpoints for handling fee templates
+api_router.include_router(
+    fee_templates.router, prefix="/fee-templates", tags=["Fee Management"]
+)
+api_router.include_router(invoices.router, prefix="/invoices", tags=["Fee Management"])
 # Admin-managed lookup tables
 api_router.include_router(
     employment_statuses.router,
@@ -36,4 +48,18 @@ api_router.include_router(
     product_categories.router,
     prefix="/product-categories",
     tags=["Admin: Lookup Tables"],
+)
+api_router.include_router(
+    products.router, prefix="/products", tags=["E-commerce"]
+)  # New
+api_router.include_router(
+    product_packages.router, prefix="/product-packages", tags=["E-commerce"]
+)  # New
+api_router.include_router(orders.router, prefix="/orders", tags=["E-commerce: Orders"])
+api_router.include_router(carts.router, prefix="/carts", tags=["E-commerce: Cart"])
+api_router.include_router(
+    announcements.router, prefix="/announcements", tags=["Communication: Announcements"]
+)
+api_router.include_router(
+    communication.router, prefix="/comms", tags=["Communication: Chat"]
 )
