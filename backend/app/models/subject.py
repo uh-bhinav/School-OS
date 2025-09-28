@@ -1,0 +1,23 @@
+# backend/app/models/subject.py
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+
+from app.db.base import Base
+
+
+class Subject(Base):
+    """
+    SQLAlchemy model for the subjects table.
+    """
+
+    __tablename__ = "subjects"
+
+    subject_id = Column(Integer, primary_key=True)
+    school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False)
+    name = Column(String, nullable=False)
+    short_code = Column(String)
+    description = Column(Text)
+    category = Column(String)
+    is_active = Column(Boolean, default=True)
+
+    school = relationship("School")
