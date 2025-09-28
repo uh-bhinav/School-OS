@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 app = FastAPI(title="SchoolOS API")
 
+
 @app.get("/", tags=["Health Check"])
 async def root():
     """
