@@ -31,4 +31,6 @@ target-version = ["py311"]
 
 [tool.ruff]
 line-length = 88
-select = ["E", "F", "W", "I", "UP"] # Standard checks + isort + pyupgrade
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
