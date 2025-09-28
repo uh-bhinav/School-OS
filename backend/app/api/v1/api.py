@@ -3,13 +3,16 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     academic_years,
+    attendance_records,
     classes,
     employment_statuses,
     exam_types,
+    marks,
     periods,
     product_categories,
     schools,
     subjects,
+    timetable,
 )
 
 api_router = APIRouter()
@@ -37,3 +40,8 @@ api_router.include_router(
     prefix="/product-categories",
     tags=["Admin: Lookup Tables"],
 )
+api_router.include_router(
+    attendance_records.router, prefix="/attendance", tags=["Attendance"]
+)
+api_router.include_router(timetable.router, prefix="/timetable", tags=["Timetable"])
+api_router.include_router(marks.router, prefix="/marks", tags=["Marks"])
