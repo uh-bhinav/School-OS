@@ -3,27 +3,37 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # This defaults commands to run inside the 'backend' folder
+    defaults:
+      run:
+        working-directory: ./backend
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
+
     - name: Install dependencies
       run: |
         pip install poetry
         poetry install
+
     - name: Lint with Ruff
       run: poetry run ruff check app
+
     - name: Format with Black
       run: poetry run black --check app
+
     - name: Run tests
       run: poetry run pytest
