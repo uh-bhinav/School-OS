@@ -1,5 +1,5 @@
 # backend/app/services/exam_service.py
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -22,7 +22,7 @@ async def get_exam_by_id(db: AsyncSession, exam_id: int) -> Optional[Exam]:
     return result.scalars().first()
 
 
-async def get_all_exams_for_school(db: AsyncSession, school_id: int) -> List[Exam]:
+async def get_all_exams_for_school(db: AsyncSession, school_id: int) -> list[Exam]:
     stmt = (
         select(Exam).where(Exam.school_id == school_id).order_by(Exam.start_date.desc())
     )

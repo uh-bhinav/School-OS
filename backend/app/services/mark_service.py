@@ -1,5 +1,5 @@
 # backend/app/services/mark_service.py
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -22,13 +22,13 @@ async def get_mark_by_id(db: AsyncSession, mark_id: int) -> Optional[Mark]:
     return result.scalars().first()
 
 
-async def get_marks_by_student(db: AsyncSession, student_id: int) -> List[Mark]:
+async def get_marks_by_student(db: AsyncSession, student_id: int) -> list[Mark]:
     stmt = select(Mark).where(Mark.student_id == student_id).order_by(Mark.exam_id)
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def get_marks_for_exam(db: AsyncSession, exam_id: int) -> List[Mark]:
+async def get_marks_for_exam(db: AsyncSession, exam_id: int) -> list[Mark]:
     stmt = select(Mark).where(Mark.exam_id == exam_id).order_by(Mark.student_id)
     result = await db.execute(stmt)
     return result.scalars().all()

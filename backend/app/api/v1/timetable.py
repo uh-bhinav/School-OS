@@ -1,5 +1,4 @@
 # backend/app/api/v1/endpoints/timetable.py
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,7 +36,7 @@ async def create_new_timetable_entry(
 # Student/Parent only: Get timetable for a specific class
 @router.get(
     "/classes/{class_id}",
-    response_model=List[TimetableEntryOut],
+    response_model=list[TimetableEntryOut],
     dependencies=[Depends(require_role("Student"))],  # Or Parent
 )
 async def get_timetable_for_class(class_id: int, db: AsyncSession = Depends(get_db)):
@@ -55,7 +54,7 @@ async def get_timetable_for_class(class_id: int, db: AsyncSession = Depends(get_
 # Teacher only: Get personalized timetable
 @router.get(
     "/teachers/{teacher_id}",
-    response_model=List[TimetableEntryOut],
+    response_model=list[TimetableEntryOut],
     dependencies=[Depends(require_role("Teacher"))],
 )
 async def get_timetable_for_teacher(

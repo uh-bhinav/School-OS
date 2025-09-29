@@ -1,6 +1,4 @@
 # backend/app/api/v1/endpoints/attendance_records.py
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,7 +37,7 @@ async def create_attendance(
 # Student/Parent only: View a student's attendance history
 @router.get(
     "/students/{student_id}",
-    response_model=List[AttendanceRecordOut],
+    response_model=list[AttendanceRecordOut],
     dependencies=[Depends(require_role("parent"))],  # Example: Parents can view
 )
 async def get_student_attendance_history(

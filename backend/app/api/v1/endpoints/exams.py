@@ -1,6 +1,4 @@
 # backend/app/api/v1/endpoints/exams.py
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,7 +25,7 @@ async def create_new_exam(exam_in: ExamCreate, db: AsyncSession = Depends(get_db
 
 
 # All authenticated users: Get all exams for a specific school
-@router.get("/all/{school_id}", response_model=List[ExamOut])
+@router.get("/all/{school_id}", response_model=list[ExamOut])
 async def get_all_exams(school_id: int, db: AsyncSession = Depends(get_db)):
     """
     Get all exams for a specific school.

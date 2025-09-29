@@ -1,5 +1,4 @@
 # backend/app/api/v1/endpoints/marks.py
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,7 +30,7 @@ async def create_new_mark(mark_in: MarkCreate, db: AsyncSession = Depends(get_db
 # Student/Parent only: Get marks for a specific student
 @router.get(
     "/students/{student_id}",
-    response_model=List[MarkOut],
+    response_model=list[MarkOut],
     dependencies=[Depends(require_role("student"))],  # Or Parent
 )
 async def get_student_marks(student_id: int, db: AsyncSession = Depends(get_db)):

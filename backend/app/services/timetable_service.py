@@ -1,5 +1,5 @@
 # backend/app/services/timetable_service.py
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -26,7 +26,7 @@ async def get_timetable_entry_by_id(
     return result.scalars().first()
 
 
-async def get_class_timetable(db: AsyncSession, class_id: int) -> List[Timetable]:
+async def get_class_timetable(db: AsyncSession, class_id: int) -> list[Timetable]:
     stmt = (
         select(Timetable)
         .where(Timetable.class_id == class_id)
@@ -36,7 +36,7 @@ async def get_class_timetable(db: AsyncSession, class_id: int) -> List[Timetable
     return result.scalars().all()
 
 
-async def get_teacher_timetable(db: AsyncSession, teacher_id: int) -> List[Timetable]:
+async def get_teacher_timetable(db: AsyncSession, teacher_id: int) -> list[Timetable]:
     stmt = (
         select(Timetable)
         .where(Timetable.teacher_id == teacher_id)
