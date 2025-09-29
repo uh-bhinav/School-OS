@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     academic_years,
     announcements,
+    attendance_records,
     carts,
     classes,
     communication,
@@ -11,6 +12,7 @@ from app.api.v1.endpoints import (
     exam_types,
     fee_templates,
     invoices,
+    marks,
     orders,
     periods,
     product_categories,
@@ -18,6 +20,7 @@ from app.api.v1.endpoints import (
     products,
     schools,
     subjects,
+    timetable,
 )
 
 api_router = APIRouter()
@@ -50,11 +53,14 @@ api_router.include_router(
     tags=["Admin: Lookup Tables"],
 )
 api_router.include_router(
-    products.router, prefix="/products", tags=["E-commerce"]
-)  # New
+    attendance_records.router, prefix="/attendance", tags=["Attendance"]
+)
+api_router.include_router(timetable.router, prefix="/timetable", tags=["Timetable"])
+api_router.include_router(marks.router, prefix="/marks", tags=["Marks"])
+api_router.include_router(products.router, prefix="/products", tags=["E-commerce"])
 api_router.include_router(
     product_packages.router, prefix="/product-packages", tags=["E-commerce"]
-)  # New
+)
 api_router.include_router(orders.router, prefix="/orders", tags=["E-commerce: Orders"])
 api_router.include_router(carts.router, prefix="/carts", tags=["E-commerce: Cart"])
 api_router.include_router(
