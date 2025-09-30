@@ -1,6 +1,7 @@
 # backend/app/services/timetable_service.py
 from typing import Optional
 
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -21,15 +22,17 @@ async def create_timetable_entry(
 async def get_timetable_entry_by_id(
     db: AsyncSession, entry_id: int
 ) -> Optional[Timetable]:
-    stmt = select(Timetable).where(Timetable.id == entry_id)
+    # Use 'Timetable.is_active' directly for the boolean check
+    stmt = select(Timetable).where(Timetable.id == entry_id, Timetable.is_active)
     result = await db.execute(stmt)
     return result.scalars().first()
 
 
 async def get_class_timetable(db: AsyncSession, class_id: int) -> list[Timetable]:
+    # Use 'Timetable.is_active' directly for the boolean check
     stmt = (
         select(Timetable)
-        .where(Timetable.class_id == class_id)
+        .where(Timetable.class_id == class_id, Timetable.is_active)
         .order_by(Timetable.day_of_week, Timetable.period_id)
     )
     result = await db.execute(stmt)
@@ -37,9 +40,10 @@ async def get_class_timetable(db: AsyncSession, class_id: int) -> list[Timetable
 
 
 async def get_teacher_timetable(db: AsyncSession, teacher_id: int) -> list[Timetable]:
+    # Use 'Timetable.is_active' directly for the boolean check
     stmt = (
         select(Timetable)
-        .where(Timetable.teacher_id == teacher_id)
+        .where(Timetable.teacher_id == teacher_id, Timetable.is_active)
         .order_by(Timetable.day_of_week, Timetable.period_id)
     )
     result = await db.execute(stmt)
@@ -58,6 +62,20 @@ async def update_timetable_entry(
     return db_obj
 
 
-async def delete_timetable_entry(db: AsyncSession, db_obj: Timetable) -> None:
-    await db.delete(db_obj)
+async def soft_delete_timetable_entry(
+    db: AsyncSession, entry_id: int
+) -> Optional[Timetable]:
+    """
+    Soft-deletes a timetable entry by setting its is_active flag to False.
+    """
+    stmt = (
+        update(Timetable)
+        .where(
+            Timetable.id == entry_id, Timetable.is_active
+        )  # Use 'Timetable.is_active' directly
+        .values(is_active=False)
+        .returning(Timetable)
+    )
+    result = await db.execute(stmt)
     await db.commit()
+    return result.scalar_one_or_none()

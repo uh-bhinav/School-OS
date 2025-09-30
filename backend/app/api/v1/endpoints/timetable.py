@@ -92,15 +92,22 @@ async def update_timetable_entry(
     )
 
 
-# Admin only: Delete an existing timetable entry
+# Admin only: Soft-delete an existing timetable entry
 @router.delete(
     "/{entry_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_role("Admin"))],
 )
 async def delete_timetable_entry(entry_id: int, db: AsyncSession = Depends(get_db)):
-    db_obj = await timetable_service.get_timetable_entry_by_id(db, entry_id)
-    if not db_obj:
-        raise HTTPException(status_code=404, detail="Timetable entry not found.")
-    await timetable_service.delete_timetable_entry(db, db_obj=db_obj)
-    return {"ok": True}
+    """
+    Soft-deletes a timetable entry by setting its is_active flag to false.
+    """
+    deleted_entry = await timetable_service.soft_delete_timetable_entry(
+        db, entry_id=entry_id
+    )
+    if not deleted_entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Active timetable entry with id {entry_id} not found",
+        )
+    return None  # Return 204 No Content on success
