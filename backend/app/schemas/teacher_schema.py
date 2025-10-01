@@ -1,6 +1,6 @@
 # backend/app/schemas/teacher_schema.py
 from datetime import date
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import UUID4, BaseModel, ConfigDict
 
@@ -25,7 +25,7 @@ class TeacherUpdate(BaseModel):
     bio: Optional[str] = None
     is_active: Optional[bool] = None
     # ADDED: Allow qualifications to be updated
-    qualifications: Optional[List[Any]] = None
+    qualifications: Optional[list[Any]] = None
 
 
 # Properties to return to the client
@@ -38,7 +38,7 @@ class TeacherOut(BaseModel):
     employment_status_id: Optional[int] = None
     is_active: bool
     # ADDED: Return qualifications with the main teacher object
-    qualifications: Optional[List[Any]] = None
+    qualifications: Optional[list[Any]] = None
     profile: ProfileForTeacherOut  # Nested profile information
 
     model_config = ConfigDict(from_attributes=True)
@@ -49,6 +49,6 @@ class TeacherQualification(BaseModel):
     """Schema for returning a teacher's professional qualifications."""
 
     years_of_experience: Optional[int] = None
-    qualifications: Optional[List[Any]] = None
+    qualifications: Optional[list[Any]] = None
 
     model_config = ConfigDict(from_attributes=True)
