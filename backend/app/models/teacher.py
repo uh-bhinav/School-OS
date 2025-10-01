@@ -11,6 +11,9 @@ from sqlalchemy import (
     String,
     Text,
 )
+
+# ADDED: Import JSONB for the new qualifications column
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -40,6 +43,8 @@ class Teacher(Base):
     years_of_experience = Column(Integer)
     is_certified = Column(Boolean)
     bio = Column(Text)
+    # ADDED: New column to store structured qualifications
+    qualifications = Column(JSONB)
 
     # Soft Delete & Timestamps
     is_active = Column(Boolean, default=True)
@@ -49,7 +54,8 @@ class Teacher(Base):
     )
 
     # Relationships
-    user = relationship("Profile")
+    # CHANGED: The relationship name is 'profile' to match the schema and service layers
+    profile = relationship("Profile")
     employment_status = relationship("EmploymentStatus")
     profile = relationship("Profile", back_populates="teacher")
     timetables = relationship("Timetable", back_populates="teacher")

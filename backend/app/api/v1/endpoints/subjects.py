@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import require_role
 from app.db.session import get_db
 from app.schemas.subject_schema import SubjectCreate, SubjectOut, SubjectUpdate
+from app.schemas.teacher_schema import TeacherOut
 from app.services import subject_service
 
 router = APIRouter()
@@ -19,6 +20,7 @@ router = APIRouter()
 async def create_new_subject(
     *, db: AsyncSession = Depends(get_db), subject_in: SubjectCreate
 ):
+    """Create a new subject. Admin only."""
     return await subject_service.create_subject(db=db, subject_in=subject_in)
 
 
@@ -28,9 +30,7 @@ async def create_new_subject(
     dependencies=[Depends(require_role("Admin", "Teacher"))],  # Allow Teachers too
 )
 async def get_all_subjects(school_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    Get all active subjects for a school.
-    """
+    """Get all active subjects for a school."""
     return await subject_service.get_all_subjects_for_school(db=db, school_id=school_id)
 
 
@@ -40,12 +40,28 @@ async def get_all_subjects(school_id: int, db: AsyncSession = Depends(get_db)):
     dependencies=[Depends(require_role("Admin", "Teacher"))],  # Allow Teachers too
 )
 async def get_subject_by_id(subject_id: int, db: AsyncSession = Depends(get_db)):
+    """Get a single subject by its ID."""
     db_subject = await subject_service.get_subject(db=db, subject_id=subject_id)
     if not db_subject:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
         )
     return db_subject
+
+
+@router.get(
+    "/{subject_id}/teachers",
+    response_model=list[TeacherOut],
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def get_teachers_for_subject_endpoint(
+    subject_id: int, school_id: int, db: AsyncSession = Depends(get_db)
+):
+    """Find all teachers in a school qualified to teach a specific subject."""
+    teachers = await subject_service.get_teachers_for_subject(
+        db=db, school_id=school_id, subject_id=subject_id
+    )
+    return teachers
 
 
 @router.put(
@@ -56,6 +72,7 @@ async def get_subject_by_id(subject_id: int, db: AsyncSession = Depends(get_db))
 async def update_existing_subject(
     subject_id: int, *, db: AsyncSession = Depends(get_db), subject_in: SubjectUpdate
 ):
+    """Update a subject's details. Admin only."""
     db_subject = await subject_service.get_subject(db=db, subject_id=subject_id)
     if not db_subject:
         raise HTTPException(
@@ -74,9 +91,7 @@ async def update_existing_subject(
     dependencies=[Depends(require_role("Admin"))],
 )
 async def delete_subject(subject_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    Soft-deletes a subject.
-    """
+    """Soft-deletes a subject. Admin only."""
     deleted_subject = await subject_service.soft_delete_subject(
         db, subject_id=subject_id
     )

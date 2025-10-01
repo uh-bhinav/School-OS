@@ -3,6 +3,7 @@ from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+from app.models.stream import stream_subjects_association
 
 
 class Subject(Base):
@@ -21,6 +22,9 @@ class Subject(Base):
     is_active = Column(Boolean, default=True)
 
     school = relationship("School")
+    streams = relationship(
+        "Stream", secondary=stream_subjects_association, back_populates="subjects"
+    )
 
     timetables = relationship("Timetable", back_populates="subject")
     marks_records = relationship("Mark", back_populates="subject")
