@@ -1,6 +1,7 @@
 # backend/app/models/cart.py
-from sqlalchemy import UUID, Column, ForeignKey, Integer
+from sqlalchemy import UUID, Column, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base import Base
 
@@ -18,6 +19,8 @@ class Cart(Base):
     user_id = Column(
         UUID, ForeignKey("profiles.user_id"), nullable=False, unique=True
     )  # One cart per user
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # Relationships
     user = relationship("Profile")

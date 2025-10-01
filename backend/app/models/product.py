@@ -1,6 +1,7 @@
 # backend/app/models/product.py
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base import Base
 
@@ -17,13 +18,17 @@ class Product(Base):
     category_id = Column(Integer, ForeignKey("product_categories.category_id"))
     # Linking to the lookup table
 
-    name = Column(String, nullable=False)
+    name = Column(String)
     description = Column(String)
-    price = Column(Numeric, nullable=False)
-    stock_quantity = Column(Integer, default=0)
+    price = Column(Numeric)
+    stock_quantity = Column(Integer, nullable=True)
     sku = Column(String)
     image_url = Column(String)
     is_active = Column(Boolean, default=True)
+    reorder_level = Column(Integer)
+    manufacturer = Column(String)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # Relationships
     school = relationship("School")

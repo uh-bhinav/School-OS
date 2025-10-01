@@ -1,6 +1,7 @@
 # backend/app/models/product_package.py (Completed)
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base import Base
 
@@ -15,12 +16,15 @@ class ProductPackage(Base):
     id = Column(Integer, primary_key=True, index=True)
     school_id = Column(Integer, ForeignKey("schools.school_id"))
 
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=True)
     description = Column(String)
     price = Column(Numeric)
     image_url = Column(String)
     is_active = Column(Boolean, default=True)
-
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
+    )
     # Relationships
     school = relationship("School")
 

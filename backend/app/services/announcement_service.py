@@ -41,7 +41,9 @@ async def get_announcement_by_id(
     db: AsyncSession, announcement_id: int
 ) -> Optional[Announcement]:
     """Retrieves a single announcement."""
-    stmt = select(Announcement).where(Announcement.id == announcement_id)
+    stmt = select(Announcement).where(
+        Announcement.id == announcement_id, Announcement.is_active.is_(True)
+    )
     result = await db.execute(stmt)
     return result.scalars().first()
 
@@ -50,7 +52,8 @@ async def get_user_announcement_feed(
     db: AsyncSession, user_id: UUID
 ) -> list[Announcement]:
     """
-    Retrieves announcements relevant to the user (Requires complex filtering/RLS).
+    Retrieves announcements relevant to the
+    user (Requires complex filtering/RLS).
     """
     # 1. Look up the user's school_id first.
     user_profile = await db.get(Profile, user_id)
@@ -67,3 +70,10 @@ async def get_user_announcement_feed(
     # RLS will apply the fine-grained logic for targets (CLASS, GRADE)
     result = await db.execute(stmt)
     return result.scalars().all()
+
+
+async def delete_announcement(db: AsyncSession, *, db_obj: Announcement):
+    """Deactivates an announcement (SOFT DELETE IMPLEMENTED)."""
+    db_obj.is_active = False  # Set the flag to False
+    db.add(db_obj)
+    await db.commit()

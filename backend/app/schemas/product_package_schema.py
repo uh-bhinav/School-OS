@@ -16,7 +16,7 @@ class PackageItemIn(BaseModel):
 # --- Updated: ProductPackageCreate must now accept a list of items ---
 class ProductPackageCreate(BaseModel):
     school_id: int
-    name: str
+    name: Optional[str] = None
     description: Optional[str] = None
     price: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
     image_url: Optional[str] = None

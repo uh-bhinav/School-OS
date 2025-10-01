@@ -1,6 +1,16 @@
 # backend/app/models/invoice.py
-from sqlalchemy import Column, Date, ForeignKey, Integer, Numeric, String
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+)
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base import Base
 
@@ -13,13 +23,19 @@ class Invoice(Base):
     __tablename__ = "invoices"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.student_id"))
-    fee_structure_id = Column(Integer, ForeignKey("fee_templates.id"))
+    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=True)
+    fee_structure_id = Column(Integer, ForeignKey("fee_templates.id"), nullable=True)
     fee_term_id = Column(Integer, ForeignKey("fee_terms.id"))
-
+    payment_date = Column(Date)
+    fine_amount = Column(Numeric)
+    scholarship_ref = Column(String)
+    payment_method = Column(String)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     status = Column(String, default="Unpaid")
-    invoice_number = Column(String, unique=True, nullable=False)
-    due_date = Column(Date)
+    invoice_number = Column(String, nullable=False, unique=True)
+    due_date = Column(Date, nullable=True)
     amount_due = Column(Numeric, nullable=False)
     late_fee_applied = Column(Numeric, default=0)
 
