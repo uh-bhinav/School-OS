@@ -1,7 +1,7 @@
 # backend/app/models/subject.py
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
-
+from app.models.stream import stream_subjects_association
 from app.db.base import Base
 
 
@@ -21,3 +21,8 @@ class Subject(Base):
     is_active = Column(Boolean, default=True)
 
     school = relationship("School")
+    streams = relationship(
+        "Stream",
+        secondary=stream_subjects_association,
+        back_populates="subjects"
+    )
