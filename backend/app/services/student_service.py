@@ -1,11 +1,13 @@
 # backend/app/services/student_service.py
 from typing import Optional
 
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from supabase import Client
 
+from app.models.profile import Profile
 from app.models.student import Student
 from app.models.user_role import UserRole
 from app.schemas.student_schema import StudentCreate, StudentUpdate
@@ -52,6 +54,7 @@ async def create_student(
     # 2. Trigger creates the profile. We can now create the student record.
     db_student = Student(
         user_id=new_user.id,
+        school_id=student_in.school_id,  # Added school_id
         current_class_id=student_in.current_class_id,
         roll_number=student_in.roll_number,
         enrollment_date=student_in.enrollment_date,
@@ -68,9 +71,12 @@ async def create_student(
 
 
 async def get_student(db: AsyncSession, student_id: int) -> Optional[Student]:
+    """
+    Gets a single active student by their ID.
+    """
     stmt = (
         select(Student)
-        .where(Student.student_id == student_id)
+        .where(Student.student_id == student_id, Student.is_active)  # MODIFIED
         .options(selectinload(Student.profile))
     )
     result = await db.execute(stmt)
@@ -78,9 +84,12 @@ async def get_student(db: AsyncSession, student_id: int) -> Optional[Student]:
 
 
 async def get_all_students_for_class(db: AsyncSession, class_id: int) -> list[Student]:
+    """
+    Gets all active students for a specific class.
+    """
     stmt = (
         select(Student)
-        .where(Student.current_class_id == class_id)
+        .where(Student.current_class_id == class_id, Student.is_active)  # MODIFIED
         .options(selectinload(Student.profile))
     )
     result = await db.execute(stmt)
@@ -97,3 +106,32 @@ async def update_student(
     await db.commit()
     await db.refresh(db_obj)
     return db_obj
+
+
+async def soft_delete_student(db: AsyncSession, student_id: int) -> Optional[Student]:
+    """
+    Soft-deletes a student and their associated profile.
+    """
+    # First, get the student to find their user_id
+    student_to_delete = await get_student(db, student_id)
+    if not student_to_delete:
+        return None
+
+    user_id_to_deactivate = student_to_delete.user_id
+
+    # Deactivate student record
+    stmt_student = (
+        update(Student).where(Student.student_id == student_id).values(is_active=False)
+    )
+    await db.execute(stmt_student)
+
+    # Deactivate profile record
+    stmt_profile = (
+        update(Profile)
+        .where(Profile.user_id == user_id_to_deactivate)
+        .values(is_active=False)
+    )
+    await db.execute(stmt_profile)
+
+    await db.commit()
+    return student_to_delete

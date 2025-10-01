@@ -12,11 +12,11 @@ from app.schemas.teacher_schema import TeacherUpdate
 
 async def get_teacher(db: AsyncSession, teacher_id: int) -> Optional[Teacher]:
     """
-    Get a single teacher by their teacher_id, preloading profile info.
+    Get a single active teacher by their teacher_id, preloading profile info.
     """
     stmt = (
         select(Teacher)
-        .where(Teacher.teacher_id == teacher_id)
+        .where(Teacher.teacher_id == teacher_id, Teacher.is_active)  # MODIFIED
         .options(selectinload(Teacher.profile))
     )
     result = await db.execute(stmt)
@@ -27,12 +27,12 @@ async def get_all_teachers_for_school(
     db: AsyncSession, school_id: int
 ) -> list[Teacher]:
     """
-    Get all teachers for a school, preloading their profile info.
+    Get all active teachers for a school, preloading their profile info.
     """
     stmt = (
         select(Teacher)
         .join(Teacher.profile)
-        .where(Profile.school_id == school_id)
+        .where(Profile.school_id == school_id, Teacher.is_active)  # MODIFIED
         .options(selectinload(Teacher.profile))
         .order_by(Profile.first_name)
     )

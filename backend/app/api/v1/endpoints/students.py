@@ -32,7 +32,6 @@ async def enroll_new_student(
     if not student:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            # CORRECTED: Line is no longer too long
             detail=(
                 "Failed to create student. The user may already exist "
                 "or input data is invalid."
@@ -42,11 +41,10 @@ async def enroll_new_student(
     return await student_service.get_student(db=db, student_id=student.student_id)
 
 
-# ... (The rest of the GET and PUT endpoints remain the same) ...
 @router.get(
     "/{student_id}",
     response_model=StudentOut,
-    dependencies=[Depends(require_role("Admin"))],
+    dependencies=[Depends(require_role("Admin", "Teacher"))],  # Added Teacher
 )
 async def get_student_by_id(student_id: int, db: AsyncSession = Depends(get_db)):
     db_student = await student_service.get_student(db=db, student_id=student_id)
@@ -74,3 +72,23 @@ async def update_existing_student(
     return await student_service.update_student(
         db=db, db_obj=db_student, student_in=student_in
     )
+
+
+@router.delete(
+    "/{student_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def delete_student(student_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Soft-deletes a student and their associated profile.
+    """
+    deleted_student = await student_service.soft_delete_student(
+        db, student_id=student_id
+    )
+    if not deleted_student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Active student with id {student_id} not found",
+        )
+    return None

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
-from app.models.profile import Profile  # We need the Profile model for type hinting
+from app.models.profile import Profile
 from app.schemas.school_schema import SchoolOut, SchoolUpdate
 from app.services import school_service
 
@@ -70,3 +70,32 @@ async def update_school_details(
         db=db, db_obj=db_school, school_in=school_in
     )
     return updated_school
+
+
+@router.delete(
+    "/{school_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def delete_school(
+    school_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Soft-deletes a school. Admins only.
+    Admins can only delete their own school.
+    """
+    if current_profile.school_id != school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete your own school.",
+        )
+
+    deleted_school = await school_service.soft_delete_school(db, school_id=school_id)
+    if not deleted_school:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Active school with id {school_id} not found",
+        )
+    return None
