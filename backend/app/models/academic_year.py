@@ -21,3 +21,5 @@ class AcademicYear(Base):
 
     # Relationship to the school
     school = relationship("School")
+
+    timetables = relationship("Timetable", back_populates="academic_year")

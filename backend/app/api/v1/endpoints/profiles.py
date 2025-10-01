@@ -5,12 +5,24 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import require_role
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
+from app.models.profile import Profile
 from app.schemas.profile_schema import ProfileOut
 from app.services import profile_service
 
 router = APIRouter()
+
+
+# NEW: Endpoint for a user to get their own profile
+@router.get("/me", response_model=ProfileOut)
+async def get_my_profile(
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get the profile for the currently authenticated user.
+    """
+    return current_profile
 
 
 @router.get(
@@ -54,14 +66,20 @@ async def get_profile_by_id(user_id: uuid.UUID, db: AsyncSession = Depends(get_d
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def delete_profile(user_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def delete_profile(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     Soft-deletes a user profile. Admin only.
     """
-    deleted_profile = await profile_service.soft_delete_profile(db, user_id=user_id)
+    deleted_profile = await profile_service.soft_delete_profile(
+        db, user_id=user_id, school_id=current_profile.school_id
+    )
     if not deleted_profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Active profile for user_id {user_id} not found",
+            detail=f"Active profile for user_id {user_id} not found in this school",
         )
     return None

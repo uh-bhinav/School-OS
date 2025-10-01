@@ -4,6 +4,10 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from app.schemas.subject_schema import SubjectOut
+
+# Import schemas for nested objects
+
 
 # Properties to receive on class creation
 class ClassCreate(BaseModel):
@@ -23,6 +27,17 @@ class ClassUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class ClassSubjectsAssign(BaseModel):
+    subject_ids: list[int]
+
+
+# NEW: Schema for the bulk student promotion feature
+class StudentPromotionRequest(BaseModel):
+    source_class_id: int
+    destination_class_id: int
+    student_ids: list[int]
+
+
 # Properties to return to the client
 class ClassOut(BaseModel):
     class_id: int
@@ -32,6 +47,7 @@ class ClassOut(BaseModel):
     academic_year_id: int
     class_teacher_id: Optional[int] = None
     is_active: bool
+    subjects: list[SubjectOut] = []
 
     class Config:
         from_attributes = True

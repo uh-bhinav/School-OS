@@ -51,3 +51,6 @@ class Teacher(Base):
     # Relationships
     user = relationship("Profile")
     employment_status = relationship("EmploymentStatus")
+    profile = relationship("Profile", back_populates="teacher")
+    timetables = relationship("Timetable", back_populates="teacher")
+    attendance_records = relationship("AttendanceRecord", back_populates="teacher")

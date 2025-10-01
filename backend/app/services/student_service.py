@@ -9,7 +9,7 @@ from supabase import Client
 
 from app.models.profile import Profile
 from app.models.student import Student
-from app.models.user_role import UserRole
+from app.models.user_roles import UserRole
 from app.schemas.student_schema import StudentCreate, StudentUpdate
 
 
