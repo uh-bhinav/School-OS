@@ -1,9 +1,12 @@
-# backend/app/api/v1/endpoints/exams.py
+# backend/app/api/v1/endpoints/exams.py (FINALIZED)
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_role
 from app.db.session import get_db
+
+# CRITICAL IMPORT: Need to import the model directly for robust PUT/DELETE checks
+from app.models.exam import Exam
 from app.schemas.exam_schema import ExamCreate, ExamOut, ExamUpdate
 from app.services import exam_service
 
@@ -30,9 +33,13 @@ async def get_all_exams(school_id: int, db: AsyncSession = Depends(get_db)):
     """
     Get all exams for a specific school.
     """
+    # Service layer handles filtering by school_id AND is_active=True
     exams = await exam_service.get_all_exams_for_school(db=db, school_id=school_id)
     if not exams:
-        raise HTTPException(status_code=404, detail="No exams found for this school.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active exams found for this school.",
+        )
     return exams
 
 
@@ -43,9 +50,15 @@ async def get_all_exams(school_id: int, db: AsyncSession = Depends(get_db)):
 async def update_exam(
     exam_id: int, exam_in: ExamUpdate, db: AsyncSession = Depends(get_db)
 ):
-    db_obj = await exam_service.get_exam_by_id(db, exam_id)
+    """Update an existing exam. Admin only."""
+    # CRITICAL FIX: Use db.get(Exam, id) to fetch
+    #  the object regardless of its active status.
+    db_obj = await db.get(Exam, exam_id)
     if not db_obj:
-        raise HTTPException(status_code=404, detail="Exam not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found."
+        )
+
     return await exam_service.update_exam(db, db_obj=db_obj, exam_in=exam_in)
 
 
@@ -56,8 +69,20 @@ async def update_exam(
     dependencies=[Depends(require_role("Admin"))],
 )
 async def delete_exam(exam_id: int, db: AsyncSession = Depends(get_db)):
-    db_obj = await exam_service.get_exam_by_id(db, exam_id)
+    """Deactivate an exam (SOFT DELETE). Admin only."""
+    # CRITICAL FIX: Use db.get(Exam, id) to fetch
+    #  the object regardless of its active status.
+    db_obj = await db.get(Exam, exam_id)
+
     if not db_obj:
-        raise HTTPException(status_code=404, detail="Exam not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found."
+        )
+
+    if not db_obj.is_active:
+        # If it's already inactive, consider the operation successful (Idempotency).
+        return None
+
+    # Call the service layer's soft delete function
     await exam_service.delete_exam(db, db_obj=db_obj)
-    return {"ok": True}
+    return None  # Return 204 No Content

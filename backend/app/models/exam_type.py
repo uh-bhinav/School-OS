@@ -14,6 +14,6 @@ class ExamType(Base):
 
     exam_type_id = Column(Integer, primary_key=True)
     school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False)
-    type_name = Column(String, nullable=False)
+    type_name = Column(String, nullable=True)
 
     school = relationship("School")
