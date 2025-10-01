@@ -1,9 +1,11 @@
-# backend/app/api/v1/endpoints/product_packages.py (Completed)
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_role
 from app.db.session import get_db
+
+# Import Model directly for full context retrieval in PUT/DELETE
+from app.models.product_package import ProductPackage
 from app.schemas.product_package_schema import (
     ProductPackageCreate,
     ProductPackageOut,
@@ -38,6 +40,7 @@ async def get_all_active_packages(school_id: int, db: AsyncSession = Depends(get
     """
     Get all active product packages for a school (available to all users via RLS).
     """
+    # The service layer handles the 'is_active=True' filter.
     return await product_package_service.get_all_packages_for_school(
         db=db, school_id=school_id
     )
@@ -51,13 +54,15 @@ async def get_all_active_packages(school_id: int, db: AsyncSession = Depends(get
 )
 async def get_package_by_id(package_id: int, db: AsyncSession = Depends(get_db)):
     """
-    Get a specific package by ID. Accessible by
-      Parents/Students to view contents.
+    Get a specific active package by ID.
+    Accessible by Parents/Students to view contents.
     """
+    # Service layer ensures the result is active (is_active=True)
     package = await product_package_service.get_package(db=db, package_id=package_id)
     if not package:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Product Package not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product Package not found or inactive",
         )
     return package
 
@@ -75,8 +80,12 @@ async def update_package_header_by_id(
 ):
     """
     Update a package's header details (name, price). Admin only.
+
+    CRITICAL FIX: Uses db.get to retrieve the object regardless of 'is_active' status.
     """
-    package = await product_package_service.get_package(db=db, package_id=package_id)
+    package = await db.get(
+        ProductPackage, package_id
+    )  # Use direct ORM access to retrieve inactive items
     if not package:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Product Package not found"
@@ -95,12 +104,21 @@ async def update_package_header_by_id(
 async def delete_package_by_id(package_id: int, db: AsyncSession = Depends(get_db)):
     """
     Deactivate (soft delete) a product package. Admin only.
+
+    CRITICAL FIX: Uses db.get to retrieve the object regardless of 'is_active' status
+    before performing the soft delete.
     """
-    package = await product_package_service.get_package(db=db, package_id=package_id)
+    package = await db.get(
+        ProductPackage, package_id
+    )  # Use direct ORM access to retrieve inactive items
     if not package:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Product Package not found"
         )
+
+    if not package.is_active:
+        # If it's already inactive, the DELETE operation is implicitly successful.
+        return None
 
     await product_package_service.delete_package(db=db, db_obj=package)
     return None

@@ -46,6 +46,34 @@ async def update_product_by_id(
     )
 
 
+@router.delete(
+    "/{product_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    # Standard status for successful DELETE
+    dependencies=[Depends(require_role("Admin"))],
+    tags=["E-commerce"],
+)
+async def delete_product_by_id(product_id: int, db: AsyncSession = Depends(get_db)):
+    """Deactivates a product (SOFT DELETE). Admin only."""
+    # Attempt to get the product, ignoring the
+    # active filter (we need the record to set it inactive)
+    product = await db.get(product_service.Product, product_id)
+
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
+        )
+
+    if not product.is_active:
+        # If it's already inactive, consider
+        #  the operation successful and return 204
+        return None
+
+    # Call the service function to set is_active=False
+    await product_service.delete_product(db=db, db_obj=product)
+    return None
+
+
 # --- Public/User Read Access (RLS will filter by school_id) ---
 @router.get(
     "/{product_id}",

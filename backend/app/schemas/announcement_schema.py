@@ -1,4 +1,4 @@
-# backend/app/schemas/announcement_schema.py
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -19,7 +19,9 @@ class AnnouncementCreate(BaseModel):
     """Schema for creating a new announcement."""
 
     school_id: int
-    title: str
+    # FIX: Title must be Optional to reflect
+    #  DB nullability (though usually required by UX)
+    title: Optional[str] = None
     content: dict = Field(..., description="The message body as JSON/rich text.")
     targets: list[AnnouncementTargetIn] = Field(
         ..., description="The audience to receive the announcement."
@@ -43,9 +45,17 @@ class AnnouncementOut(BaseModel):
     id: int
     school_id: int
     published_by_id: UUID
-    title: str
+    # FIX: Title must be Optional to reflect DB nullability
+    title: Optional[str]
     content: dict
     is_active: bool
+
+    # ADDED OUTPUT FIELDS (from Model fix)
+    published_at: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    language: Optional[str] = None
+
     targets: list[AnnouncementTargetOut]  # Includes the list of recipients/targets
 
     class Config:

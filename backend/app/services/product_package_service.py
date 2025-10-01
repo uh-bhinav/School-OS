@@ -42,4 +42,5 @@ async def update_package(
 async def delete_package(db: AsyncSession, *, db_obj: ProductPackage):
     """Deactivates a package (soft delete)."""
     db_obj.is_active = False
+    db.add(db_obj)
     await db.commit()
