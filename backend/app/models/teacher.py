@@ -57,3 +57,6 @@ class Teacher(Base):
     # CHANGED: The relationship name is 'profile' to match the schema and service layers
     profile = relationship("Profile")
     employment_status = relationship("EmploymentStatus")
+    profile = relationship("Profile", back_populates="teacher")
+    timetables = relationship("Timetable", back_populates="teacher")
+    attendance_records = relationship("AttendanceRecord", back_populates="teacher")

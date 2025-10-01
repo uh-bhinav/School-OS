@@ -1,18 +1,29 @@
 # backend/app/api/v1/endpoints/timetable.py
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import date
+from enum import Enum
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import require_role
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
+from app.models.profile import Profile
 from app.schemas.timetable_schema import (
     TimetableEntryCreate,
     TimetableEntryOut,
     TimetableEntryUpdate,
 )
+from app.schemas.timetable_schema import TimetableEntryOut as TimetableOut
 from app.services import timetable_service
 
 router = APIRouter()
+
+
+class ScheduleTargetType(str, Enum):
+    CLASS = "class"
+    TEACHER = "teacher"
+    STUDENT = "student"
 
 
 # Admin only: Create a new timetable entry
@@ -111,3 +122,26 @@ async def delete_timetable_entry(entry_id: int, db: AsyncSession = Depends(get_d
             detail=f"Active timetable entry with id {entry_id} not found",
         )
     return None  # Return 204 No Content on success
+
+
+@router.get("/schedule-for-day", response_model=list[TimetableOut])
+async def get_schedule(
+    target_type: ScheduleTargetType,
+    target_id: int,
+    schedule_date: date = Query(
+        ..., description="The date for the schedule in YYYY-MM-DD format"
+    ),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get the daily schedule for a specific class, teacher, or student.
+    """
+
+    return await timetable_service.get_schedule_for_day(
+        db=db,
+        school_id=current_profile.school_id,
+        target_type=target_type.value,
+        target_id=target_id,
+        schedule_date=schedule_date,
+    )

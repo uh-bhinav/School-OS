@@ -25,3 +25,6 @@ class Subject(Base):
     streams = relationship(
         "Stream", secondary=stream_subjects_association, back_populates="subjects"
     )
+
+    timetables = relationship("Timetable", back_populates="subject")
+    marks_records = relationship("Mark", back_populates="subject")

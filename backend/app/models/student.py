@@ -43,3 +43,5 @@ class Student(Base):
 
     # One-to-many relationship with AttendanceRecord
     attendance_records = relationship("AttendanceRecord", back_populates="student")
+
+    contacts = relationship("StudentContact", back_populates="student")
