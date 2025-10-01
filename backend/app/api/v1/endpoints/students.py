@@ -1,23 +1,25 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from supabase import Client
-from typing import Optional
 
-from app.core.security import get_supabase_client, get_current_user_profile, require_role
+from app.core.security import (
+    get_current_user_profile,
+    get_supabase_client,
+    require_role,
+)
 from app.db.session import get_db
 from app.models.profile import Profile
 from app.schemas.student_schema import (
+    StudentAcademicSummaryOut,  # Added import
+    StudentBulkPromoteIn,
+    StudentBulkPromoteOut,
     StudentCreate,
     StudentOut,
     StudentUpdate,
-    StudentBulkPromoteIn,
-    StudentBulkPromoteOut,
-    StudentAcademicSummaryOut, # Added import
 )
 from app.services import student_service
-
-
-
 
 router = APIRouter()
 
@@ -108,7 +110,7 @@ async def delete_student(student_id: int, db: AsyncSession = Depends(get_db)):
 @router.get(
     "/search",
     response_model=list[StudentOut],
-    dependencies=[Depends(require_role("Admin"))], # Or other appropriate roles
+    dependencies=[Depends(require_role("Admin"))],  # Or other appropriate roles
 )
 async def search_for_students(
     name: Optional[str] = None,
@@ -162,7 +164,7 @@ async def promote_students_in_bulk(
 @router.get(
     "/{student_id}/academic-summary",
     response_model=StudentAcademicSummaryOut,
-    dependencies=[Depends(require_role("Admin"))], # Also for Teachers, Parents
+    dependencies=[Depends(require_role("Admin"))],  # Also for Teachers, Parents
 )
 async def get_student_summary(
     student_id: int,

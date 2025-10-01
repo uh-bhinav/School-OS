@@ -1,9 +1,8 @@
 from datetime import date
 from decimal import Decimal
 from typing import Optional
+
 from pydantic import UUID4, BaseModel, EmailStr, Field
-
-
 
 
 # A nested schema for returning profile info with the student record

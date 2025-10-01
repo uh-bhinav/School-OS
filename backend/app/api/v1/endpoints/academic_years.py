@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.schemas.academic_year_schema import (
     AcademicYearCreate,
     AcademicYearOut,
+    AcademicYearUpdate,
 )
 from app.services import academic_year_service
 
@@ -104,11 +105,12 @@ async def delete_academic_year(year_id: int, db: AsyncSession = Depends(get_db))
         )
     return None
 
+
 @router.get(
     "/{school_id}/active",
     response_model=AcademicYearOut,
     # This can be accessed by any authenticated user of the school
-    dependencies=[Depends(require_role("Admin"))], # Or Teacher, Parent, etc.
+    dependencies=[Depends(require_role("Admin"))],  # Or Teacher, Parent, etc.
 )
 async def get_the_active_year(school_id: int, db: AsyncSession = Depends(get_db)):
     """
@@ -123,6 +125,7 @@ async def get_the_active_year(school_id: int, db: AsyncSession = Depends(get_db)
             detail="No active academic year found for this school.",
         )
     return active_year
+
 
 @router.put(
     "/{school_id}/set-active/{academic_year_id}",
@@ -141,6 +144,8 @@ async def set_the_active_year(
     if not updated_year:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Academic year not found or does not belong to the specified school.",
+            detail=(
+                "Academic year not found or does not belong to the specified school."
+            ),
         )
     return updated_year

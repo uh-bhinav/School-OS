@@ -16,6 +16,7 @@ async def create_mark(db: AsyncSession, mark_in: MarkCreate) -> Mark:
     return db_obj
 
 
+# it might be redundant
 async def get_mark_by_id(db: AsyncSession, mark_id: int) -> Optional[Mark]:
     stmt = select(Mark).where(Mark.id == mark_id)
     result = await db.execute(stmt)
