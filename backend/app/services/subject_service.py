@@ -5,11 +5,17 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+# Models and Schemas needed
+from app.models.class_subject import ClassSubject
 from app.models.subject import Subject
+from app.models.teacher import Teacher
 from app.schemas.subject_schema import SubjectCreate, SubjectUpdate
+
+# --- Basic CRUD Functions ---
 
 
 async def create_subject(db: AsyncSession, *, subject_in: SubjectCreate) -> Subject:
+    """Creates a new subject in the master list for a school."""
     db_obj = Subject(**subject_in.model_dump())
     db.add(db_obj)
     await db.commit()
@@ -18,9 +24,7 @@ async def create_subject(db: AsyncSession, *, subject_in: SubjectCreate) -> Subj
 
 
 async def get_subject(db: AsyncSession, subject_id: int) -> Optional[Subject]:
-    """
-    Gets a single active subject by its ID.
-    """
+    """Gets a single active subject by its ID."""
     stmt = select(Subject).where(Subject.subject_id == subject_id, Subject.is_active)
     result = await db.execute(stmt)
     return result.scalars().first()
@@ -29,9 +33,7 @@ async def get_subject(db: AsyncSession, subject_id: int) -> Optional[Subject]:
 async def get_all_subjects_for_school(
     db: AsyncSession, school_id: int
 ) -> list[Subject]:
-    """
-    Gets all active subjects for a given school.
-    """
+    """Gets all active subjects for a given school."""
     stmt = (
         select(Subject)
         .where(Subject.school_id == school_id, Subject.is_active)
@@ -44,6 +46,7 @@ async def get_all_subjects_for_school(
 async def update_subject(
     db: AsyncSession, *, db_obj: Subject, subject_in: SubjectUpdate
 ) -> Subject:
+    """Updates a subject's details."""
     update_data = subject_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_obj, field, value)
@@ -54,9 +57,7 @@ async def update_subject(
 
 
 async def soft_delete_subject(db: AsyncSession, subject_id: int) -> Optional[Subject]:
-    """
-    Soft-deletes a subject by setting its is_active flag to False.
-    """
+    """Soft-deletes a subject by setting its is_active flag to False."""
     stmt = (
         update(Subject)
         .where(Subject.subject_id == subject_id, Subject.is_active)
@@ -66,3 +67,46 @@ async def soft_delete_subject(db: AsyncSession, subject_id: int) -> Optional[Sub
     result = await db.execute(stmt)
     await db.commit()
     return result.scalar_one_or_none()
+
+
+# --- Business Logic Functions ---
+
+
+async def get_subjects_for_class(db: AsyncSession, class_id: int) -> list[Subject]:
+    """
+    Retrieves a list of all subjects taught in a specific class.
+    """
+    stmt = (
+        select(Subject)
+        .join(ClassSubject, Subject.subject_id == ClassSubject.subject_id)
+        .where(ClassSubject.class_id == class_id, Subject.is_active)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_teachers_for_subject(
+    db: AsyncSession, *, school_id: int, subject_id: int
+) -> list[Teacher]:
+    """
+    Finds all active teachers in a school whose specialization matches
+    a given subject.
+    """
+    # First, get the subject name from its ID
+    subject = await get_subject(db, subject_id=subject_id)
+    if not subject:
+        return []
+
+    # Now, find teachers with that name in their specialization string
+    stmt = (
+        select(Teacher)
+        .join(Teacher.profile)
+        .where(
+            Teacher.profile.school_id == school_id,
+            Teacher.is_active,
+            # This performs a case-insensitive search
+            Teacher.subject_specialization.ilike(f"%{subject.name}%"),
+        )
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
