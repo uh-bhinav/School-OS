@@ -21,4 +21,3 @@ class Subject(Base):
     is_active = Column(Boolean, default=True)
 
     school = relationship("School")
-    marks_records = relationship("Mark", back_populates="subject")
