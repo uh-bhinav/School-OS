@@ -1,8 +1,9 @@
-# backend/app/schemas/student_schema.py
 from datetime import date
+from decimal import Decimal
 from typing import Optional
+from pydantic import UUID4, BaseModel, EmailStr, Field
 
-from pydantic import UUID4, BaseModel, EmailStr
+
 
 
 # A nested schema for returning profile info with the student record
@@ -53,3 +54,32 @@ class StudentOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class StudentBulkPromoteIn(BaseModel):
+    student_ids: list[int] = Field(..., min_length=1)
+    target_class_id: int
+
+
+# ADDED: Schema for the bulk promotion response
+class StudentBulkPromoteOut(BaseModel):
+    status: str
+    promoted_count: int
+
+
+class MarkForSummaryOut(BaseModel):
+    subject_name: str
+    exam_name: str
+    marks_obtained: Decimal
+
+    class Config:
+        from_attributes = True
+
+
+# ADDED: The main schema for the academic summary response
+class StudentAcademicSummaryOut(BaseModel):
+    student_id: int
+    full_name: str
+    overall_attendance_percentage: Optional[float] = None
+    average_score_percentage: Optional[float] = None
+    recent_marks: list[MarkForSummaryOut] = []
