@@ -1,13 +1,18 @@
-# backend/app/api/v1/endpoints/attendance_records.py
+# REPLACE the entire import block at the top of the file with this:
+from datetime import date
+from typing import dict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_role
 from app.db.session import get_db
 from app.schemas.attendance_record_schema import (
+    AttendanceRecordBulkCreate,
     AttendanceRecordCreate,
     AttendanceRecordOut,
     AttendanceRecordUpdate,
+    ClassAttendanceSummaryOut,
 )
 from app.services import attendance_record_service
 
@@ -91,3 +96,72 @@ async def delete_attendance(attendance_id: int, db: AsyncSession = Depends(get_d
         raise HTTPException(status_code=404, detail="Attendance record not found")
     await attendance_record_service.delete_attendance_record(db, db_obj=db_obj)
     return {"ok": True}
+
+
+@router.post(
+    "/bulk",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role("Teacher"))],  # Or "Admin"
+)
+async def create_bulk_attendance(
+    attendance_in: AttendanceRecordBulkCreate, db: AsyncSession = Depends(get_db)
+):
+    """
+    Create multiple attendance records for a class in a single transaction.
+    """
+    result = await attendance_record_service.bulk_create_attendance_records(
+        db=db, attendance_data=attendance_in
+    )
+    return result
+
+
+@router.get(
+    "/class/{class_id}/range",
+    response_model=list[AttendanceRecordOut],
+    dependencies=[Depends(require_role("Teacher"))],  # Or "Admin"
+)
+async def get_class_attendance_in_range(
+    class_id: int,
+    start_date: date,
+    end_date: date,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get all attendance records for a class within a specific date range.
+    """
+    records = await attendance_record_service.get_class_attendance_for_date_range(
+        db=db, class_id=class_id, start_date=start_date, end_date=end_date
+    )
+    if not records:
+        # REPLACE the HTTPException in the get_class_attendance_in_range function
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No attendance records found for this class the given date range.",
+        )
+    return records
+
+
+@router.get(
+    "/class/{class_id}/summary",
+    response_model=ClassAttendanceSummaryOut,
+    dependencies=[Depends(require_role("Teacher"))],  # Or "Admin"
+)
+async def get_class_weekly_summary(
+    class_id: int,
+    week_start_date: date,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get a pre-calculated weekly attendance summary for a class.
+    Reads from a high-performance summary table.
+    """
+    summary = await attendance_record_service.get_class_attendance_summary(
+        db=db, class_id=class_id, week_start_date=week_start_date
+    )
+    if not summary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No attendance summary found for this class and week.",
+        )
+    return summary

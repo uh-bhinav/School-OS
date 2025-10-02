@@ -1,4 +1,4 @@
-# backend/app/services/attendance_record_service.py
+# REPLACE the entire import block at the top of the file with this:
 from datetime import date
 from typing import Optional
 
@@ -6,7 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.models.attendance_record import AttendanceRecord
+from app.models.class_attendance_weekly import ClassAttendanceWeekly
 from app.schemas.attendance_record_schema import (
+    AttendanceRecordBulkCreate,
     AttendanceRecordCreate,
     AttendanceRecordUpdate,
 )
@@ -71,3 +73,52 @@ async def update_attendance_record(
 async def delete_attendance_record(db: AsyncSession, db_obj: AttendanceRecord) -> None:
     await db.delete(db_obj)
     await db.commit()
+
+
+async def bulk_create_attendance_records(
+    db: AsyncSession, *, attendance_data: AttendanceRecordBulkCreate
+) -> dict:
+    """
+    Creates multiple attendance records in a single transaction.
+    Use this for a teacher submitting attendance for an entire class period.
+    """
+    db_records = [
+        AttendanceRecord(**record.model_dump()) for record in attendance_data.records
+    ]
+    db.add_all(db_records)
+    await db.commit()
+    return {"status": "success", "records_created": len(db_records)}
+
+
+async def get_class_attendance_for_date_range(
+    db: AsyncSession, *, class_id: int, start_date: date, end_date: date
+) -> list[AttendanceRecord]:
+    """
+    Retrieves all raw attendance records for a specific class within a given date range.
+    """
+    stmt = (
+        select(AttendanceRecord)
+        .where(
+            AttendanceRecord.class_id == class_id,
+            AttendanceRecord.date >= start_date,
+            AttendanceRecord.date <= end_date,
+        )
+        .order_by(AttendanceRecord.date, AttendanceRecord.period_id)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_class_attendance_summary(
+    db: AsyncSession, *, class_id: int, week_start_date: date
+) -> Optional[ClassAttendanceWeekly]:
+    """
+    Retrieves a pre-calculated weekly attendance summary for a class.
+    This function reads from a high-performance summary table.
+    """
+    stmt = select(ClassAttendanceWeekly).where(
+        ClassAttendanceWeekly.class_id == class_id,
+        ClassAttendanceWeekly.week_start_date == week_start_date,
+    )
+    result = await db.execute(stmt)
+    return result.scalars().first()

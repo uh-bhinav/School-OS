@@ -1,3 +1,4 @@
+# This is the corrected import block
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,7 +13,7 @@ from app.core.security import (
 from app.db.session import get_db
 from app.models.profile import Profile
 from app.schemas.student_schema import (
-    StudentAcademicSummaryOut,  # Added import
+    StudentAcademicSummaryOut,
     StudentBulkPromoteIn,
     StudentBulkPromoteOut,
     StudentCreate,

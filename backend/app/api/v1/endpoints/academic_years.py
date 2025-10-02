@@ -1,5 +1,4 @@
-# backend/app/api/v1/endpoints/academic_years.py
-
+# REPLACE the entire import block at the top of the file with this:
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -132,6 +131,7 @@ async def get_the_active_year(school_id: int, db: AsyncSession = Depends(get_db)
     response_model=AcademicYearOut,
     dependencies=[Depends(require_role("Admin"))],
 )
+# This is the corrected function
 async def set_the_active_year(
     school_id: int, academic_year_id: int, db: AsyncSession = Depends(get_db)
 ):
@@ -144,8 +144,12 @@ async def set_the_active_year(
     if not updated_year:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            # The long line is broken into a multi-line string
             detail=(
-                "Academic year not found or does not belong to the specified school."
+                "Academic year not found or does not belong to the " "specified school."
             ),
         )
     return updated_year
+
+
+# A newline character is implicitly added here at the end of the file.

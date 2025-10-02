@@ -1,4 +1,4 @@
-# backend/app/services/student_service.py
+# REPLACE the entire import block at the top of the file with this:
 from typing import Optional
 
 from sqlalchemy import func, select, update
@@ -7,12 +7,12 @@ from sqlalchemy.orm import selectinload
 from supabase import Client
 
 from app.models.attendance_record import AttendanceRecord
-from app.models.exams import Exam
+from app.models.exam import Exam
 from app.models.mark import Mark
 from app.models.profile import Profile
 from app.models.student import Student
 from app.models.subject import Subject
-from app.models.user_roles import UserRole
+from app.models.user_role import UserRole
 from app.schemas.student_schema import (
     MarkForSummaryOut,
     StudentAcademicSummaryOut,
@@ -222,11 +222,9 @@ async def get_student_academic_summary(
 
     attendance_result = (await db.execute(attendance_stmt)).first()
     present_count, total_count = attendance_result or (0, 0)
-
-    if total_count > 0:
-        attendance_percentage = (present_count / total_count) * 100
-    else:
-        attendance_percentage = None
+    attendance_percentage = (
+        (present_count / total_count) * 100 if total_count > 0 else None
+    )
 
     # --- Fetch Recent Marks ---
     marks_stmt = (
@@ -254,10 +252,9 @@ async def get_student_academic_summary(
         total_score += mark.marks_obtained
         total_max_marks += max_marks
 
-    if total_max_marks > 0:
-        average_percentage = (total_score / total_max_marks) * 100
-    else:
-        average_percentage = None
+    average_percentage = (
+        (total_score / total_max_marks) * 100 if total_max_marks > 0 else None
+    )
 
     summary = StudentAcademicSummaryOut(
         student_id=student_id,

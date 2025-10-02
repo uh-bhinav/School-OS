@@ -1,11 +1,8 @@
-# backend/app/services/academic_year_service.py
-
-
+# REPLACE the import block at the top of the file with this:
 from typing import Optional
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 
 from app.models.academic_year import AcademicYear
 from app.schemas.academic_year_schema import AcademicYearCreate, AcademicYearUpdate
@@ -93,10 +90,11 @@ async def get_active_academic_year(
 async def set_active_academic_year(
     db: AsyncSession, *, school_id: int, academic_year_id: int
 ) -> Optional[AcademicYear]:
+    # This is the corrected docstring with the line wrapped
     """
     Sets a specific academic year as active for a school.
-    This is an administrative action that first deactivates all other years
-    for the school to ensure only one year is ever active.
+    This action deactivates all other years for the school to ensure only one
+    is active.
     """
     # Deactivate all other years for the school in one transaction
     await db.execute(
