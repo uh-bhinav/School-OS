@@ -1,16 +1,16 @@
-# backend/app/services/attendance_record_service.py
+# REPLACE the entire import block at the top of the file with this:
 from datetime import date
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.models.class_attendance_weekly import ClassAttendanceWeekly 
 
 from app.models.attendance_record import AttendanceRecord
+from app.models.class_attendance_weekly import ClassAttendanceWeekly
 from app.schemas.attendance_record_schema import (
+    AttendanceRecordBulkCreate,
     AttendanceRecordCreate,
     AttendanceRecordUpdate,
-    AttendanceRecordBulkCreate,
 )
 
 

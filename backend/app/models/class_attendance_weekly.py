@@ -1,6 +1,5 @@
-# backend/app/models/class_attendance_weekly.py
-
-from sqlalchemy import Column, Integer, Date, Float, ForeignKey
+# REPLACE the import block at the top of the file with this:
+from sqlalchemy import Column, Date, Float, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base

@@ -1,4 +1,4 @@
-# This is the corrected and sorted import block
+# REPLACE the import block at the top of the file with this:
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 

@@ -1,4 +1,4 @@
-# This is the corrected and sorted import 
+# REPLACE the entire import block at the top of the file with this:
 from typing import Optional
 
 from sqlalchemy import func, select, update
@@ -20,7 +20,6 @@ from app.schemas.student_schema import (
     StudentCreate,
     StudentUpdate,
 )
-
 
 async def create_student(
     db: AsyncSession, supabase: Client, *, student_in: StudentCreate
@@ -223,7 +222,7 @@ async def get_student_academic_summary(
     attendance_result = (await db.execute(attendance_stmt)).first()
     present_count, total_count = attendance_result or (0, 0)
     attendance_percentage = (
-        (present_count / total_count) * 100 if total_count > 0 else None
+    (present_count / total_count) * 100 if total_count > 0 else None
     )
 
     # --- Fetch Recent Marks ---
@@ -253,7 +252,7 @@ async def get_student_academic_summary(
         total_max_marks += max_marks
 
     average_percentage = (
-        (total_score / total_max_marks) * 100 if total_max_marks > 0 else None
+    (total_score / total_max_marks) * 100 if total_max_marks > 0 else None
     )
 
     summary = StudentAcademicSummaryOut(

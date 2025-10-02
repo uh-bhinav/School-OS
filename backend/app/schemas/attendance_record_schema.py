@@ -57,3 +57,4 @@ class ClassAttendanceSummaryOut(BaseModel):
 
     class Config:
         from_attributes = True
+

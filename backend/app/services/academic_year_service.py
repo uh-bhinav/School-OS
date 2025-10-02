@@ -1,10 +1,7 @@
-# backend/app/services/academic_year_service.py
-
-
-# This is the corrected and sorted import block
+# REPLACE the import block at the top of the file with this:
 from typing import Optional
 
-from sqlalchemy import select, update  # 'update' is added here
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.academic_year import AcademicYear

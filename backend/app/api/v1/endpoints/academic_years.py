@@ -1,15 +1,13 @@
-# backend/app/api/v1/endpoints/academic_years.py
-
+# REPLACE the entire import block at the top of the file with this:
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_role
 from app.db.session import get_db
-# This is the corrected import block
 from app.schemas.academic_year_schema import (
     AcademicYearCreate,
     AcademicYearOut,
-    AcademicYearUpdate,  # Added AcademicYearUpdate
+    AcademicYearUpdate,
 )
 from app.services import academic_year_service
 

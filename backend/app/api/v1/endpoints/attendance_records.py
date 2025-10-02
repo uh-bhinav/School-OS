@@ -1,18 +1,20 @@
-# backend/app/api/v1/endpoints/attendance_records.py
+# REPLACE the entire import block at the top of the file with this:
+from datetime import date
+from typing import dict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import dict
+
 from app.core.security import require_role
 from app.db.session import get_db
 from app.schemas.attendance_record_schema import (
+    AttendanceRecordBulkCreate,
     AttendanceRecordCreate,
     AttendanceRecordOut,
     AttendanceRecordUpdate,
-    AttendanceRecordBulkCreate,
     ClassAttendanceSummaryOut,
 )
 from app.services import attendance_record_service
-from datetime import date
 router = APIRouter()
 
 
@@ -130,6 +132,7 @@ async def get_class_attendance_in_range(
         db=db, class_id=class_id, start_date=start_date, end_date=end_date
     )
     if not records:
+        # REPLACE the HTTPException in the get_class_attendance_in_range function
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No attendance records found for this class in the given date range.",
