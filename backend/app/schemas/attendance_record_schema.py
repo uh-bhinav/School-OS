@@ -29,6 +29,10 @@ class AttendanceRecordUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class AttendanceRecordBulkCreate(BaseModel):
+    records: list[AttendanceRecordCreate]
+
+
 # Properties to return to the client
 class AttendanceRecordOut(BaseModel):
     id: int
@@ -39,6 +43,18 @@ class AttendanceRecordOut(BaseModel):
     period_id: Optional[int] = None
     teacher_id: Optional[int] = None
     notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ClassAttendanceSummaryOut(BaseModel):
+    class_id: int
+    week_start_date: date
+    total_students: int
+    total_present: int
+    total_absent: int
+    attendance_percentage: float
 
     class Config:
         from_attributes = True

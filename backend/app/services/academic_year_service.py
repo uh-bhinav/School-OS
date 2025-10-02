@@ -1,8 +1,7 @@
-from typing import Optional, list
+from typing import Optional
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 
 from app.models.academic_year import AcademicYear
 from app.schemas.academic_year_schema import AcademicYearCreate, AcademicYearUpdate
@@ -91,9 +90,8 @@ async def set_active_academic_year(
 ) -> Optional[AcademicYear]:
     """
     Sets a specific academic year as active for a school.
-    This is an administrative action that first deactivates
-      all other years for the school
-    to ensure only one year is ever active.
+    This action deactivates all other years for the school to ensure only one
+    is active.
     """
     # 1. Look up the year to get its school_id
     #  (needed for filtering other years)

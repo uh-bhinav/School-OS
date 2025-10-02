@@ -92,16 +92,20 @@ async def delete_academic_year(year_id: int, db: AsyncSession = Depends(get_db))
     response_model=AcademicYearOut,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def activate_academic_year_endpoint(
-    academic_year_id: int,
-    db: AsyncSession = Depends(get_db),
+async def set_the_active_year(
+    school_id: int, academic_year_id: int, db: AsyncSession = Depends(get_db)
 ):
-    updated_year = await academic_year_service.activate_academic_year(
-        db, academic_year_id
+    """
+    Set a specific academic year as the active one for a school.
+    """
+    updated_year = await academic_year_service.set_active_academic_year(
+        db=db, school_id=school_id, academic_year_id=academic_year_id
     )
     if not updated_year:
-        # E501 Fix: Breaking the detail string
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found "
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "Academic year not found or does not belong to the " "specified school."
+            ),
         )
     return updated_year
