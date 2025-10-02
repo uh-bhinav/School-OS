@@ -1,7 +1,5 @@
 from typing import (
     Any,
-    Dict,
-    List,
     Optional,
 )
 
@@ -11,7 +9,9 @@ from sqlalchemy.future import select
 
 from app.models.exam import Exam
 from app.models.marks import Mark  # Assuming you have a Mark model
-from app.models.subjects import Subject  # Assuming you have a Subject model
+from app.models.subjects import Subject
+
+# Assuming you have a Subject model
 from app.schemas.exam_schema import ExamCreate, ExamUpdate
 
 
@@ -24,7 +24,9 @@ async def create_exam(db: AsyncSession, exam_in: ExamCreate) -> Exam:
 
 
 async def get_exam_by_id(db: AsyncSession, exam_id: int) -> Optional[Exam]:
-    stmt = select(Exam).where(Exam.id == exam_id)
+    """Retrieves an active exam by ID (READ FILTER APPLIED)."""
+    # NOTE: The critical filter required by project standards:
+    stmt = select(Exam).where(Exam.id == exam_id, Exam.is_active.is_(True))
     result = await db.execute(stmt)
     return result.scalars().first()
 
@@ -48,7 +50,8 @@ async def update_exam(db: AsyncSession, db_obj: Exam, exam_in: ExamUpdate) -> Ex
 
 
 async def delete_exam(db: AsyncSession, db_obj: Exam) -> Exam:
-    # Assuming the soft delete standard is implemented here, as per project context
+    # Assuming the soft delete standard is
+    # implemented here, as per project context
     db_obj.is_active = False
     db.add(db_obj)
     await db.commit()
@@ -57,9 +60,10 @@ async def delete_exam(db: AsyncSession, db_obj: Exam) -> Exam:
 
 async def get_exam_mark_summary(
     db: AsyncSession, exam_id: int, student_id: int
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
-    Agentic Function: Retrieves a student's consolidated results for all subjects
+    Agentic Function: Retrieves a student's
+      consolidated results for all subjects
     in a specific, active exam.
     """
 
@@ -120,7 +124,7 @@ async def get_exam_mark_summary(
 
 async def fetch_exams_by_academic_year(
     db: AsyncSession, academic_year_id: int
-) -> List[Exam]:
+) -> list[Exam]:
     """
     Agentic Function: Retrieves all active
     exams scheduled within a specific academic year.

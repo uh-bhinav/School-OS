@@ -1,5 +1,5 @@
 # backend/app/models/exam.py
-from sqlalchemy import Column, Date, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
@@ -16,6 +16,9 @@ class Exam(Base):
     end_date = Column(Date)
     marks = Column(Numeric(10, 2))
     academic_year_id = Column(Integer, ForeignKey("academic_years.id"))
+
+    # CRITICAL FIX: Soft Delete field required by the service logic
+    is_active = Column(Boolean, default=True)
 
     # Relationships
     school = relationship("School")
