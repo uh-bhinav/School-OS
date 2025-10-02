@@ -21,3 +21,5 @@ class Period(Base):
     period_name = Column(String)
 
     school = relationship("School")
+
+    timetables = relationship("Timetable", back_populates="period")

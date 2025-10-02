@@ -1,5 +1,4 @@
-# app/api/v1/endpoints/students.py (FIXED)
-from typing import Optional, list  # Ensure list is imported or use built-in
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -111,7 +110,7 @@ async def delete_student(student_id: int, db: AsyncSession = Depends(get_db)):
 @router.get(
     "/search",
     response_model=list[StudentOut],
-    dependencies=[Depends(require_role("Admin"))],
+    dependencies=[Depends(require_role("Admin"))],  # Or other appropriate roles
 )
 async def search_for_students(
     name: Optional[str] = None,
@@ -144,7 +143,7 @@ async def search_for_students(
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def promote_students_in_bulk(  # FIX: Removed invalid token 'cd' from parameters
+async def promote_students_in_bulk(
     promotion_in: StudentBulkPromoteIn,
     db: AsyncSession = Depends(get_db),
 ):

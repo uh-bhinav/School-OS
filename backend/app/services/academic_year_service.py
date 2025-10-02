@@ -72,13 +72,27 @@ async def soft_delete_academic_year(
     return result.scalar_one_or_none()
 
 
-async def activate_academic_year(
-    db: AsyncSession, academic_year_id: int
+async def get_active_academic_year(
+    db: AsyncSession, *, school_id: int
+) -> Optional[AcademicYear]:
+    """
+    Finds the single academic year that is currently active for a school.
+    Use this to get the context for the current school year's operations.
+    """
+    stmt = select(AcademicYear).where(
+        AcademicYear.school_id == school_id, AcademicYear.is_active.is_(True)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
+async def set_active_academic_year(
+    db: AsyncSession, *, school_id: int, academic_year_id: int
 ) -> Optional[AcademicYear]:
     """
     Sets a specific academic year as active for a school.
-    This is an administrative action that
-      first deactivates all other years for the school
+    This is an administrative action that first deactivates
+      all other years for the school
     to ensure only one year is ever active.
     """
     # 1. Look up the year to get its school_id

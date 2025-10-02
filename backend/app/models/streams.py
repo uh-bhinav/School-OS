@@ -45,5 +45,7 @@ class Stream(Base):
     # Many-to-many relationship with Subject
     # The ORM will use the 'stream_subjects_association' table to manage this link.
     subjects = relationship(
-        "Subject", secondary=stream_subjects_association, back_populates="streams"
+        "Subject",
+        secondary=stream_subjects_association,
+        back_populates="streams",
     )

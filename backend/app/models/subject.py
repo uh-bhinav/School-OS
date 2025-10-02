@@ -5,8 +5,6 @@ from sqlalchemy.orm import relationship
 from app.db.base import Base
 from app.models.stream import stream_subjects_association
 
-# backend/app/models/subject.py (RESOLVED)
-
 
 class Subject(Base):
     """
@@ -33,4 +31,3 @@ class Subject(Base):
     streams = relationship(
         "Stream", secondary=stream_subjects_association, back_populates="subjects"
     )
-    #
