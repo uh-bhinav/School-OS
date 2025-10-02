@@ -1,13 +1,13 @@
 # backend/app/models/stream.py
 
 from sqlalchemy import (
-    Table,
+    Boolean,
     Column,
+    ForeignKey,
     Integer,
     String,
-    Boolean,
+    Table,
     Text,
-    ForeignKey,
 )
 from sqlalchemy.orm import relationship
 
@@ -16,10 +16,10 @@ from app.db.base import Base
 # This is a SQLAlchemy association table to manage the many-to-many
 # relationship between streams and subjects. It does not get its own model class.
 stream_subjects_association = Table(
-    'stream_subjects',
+    "stream_subjects",
     Base.metadata,
-    Column('stream_id', Integer, ForeignKey('streams.id'), primary_key=True),
-    Column('subject_id', Integer, ForeignKey('subjects.subject_id'), primary_key=True)
+    Column("stream_id", Integer, ForeignKey("streams.id"), primary_key=True),
+    Column("subject_id", Integer, ForeignKey("subjects.subject_id"), primary_key=True),
 )
 
 
@@ -47,5 +47,6 @@ class Stream(Base):
     subjects = relationship(
         "Subject",
         secondary=stream_subjects_association,
-        back_populates="streams" # This assumes you will add a 'streams' relationship to the Subject model
+        # This assumes you will add a 'streams' relationship to the Subject model
+        back_populates="streams",
     )

@@ -3,7 +3,9 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
+from app.models.exams import Exam
 from app.models.mark import Mark
 from app.schemas.mark_schema import MarkCreate, MarkUpdate
 
@@ -14,6 +16,40 @@ async def create_mark(db: AsyncSession, mark_in: MarkCreate) -> Mark:
     await db.commit()
     await db.refresh(db_obj)
     return db_obj
+
+
+async def bulk_create_marks(
+    db: AsyncSession, *, marks_in: list[MarkCreate], entered_by_teacher_id: int
+) -> list[Mark]:
+    """
+    Creates multiple mark records, associating them with the teacher who entered them.
+    """
+    db_objects = [
+        Mark(**mark.model_dump(), entered_by_teacher_id=entered_by_teacher_id)
+        for mark in marks_in
+    ]
+    db.add_all(db_objects)
+    await db.commit()
+    # To return the full objects with IDs, we need to re-fetch them.
+    # For now, this is sufficient.
+    return db_objects
+
+
+async def get_student_report_card(
+    db: AsyncSession, *, student_id: int, academic_year_id: int
+) -> list[Mark]:
+    """
+    Retrieves all marks for a student for a specific academic year.
+    """
+    stmt = (
+        select(Mark)
+        .join(Exam)
+        .where(Mark.student_id == student_id, Exam.academic_year_id == academic_year_id)
+        .options(selectinload(Mark.subject), selectinload(Mark.exam))
+        .order_by(Exam.start_date, Mark.subject_id)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def get_mark_by_id(db: AsyncSession, mark_id: int) -> Optional[Mark]:

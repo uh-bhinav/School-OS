@@ -1,5 +1,4 @@
-# app/api/v1/endpoints/students.py (FIXED)
-from typing import Optional, list  # Ensure list is imported or use built-in
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +9,6 @@ from app.core.security import (
     get_supabase_client,
     require_role,
 )
-
 # E501 Fix: Lines are broken correctly by Ruff
 from app.db.session import get_db
 from app.models.profile import Profile
@@ -23,8 +21,6 @@ from app.schemas.student_schema import (
     StudentUpdate,
 )
 from app.services import student_service
-
-# ... (Rest of the file follows, assuming imports are correctly alphabetized/grouped)
 
 
 router = APIRouter()

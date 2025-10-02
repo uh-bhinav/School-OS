@@ -1,8 +1,16 @@
 # backend/app/models/class_model.py
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+
+# Define the association table for the many-to-many relationship
+class_subjects_association = Table(
+    "class_subjects",
+    Base.metadata,
+    Column("class_id", Integer, ForeignKey("classes.class_id"), primary_key=True),
+    Column("subject_id", Integer, ForeignKey("subjects.subject_id"), primary_key=True),
+)
 
 
 class Class(Base):
@@ -24,3 +32,9 @@ class Class(Base):
     school = relationship("School")
     class_teacher = relationship("Teacher")
     academic_year = relationship("AcademicYear")
+
+    # NEW: Many-to-many relationship to subjects
+    subjects = relationship("Subject", secondary=class_subjects_association)
+
+    timetables = relationship("Timetable", back_populates="class_record")
+    attendance_records = relationship("AttendanceRecord", back_populates="class_record")

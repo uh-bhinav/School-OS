@@ -1,8 +1,9 @@
 # backend/app/models/subject.py
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
-from app.models.stream import stream_subjects_association
+
 from app.db.base import Base
+from app.models.stream import stream_subjects_association
 
 
 class Subject(Base):
@@ -22,7 +23,8 @@ class Subject(Base):
 
     school = relationship("School")
     streams = relationship(
-        "Stream",
-        secondary=stream_subjects_association,
-        back_populates="subjects"
+        "Stream", secondary=stream_subjects_association, back_populates="subjects"
     )
+
+    timetables = relationship("Timetable", back_populates="subject")
+    marks_records = relationship("Mark", back_populates="subject")
