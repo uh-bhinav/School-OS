@@ -21,9 +21,7 @@ router = APIRouter()
     dependencies=[Depends(require_role("Admin"))],
 )
 async def create_new_academic_year(
-    *,
-    db: AsyncSession = Depends(get_db),
-    year_in: AcademicYearCreate,
+    *, db: AsyncSession = Depends(get_db), year_in: AcademicYearCreate
 ):
     return await academic_year_service.create_academic_year(db=db, year_in=year_in)
 
@@ -87,8 +85,30 @@ async def delete_academic_year(year_id: int, db: AsyncSession = Depends(get_db))
     return None
 
 
-@router.post(
-    "/{academic_year_id}/activate",
+# RESTful GET for the current active year
+@router.get(
+    "/{school_id}/active",
+    response_model=AcademicYearOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def get_the_active_year(school_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Get the currently active academic year for a school.
+    """
+    active_year = await academic_year_service.get_active_academic_year(
+        db=db, school_id=school_id
+    )
+    if not active_year:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active academic year found for this school.",
+        )
+    return active_year
+
+
+# RESTful PUT for setting the active year
+@router.put(
+    "/{school_id}/set-active/{academic_year_id}",
     response_model=AcademicYearOut,
     dependencies=[Depends(require_role("Admin"))],
 )
