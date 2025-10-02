@@ -36,4 +36,9 @@ jobs:
       run: poetry run black --check app
 
     - name: Run tests
+      env:
+        # Populate environment variables from GitHub Secrets
+        SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.TEST_SUPABASE_KEY }}
+        DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
       run: poetry run pytest
