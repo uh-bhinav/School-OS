@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.academic_year import AcademicYear
 from app.schemas.academic_year_schema import AcademicYearCreate, AcademicYearUpdate
 
+
 async def create_academic_year(
     db: AsyncSession, *, year_in: AcademicYearCreate
 ) -> AcademicYear:
@@ -89,7 +90,7 @@ async def get_active_academic_year(
 async def set_active_academic_year(
     db: AsyncSession, *, school_id: int, academic_year_id: int
 ) -> Optional[AcademicYear]:
-  # This is the corrected docstring with the line wrapped
+    # This is the corrected docstring with the line wrapped
     """
     Sets a specific academic year as active for a school.
     This action deactivates all other years for the school to ensure only one

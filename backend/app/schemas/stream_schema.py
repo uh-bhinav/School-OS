@@ -42,6 +42,7 @@ class StreamSubjectsUpdate(BaseModel):
     """
     Schema specifically for the operation of assigning a list of subjects to a stream.
     """
+
     subject_ids: list[int] = Field(
         ..., description="A list of subject IDs to associate with the stream."
     )

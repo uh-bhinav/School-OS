@@ -15,6 +15,7 @@ from app.schemas.attendance_record_schema import (
     ClassAttendanceSummaryOut,
 )
 from app.services import attendance_record_service
+
 router = APIRouter()
 
 
@@ -96,11 +97,12 @@ async def delete_attendance(attendance_id: int, db: AsyncSession = Depends(get_d
     await attendance_record_service.delete_attendance_record(db, db_obj=db_obj)
     return {"ok": True}
 
+
 @router.post(
     "/bulk",
     response_model=dict,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role("Teacher"))], # Or "Admin"
+    dependencies=[Depends(require_role("Teacher"))],  # Or "Admin"
 )
 async def create_bulk_attendance(
     attendance_in: AttendanceRecordBulkCreate, db: AsyncSession = Depends(get_db)
@@ -117,7 +119,7 @@ async def create_bulk_attendance(
 @router.get(
     "/class/{class_id}/range",
     response_model=list[AttendanceRecordOut],
-    dependencies=[Depends(require_role("Teacher"))], # Or "Admin"
+    dependencies=[Depends(require_role("Teacher"))],  # Or "Admin"
 )
 async def get_class_attendance_in_range(
     class_id: int,
@@ -135,14 +137,15 @@ async def get_class_attendance_in_range(
         # REPLACE the HTTPException in the get_class_attendance_in_range function
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No attendance records found for this class in the given date range.",
+            detail="No attendance records found for this class the given date range.",
         )
     return records
+
 
 @router.get(
     "/class/{class_id}/summary",
     response_model=ClassAttendanceSummaryOut,
-    dependencies=[Depends(require_role("Teacher"))], # Or "Admin"
+    dependencies=[Depends(require_role("Teacher"))],  # Or "Admin"
 )
 async def get_class_weekly_summary(
     class_id: int,

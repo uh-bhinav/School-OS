@@ -47,6 +47,7 @@ class AttendanceRecordOut(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ClassAttendanceSummaryOut(BaseModel):
     class_id: int
     week_start_date: date
@@ -57,4 +58,3 @@ class ClassAttendanceSummaryOut(BaseModel):
 
     class Config:
         from_attributes = True
-

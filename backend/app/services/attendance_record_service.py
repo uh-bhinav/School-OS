@@ -89,6 +89,7 @@ async def bulk_create_attendance_records(
     await db.commit()
     return {"status": "success", "records_created": len(db_records)}
 
+
 async def get_class_attendance_for_date_range(
     db: AsyncSession, *, class_id: int, start_date: date, end_date: date
 ) -> list[AttendanceRecord]:
@@ -106,6 +107,7 @@ async def get_class_attendance_for_date_range(
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
 
 async def get_class_attendance_summary(
     db: AsyncSession, *, class_id: int, week_start_date: date

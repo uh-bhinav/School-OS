@@ -3,12 +3,15 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+
 class StreamForSubjectOut(BaseModel):
     id: int
     name: str
 
     class Config:
         from_attributes = True
+
+
 class SubjectCreate(BaseModel):
     school_id: int
     name: str
@@ -34,7 +37,6 @@ class SubjectOut(BaseModel):
     category: Optional[str] = None
     is_active: bool
     streams: list[StreamForSubjectOut] = []
-
 
     class Config:
         from_attributes = True

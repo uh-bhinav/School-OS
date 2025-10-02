@@ -21,6 +21,7 @@ from app.schemas.student_schema import (
     StudentUpdate,
 )
 
+
 async def create_student(
     db: AsyncSession, supabase: Client, *, student_in: StudentCreate
 ) -> Optional[Student]:
@@ -222,7 +223,7 @@ async def get_student_academic_summary(
     attendance_result = (await db.execute(attendance_stmt)).first()
     present_count, total_count = attendance_result or (0, 0)
     attendance_percentage = (
-    (present_count / total_count) * 100 if total_count > 0 else None
+        (present_count / total_count) * 100 if total_count > 0 else None
     )
 
     # --- Fetch Recent Marks ---
@@ -252,7 +253,7 @@ async def get_student_academic_summary(
         total_max_marks += max_marks
 
     average_percentage = (
-    (total_score / total_max_marks) * 100 if total_max_marks > 0 else None
+        (total_score / total_max_marks) * 100 if total_max_marks > 0 else None
     )
 
     summary = StudentAcademicSummaryOut(

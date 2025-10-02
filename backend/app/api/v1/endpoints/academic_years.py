@@ -146,10 +146,10 @@ async def set_the_active_year(
             status_code=status.HTTP_404_NOT_FOUND,
             # The long line is broken into a multi-line string
             detail=(
-                "Academic year not found or does not belong to the "
-                "specified school."
+                "Academic year not found or does not belong to the " "specified school."
             ),
         )
     return updated_year
+
 
 # A newline character is implicitly added here at the end of the file.

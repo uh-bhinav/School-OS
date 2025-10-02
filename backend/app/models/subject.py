@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from app.db.base import Base
 from app.models.stream import stream_subjects_association
 
+
 class Subject(Base):
     """
     SQLAlchemy model for the subjects table.
