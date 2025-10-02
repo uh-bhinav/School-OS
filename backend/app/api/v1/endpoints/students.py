@@ -2,7 +2,6 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from supabase import Client
 
 from app.core.security import (
     get_current_user_profile,
@@ -20,6 +19,7 @@ from app.schemas.student_schema import (
     StudentUpdate,
 )
 from app.services import student_service
+from supabase import Client
 
 router = APIRouter()
 

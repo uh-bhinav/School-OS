@@ -4,12 +4,12 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from supabase import Client, create_client
 
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.profile import Profile
 from app.models.user_role import UserRole
+from supabase import Client, create_client
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 

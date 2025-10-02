@@ -4,7 +4,6 @@ from typing import Optional
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from supabase import Client
 
 from app.models.attendance_record import AttendanceRecord
 from app.models.exam import Exam
@@ -20,6 +19,7 @@ from app.schemas.student_schema import (
     StudentCreate,
     StudentUpdate,
 )
+from supabase import Client
 
 
 async def create_student(
