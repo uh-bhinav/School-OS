@@ -21,6 +21,7 @@ from app.schemas.student_schema import (
     StudentUpdate,
 )
 
+
 async def create_student(
     db: AsyncSession, supabase: Client, *, student_in: StudentCreate
 ) -> Optional[Student]:
@@ -144,6 +145,7 @@ async def soft_delete_student(db: AsyncSession, student_id: int) -> Optional[Stu
     await db.commit()
     return student_to_delete
 
+
 async def search_students(
     db: AsyncSession,
     *,
@@ -210,16 +212,13 @@ async def get_student_academic_summary(
         return None
 
     # --- Calculate Attendance ---
-    attendance_stmt = (
-        select(
-            func.count().filter(AttendanceRecord.status == "Present"),
-            func.count(),
-        )
-        .where(AttendanceRecord.student_id == student_id)
-    )
+    attendance_stmt = select(
+        func.count().filter(AttendanceRecord.status == "Present"),
+        func.count(),
+    ).where(AttendanceRecord.student_id == student_id)
     if academic_year_id and student.current_class:
-         # A real implementation would filter by date range of the academic year
-         pass
+        # A real implementation would filter by date range of the academic year
+        pass
 
     attendance_result = (await db.execute(attendance_stmt)).first()
     present_count, total_count = attendance_result or (0, 0)

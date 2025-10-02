@@ -1,10 +1,15 @@
 # backend/app/services/timetable_service.py
+from datetime import date
 from typing import Optional
 
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
+from app.models.period import Period
+from app.models.student import Student
+from app.models.teacher import Teacher
 from app.models.timetable import Timetable
 from app.schemas.timetable_schema import TimetableEntryCreate, TimetableEntryUpdate
 
@@ -79,3 +84,63 @@ async def soft_delete_timetable_entry(
     result = await db.execute(stmt)
     await db.commit()
     return result.scalar_one_or_none()
+
+
+async def get_schedule_for_day(
+    db: AsyncSession,
+    *,
+    school_id: int,
+    target_type: str,
+    target_id: int,
+    schedule_date: date,
+) -> list[Timetable]:
+    """
+    Gets the detailed schedule for a specific day for a class, teacher, or student.
+    It ensures that the data is scoped to the correct school.
+    """
+    # 1. Calculate the day of the week (Monday=1, ..., Sunday=7)
+    day_of_week = schedule_date.weekday() + 1
+
+    # 2. Build the base query with security and performance in mind
+    base_query = (
+        select(Timetable)
+        .where(
+            Timetable.school_id == school_id,  # Multi-tenancy security
+            Timetable.day_of_week == day_of_week,
+            Timetable.is_active,
+        )
+        .options(
+            # Eagerly load related data to prevent extra DB queries
+            selectinload(Timetable.subject),
+            selectinload(Timetable.teacher).selectinload(Teacher.profile),
+            selectinload(Timetable.period),
+        )
+        .join(Period)  # Join to allow ordering by period start_time
+        .order_by(Period.start_time)
+    )
+
+    # 3. Apply the specific filter based on the target type
+    if target_type == "class":
+        stmt = base_query.where(Timetable.class_id == target_id)
+
+    elif target_type == "teacher":
+        stmt = base_query.where(Timetable.teacher_id == target_id)
+
+    elif target_type == "student":
+        # For a student, first find their class ID
+        student_class_id_res = await db.execute(
+            select(Student.current_class_id).where(Student.student_id == target_id)
+        )
+        student_class_id = student_class_id_res.scalar_one_or_none()
+
+        if not student_class_id:
+            return []  # Return empty list if student is not in a class
+
+        stmt = base_query.where(Timetable.class_id == student_class_id)
+
+    else:
+        return []  # Invalid target type
+
+    # Execute the final query and return the results
+    result = await db.execute(stmt)
+    return list(result.scalars().all())

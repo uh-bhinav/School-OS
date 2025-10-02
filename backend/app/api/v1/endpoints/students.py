@@ -22,9 +22,6 @@ from app.schemas.student_schema import (
 )
 from app.services import student_service
 
-
-
-
 router = APIRouter()
 
 
@@ -114,7 +111,7 @@ async def delete_student(student_id: int, db: AsyncSession = Depends(get_db)):
 @router.get(
     "/search",
     response_model=list[StudentOut],
-    dependencies=[Depends(require_role("Admin"))], # Or other appropriate roles
+    dependencies=[Depends(require_role("Admin"))],  # Or other appropriate roles
 )
 async def search_for_students(
     name: Optional[str] = None,
@@ -168,7 +165,7 @@ async def promote_students_in_bulk(
 @router.get(
     "/{student_id}/academic-summary",
     response_model=StudentAcademicSummaryOut,
-    dependencies=[Depends(require_role("Admin"))], # Also for Teachers, Parents
+    dependencies=[Depends(require_role("Admin"))],  # Also for Teachers, Parents
 )
 async def get_student_summary(
     student_id: int,

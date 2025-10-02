@@ -106,11 +106,12 @@ async def delete_academic_year(year_id: int, db: AsyncSession = Depends(get_db))
         )
     return None
 
+
 @router.get(
     "/{school_id}/active",
     response_model=AcademicYearOut,
     # This can be accessed by any authenticated user of the school
-    dependencies=[Depends(require_role("Admin"))], # Or Teacher, Parent, etc.
+    dependencies=[Depends(require_role("Admin"))],  # Or Teacher, Parent, etc.
 )
 async def get_the_active_year(school_id: int, db: AsyncSession = Depends(get_db)):
     """
@@ -125,6 +126,7 @@ async def get_the_active_year(school_id: int, db: AsyncSession = Depends(get_db)
             detail="No active academic year found for this school.",
         )
     return active_year
+
 
 @router.put(
     "/{school_id}/set-active/{academic_year_id}",

@@ -74,6 +74,7 @@ async def soft_delete_academic_year(
     await db.commit()
     return result.scalar_one_or_none()
 
+
 async def get_active_academic_year(
     db: AsyncSession, *, school_id: int
 ) -> Optional[AcademicYear]:
@@ -86,6 +87,7 @@ async def get_active_academic_year(
     )
     result = await db.execute(stmt)
     return result.scalars().first()
+
 
 async def set_active_academic_year(
     db: AsyncSession, *, school_id: int, academic_year_id: int
