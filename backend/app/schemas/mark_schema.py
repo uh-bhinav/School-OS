@@ -38,3 +38,12 @@ class MarkOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ClassPerformanceSummary(BaseModel):
+    class_average: Optional[float] = None
+    highest_score: Optional[float] = None
+    lowest_score: Optional[float] = None
+    total_students: int
+    students_passed: int
+    failure_rate: float

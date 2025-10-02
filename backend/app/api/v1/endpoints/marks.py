@@ -6,7 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
 from app.models.profile import Profile
-from app.schemas.mark_schema import MarkBulkCreate, MarkCreate, MarkOut, MarkUpdate
+from app.schemas.mark_schema import (
+    ClassPerformanceSummary,
+    MarkBulkCreate,
+    MarkCreate,
+    MarkOut,
+    MarkUpdate,
+)
 from app.services import mark_service, student_contact_service
 
 router = APIRouter()
@@ -141,4 +147,47 @@ async def get_report_card(
 
     return await mark_service.get_student_report_card(
         db=db, student_id=student_id, academic_year_id=academic_year_id
+    )
+
+
+@router.get(
+    "/performance/class/{class_id}/exam/{exam_id}",
+    response_model=ClassPerformanceSummary,
+    dependencies=[Depends(require_role("Admin"))],  # Or Teacher
+)
+async def get_class_performance(
+    class_id: int, exam_id: int, db: AsyncSession = Depends(get_db)
+):
+    """
+    Get a performance summary for a class in a specific exam.
+    """
+    summary = await mark_service.get_class_performance_in_exam(
+        db=db, class_id=class_id, exam_id=exam_id
+    )
+    if not summary:
+        raise HTTPException(
+            status_code=404,
+            detail="No marks found for this class and exam combination.",
+        )
+    return summary
+
+
+@router.get(
+    "/progression/student/{student_id}/subject/{subject_id}",
+    response_model=list[MarkOut],
+    dependencies=[Depends(require_role("Admin"))],  # Or Teacher, Parent, Student
+)
+async def get_grade_progression(
+    student_id: int,
+    subject_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get a student's grade progression in a single subject over time.
+    """
+    # Add security logic here similar to the get_report_card endpoint
+    # to ensure only authorized users can access this data.
+    return await mark_service.get_student_grade_progression(
+        db=db, student_id=student_id, subject_id=subject_id
     )
