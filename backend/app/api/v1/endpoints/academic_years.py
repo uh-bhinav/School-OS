@@ -1,18 +1,14 @@
-from typing import list  # Ensure list is imported or use built-in
-
-# CRITICAL FIX: Add ALL missing FastAPI/Dependency Imports
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# CRITICAL FIX: Add imports for your local dependencies
-from app.core.security import require_role  # Assuming this is the correct path
-from app.db.session import get_db  # Assuming this is the correct path
+from app.core.security import require_role
+from app.db.session import get_db
 from app.schemas.academic_year_schema import (
     AcademicYearCreate,
     AcademicYearOut,
     AcademicYearUpdate,
 )
-from app.services import academic_year_service  # Import your service file
+from app.services import academic_year_service
 
 # --- Router Definition ---
 router = APIRouter()
@@ -22,12 +18,12 @@ router = APIRouter()
     "/",
     response_model=AcademicYearOut,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role("Admin"))],  # F821 FIX: require_role is imported
+    dependencies=[Depends(require_role("Admin"))],
 )
 async def create_new_academic_year(
     *,
     db: AsyncSession = Depends(get_db),
-    year_in: AcademicYearCreate,  # F821 FIX: Depends/get_db imported
+    year_in: AcademicYearCreate,
 ):
     return await academic_year_service.create_academic_year(db=db, year_in=year_in)
 
@@ -97,7 +93,6 @@ async def delete_academic_year(year_id: int, db: AsyncSession = Depends(get_db))
     dependencies=[Depends(require_role("Admin"))],
 )
 async def activate_academic_year_endpoint(
-    # Renamed to avoid confusion with service function
     academic_year_id: int,
     db: AsyncSession = Depends(get_db),
 ):
@@ -107,8 +102,6 @@ async def activate_academic_year_endpoint(
     if not updated_year:
         # E501 Fix: Breaking the detail string
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Academic year not found or does"
-            " not belong to the specified school.",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found "
         )
     return updated_year

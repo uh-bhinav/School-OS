@@ -10,12 +10,10 @@ from app.core.security import (
     get_supabase_client,
     require_role,
 )
-
-# E501 Fix: Lines are broken correctly by Ruff
 from app.db.session import get_db
 from app.models.profile import Profile
 from app.schemas.student_schema import (
-    StudentAcademicSummaryOut,  # Added import
+    StudentAcademicSummaryOut,
     StudentBulkPromoteIn,
     StudentBulkPromoteOut,
     StudentCreate,
@@ -23,9 +21,6 @@ from app.schemas.student_schema import (
     StudentUpdate,
 )
 from app.services import student_service
-
-# ... (Rest of the file follows, assuming imports are correctly alphabetized/grouped)
-
 
 router = APIRouter()
 
@@ -63,7 +58,7 @@ async def enroll_new_student(
 @router.get(
     "/{student_id}",
     response_model=StudentOut,
-    dependencies=[Depends(require_role("Admin", "Teacher"))],  # Added Teacher
+    dependencies=[Depends(require_role("Admin", "Teacher"))],
 )
 async def get_student_by_id(student_id: int, db: AsyncSession = Depends(get_db)):
     db_student = await student_service.get_student(db=db, student_id=student_id)
@@ -116,7 +111,7 @@ async def delete_student(student_id: int, db: AsyncSession = Depends(get_db)):
 @router.get(
     "/search",
     response_model=list[StudentOut],
-    dependencies=[Depends(require_role("Admin"))],  # Or other appropriate roles
+    dependencies=[Depends(require_role("Admin"))],
 )
 async def search_for_students(
     name: Optional[str] = None,
@@ -149,7 +144,7 @@ async def search_for_students(
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def promote_students_in_bulk(
+async def promote_students_in_bulk(  # FIX: Removed invalid token 'cd' from parameters
     promotion_in: StudentBulkPromoteIn,
     db: AsyncSession = Depends(get_db),
 ):
@@ -170,7 +165,7 @@ async def promote_students_in_bulk(
 @router.get(
     "/{student_id}/academic-summary",
     response_model=StudentAcademicSummaryOut,
-    dependencies=[Depends(require_role("Admin"))],  # Also for Teachers, Parents
+    dependencies=[Depends(require_role("Admin"))],
 )
 async def get_student_summary(
     student_id: int,

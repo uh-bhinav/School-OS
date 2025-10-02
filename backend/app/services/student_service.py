@@ -1,24 +1,26 @@
 # backend/app/services/student_service.py
 from typing import Optional
-from sqlalchemy import select, update, func
+
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from supabase import Client
 
+from app.models.attendance_record import AttendanceRecord
+from app.models.exam import Exam
+from app.models.mark import Mark
 from app.models.profile import Profile
 from app.models.student import Student
-from app.models.user_role import UserRole
-from app.models.attendance_record import AttendanceRecord
-from app.models.mark import Mark
-from app.models.exam import Exam
 from app.models.subject import Subject
+from app.models.user_role import UserRole
 from app.schemas.student_schema import (
+    MarkForSummaryOut,
+    StudentAcademicSummaryOut,
+    StudentBulkPromoteIn,
     StudentCreate,
     StudentUpdate,
-    StudentBulkPromoteIn,
-    StudentAcademicSummaryOut,
-    MarkForSummaryOut
 )
+
 
 async def create_student(
     db: AsyncSession, supabase: Client, *, student_in: StudentCreate
@@ -143,6 +145,7 @@ async def soft_delete_student(db: AsyncSession, student_id: int) -> Optional[Stu
     await db.commit()
     return student_to_delete
 
+
 async def search_students(
     db: AsyncSession,
     *,
@@ -209,20 +212,19 @@ async def get_student_academic_summary(
         return None
 
     # --- Calculate Attendance ---
-    attendance_stmt = (
-        select(
-            func.count().filter(AttendanceRecord.status == "Present"),
-            func.count(),
-        )
-        .where(AttendanceRecord.student_id == student_id)
-    )
+    attendance_stmt = select(
+        func.count().filter(AttendanceRecord.status == "Present"),
+        func.count(),
+    ).where(AttendanceRecord.student_id == student_id)
     if academic_year_id and student.current_class:
-         # A real implementation would filter by date range of the academic year
-         pass
+        # A real implementation would filter by date range of the academic year
+        pass
 
     attendance_result = (await db.execute(attendance_stmt)).first()
     present_count, total_count = attendance_result or (0, 0)
-    attendance_percentage = (present_count / total_count) * 100 if total_count > 0 else None
+    attendance_percentage = (
+        (present_count / total_count) * 100 if total_count > 0 else None
+    )
 
     # --- Fetch Recent Marks ---
     marks_stmt = (
@@ -250,7 +252,9 @@ async def get_student_academic_summary(
         total_score += mark.marks_obtained
         total_max_marks += max_marks
 
-    average_percentage = (total_score / total_max_marks) * 100 if total_max_marks > 0 else None
+    average_percentage = (
+        (total_score / total_max_marks) * 100 if total_max_marks > 0 else None
+    )
 
     summary = StudentAcademicSummaryOut(
         student_id=student_id,

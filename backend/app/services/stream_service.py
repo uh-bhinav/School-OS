@@ -1,6 +1,7 @@
 # backend/app/services/stream_service.py
 
 from typing import Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -84,9 +85,7 @@ async def assign_subjects_to_stream(
     return db_stream
 
 
-async def get_subjects_for_stream(
-    db: AsyncSession, *, stream_id: int
-) -> list[Subject]:
+async def get_subjects_for_stream(db: AsyncSession, *, stream_id: int) -> list[Subject]:
     """
     Retrieves all the subjects that are part of a specific academic stream.
     """

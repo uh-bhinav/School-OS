@@ -1,8 +1,11 @@
 # backend/app/models/subject.py
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
-from app.models.stream import stream_subjects_association
+
 from app.db.base import Base
+from app.models.stream import stream_subjects_association
+
+# backend/app/models/subject.py (RESOLVED)
 
 
 class Subject(Base):
@@ -21,8 +24,13 @@ class Subject(Base):
     is_active = Column(Boolean, default=True)
 
     school = relationship("School")
+
+    # RESOLVED CONFLICT: KEEP BOTH RELATIONSHIPS
+    # 1. Relationship for Marks (from financials branch)
+    marks_records = relationship("Mark", back_populates="subject")
+
+    # 2. Relationship for Streams (from main/other branch)
     streams = relationship(
-        "Stream",
-        secondary=stream_subjects_association,
-        back_populates="subjects"
+        "Stream", secondary=stream_subjects_association, back_populates="subjects"
     )
+    #
