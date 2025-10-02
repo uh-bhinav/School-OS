@@ -1,9 +1,9 @@
-# backend/app/models/subject.py
+# This is the corrected and sorted import block
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
-from app.models.stream import stream_subjects_association
-from app.db.base import Base
 
+from app.db.base import Base
+from app.models.stream import stream_subjects_association
 
 class Subject(Base):
     """

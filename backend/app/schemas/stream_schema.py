@@ -1,6 +1,7 @@
 # backend/app/schemas/stream_schema.py
 
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
 # --- Nested Schemas ---
@@ -38,7 +39,9 @@ class StreamSubjectsUpdate(BaseModel):
     """
     Schema specifically for the operation of assigning a list of subjects to a stream.
     """
-    subject_ids: list[int] = Field(..., description="A list of subject IDs to associate with the stream.")
+    subject_ids: list[int] = Field(
+        ..., description="A list of subject IDs to associate with the stream."
+    )
 
 
 class StreamOut(StreamBase):

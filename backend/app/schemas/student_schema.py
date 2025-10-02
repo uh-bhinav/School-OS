@@ -1,6 +1,8 @@
+# This is the corrected import block
 from datetime import date
 from decimal import Decimal
 from typing import Optional
+
 from pydantic import UUID4, BaseModel, EmailStr, Field
 
 

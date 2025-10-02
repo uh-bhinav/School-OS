@@ -5,9 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_role
 from app.db.session import get_db
+# This is the corrected import block
 from app.schemas.academic_year_schema import (
     AcademicYearCreate,
     AcademicYearOut,
+    AcademicYearUpdate,  # Added AcademicYearUpdate
 )
 from app.services import academic_year_service
 
@@ -129,6 +131,7 @@ async def get_the_active_year(school_id: int, db: AsyncSession = Depends(get_db)
     response_model=AcademicYearOut,
     dependencies=[Depends(require_role("Admin"))],
 )
+# This is the corrected function
 async def set_the_active_year(
     school_id: int, academic_year_id: int, db: AsyncSession = Depends(get_db)
 ):
@@ -141,6 +144,12 @@ async def set_the_active_year(
     if not updated_year:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Academic year not found or does not belong to the specified school.",
+            # The long line is broken into a multi-line string
+            detail=(
+                "Academic year not found or does not belong to the "
+                "specified school."
+            ),
         )
     return updated_year
+
+# A newline character is implicitly added here at the end of the file.

@@ -1,13 +1,13 @@
 # backend/app/models/stream.py
 
 from sqlalchemy import (
-    Table,
+    Boolean,
     Column,
+    ForeignKey,
     Integer,
     String,
-    Boolean,
+    Table,
     Text,
-    ForeignKey,
 )
 from sqlalchemy.orm import relationship
 
@@ -47,5 +47,5 @@ class Stream(Base):
     subjects = relationship(
         "Subject",
         secondary=stream_subjects_association,
-        back_populates="streams" # This assumes you will add a 'streams' relationship to the Subject model
+        back_populates="streams"
     )

@@ -1,18 +1,24 @@
+# This is the corrected import block
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from supabase import Client
-from typing import Optional
 
-from app.core.security import get_supabase_client, get_current_user_profile, require_role
+from app.core.security import (
+    get_current_user_profile,
+    get_supabase_client,
+    require_role,
+)
 from app.db.session import get_db
 from app.models.profile import Profile
 from app.schemas.student_schema import (
+    StudentAcademicSummaryOut,
+    StudentBulkPromoteIn,
+    StudentBulkPromoteOut,
     StudentCreate,
     StudentOut,
     StudentUpdate,
-    StudentBulkPromoteIn,
-    StudentBulkPromoteOut,
-    StudentAcademicSummaryOut, # Added import
 )
 from app.services import student_service
 
