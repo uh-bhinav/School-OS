@@ -1,4 +1,3 @@
-# This is the corrected import block
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -58,7 +57,7 @@ async def enroll_new_student(
 @router.get(
     "/{student_id}",
     response_model=StudentOut,
-    dependencies=[Depends(require_role("Admin", "Teacher"))],  # Added Teacher
+    dependencies=[Depends(require_role("Admin", "Teacher"))],
 )
 async def get_student_by_id(student_id: int, db: AsyncSession = Depends(get_db)):
     db_student = await student_service.get_student(db=db, student_id=student_id)
@@ -165,7 +164,7 @@ async def promote_students_in_bulk(
 @router.get(
     "/{student_id}/academic-summary",
     response_model=StudentAcademicSummaryOut,
-    dependencies=[Depends(require_role("Admin"))],  # Also for Teachers, Parents
+    dependencies=[Depends(require_role("Admin"))],
 )
 async def get_student_summary(
     student_id: int,

@@ -22,9 +22,12 @@ class Subject(Base):
     is_active = Column(Boolean, default=True)
 
     school = relationship("School")
+
+    # RESOLVED CONFLICT: KEEP BOTH RELATIONSHIPS
+    # 1. Relationship for Marks (from financials branch)
+    marks_records = relationship("Mark", back_populates="subject")
+
+    # 2. Relationship for Streams (from main/other branch)
     streams = relationship(
         "Stream", secondary=stream_subjects_association, back_populates="subjects"
     )
-
-    timetables = relationship("Timetable", back_populates="subject")
-    marks_records = relationship("Mark", back_populates="subject")

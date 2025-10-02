@@ -1,4 +1,3 @@
-# REPLACE the entire import block at the top of the file with this:
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +10,7 @@ from app.schemas.academic_year_schema import (
 )
 from app.services import academic_year_service
 
+# --- Router Definition ---
 router = APIRouter()
 
 
@@ -21,44 +21,32 @@ router = APIRouter()
     dependencies=[Depends(require_role("Admin"))],
 )
 async def create_new_academic_year(
-    year_in: AcademicYearCreate, db: AsyncSession = Depends(get_db)
+    *, db: AsyncSession = Depends(get_db), year_in: AcademicYearCreate
 ):
-    """
-    Create a new academic year. Admin only.
-    """
     return await academic_year_service.create_academic_year(db=db, year_in=year_in)
+
+
+@router.get(
+    "/all",
+    response_model=list[AcademicYearOut],
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def get_all_academic_years(db: AsyncSession = Depends(get_db)):
+    return await academic_year_service.get_all_academic_years(db=db)
 
 
 @router.get(
     "/{year_id}",
     response_model=AcademicYearOut,
-    dependencies=[Depends(require_role("Admin", "Teacher"))],
-)
-async def get_academic_year_by_id(year_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    Get a single academic year by its ID.
-    """
-    db_year = await academic_year_service.get_academic_year(db, year_id=year_id)
-    if not db_year:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Academic year not found",
-        )
-    return db_year
-
-
-@router.get(
-    "/school/{school_id}",
-    response_model=list[AcademicYearOut],
     dependencies=[Depends(require_role("Admin"))],
 )
-async def get_all_years_for_school(school_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    Get all active academic years for a specific school.
-    """
-    return await academic_year_service.get_all_academic_years_for_school(
-        db, school_id=school_id
-    )
+async def get_academic_year_details(year_id: int, db: AsyncSession = Depends(get_db)):
+    year = await academic_year_service.get_academic_year(db, year_id)
+    if not year:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found"
+        )
+    return year
 
 
 @router.put(
@@ -71,14 +59,10 @@ async def update_academic_year_details(
     year_in: AcademicYearUpdate,
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Update an academic year's details.
-    """
-    db_obj = await academic_year_service.get_academic_year(db, year_id=year_id)
+    db_obj = await academic_year_service.get_academic_year(db, year_id)
     if not db_obj:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Academic year not found",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found"
         )
     return await academic_year_service.update_academic_year(
         db, db_obj=db_obj, year_in=year_in
@@ -91,25 +75,21 @@ async def update_academic_year_details(
     dependencies=[Depends(require_role("Admin"))],
 )
 async def delete_academic_year(year_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    Soft-deletes an academic year.
-    """
     deleted_year = await academic_year_service.soft_delete_academic_year(
         db, year_id=year_id
     )
     if not deleted_year:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Active academic year with id {year_id} not found",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found"
         )
     return None
 
 
+# RESTful GET for the current active year
 @router.get(
     "/{school_id}/active",
     response_model=AcademicYearOut,
-    # This can be accessed by any authenticated user of the school
-    dependencies=[Depends(require_role("Admin"))],  # Or Teacher, Parent, etc.
+    dependencies=[Depends(require_role("Admin"))],
 )
 async def get_the_active_year(school_id: int, db: AsyncSession = Depends(get_db)):
     """
@@ -126,12 +106,12 @@ async def get_the_active_year(school_id: int, db: AsyncSession = Depends(get_db)
     return active_year
 
 
+# RESTful PUT for setting the active year
 @router.put(
     "/{school_id}/set-active/{academic_year_id}",
     response_model=AcademicYearOut,
     dependencies=[Depends(require_role("Admin"))],
 )
-# This is the corrected function
 async def set_the_active_year(
     school_id: int, academic_year_id: int, db: AsyncSession = Depends(get_db)
 ):
@@ -144,12 +124,8 @@ async def set_the_active_year(
     if not updated_year:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            # The long line is broken into a multi-line string
             detail=(
                 "Academic year not found or does not belong to the " "specified school."
             ),
         )
     return updated_year
-
-
-# A newline character is implicitly added here at the end of the file.
