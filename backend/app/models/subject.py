@@ -3,7 +3,7 @@ from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
-from app.models.stream import stream_subjects_association
+from app.models.streams import stream_subjects_association
 
 
 class Subject(Base):
@@ -31,3 +31,6 @@ class Subject(Base):
     streams = relationship(
         "Stream", secondary=stream_subjects_association, back_populates="subjects"
     )
+
+    # 3. Relationship for Timetables
+    timetables = relationship("Timetable", back_populates="subject")

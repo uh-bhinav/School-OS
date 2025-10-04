@@ -42,4 +42,5 @@ class Invoice(Base):
     # Relationships
     student = relationship("Student", back_populates="invoices")
     fee_template = relationship("FeeTemplate")
-    fee_term = relationship("FeeTerm")
+    # fee_term = relationship("FeeTerm")
+    # # Commented out - FeeTerm model doesn't exist yet

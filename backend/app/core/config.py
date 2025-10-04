@@ -18,6 +18,7 @@ class Settings(BaseSettings):
         # In a team, you might place the .env file in the root directory.
         # This line helps pydantic find it relative to this file's location.
         env_file_encoding = "utf-8"
+        extra = "ignore"  # Ignore extra fields in .env file
 
 
 settings = Settings()

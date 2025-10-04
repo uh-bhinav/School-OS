@@ -44,9 +44,7 @@ api_router.include_router(
     prefix="/employment-statuses",
     tags=["Admin: Lookup Tables"],
 )
-api_router.include_router(
-    exam_types.router, prefix="/exam-types", tags=["Admin: Lookup Tables"]
-)
+api_router.include_router(exam_types.router, prefix="/exam-types", tags=["exam-types"])
 api_router.include_router(
     product_categories.router,
     prefix="/product-categories",

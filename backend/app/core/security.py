@@ -1,32 +1,31 @@
 # backend/app/core/security.py
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.profile import Profile
-from app.models.user_role import UserRole
+from app.models.user_roles import UserRole
 from supabase import Client, create_client
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 # Dependency to get the Supabase client
-async def get_supabase_client() -> Client:
+def get_supabase_client() -> Client:
     return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 
 # Dependency to get the current user's profile from your database
-async def get_current_user_profile(
+def get_current_user_profile(
     token: str = Depends(oauth2_scheme),
     supabase: Client = Depends(get_supabase_client),
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db),
 ) -> Profile:
     try:
-        user_response = await supabase.auth.get_user(token)
+        user_response = supabase.auth.get_user(token)
         auth_user = user_response.user
         if not auth_user:
             raise HTTPException(
@@ -39,7 +38,7 @@ async def get_current_user_profile(
             .where(Profile.user_id == auth_user.id)
             .options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
         )
-        result = await db.execute(stmt)
+        result = db.execute(stmt)
         profile = result.scalars().first()
 
         if not profile:
@@ -62,7 +61,7 @@ def require_role(required_role: str):
     This enforces the application-layer security based on your defined policies.
     """
 
-    async def role_checker(
+    def role_checker(
         profile: Profile = Depends(get_current_user_profile),
     ) -> Profile:
         user_roles = {role.role_definition.role_name for role in profile.roles}

@@ -1,6 +1,5 @@
 # REPLACE the entire import block at the top of the file with this:
 from datetime import date
-from typing import dict
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession

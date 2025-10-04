@@ -1,34 +1,29 @@
 # backend/app/services/exam_type_service.py
 from typing import Optional
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-# No longer need 'from typing import List'
 from app.models.exam_type import ExamType
 from app.schemas.exam_type_schema import ExamTypeCreate
 
 
-async def create_exam_type(
-    db: AsyncSession, *, exam_type_in: ExamTypeCreate
-) -> ExamType:
+def create_exam_type(db: Session, *, exam_type_in: ExamTypeCreate) -> ExamType:
     db_obj = ExamType(**exam_type_in.model_dump())
     db.add(db_obj)
-    await db.commit()
-    await db.refresh(db_obj)
+    db.commit()
+    db.refresh(db_obj)
     return db_obj
 
 
-async def get_all_exam_types_for_school(
-    db: AsyncSession, school_id: int
-) -> list[ExamType]:  # Changed from List to list
+def get_all_exam_types_for_school(db: Session, school_id: int) -> list[ExamType]:
     stmt = select(ExamType).where(ExamType.school_id == school_id)
-    result = await db.execute(stmt)
+    result = db.execute(stmt)
     return list(result.scalars().all())
 
 
-async def get_exam_type_id_by_name(
-    db: AsyncSession, school_id: int, type_name: str
+def get_exam_type_id_by_name(
+    db: Session, school_id: int, type_name: str
 ) -> Optional[int]:
     """
     Agentic Function: Retrieves the ID for a given exam type name within a school.
@@ -36,14 +31,12 @@ async def get_exam_type_id_by_name(
     stmt = select(ExamType.exam_type_id).where(
         ExamType.school_id == school_id, ExamType.type_name == type_name
     )
-    result = await db.execute(stmt)
+    result = db.execute(stmt)
     # Returns the integer ID or None
     return result.scalar_one_or_none()
 
 
-async def check_type_name_exists(
-    db: AsyncSession, school_id: int, type_name: str
-) -> bool:
+def check_type_name_exists(db: Session, school_id: int, type_name: str) -> bool:
     """
     Agentic Function: Checks if an exam type name already exists for the school.
     """
@@ -52,22 +45,22 @@ async def check_type_name_exists(
         .where(ExamType.school_id == school_id, ExamType.type_name == type_name)
         .exists()
     )
-    result = await db.execute(stmt)
+    result = db.execute(stmt)
     return result.scalar_one()
 
 
-async def update_type_name(
-    db: AsyncSession, exam_type_id: int, new_name: str
+def update_type_name(
+    db: Session, exam_type_id: int, new_name: str
 ) -> Optional[ExamType]:
     """
     Agentic Function: Updates the name of an existing exam type.
     """
-    db_obj = await db.get(ExamType, exam_type_id)
+    db_obj = db.get(ExamType, exam_type_id)
     if not db_obj:
         return None
 
     db_obj.type_name = new_name
     db.add(db_obj)
-    await db.commit()
-    await db.refresh(db_obj)
+    db.commit()
+    db.refresh(db_obj)
     return db_obj

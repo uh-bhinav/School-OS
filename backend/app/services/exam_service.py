@@ -3,64 +3,63 @@ from typing import (
     Optional,
 )
 
+from sqlalchemy import select
+
 # FIX 1: Import Dict, Any, List from typing
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy.orm import Session
 
 from app.models.exam import Exam
-from app.models.marks import Mark  # Assuming you have a Mark model
-from app.models.subjects import Subject
+from app.models.mark import Mark  # Assuming you have a Mark model
+from app.models.subject import Subject
 
 # Assuming you have a Subject model
 from app.schemas.exam_schema import ExamCreate, ExamUpdate
 
 
-async def create_exam(db: AsyncSession, exam_in: ExamCreate) -> Exam:
+def create_exam(db: Session, exam_in: ExamCreate) -> Exam:
     db_obj = Exam(**exam_in.model_dump())
     db.add(db_obj)
-    await db.commit()
-    await db.refresh(db_obj)
+    db.commit()
+    db.refresh(db_obj)
     return db_obj
 
 
-async def get_exam_by_id(db: AsyncSession, exam_id: int) -> Optional[Exam]:
+def get_exam_by_id(db: Session, exam_id: int) -> Optional[Exam]:
     """Retrieves an active exam by ID (READ FILTER APPLIED)."""
     # NOTE: The critical filter required by project standards:
     stmt = select(Exam).where(Exam.id == exam_id, Exam.is_active.is_(True))
-    result = await db.execute(stmt)
+    result = db.execute(stmt)
     return result.scalars().first()
 
 
-async def get_all_exams_for_school(db: AsyncSession, school_id: int) -> list[Exam]:
+def get_all_exams_for_school(db: Session, school_id: int) -> list[Exam]:
     stmt = (
         select(Exam).where(Exam.school_id == school_id).order_by(Exam.start_date.desc())
     )
-    result = await db.execute(stmt)
-    return result.scalars().all()
+    result = db.execute(stmt)
+    return list(result.scalars().all())
 
 
-async def update_exam(db: AsyncSession, db_obj: Exam, exam_in: ExamUpdate) -> Exam:
+def update_exam(db: Session, db_obj: Exam, exam_in: ExamUpdate) -> Exam:
     update_data = exam_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_obj, field, value)
     db.add(db_obj)
-    await db.commit()
-    await db.refresh(db_obj)
+    db.commit()
+    db.refresh(db_obj)
     return db_obj
 
 
-async def delete_exam(db: AsyncSession, db_obj: Exam) -> Exam:
+def delete_exam(db: Session, db_obj: Exam) -> Exam:
     # Assuming the soft delete standard is
     # implemented here, as per project context
     db_obj.is_active = False
     db.add(db_obj)
-    await db.commit()
+    db.commit()
     return db_obj
 
 
-async def get_exam_mark_summary(
-    db: AsyncSession, exam_id: int, student_id: int
-) -> dict[str, Any]:
+def get_exam_mark_summary(db: Session, exam_id: int, student_id: int) -> dict[str, Any]:
     """
     Agentic Function: Retrieves a student's
       consolidated results for all subjects
@@ -87,7 +86,7 @@ async def get_exam_mark_summary(
         )
     )
 
-    result = await db.execute(stmt)
+    result = db.execute(stmt)
     mark_records = result.all()
 
     if not mark_records:
@@ -122,9 +121,7 @@ async def get_exam_mark_summary(
 # to resolve E402 and F811 errors (Imports must be at the top).
 
 
-async def fetch_exams_by_academic_year(
-    db: AsyncSession, academic_year_id: int
-) -> list[Exam]:
+def fetch_exams_by_academic_year(db: Session, academic_year_id: int) -> list[Exam]:
     """
     Agentic Function: Retrieves all active
     exams scheduled within a specific academic year.
@@ -139,6 +136,6 @@ async def fetch_exams_by_academic_year(
         )
         .order_by(Exam.start_date.asc())
     )
-    result = await db.execute(stmt)
+    result = db.execute(stmt)
     # Return a list of Exam objects
-    return result.scalars().all()
+    return list(result.scalars().all())

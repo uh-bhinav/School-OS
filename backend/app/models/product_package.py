@@ -29,9 +29,13 @@ class ProductPackage(Base):
     school = relationship("School")
 
     # 1. Relationship to the junction table (PackageItem)
-    items = relationship("PackageItem", back_populates="package")
+    # items = relationship("PackageItem", back_populates="package")
+    #  # Commented out - PackageItem model doesn't exist yet
 
-    # 2. Relationship to the target Product table, accessed via the junction
-    products = relationship(
-        "Product", secondary="package_items", back_populates="packages"
-    )
+    # 2. Relationship to the target Product table,
+    # accessed via the junction
+    # products = relationship(
+    #     "Product", secondary="package_items",
+    #  back_populates="packages"
+    # )  # Commented out - package_items table
+    #  doesn't exist yet

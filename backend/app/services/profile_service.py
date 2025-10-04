@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.profile import Profile
 from app.models.role_definition import RoleDefinition
-from app.models.user_roles import UserRole
+from app.models.user_role import UserRole
 from app.schemas.profile_schema import ProfileUpdate
 
 
