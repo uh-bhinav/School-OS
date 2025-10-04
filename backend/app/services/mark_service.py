@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from app.models.exams import Exam
+from app.models.exam import Exam
 from app.models.mark import Mark
 from app.models.student import Student
 from app.schemas.mark_schema import ClassPerformanceSummary, MarkCreate, MarkUpdate
