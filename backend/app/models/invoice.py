@@ -44,4 +44,4 @@ class Invoice(Base):
     student = relationship("Student", back_populates="invoices")
     fee_template = relationship("FeeTemplate")
     fee_term = relationship("FeeTerm")
-    """
+"""
