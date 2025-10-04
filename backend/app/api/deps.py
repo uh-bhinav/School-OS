@@ -1,5 +1,5 @@
 # backend/app/api/deps.py
-from typing import Generator
+from collections.abc import Generator
 
 from app.db.session import SessionLocal
 
