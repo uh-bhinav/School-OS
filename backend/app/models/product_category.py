@@ -1,14 +1,14 @@
-# backend/app/models/product_category.py
+"""# backend/app/models/product_category.py
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class ProductCategory(Base):
-    """
+
     SQLAlchemy model for the product_categories table.
-    """
+
 
     __tablename__ = "product_categories"
 
@@ -17,3 +17,4 @@ class ProductCategory(Base):
     category_name = Column(String)
 
     school = relationship("School")
+"""

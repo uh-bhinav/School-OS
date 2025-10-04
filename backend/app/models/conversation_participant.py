@@ -2,7 +2,7 @@
 from sqlalchemy import UUID, Column, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 # Assuming Profile model is available
 

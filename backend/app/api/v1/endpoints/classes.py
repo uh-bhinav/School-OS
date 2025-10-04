@@ -34,7 +34,7 @@ async def create_new_class(class_in: ClassCreate, db: AsyncSession = Depends(get
 @router.get(
     "/{class_id}",
     response_model=ClassOut,
-    dependencies=[Depends(require_role("Admin", "Teacher"))],
+    dependencies=[Depends(require_role("Admin"))],
 )
 async def get_class_by_id(class_id: int, db: AsyncSession = Depends(get_db)):
     """

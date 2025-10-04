@@ -3,9 +3,9 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from supabase.lib.client_options import User
+from supabase_auth.types import User
 
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
 from app.schemas.order_schema import OrderCreate, OrderOut, OrderUpdate
 from app.services import order_service
@@ -29,7 +29,7 @@ def generate_order_number() -> str:
 async def place_new_order(
     order_in: OrderCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_profile),
 ):
     """
     Places a new order. Triggers stock checks and deduction. Parent only.
@@ -56,7 +56,8 @@ async def place_new_order(
 
 @router.get("/my-orders", response_model=list[OrderOut], tags=["E-commerce: Orders"])
 async def get_my_orders(
-    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_profile),
 ):
     """
     Gets all orders placed by the current authenticated parent.

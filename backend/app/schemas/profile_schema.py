@@ -1,7 +1,7 @@
 # backend/app/schemas/profile_schema.py
 from typing import Optional
 
-from pydantic import UUID4, BaseModel
+from pydantic import UUID4, BaseModel, ConfigDict
 
 from app.schemas.student_schema import StudentOut
 from app.schemas.teacher_schema import TeacherOut
@@ -35,8 +35,7 @@ class ProfileOut(BaseModel):
     teacher: Optional[TeacherOut] = None
     student: Optional[StudentOut] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProfileUpdate(BaseModel):

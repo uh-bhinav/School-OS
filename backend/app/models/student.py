@@ -10,7 +10,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class Student(Base):
@@ -33,7 +33,7 @@ class Student(Base):
     # --- Relationships ---
 
     # One-to-one relationship with Profile
-    profile = relationship("Profile", back_populates="student_record")
+    profile = relationship("Profile", back_populates="student")
 
     # Many-to-one relationship with Class
     current_class = relationship("Class")
@@ -45,3 +45,5 @@ class Student(Base):
     attendance_records = relationship("AttendanceRecord", back_populates="student")
 
     contacts = relationship("StudentContact", back_populates="student")
+
+    # invoices = relationship("Invoice", back_populates="student")

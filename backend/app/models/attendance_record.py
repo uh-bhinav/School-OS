@@ -4,7 +4,7 @@ import datetime
 from sqlalchemy import TIMESTAMP, Column, Date, ForeignKey, Integer, String, text
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class AttendanceRecord(Base):

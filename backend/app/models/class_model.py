@@ -2,7 +2,7 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 # Define the association table for the many-to-many relationship
 class_subjects_association = Table(

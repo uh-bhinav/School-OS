@@ -1,12 +1,12 @@
 # backend/app/services/class_service.py
 from typing import Optional
 
-from backend.app.models.class_model import Class
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
+from app.models.class_model import Class
 from app.models.subject import Subject
 from app.models.teacher import Teacher
 from app.schemas.class_schema import ClassCreate, ClassUpdate

@@ -1,14 +1,14 @@
-# backend/app/models/order.py
+"""# backend/app/models/order.py
 from sqlalchemy import UUID, Column, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class Order(Base):
-    """
+
     SQLAlchemy model for the orders table.
-    """
+
 
     __tablename__ = "orders"
 
@@ -24,3 +24,4 @@ class Order(Base):
     student = relationship("Student")
     parent = relationship("Profile")
     items = relationship("OrderItem", back_populates="order")  # Link to order items
+"""
