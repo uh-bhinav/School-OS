@@ -25,4 +25,4 @@ class Cart(Base):
     # Relationships
     user = relationship("Profile")
     items = relationship("CartItem", back_populates="cart")  # Link to cart items
-    """
+"""
