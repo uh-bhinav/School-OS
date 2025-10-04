@@ -13,6 +13,7 @@ sqlalchemy = {extras = ["asyncpg"], version = ">=2.0.43,<3.0.0"}
 psycopg2-binary = ">=2.9.10,<3.0.0"
 python-dotenv = ">=1.1.1,<2.0.0"
 supabase = ">=2.20.0,<3.0.0"
+psycopg = "^3.2.10"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.4.2,<9.0.0"
