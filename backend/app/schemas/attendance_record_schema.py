@@ -1,9 +1,9 @@
 # backend/app/schemas/attendance_record_schema.py
-from datetime import date
+from datetime import date as date_type
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AttendanceStatus(str, Enum):
@@ -20,7 +20,7 @@ class AttendanceRecordCreate(BaseModel):
     period_id: Optional[int] = None
     teacher_id: Optional[int] = None
     notes: Optional[str] = None
-    date: Optional[date] = date.today()
+    date: Optional[date_type] = Field(default_factory=date_type.today)
 
 
 # Properties to receive on update
@@ -38,7 +38,7 @@ class AttendanceRecordOut(BaseModel):
     id: int
     student_id: int
     class_id: int
-    date: date
+    date: date_type
     status: AttendanceStatus
     period_id: Optional[int] = None
     teacher_id: Optional[int] = None
@@ -50,7 +50,7 @@ class AttendanceRecordOut(BaseModel):
 
 class ClassAttendanceSummaryOut(BaseModel):
     class_id: int
-    week_start_date: date
+    week_start_date: date_type
     total_students: int
     total_present: int
     total_absent: int

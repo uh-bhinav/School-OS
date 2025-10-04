@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.profile import Profile
-from app.models.user_roles import UserRole
+from app.models.user_role import UserRole
 from supabase import Client, create_client
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")

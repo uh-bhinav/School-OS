@@ -11,8 +11,6 @@ from app.api.v1.endpoints import exam_types, exams
 from app.db.session import SessionLocal, engine
 
 # Import all models to ensure relationships are properly configured
-# Import all models to ensure relationships are properly configured
-# Import them all at once to avoid circular dependency issues
 
 
 def override_get_db() -> Generator[Session, None, None]:
