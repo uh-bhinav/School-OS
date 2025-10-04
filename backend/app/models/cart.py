@@ -1,17 +1,17 @@
-# backend/app/models/cart.py
+"""# backend/app/models/cart.py
 from sqlalchemy import UUID, Column, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 # Assuming the Profile model is available
 
 
 class Cart(Base):
-    """
+
     SQLAlchemy model for the carts table (Shopping Cart Header).
-    """
+
 
     __tablename__ = "carts"
 
@@ -25,3 +25,4 @@ class Cart(Base):
     # Relationships
     user = relationship("Profile")
     items = relationship("CartItem", back_populates="cart")  # Link to cart items
+    """

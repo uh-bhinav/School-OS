@@ -1,4 +1,5 @@
 # backend/app/core/security.py
+import requests
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.profile import Profile
-from app.models.user_role import UserRole
+from app.models.user_roles import UserRole
 from supabase import Client, create_client
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -20,7 +21,7 @@ async def get_supabase_client() -> Client:
 
 
 # Dependency to get the current user's profile from your database
-async def get_current_user_profile(
+async def _get_current_user_profile_from_db(
     token: str = Depends(oauth2_scheme),
     supabase: Client = Depends(get_supabase_client),
     db: AsyncSession = Depends(get_db),
@@ -33,7 +34,6 @@ async def get_current_user_profile(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
             )
 
-        # Fetch the user's profile and roles from your public schema
         stmt = (
             select(Profile)
             .where(Profile.user_id == auth_user.id)
@@ -42,9 +42,10 @@ async def get_current_user_profile(
         result = await db.execute(stmt)
         profile = result.scalars().first()
 
-        if not profile:
+        if not profile or not profile.is_active:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Profile not found"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Profile not found or inactive",
             )
 
         return profile
@@ -56,21 +57,69 @@ async def get_current_user_profile(
 
 
 # Final implementation of the role checker
-def require_role(required_role: str):
+def require_role(*required_roles: str):
     """
-    Dependency that checks if the current user has the required role.
-    This enforces the application-layer security based on your defined policies.
+    Dependency that checks if the current user has ANY of the required roles.
     """
+    required_roles_set = set(required_roles)
 
     async def role_checker(
-        profile: Profile = Depends(get_current_user_profile),
+        profile: Profile = Depends(_get_current_user_profile_from_db),
     ) -> Profile:
         user_roles = {role.role_definition.role_name for role in profile.roles}
-        if required_role not in user_roles:
+
+        # If the user has no roles in common with the required roles, deny access.
+        if user_roles.isdisjoint(required_roles_set):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Operation not permitted. Requires '{required_role}' role.",
+                detail=(
+                    "Operation not permitted. "
+                    f"Requires one of: {', '.join(required_roles)}."
+                ),
             )
         return profile
 
     return role_checker
+
+
+get_current_user_profile = _get_current_user_profile_from_db
+
+
+async def invite_user(
+    email: str,
+    school_id: int,
+    first_name: str,
+    last_name: str,
+    phone_number: str | None = None,
+    gender: str | None = None,
+    dob: str | None = None,
+) -> dict:
+    payload = {
+        "email": email,
+        "data": {
+            "school_id": school_id,
+            "first_name": first_name,
+            "last_name": last_name,
+            "phone_number": phone_number,
+            "gender": gender,
+            "date_of_birth": dob,
+        },
+    }
+
+    response = requests.post(
+        f"{settings.SUPABASE_URL}/auth/v1/invite",
+        headers={
+            "apikey": settings.SUPABASE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_KEY}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+    )
+
+    if not response.ok:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Supabase invite failed: {response.text}",
+        )
+
+    return response.json()

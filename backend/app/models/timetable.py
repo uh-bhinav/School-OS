@@ -8,7 +8,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func  # Needed for timestamps
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class Timetable(Base):
@@ -40,7 +40,7 @@ class Timetable(Base):
     school = relationship("School")
 
     class_record = relationship("Class", back_populates="timetables")
-    subject = relationship("Subject", back_populates="timetables")
     teacher = relationship("Teacher", back_populates="timetables")
     period = relationship("Period", back_populates="timetables")
     academic_year = relationship("AcademicYear", back_populates="timetables")
+    subjects = relationship("Subject", back_populates="timetables")

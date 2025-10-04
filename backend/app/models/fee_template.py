@@ -1,14 +1,14 @@
 # backend/app/models/fee_template.py
-from sqlalchemy import Column, Date, ForeignKey, Integer, Numeric, String
+"""from sqlalchemy import Column, Date, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class FeeTemplate(Base):
-    """
+
     SQLAlchemy model for the fee_templates table (Fee Structure).
-    """
+
 
     __tablename__ = "fee_templates"
 
@@ -26,3 +26,4 @@ class FeeTemplate(Base):
     # Relationships
     school = relationship("School")
     academic_year = relationship("AcademicYear")
+"""

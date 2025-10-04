@@ -1,15 +1,16 @@
-# backend/app/models/product_package.py (Completed)
+"""# backend/app/models/product_package.py (Completed)
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
+from app.db.base_class import Base
+from app.models.package_item import package_items_association
 
 
 class ProductPackage(Base):
-    """
+
     SQLAlchemy model for the product_packages table (Bundles).
-    """
+
 
     __tablename__ = "product_packages"
 
@@ -28,10 +29,8 @@ class ProductPackage(Base):
     # Relationships
     school = relationship("School")
 
-    # 1. Relationship to the junction table (PackageItem)
-    items = relationship("PackageItem", back_populates="package")
-
     # 2. Relationship to the target Product table, accessed via the junction
     products = relationship(
-        "Product", secondary="package_items", back_populates="packages"
+        "Product", secondary=package_items_association, back_populates="packages"
     )
+"""

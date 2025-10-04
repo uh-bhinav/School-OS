@@ -1,15 +1,15 @@
-# backend/app/models/cart_item.py
+"""# backend/app/models/cart_item.py
 from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 # Assuming the Cart and Product models are available
 class CartItem(Base):
-    """
+
     SQLAlchemy model for the cart_items table (Cart Details).
-    """
+
 
     __tablename__ = "cart_items"
 
@@ -28,3 +28,4 @@ class CartItem(Base):
     __table_args__ = (
         UniqueConstraint("cart_id", "product_id", name="_cart_product_uc"),
     )
+"""

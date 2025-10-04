@@ -11,7 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 # This is a SQLAlchemy association table to manage the many-to-many
 # relationship between streams and subjects. It does not get its own model class.

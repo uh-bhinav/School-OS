@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 # Models and Schemas needed
-from app.models.class_subject import ClassSubject
+# Add this import
+from app.models.class_model import class_subjects_association
 from app.models.subject import Subject
 from app.models.teacher import Teacher
 from app.schemas.subject_schema import SubjectCreate, SubjectUpdate
@@ -78,8 +79,8 @@ async def get_subjects_for_class(db: AsyncSession, class_id: int) -> list[Subjec
     """
     stmt = (
         select(Subject)
-        .join(ClassSubject, Subject.subject_id == ClassSubject.subject_id)
-        .where(ClassSubject.class_id == class_id, Subject.is_active)
+        .join(class_subjects_association)
+        .where(class_subjects_association.c.class_id == class_id, Subject.is_active)
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())

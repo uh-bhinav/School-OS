@@ -1,8 +1,8 @@
-# backend/app/models/user_role.py
+# backend/app/models/user_roles.py
 from sqlalchemy import UUID, Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class UserRole(Base):

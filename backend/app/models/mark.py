@@ -2,7 +2,7 @@
 from sqlalchemy import Column, ForeignKey, Integer, Numeric
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class Mark(Base):
@@ -18,4 +18,4 @@ class Mark(Base):
     # Relationships
     student = relationship("Student", back_populates="marks_records")
     exam = relationship("Exam", back_populates="marks_records")
-    subject = relationship("Subject", back_populates="marks_records")
+    subjects = relationship("Subject", back_populates="marks_records")

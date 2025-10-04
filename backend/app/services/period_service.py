@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.models.classes import Class
+from app.models.class_model import Class
 from app.models.period import Period
 from app.schemas.period_schema import PeriodCreate, PeriodUpdate
 

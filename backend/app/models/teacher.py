@@ -17,7 +17,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class Teacher(Base):
@@ -55,7 +55,6 @@ class Teacher(Base):
 
     # Relationships
     # CHANGED: The relationship name is 'profile' to match the schema and service layers
-    profile = relationship("Profile")
     employment_status = relationship("EmploymentStatus")
     profile = relationship("Profile", back_populates="teacher")
     timetables = relationship("Timetable", back_populates="teacher")

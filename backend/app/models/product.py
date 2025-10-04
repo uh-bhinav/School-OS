@@ -1,15 +1,15 @@
-# backend/app/models/product.py
+"""# backend/app/models/product.py
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
-
+from app.db.base_class import Base
+from app.models.package_item import package_items_association
 
 class Product(Base):
-    """
+
     SQLAlchemy model for the products table.
-    """
+
 
     __tablename__ = "products"
 
@@ -34,3 +34,8 @@ class Product(Base):
     school = relationship("School")
     category = relationship("ProductCategory")
     # Assuming you created the ProductCategory model
+
+    packages = relationship(
+        "ProductPackage", secondary=package_items_association, back_populates="products"
+    )
+"""
