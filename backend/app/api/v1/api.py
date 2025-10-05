@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     exam_types,
     marks,
     periods,
+    profiles,  # Added this import
     schools,
     subjects,
     timetable,
@@ -65,4 +66,8 @@ api_router.include_router(carts.router, prefix="/carts", tags=["E-commerce: Cart
 api_router.include_router(
     communication.router, prefix="/comms", tags=["Communication: Chat"]
 )
+
+# Added the profiles router
+api_router.include_router(profiles.router, prefix="/profiles", tags=["Profiles"])
+
 api_router.include_router(users.router, prefix="/users", tags=["Users"])

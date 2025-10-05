@@ -24,7 +24,8 @@ class Student(Base):
     user_id = Column(
         UUID(as_uuid=True), ForeignKey("profiles.user_id"), nullable=False, unique=True
     )
-    school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False)
+    # The incorrect school_id column has been removed from here.
+    # The school is correctly accessed via the profile relationship.
     current_class_id = Column(Integer, ForeignKey("classes.class_id"), nullable=True)
     roll_number = Column(String)
     enrollment_date = Column(Date)

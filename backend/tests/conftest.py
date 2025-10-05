@@ -1,5 +1,6 @@
 # backend/tests/conftest.py
 import asyncio
+import sys
 from typing import AsyncGenerator
 
 import pytest
@@ -12,6 +13,9 @@ from app.main import app
 from app.models.profile import Profile
 from app.models.role_definition import RoleDefinition
 from app.models.user_roles import UserRole
+
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)

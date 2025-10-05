@@ -41,7 +41,11 @@ async def get_all_profiles_for_school(
     stmt = (
         select(Profile)
         .where(Profile.school_id == school_id)
-        .options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
+        .options(
+            selectinload(Profile.roles).selectinload(UserRole.role_definition),
+            selectinload(Profile.teacher),  # Eagerly load the teacher record
+            selectinload(Profile.student),  # Eagerly load the student record
+        )
         .order_by(Profile.last_name)
     )
 
