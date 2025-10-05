@@ -2,6 +2,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from app.models.class_model import Class
 from app.models.period import Period
@@ -76,9 +77,9 @@ async def fetch_periods_for_class(db: AsyncSession, class_id: int) -> list[Perio
         select(Period)
         # FIX 1: Corrected E712 comparison to
         # use idiomatic SQLAlchemy syntax for boolean check
-        .where(Period.school_id == school_id, Period.is_recess.is_(False)).order_by(
-            Period.period_number
-        )
+        .where(Period.school_id == school_id, Period.is_recess.is_(False))
+        .options(selectinload(Period.school))
+        .order_by(Period.period_number)
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())

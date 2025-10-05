@@ -16,6 +16,7 @@ class TimetableEntryCreate(BaseModel):
     period_id: int
     day_of_week: int = Field(..., ge=1, le=5)  # 1=Monday, 5=Friday
     academic_year_id: int
+    school_id: int
 
 
 # Properties to receive on update
