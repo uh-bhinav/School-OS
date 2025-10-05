@@ -4,11 +4,14 @@ from sqlalchemy import (
     Boolean,
     Column,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     String,
+    Text,
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 
@@ -24,12 +27,17 @@ class Student(Base):
     user_id = Column(
         UUID(as_uuid=True), ForeignKey("profiles.user_id"), nullable=False, unique=True
     )
-    # The incorrect school_id column has been removed from here.
-    # The school is correctly accessed via the profile relationship.
     current_class_id = Column(Integer, ForeignKey("classes.class_id"), nullable=True)
+    proctor_teacher_id = Column(Integer, ForeignKey("teachers.teacher_id"))
     roll_number = Column(String)
     enrollment_date = Column(Date)
+    academic_status = Column(String, default="Active")
+    notes = Column(Text)
     is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
+    )
 
     # --- Relationships ---
 
@@ -46,5 +54,3 @@ class Student(Base):
     attendance_records = relationship("AttendanceRecord", back_populates="student")
 
     contacts = relationship("StudentContact", back_populates="student")
-
-    # invoices = relationship("Invoice", back_populates="student")

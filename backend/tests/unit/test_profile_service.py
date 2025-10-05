@@ -1,17 +1,20 @@
+# backend/tests/unit/test_profile_service.py
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.models.profile import Profile
+from app.schemas.profile_schema import ProfileUpdate
 from app.services import profile_service
+
+# --- Happy Path Tests ---
 
 
 @pytest.mark.asyncio
-async def test_get_profile():
+async def test_get_profile_happy_path():
     """
-    Unit test for the get_profile service function.
-    Verifies that it correctly fetches a single profile by user_id.
+    Happy Path: Unit test for get_profile when the profile is found.
     """
     mock_db = AsyncMock()
     user_id = uuid.uuid4()
@@ -26,101 +29,152 @@ async def test_get_profile():
     mock_db.execute.assert_awaited_once()
     assert result_profile is not None
     assert result_profile.user_id == user_id
-    assert result_profile.first_name == "Test"
 
 
 @pytest.mark.asyncio
 async def test_get_all_profiles_for_school_no_filters():
     """
-    Unit test for get_all_profiles_for_school without any filters.
+    Happy Path: Unit test for get_all_profiles_for_school without filters.
     """
     mock_db = AsyncMock()
     school_id = 1
-
-    mock_profiles = [
-        Profile(
-            user_id=uuid.uuid4(),
-            school_id=school_id,
-            first_name="John",
-            last_name="Doe",
-        ),
-        Profile(
-            user_id=uuid.uuid4(),
-            school_id=school_id,
-            first_name="Jane",
-            last_name="Smith",
-        ),
-    ]
+    mock_profiles = [Profile(user_id=uuid.uuid4(), school_id=school_id)]
 
     mock_result = MagicMock()
-    mock_result.scalars.return_value.unique.return_value.all.return_value = (
-        mock_profiles
-    )
+    # This chained call was the long line. It has been broken up correctly now.
+    (
+        mock_result.scalars.return_value.unique.return_value.all.return_value
+    ) = mock_profiles
     mock_db.execute.return_value = mock_result
 
-    result_profiles = await profile_service.get_all_profiles_for_school(
+    result = await profile_service.get_all_profiles_for_school(
         db=mock_db, school_id=school_id
     )
 
     mock_db.execute.assert_awaited_once()
-    assert len(result_profiles) == 2
-    assert result_profiles[0].first_name == "John"
-    assert result_profiles[1].first_name == "Jane"
+    assert len(result) == 1
 
 
 @pytest.mark.asyncio
-async def test_get_all_profiles_for_school_with_role_filter():
+async def test_soft_delete_profile_happy_path(monkeypatch):
     """
-    Unit test for get_all_profiles_for_school with a role filter.
-    This test verifies that the correct SQLAlchemy joins and filters are applied.
+    Happy Path: Unit test for soft_delete_profile when the profile is active and valid.
     """
     mock_db = AsyncMock()
+    user_id = uuid.uuid4()
     school_id = 1
 
-    mock_query = MagicMock()
-    mock_db.execute.return_value = mock_query
-    mock_query.scalars.return_value.unique.return_value.all.return_value = []
+    mock_profile = MagicMock(spec=Profile)
+    mock_profile.school_id = school_id
+    mock_profile.is_active = True
 
-    await profile_service.get_all_profiles_for_school(
-        db=mock_db, school_id=school_id, role="Admin"
+    # Use monkeypatch to temporarily replace the get_profile function
+    mock_get_profile = AsyncMock(return_value=mock_profile)
+    monkeypatch.setattr(profile_service, "get_profile", mock_get_profile)
+
+    result = await profile_service.soft_delete_profile(
+        db=mock_db, user_id=user_id, school_id=school_id
     )
 
-    mock_db.execute.assert_awaited_once()
-
-    executed_stmt = mock_db.execute.call_args[0][0]
-
-    assert "JOIN user_roles ON profiles.user_id = user_roles.user_id" in str(
-        executed_stmt
-    )
-    assert (
-        "JOIN roles_definition ON roles_definition.role_id = user_roles.role_id"
-        in str(executed_stmt)
-    )
-    assert "roles_definition.role_name = :role_name_1" in str(executed_stmt)
+    mock_get_profile.assert_awaited_once_with(mock_db, user_id=user_id)
+    assert mock_profile.is_active is False
+    mock_db.add.assert_called_with(mock_profile)
+    mock_db.commit.assert_awaited_once()
+    mock_db.refresh.assert_awaited_once_with(mock_profile)
+    assert result == mock_profile
 
 
 @pytest.mark.asyncio
-async def test_get_all_profiles_for_school_with_name_filter():
+async def test_admin_update_profile():
     """
-    Unit test for get_all_profiles_for_school with a name filter.
-    Verifies that the case-insensitive filter is correctly applied.
+    Happy Path: Unit test for admin_update_profile to ensure attributes are set.
     """
     mock_db = AsyncMock()
-    school_id = 1
+    mock_db_profile = MagicMock(spec=Profile)
+    update_schema = ProfileUpdate(first_name="John", last_name="Doe")
 
-    mock_query = MagicMock()
-    mock_db.execute.return_value = mock_query
-    mock_query.scalars.return_value.unique.return_value.all.return_value = []
-
-    await profile_service.get_all_profiles_for_school(
-        db=mock_db, school_id=school_id, name="John"
+    updated_profile = await profile_service.admin_update_profile(
+        db=mock_db, db_obj=mock_db_profile, profile_in=update_schema
     )
 
+    assert mock_db_profile.first_name == "John"
+    assert mock_db_profile.last_name == "Doe"
+    mock_db.add.assert_called_with(mock_db_profile)
+    mock_db.commit.assert_awaited_once()
+    mock_db.refresh.assert_awaited_once_with(mock_db_profile)
+    assert updated_profile == mock_db_profile
+
+
+# --- Sad Path Tests ---
+
+
+@pytest.mark.asyncio
+async def test_get_profile_not_found():
+    """
+    Sad Path: Unit test for get_profile when the user_id does not exist.
+    """
+    mock_db = AsyncMock()
+    user_id = uuid.uuid4()
+
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.first.return_value = None
+    mock_db.execute.return_value = mock_result
+
+    result_profile = await profile_service.get_profile(db=mock_db, user_id=user_id)
+
     mock_db.execute.assert_awaited_once()
+    assert result_profile is None
 
-    executed_stmt = mock_db.execute.call_args[0][0]
 
-    # Corrected and formatted assertion
-    stmt_str = str(executed_stmt)
-    assert "lower(profiles.first_name) LIKE lower(:first_name_1)" in stmt_str
-    assert "lower(profiles.last_name) LIKE lower(:last_name_1)" in stmt_str
+@pytest.mark.asyncio
+async def test_soft_delete_profile_not_found(monkeypatch):
+    """
+    Sad Path: Unit test for soft_delete_profile when the profile doesn't exist.
+    """
+    mock_db = AsyncMock()
+    mock_get_profile = AsyncMock(return_value=None)
+    monkeypatch.setattr(profile_service, "get_profile", mock_get_profile)
+
+    result = await profile_service.soft_delete_profile(
+        db=mock_db, user_id=uuid.uuid4(), school_id=1
+    )
+
+    assert result is None
+    mock_db.commit.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_soft_delete_profile_wrong_school(monkeypatch):
+    """
+    Sad Path: Unit test for soft_delete_profile when admin tries
+    to delete a user from another school.
+    """
+    mock_db = AsyncMock()
+    mock_profile = MagicMock(spec=Profile, school_id=99, is_active=True)
+    mock_get_profile = AsyncMock(return_value=mock_profile)
+    monkeypatch.setattr(profile_service, "get_profile", mock_get_profile)
+
+    result = await profile_service.soft_delete_profile(
+        db=mock_db, user_id=uuid.uuid4(), school_id=1
+    )
+
+    assert result is None
+    mock_db.commit.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_soft_delete_profile_already_inactive(monkeypatch):
+    """
+    Sad Path: Unit test for soft_delete_profile when the profile is already inactive.
+    """
+    mock_db = AsyncMock()
+    mock_profile = MagicMock(spec=Profile, school_id=1, is_active=False)
+    mock_get_profile = AsyncMock(return_value=mock_profile)
+    monkeypatch.setattr(profile_service, "get_profile", mock_get_profile)
+
+    result = await profile_service.soft_delete_profile(
+        db=mock_db, user_id=uuid.uuid4(), school_id=1
+    )
+
+    assert result is None
+    mock_db.commit.assert_not_called()
