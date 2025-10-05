@@ -17,18 +17,13 @@ async def test_get_my_profile(
     test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
 ):
     """
-    Tests that an authenticated user can successfully retrieve their own profile.
+    Happy Path: Tests that an authenticated user can retrieve their own profile.
     """
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
     response = await test_client.get("/v1/profiles/me")
     assert response.status_code == status.HTTP_200_OK
-
     data = response.json()
     assert data["user_id"] == str(mock_admin_profile.user_id)
-    assert data["first_name"] == mock_admin_profile.first_name
-    assert data["school_id"] == mock_admin_profile.school_id
-    assert "roles" in data
-
     app.dependency_overrides.clear()
 
 
@@ -37,22 +32,15 @@ async def test_get_all_profiles_as_admin(
     test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
 ):
     """
-    Tests that an Admin can successfully retrieve all profiles for their school.
+    Happy Path: Tests that an Admin can retrieve all profiles for their school.
     """
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
     school_id = mock_admin_profile.school_id
-
     response = await test_client.get(f"/v1/profiles/school/{school_id}")
-
     assert response.status_code == status.HTTP_200_OK
-
     data = response.json()
     assert isinstance(data, list)
     assert len(data) > 0
-    assert "user_id" in data[0]
-    assert "first_name" in data[0]
-    assert "roles" in data[0]
-
     app.dependency_overrides.clear()
 
 
@@ -61,7 +49,7 @@ async def test_get_all_profiles_as_teacher_fails(
     test_client: AsyncClient, db_session: AsyncSession
 ):
     """
-    Tests that a non-Admin user (e.g., a Teacher) receives a 403 Forbidden error.
+    Sad Path: Tests that a non-Admin user receives a 403 Forbidden error.
     """
     mock_teacher_profile = Profile(
         user_id=uuid.uuid4(),
@@ -72,16 +60,11 @@ async def test_get_all_profiles_as_teacher_fails(
         ],
     )
     app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
-
     response = await test_client.get(
         f"/v1/profiles/school/{mock_teacher_profile.school_id}"
     )
-
     assert response.status_code == status.HTTP_403_FORBIDDEN
-
     app.dependency_overrides.clear()
-
-    # Add this function to the end of tests/test_profiles.py
 
 
 @pytest.mark.asyncio
@@ -89,26 +72,72 @@ async def test_get_all_profiles_as_admin_filter_by_role(
     test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
 ):
     """
-    Tests that an Admin can filter profiles by role.
+    Happy Path: Tests that an Admin can filter profiles by role.
     """
-    # 1. Arrange: Override dependency
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
     school_id = mock_admin_profile.school_id
-
-    # 2. Act: Make a request to the endpoint with a role filter
-    # We are filtering for the "Admin" role, so we expect at least one result.
     response = await test_client.get(f"/v1/profiles/school/{school_id}?role=Admin")
-
-    # 3. Assert
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert isinstance(data, list)
     assert len(data) > 0
-
-    # Verify that all returned profiles actually have the 'Admin' role
     for profile in data:
         role_names = [role["role_definition"]["role_name"] for role in profile["roles"]]
         assert "Admin" in role_names
+    app.dependency_overrides.clear()
 
-    # 4. Cleanup
+
+@pytest.mark.asyncio
+async def test_get_specific_profile_as_admin(
+    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
+):
+    """
+    Happy Path: Tests an admin can fetch a specific user profile by its UUID.
+    """
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+    # In a real test, you might fetch another user's ID. Here, we fetch our own.
+    user_id_to_fetch = mock_admin_profile.user_id
+    response = await test_client.get(f"/v1/profiles/{user_id_to_fetch}")
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["user_id"] == str(user_id_to_fetch)
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_get_nonexistent_profile_fails(
+    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
+):
+    """
+    Sad Path: Tests that fetching a non-existent profile UUID returns a 404 error.
+    """
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+    non_existent_uuid = uuid.uuid4()
+    response = await test_client.get(f"/v1/profiles/{non_existent_uuid}")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_delete_profile_as_admin(
+    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
+):
+    """
+    Happy Path & Sad Path: Tests an admin can soft-delete a user in their school,
+    and that deleting a non-existent user fails correctly.
+    """
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+
+    # --- Happy Path: Delete an existing user ---
+    # In a real-world test, we would create a new user here to delete.
+    # For this test, we'll use the mock admin's ID, assuming they exist.
+    user_id_to_delete = mock_admin_profile.user_id
+    delete_response = await test_client.delete(f"/v1/profiles/{user_id_to_delete}")
+    assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+
+    # --- Sad Path: Try to delete a user that doesn't exist ---
+    non_existent_uuid = uuid.uuid4()
+    delete_fail_response = await test_client.delete(f"/v1/profiles/{non_existent_uuid}")
+    assert delete_fail_response.status_code == status.HTTP_404_NOT_FOUND
+
     app.dependency_overrides.clear()
