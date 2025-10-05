@@ -41,7 +41,9 @@ async def get_all_subjects(school_id: int, db: AsyncSession = Depends(get_db)):
 )
 async def get_subject_by_id(subject_id: int, db: AsyncSession = Depends(get_db)):
     """Get a single subject by its ID."""
-    db_subject = await subject_service.get_subject(db=db, subject_id=subject_id)
+    db_subject = await subject_service.get_subject_with_streams(
+        db=db, subject_id=subject_id
+    )
     if not db_subject:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
@@ -73,7 +75,9 @@ async def update_existing_subject(
     subject_id: int, *, db: AsyncSession = Depends(get_db), subject_in: SubjectUpdate
 ):
     """Update a subject's details. Admin only."""
-    db_subject = await subject_service.get_subject(db=db, subject_id=subject_id)
+    db_subject = await subject_service.get_subject_with_streams(
+        db=db, subject_id=subject_id
+    )
     if not db_subject:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
