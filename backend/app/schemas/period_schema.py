@@ -2,7 +2,7 @@
 from datetime import time
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class PeriodCreate(BaseModel):
@@ -12,6 +12,12 @@ class PeriodCreate(BaseModel):
     start_time: time
     end_time: time
     is_recess: bool = False
+
+    @model_validator(mode="after")
+    def check_times_are_valid(self) -> "PeriodCreate":
+        if self.start_time and self.end_time and self.end_time <= self.start_time:
+            raise ValueError("End time must be after start time")
+        return self
 
 
 class PeriodUpdate(BaseModel):

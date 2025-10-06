@@ -43,4 +43,4 @@ class Timetable(Base):
     teacher = relationship("Teacher", back_populates="timetables")
     period = relationship("Period", back_populates="timetables")
     academic_year = relationship("AcademicYear", back_populates="timetables")
-    subjects = relationship("Subject", back_populates="timetables")
+    subject = relationship("Subject", back_populates="timetables")

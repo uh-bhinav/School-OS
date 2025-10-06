@@ -48,7 +48,7 @@ async def create_new_timetable_entry(
 @router.get(
     "/classes/{class_id}",
     response_model=list[TimetableEntryOut],
-    dependencies=[Depends(require_role("Student"))],  # Or Parent
+    dependencies=[Depends(require_role("Admin", "Teacher", "Student", "Parent"))],
 )
 async def get_timetable_for_class(class_id: int, db: AsyncSession = Depends(get_db)):
     """

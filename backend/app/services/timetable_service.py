@@ -9,9 +9,32 @@ from sqlalchemy.orm import selectinload
 
 from app.models.period import Period
 from app.models.student import Student
+from app.models.subject import Subject
 from app.models.teacher import Teacher
 from app.models.timetable import Timetable
 from app.schemas.timetable_schema import TimetableEntryCreate, TimetableEntryUpdate
+
+TIMETABLE_WITH_DETAILS_OPTIONS = [
+    selectinload(Timetable.subject).selectinload(Subject.streams),
+    selectinload(Timetable.teacher).selectinload(Teacher.profile),
+    selectinload(Timetable.period),
+]
+
+
+async def get_entry_with_details(
+    db: AsyncSession, entry_id: int
+) -> Optional[Timetable]:
+    """
+    Gets a single timetable entry, preloading all nested relationships
+    required by the TimetableEntryOut schema to prevent lazy-loading errors.
+    """
+    stmt = (
+        select(Timetable)
+        .where(Timetable.id == entry_id, Timetable.is_active)
+        .options(*TIMETABLE_WITH_DETAILS_OPTIONS)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
 
 async def create_timetable_entry(
@@ -21,7 +44,7 @@ async def create_timetable_entry(
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
-    return db_obj
+    return await get_entry_with_details(db=db, entry_id=db_obj.id)
 
 
 async def get_timetable_entry_by_id(
@@ -38,6 +61,7 @@ async def get_class_timetable(db: AsyncSession, class_id: int) -> list[Timetable
     stmt = (
         select(Timetable)
         .where(Timetable.class_id == class_id, Timetable.is_active)
+        .options(*TIMETABLE_WITH_DETAILS_OPTIONS)
         .order_by(Timetable.day_of_week, Timetable.period_id)
     )
     result = await db.execute(stmt)
@@ -49,6 +73,7 @@ async def get_teacher_timetable(db: AsyncSession, teacher_id: int) -> list[Timet
     stmt = (
         select(Timetable)
         .where(Timetable.teacher_id == teacher_id, Timetable.is_active)
+        .options(*TIMETABLE_WITH_DETAILS_OPTIONS)
         .order_by(Timetable.day_of_week, Timetable.period_id)
     )
     result = await db.execute(stmt)
@@ -64,7 +89,7 @@ async def update_timetable_entry(
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
-    return db_obj
+    return await get_entry_with_details(db=db, entry_id=db_obj.id)
 
 
 async def soft_delete_timetable_entry(
@@ -105,17 +130,12 @@ async def get_schedule_for_day(
     base_query = (
         select(Timetable)
         .where(
-            Timetable.school_id == school_id,  # Multi-tenancy security
+            Timetable.school_id == school_id,
             Timetable.day_of_week == day_of_week,
             Timetable.is_active,
         )
-        .options(
-            # Eagerly load related data to prevent extra DB queries
-            selectinload(Timetable.subject),
-            selectinload(Timetable.teacher).selectinload(Teacher.profile),
-            selectinload(Timetable.period),
-        )
-        .join(Period)  # Join to allow ordering by period start_time
+        .options(*TIMETABLE_WITH_DETAILS_OPTIONS)
+        .join(Period)
         .order_by(Period.start_time)
     )
 

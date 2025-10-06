@@ -2,9 +2,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import require_role
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
 from app.models.period import Period
+from app.models.profile import Profile
 from app.schemas.period_schema import PeriodCreate, PeriodOut, PeriodUpdate
 from app.services import period_service
 
@@ -111,3 +112,41 @@ async def delete_period_by_id(period_id: int, db: AsyncSession = Depends(get_db)
     # Call the service function to set is_active=False
     await period_service.delete_period(db=db, db_obj=db_period)
     return None
+
+
+@router.get(
+    "/class/{class_id}/periods",
+    response_model=list[PeriodOut],
+    # Teachers and Admins should be able to see this
+    dependencies=[Depends(require_role("Admin", "Teacher"))],
+    tags=["Periods"],
+)
+async def get_periods_for_a_class(class_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Get all active, non-recess periods for the school that a specific class belongs to.
+    """
+    return await period_service.fetch_periods_for_class(db=db, class_id=class_id)
+
+
+@router.get(
+    "/school/{school_id}/recess",
+    response_model=list[PeriodOut],
+    dependencies=[Depends(require_role("Admin", "Teacher", "Student"))],
+    tags=["Periods"],
+)
+async def get_recess_periods_for_a_school(
+    school_id: int,
+    db: AsyncSession = Depends(get_db),
+    # CRITICAL SECURITY FIX: Add the current user profile dependency
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get all periods that are marked as recess/breaks for a specific school.
+    """
+    # CRITICAL SECURITY FIX: Ensure the user is requesting their own school's data.
+    if school_id != current_profile.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access this school's information.",
+        )
+    return await period_service.get_recess_periods(db=db, school_id=school_id)
