@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     exams,
     marks,
     periods,
+    profiles,  # Added this import
     schools,
     students,
     subjects,
@@ -70,4 +71,8 @@ api_router.include_router(
 api_router.include_router(
     communication.router, prefix="/comms", tags=["Communication: Chat"]
 )
+
+# Added the profiles router
+api_router.include_router(profiles.router, prefix="/profiles", tags=["Profiles"])
+
 api_router.include_router(users.router, prefix="/users", tags=["Users"])

@@ -35,7 +35,4 @@ class Timetable(Base):
     teacher = relationship("Teacher", back_populates="timetables")
     period = relationship("Period", back_populates="timetables")
     academic_year = relationship("AcademicYear", back_populates="timetables")
-
-    # FIX: Renamed 'subjects' to 'subject' to correctly
-    #  represent a many-to-one relationship.
     subject = relationship("Subject", back_populates="timetables")

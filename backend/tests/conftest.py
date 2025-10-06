@@ -17,6 +17,9 @@ from app.models.user_roles import UserRole
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def lifespan_manager():

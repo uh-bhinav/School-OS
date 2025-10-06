@@ -35,7 +35,4 @@ class Subject(Base):
     streams = relationship(
         "Stream", secondary=stream_subjects_association, back_populates="subjects"
     )
-
-    # FIX: This MUST back-populate the singular 'subject'
-    #  relationship in the Timetable model.
     timetables = relationship("Timetable", back_populates="subject")

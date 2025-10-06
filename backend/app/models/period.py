@@ -19,6 +19,7 @@ class Period(Base):
     end_time = Column(Time)
     is_recess = Column(Boolean, default=False)
     period_name = Column(String)
+    is_active = Column(Boolean, default=True, nullable=False)
 
     school = relationship("School")
 

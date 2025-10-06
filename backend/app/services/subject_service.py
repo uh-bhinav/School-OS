@@ -1,4 +1,5 @@
 # backend/app/services/subject_service.py
+import inspect
 from typing import Optional
 
 from sqlalchemy import update
@@ -7,19 +8,42 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload  # Make sure this is imported
 
 from app.models.class_model import class_subjects_association
+from app.models.profile import Profile
 from app.models.subject import Subject
 from app.models.teacher import Teacher
 from app.schemas.subject_schema import SubjectCreate, SubjectUpdate
 
 
+# --- Basic CRUD Functions ---
+async def _maybe_await(result):
+    if inspect.isawaitable(result):
+        return await result
+    return result
+
+
+async def get_subject_with_streams(
+    db: AsyncSession, subject_id: int
+) -> Optional[Subject]:
+    """
+    Gets a single subject by ID, preloading the 'streams' relationship
+    to ensure it matches the SubjectOut schema.
+    """
+    stmt = (
+        select(Subject)
+        .where(Subject.subject_id == subject_id, Subject.is_active)
+        .options(selectinload(Subject.streams))  # <-- Eagerly load streams
+    )
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
 async def create_subject(db: AsyncSession, *, subject_in: SubjectCreate) -> Subject:
     """Creates a new subject and returns it with relationships eager-loaded."""
-    db_obj = Subject(**subject_in.model_dump(exclude_unset=True))
-    db.add(db_obj)
+    db_obj = Subject(**subject_in.model_dump())
+    await _maybe_await(db.add(db_obj))
     await db.commit()
     await db.refresh(db_obj)
-    # Re-fetch the object with its relationships loaded to prevent lazy-loading errors.
-    return await get_subject(db=db, subject_id=db_obj.subject_id)
+    return await get_subject_with_streams(db=db, subject_id=db_obj.subject_id)
 
 
 async def get_subject(db: AsyncSession, subject_id: int) -> Optional[Subject]:
@@ -40,7 +64,6 @@ async def get_all_subjects_for_school(
     stmt = (
         select(Subject)
         .where(Subject.school_id == school_id, Subject.is_active)
-        # FIX: Also eager-load here for consistency.
         .options(selectinload(Subject.streams))
         .order_by(Subject.name)
     )
@@ -55,11 +78,10 @@ async def update_subject(
     update_data = subject_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_obj, field, value)
-    db.add(db_obj)
+    await _maybe_await(db.add(db_obj))
     await db.commit()
     await db.refresh(db_obj)
-    # Re-fetch with relationships loaded after update.
-    return await get_subject(db=db, subject_id=db_obj.subject_id)
+    return await get_subject_with_streams(db=db, subject_id=db_obj.subject_id)
 
 
 async def soft_delete_subject(db: AsyncSession, subject_id: int) -> Optional[Subject]:
@@ -103,7 +125,7 @@ async def get_teachers_for_subject(
         select(Teacher)
         .join(Teacher.profile)
         .where(
-            Teacher.profile.school_id == school_id,
+            Profile.school_id == school_id,
             Teacher.is_active,
             Teacher.subject_specialization.ilike(f"%{subject.name}%"),
         )

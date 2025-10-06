@@ -4,11 +4,14 @@ from sqlalchemy import (
     Boolean,
     Column,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     String,
+    Text,
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 
@@ -28,9 +31,16 @@ class Student(Base):
     # It is accessed via the relationship to the Profile model.
     # school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False)
     current_class_id = Column(Integer, ForeignKey("classes.class_id"), nullable=True)
+    proctor_teacher_id = Column(Integer, ForeignKey("teachers.teacher_id"))
     roll_number = Column(String)
     enrollment_date = Column(Date)
+    academic_status = Column(String, default="Active")
+    notes = Column(Text)
     is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
+    )
 
     # --- Relationships ---
     profile = relationship("Profile", back_populates="student")

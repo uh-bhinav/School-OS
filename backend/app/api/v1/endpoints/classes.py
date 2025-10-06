@@ -135,11 +135,15 @@ async def update_class_details(
     class_id: int,
     class_in: ClassUpdate,
     db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
     Update a class's details.
     """
-    db_obj = await class_service.get_class(db, class_id=class_id)
+
+    db_obj = await class_service.get_class(
+        db, class_id=class_id, school_id=current_profile.school_id
+    )
     if not db_obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
