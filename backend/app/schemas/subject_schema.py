@@ -36,7 +36,7 @@ class SubjectOut(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = None
     is_active: bool
-    streams: list[StreamForSubjectOut] = []
+    streams: Optional[list[StreamForSubjectOut]] = None
 
     class Config:
         from_attributes = True

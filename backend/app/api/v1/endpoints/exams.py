@@ -6,7 +6,7 @@ from app.core.security import require_role
 from app.db.session import get_db
 
 # CRITICAL IMPORT: Need to import the model directly for robust PUT/DELETE checks
-from app.models.exam import Exam
+from app.models.exams import Exam
 from app.schemas.exam_schema import ExamCreate, ExamOut, ExamUpdate
 from app.services import exam_service
 

@@ -7,9 +7,9 @@ from typing import (
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.models.exam import Exam
-from app.models.marks import Mark  # Assuming you have a Mark model
-from app.models.subjects import Subject
+from app.models.exams import Exam
+from app.models.mark import Mark  # Assuming you have a Mark model
+from app.models.subject import Subject
 
 # Assuming you have a Subject model
 from app.schemas.exam_schema import ExamCreate, ExamUpdate

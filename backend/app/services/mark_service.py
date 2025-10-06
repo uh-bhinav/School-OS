@@ -9,7 +9,16 @@ from sqlalchemy.orm import selectinload
 from app.models.exams import Exam
 from app.models.mark import Mark
 from app.models.student import Student
+from app.models.subject import Subject
+from app.models.teacher import Teacher
 from app.schemas.mark_schema import ClassPerformanceSummary, MarkCreate, MarkUpdate
+
+
+def mark_relationship_options():
+    return (
+        selectinload(Mark.subject).selectinload(Subject.streams),
+        selectinload(Mark.exam),
+    )
 
 
 async def create_mark(db: AsyncSession, mark_in: MarkCreate) -> Mark:
@@ -17,24 +26,29 @@ async def create_mark(db: AsyncSession, mark_in: MarkCreate) -> Mark:
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
-    return db_obj
+    # FIX: Re-fetch the object using our getter to eager-load relationships
+    return await get_mark_by_id(db, db_obj.id)
 
 
 async def bulk_create_marks(
-    db: AsyncSession, *, marks_in: list[MarkCreate], entered_by_teacher_id: int
+    db: AsyncSession, *, marks_in: list[MarkCreate]
 ) -> list[Mark]:
     """
-    Creates multiple mark records, associating them with the teacher who entered them.
+    Creates multiple mark records.
     """
-    db_objects = [
-        Mark(**mark.model_dump(), entered_by_teacher_id=entered_by_teacher_id)
-        for mark in marks_in
-    ]
+    db_objects = [Mark(**mark.model_dump()) for mark in marks_in]
     db.add_all(db_objects)
+    await db.flush()
+
+    if not db_objects:
+        await db.commit()
+        return []
+
+    ids = [mark.id for mark in db_objects]
     await db.commit()
-    # To return the full objects with IDs, we need to re-fetch them.
-    # For now, this is sufficient.
-    return db_objects
+    stmt = select(Mark).where(Mark.id.in_(ids)).options(*mark_relationship_options())
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def get_student_report_card(
@@ -47,7 +61,7 @@ async def get_student_report_card(
         select(Mark)
         .join(Exam)
         .where(Mark.student_id == student_id, Exam.academic_year_id == academic_year_id)
-        .options(selectinload(Mark.subject), selectinload(Mark.exam))
+        .options(*mark_relationship_options())
         .order_by(Exam.start_date, Mark.subject_id)
     )
     result = await db.execute(stmt)
@@ -55,21 +69,48 @@ async def get_student_report_card(
 
 
 async def get_mark_by_id(db: AsyncSession, mark_id: int) -> Optional[Mark]:
-    stmt = select(Mark).where(Mark.id == mark_id)
+    """Gets a single mark, eager-loading its relationships."""
+    stmt = (
+        select(Mark).where(Mark.id == mark_id)
+        # FIX: Eagerly load the 'subject' and 'exam' relationships.
+        .options(*mark_relationship_options())
+    )
     result = await db.execute(stmt)
     return result.scalars().first()
 
 
 async def get_marks_by_student(db: AsyncSession, student_id: int) -> list[Mark]:
-    stmt = select(Mark).where(Mark.student_id == student_id).order_by(Mark.exam_id)
+    stmt = (
+        select(Mark)
+        .where(Mark.student_id == student_id)
+        .options(*mark_relationship_options())
+        .order_by(Mark.exam_id)
+    )
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
+
+
+async def get_marks_for_student_and_exam(
+    db: AsyncSession, *, student_id: int, exam_id: Optional[int] = None
+) -> list[Mark]:
+    stmt = select(Mark).where(Mark.student_id == student_id)
+    if exam_id is not None:
+        stmt = stmt.where(Mark.exam_id == exam_id)
+
+    stmt = stmt.options(*mark_relationship_options()).order_by(Mark.exam_id)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def get_marks_for_exam(db: AsyncSession, exam_id: int) -> list[Mark]:
-    stmt = select(Mark).where(Mark.exam_id == exam_id).order_by(Mark.student_id)
+    stmt = (
+        select(Mark)
+        .where(Mark.exam_id == exam_id)
+        .options(*mark_relationship_options())
+        .order_by(Mark.student_id)
+    )
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def update_mark(db: AsyncSession, db_obj: Mark, mark_in: MarkUpdate) -> Mark:
@@ -79,7 +120,8 @@ async def update_mark(db: AsyncSession, db_obj: Mark, mark_in: MarkUpdate) -> Ma
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
-    return db_obj
+    # Re-fetch with relationships loaded
+    return await get_mark_by_id(db, db_obj.id)
 
 
 async def delete_mark(db: AsyncSession, db_obj: Mark) -> None:
@@ -93,7 +135,6 @@ async def get_class_performance_in_exam(
     """
     Calculates and returns a performance summary for a class in a specific exam.
     """
-    # Query to calculate average, max, min, and total students
     stmt = (
         select(
             func.avg(Mark.marks_obtained),
@@ -104,14 +145,12 @@ async def get_class_performance_in_exam(
         .join(Student)
         .where(Student.current_class_id == class_id, Mark.exam_id == exam_id)
     )
-
     result = await db.execute(stmt)
     avg_score, max_score, min_score, total_count = result.one_or_none()
 
     if total_count == 0:
         return None
 
-    # Query to count students who passed
     passed_stmt = (
         select(func.count(Mark.student_id))
         .join(Student)
@@ -122,7 +161,6 @@ async def get_class_performance_in_exam(
         )
     )
     passed_count = await db.scalar(passed_stmt)
-
     failure_rate = (
         ((total_count - passed_count) / total_count) * 100 if total_count > 0 else 0
     )
@@ -147,8 +185,14 @@ async def get_student_grade_progression(
         select(Mark)
         .join(Exam)
         .where(Mark.student_id == student_id, Mark.subject_id == subject_id)
-        .options(selectinload(Mark.exam))
+        .options(*mark_relationship_options())
         .order_by(Exam.start_date.asc())
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def get_teacher_id_for_user(db: AsyncSession, *, user_id: str) -> Optional[int]:
+    stmt = select(Teacher.teacher_id).where(Teacher.user_id == user_id)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()

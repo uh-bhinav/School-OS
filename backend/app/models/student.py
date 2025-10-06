@@ -24,26 +24,17 @@ class Student(Base):
     user_id = Column(
         UUID(as_uuid=True), ForeignKey("profiles.user_id"), nullable=False, unique=True
     )
-    school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False)
+    # REMOVED: The 'school_id' column does not exist on this table.
+    # It is accessed via the relationship to the Profile model.
+    # school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False)
     current_class_id = Column(Integer, ForeignKey("classes.class_id"), nullable=True)
     roll_number = Column(String)
     enrollment_date = Column(Date)
     is_active = Column(Boolean, default=True)
 
     # --- Relationships ---
-
-    # One-to-one relationship with Profile
     profile = relationship("Profile", back_populates="student")
-
-    # Many-to-one relationship with Class
     current_class = relationship("Class")
-
-    # One-to-many relationship with Mark
     marks_records = relationship("Mark", back_populates="student")
-
-    # One-to-many relationship with AttendanceRecord
     attendance_records = relationship("AttendanceRecord", back_populates="student")
-
     contacts = relationship("StudentContact", back_populates="student")
-
-    # invoices = relationship("Invoice", back_populates="student")

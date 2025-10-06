@@ -1,4 +1,4 @@
-# backend/app/models/exam.py
+# backend/app/models/exams.py
 from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 

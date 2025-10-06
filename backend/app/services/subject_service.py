@@ -4,29 +4,31 @@ from typing import Optional
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload  # Make sure this is imported
 
-# Models and Schemas needed
-# Add this import
 from app.models.class_model import class_subjects_association
 from app.models.subject import Subject
 from app.models.teacher import Teacher
 from app.schemas.subject_schema import SubjectCreate, SubjectUpdate
 
-# --- Basic CRUD Functions ---
-
 
 async def create_subject(db: AsyncSession, *, subject_in: SubjectCreate) -> Subject:
-    """Creates a new subject in the master list for a school."""
-    db_obj = Subject(**subject_in.model_dump())
+    """Creates a new subject and returns it with relationships eager-loaded."""
+    db_obj = Subject(**subject_in.model_dump(exclude_unset=True))
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
-    return db_obj
+    # Re-fetch the object with its relationships loaded to prevent lazy-loading errors.
+    return await get_subject(db=db, subject_id=db_obj.subject_id)
 
 
 async def get_subject(db: AsyncSession, subject_id: int) -> Optional[Subject]:
-    """Gets a single active subject by its ID."""
-    stmt = select(Subject).where(Subject.subject_id == subject_id, Subject.is_active)
+    """Gets a single active subject by its ID, eager-loading its relationships."""
+    stmt = (
+        select(Subject).where(Subject.subject_id == subject_id, Subject.is_active)
+        # FIX: Eagerly load the 'streams' relationship to prevent lazy-loading errors.
+        .options(selectinload(Subject.streams))
+    )
     result = await db.execute(stmt)
     return result.scalars().first()
 
@@ -34,10 +36,12 @@ async def get_subject(db: AsyncSession, subject_id: int) -> Optional[Subject]:
 async def get_all_subjects_for_school(
     db: AsyncSession, school_id: int
 ) -> list[Subject]:
-    """Gets all active subjects for a given school."""
+    """Gets all active subjects for a school, eager-loading relationships."""
     stmt = (
         select(Subject)
         .where(Subject.school_id == school_id, Subject.is_active)
+        # FIX: Also eager-load here for consistency.
+        .options(selectinload(Subject.streams))
         .order_by(Subject.name)
     )
     result = await db.execute(stmt)
@@ -54,7 +58,8 @@ async def update_subject(
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
-    return db_obj
+    # Re-fetch with relationships loaded after update.
+    return await get_subject(db=db, subject_id=db_obj.subject_id)
 
 
 async def soft_delete_subject(db: AsyncSession, subject_id: int) -> Optional[Subject]:
@@ -70,9 +75,6 @@ async def soft_delete_subject(db: AsyncSession, subject_id: int) -> Optional[Sub
     return result.scalar_one_or_none()
 
 
-# --- Business Logic Functions ---
-
-
 async def get_subjects_for_class(db: AsyncSession, class_id: int) -> list[Subject]:
     """
     Retrieves a list of all subjects taught in a specific class.
@@ -81,6 +83,7 @@ async def get_subjects_for_class(db: AsyncSession, class_id: int) -> list[Subjec
         select(Subject)
         .join(class_subjects_association)
         .where(class_subjects_association.c.class_id == class_id, Subject.is_active)
+        .options(selectinload(Subject.streams))  # Eager load here too
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
@@ -90,22 +93,18 @@ async def get_teachers_for_subject(
     db: AsyncSession, *, school_id: int, subject_id: int
 ) -> list[Teacher]:
     """
-    Finds all active teachers in a school whose specialization matches
-    a given subject.
+    Finds all active teachers in a school whose specialization matches a given subject.
     """
-    # First, get the subject name from its ID
     subject = await get_subject(db, subject_id=subject_id)
     if not subject:
         return []
 
-    # Now, find teachers with that name in their specialization string
     stmt = (
         select(Teacher)
         .join(Teacher.profile)
         .where(
             Teacher.profile.school_id == school_id,
             Teacher.is_active,
-            # This performs a case-insensitive search
             Teacher.subject_specialization.ilike(f"%{subject.name}%"),
         )
     )

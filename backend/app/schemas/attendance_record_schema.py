@@ -29,8 +29,8 @@ class AttendanceRecordUpdate(BaseModel):
     notes: Optional[str] = None
 
 
-class AttendanceRecordBulkCreate(BaseModel):
-    records: list[AttendanceRecordCreate]
+# Type alias for bulk creation payloads (plain list of single-record payloads)
+AttendanceRecordBulkCreate = list[AttendanceRecordCreate]
 
 
 # Properties to return to the client

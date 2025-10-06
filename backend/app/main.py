@@ -1,10 +1,15 @@
 # backend/app/main.py
+import asyncio
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from app.api.v1.api import api_router as v1_api_router
 from app.db.session import init_engine
+
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 @asynccontextmanager

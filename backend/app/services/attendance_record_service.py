@@ -44,6 +44,27 @@ async def get_attendance_by_student(
     return result.scalars().all()
 
 
+async def get_attendance_by_student_in_range(
+    db: AsyncSession,
+    *,
+    student_id: int,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+) -> list[AttendanceRecord]:
+    stmt = select(AttendanceRecord).where(AttendanceRecord.student_id == student_id)
+
+    if start_date:
+        stmt = stmt.where(AttendanceRecord.date >= start_date)
+
+    if end_date:
+        stmt = stmt.where(AttendanceRecord.date <= end_date)
+
+    stmt = stmt.order_by(AttendanceRecord.date)
+
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
 async def get_attendance_by_class(
     db: AsyncSession, class_id: int, target_date: date
 ) -> list[AttendanceRecord]:
@@ -77,17 +98,19 @@ async def delete_attendance_record(db: AsyncSession, db_obj: AttendanceRecord) -
 
 async def bulk_create_attendance_records(
     db: AsyncSession, *, attendance_data: AttendanceRecordBulkCreate
-) -> dict:
+) -> list[AttendanceRecord]:
     """
     Creates multiple attendance records in a single transaction.
     Use this for a teacher submitting attendance for an entire class period.
     """
-    db_records = [
-        AttendanceRecord(**record.model_dump()) for record in attendance_data.records
-    ]
+    db_records = [AttendanceRecord(**record.model_dump()) for record in attendance_data]
     db.add_all(db_records)
     await db.commit()
-    return {"status": "success", "records_created": len(db_records)}
+
+    for record in db_records:
+        await db.refresh(record)
+
+    return db_records
 
 
 async def get_class_attendance_for_date_range(
