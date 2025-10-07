@@ -13,9 +13,7 @@ from app.models.profile import Profile
 from app.schemas.announcement_schema import AnnouncementCreate
 
 
-async def create_announcement(
-    db: AsyncSession, *, obj_in: AnnouncementCreate, published_by_id: UUID
-) -> Announcement:
+async def create_announcement(db: AsyncSession, *, obj_in: AnnouncementCreate, published_by_id: UUID) -> Announcement:
     """
     Creates a new announcement and its targets in a single transaction.
     """
@@ -27,9 +25,7 @@ async def create_announcement(
     await db.flush()
 
     for target in targets_data:
-        db_target = AnnouncementTarget(
-            announcement_id=db_announcement.id, **target.model_dump()
-        )
+        db_target = AnnouncementTarget(announcement_id=db_announcement.id, **target.model_dump())
         db.add(db_target)
 
     await db.commit()
@@ -37,20 +33,14 @@ async def create_announcement(
     return db_announcement
 
 
-async def get_announcement_by_id(
-    db: AsyncSession, announcement_id: int
-) -> Optional[Announcement]:
+async def get_announcement_by_id(db: AsyncSession, announcement_id: int) -> Optional[Announcement]:
     """Retrieves a single announcement."""
-    stmt = select(Announcement).where(
-        Announcement.id == announcement_id, Announcement.is_active.is_(True)
-    )
+    stmt = select(Announcement).where(Announcement.id == announcement_id, Announcement.is_active.is_(True))
     result = await db.execute(stmt)
     return result.scalars().first()
 
 
-async def get_user_announcement_feed(
-    db: AsyncSession, user_id: UUID
-) -> list[Announcement]:
+async def get_user_announcement_feed(db: AsyncSession, user_id: UUID) -> list[Announcement]:
     """
     Retrieves announcements relevant to the
     user (Requires complex filtering/RLS).

@@ -44,20 +44,14 @@ async def get_all_exams(school_id: int, db: AsyncSession = Depends(get_db)):
 
 
 # Admin only: Update an existing exam
-@router.put(
-    "/{exam_id}", response_model=ExamOut, dependencies=[Depends(require_role("Admin"))]
-)
-async def update_exam(
-    exam_id: int, exam_in: ExamUpdate, db: AsyncSession = Depends(get_db)
-):
+@router.put("/{exam_id}", response_model=ExamOut, dependencies=[Depends(require_role("Admin"))])
+async def update_exam(exam_id: int, exam_in: ExamUpdate, db: AsyncSession = Depends(get_db)):
     """Update an existing exam. Admin only."""
     # CRITICAL FIX: Use db.get(Exam, id) to fetch
     #  the object regardless of its active status.
     db_obj = await db.get(Exam, exam_id)
     if not db_obj:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found.")
 
     return await exam_service.update_exam(db, db_obj=db_obj, exam_in=exam_in)
 
@@ -75,9 +69,7 @@ async def delete_exam(exam_id: int, db: AsyncSession = Depends(get_db)):
     db_obj = await db.get(Exam, exam_id)
 
     if not db_obj:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found.")
 
     if not db_obj.is_active:
         # If it's already inactive, consider the operation successful (Idempotency).

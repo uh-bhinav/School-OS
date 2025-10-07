@@ -20,16 +20,11 @@ async def create_mark(db: AsyncSession, mark_in: MarkCreate) -> Mark:
     return db_obj
 
 
-async def bulk_create_marks(
-    db: AsyncSession, *, marks_in: list[MarkCreate], entered_by_teacher_id: int
-) -> list[Mark]:
+async def bulk_create_marks(db: AsyncSession, *, marks_in: list[MarkCreate], entered_by_teacher_id: int) -> list[Mark]:
     """
     Creates multiple mark records, associating them with the teacher who entered them.
     """
-    db_objects = [
-        Mark(**mark.model_dump(), entered_by_teacher_id=entered_by_teacher_id)
-        for mark in marks_in
-    ]
+    db_objects = [Mark(**mark.model_dump(), entered_by_teacher_id=entered_by_teacher_id) for mark in marks_in]
     db.add_all(db_objects)
     await db.commit()
     # To return the full objects with IDs, we need to re-fetch them.
@@ -37,19 +32,11 @@ async def bulk_create_marks(
     return db_objects
 
 
-async def get_student_report_card(
-    db: AsyncSession, *, student_id: int, academic_year_id: int
-) -> list[Mark]:
+async def get_student_report_card(db: AsyncSession, *, student_id: int, academic_year_id: int) -> list[Mark]:
     """
     Retrieves all marks for a student for a specific academic year.
     """
-    stmt = (
-        select(Mark)
-        .join(Exam)
-        .where(Mark.student_id == student_id, Exam.academic_year_id == academic_year_id)
-        .options(selectinload(Mark.subject), selectinload(Mark.exam))
-        .order_by(Exam.start_date, Mark.subject_id)
-    )
+    stmt = select(Mark).join(Exam).where(Mark.student_id == student_id, Exam.academic_year_id == academic_year_id).options(selectinload(Mark.subject), selectinload(Mark.exam)).order_by(Exam.start_date, Mark.subject_id)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -87,9 +74,7 @@ async def delete_mark(db: AsyncSession, db_obj: Mark) -> None:
     await db.commit()
 
 
-async def get_class_performance_in_exam(
-    db: AsyncSession, *, class_id: int, exam_id: int, pass_mark: float = 40.0
-) -> Optional[ClassPerformanceSummary]:
+async def get_class_performance_in_exam(db: AsyncSession, *, class_id: int, exam_id: int, pass_mark: float = 40.0) -> Optional[ClassPerformanceSummary]:
     """
     Calculates and returns a performance summary for a class in a specific exam.
     """
@@ -123,9 +108,7 @@ async def get_class_performance_in_exam(
     )
     passed_count = await db.scalar(passed_stmt)
 
-    failure_rate = (
-        ((total_count - passed_count) / total_count) * 100 if total_count > 0 else 0
-    )
+    failure_rate = ((total_count - passed_count) / total_count) * 100 if total_count > 0 else 0
 
     return ClassPerformanceSummary(
         class_average=avg_score,
@@ -137,18 +120,10 @@ async def get_class_performance_in_exam(
     )
 
 
-async def get_student_grade_progression(
-    db: AsyncSession, *, student_id: int, subject_id: int
-) -> list[Mark]:
+async def get_student_grade_progression(db: AsyncSession, *, student_id: int, subject_id: int) -> list[Mark]:
     """
     Retrieves a student's marks in a specific subject across all exams over time.
     """
-    stmt = (
-        select(Mark)
-        .join(Exam)
-        .where(Mark.student_id == student_id, Mark.subject_id == subject_id)
-        .options(selectinload(Mark.exam))
-        .order_by(Exam.start_date.asc())
-    )
+    stmt = select(Mark).join(Exam).where(Mark.student_id == student_id, Mark.subject_id == subject_id).options(selectinload(Mark.exam)).order_by(Exam.start_date.asc())
     result = await db.execute(stmt)
     return list(result.scalars().all())

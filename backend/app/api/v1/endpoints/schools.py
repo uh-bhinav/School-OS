@@ -32,9 +32,7 @@ async def get_school_details(
 
     db_school = await school_service.get_school(db=db, school_id=school_id)
     if not db_school:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="School not found")
     return db_school
 
 
@@ -62,13 +60,9 @@ async def update_school_details(
 
     db_school = await school_service.get_school(db=db, school_id=school_id)
     if not db_school:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="School not found")
 
-    updated_school = await school_service.update_school(
-        db=db, db_obj=db_school, school_in=school_in
-    )
+    updated_school = await school_service.update_school(db=db, db_obj=db_school, school_in=school_in)
     return updated_school
 
 

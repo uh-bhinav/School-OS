@@ -38,34 +38,21 @@ async def get_all_profiles_for_school(
     """
     Get all profiles for a school, with optional filters for role and name.
     """
-    stmt = (
-        select(Profile)
-        .where(Profile.school_id == school_id)
-        .options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
-        .order_by(Profile.last_name)
-    )
+    stmt = select(Profile).where(Profile.school_id == school_id).options(selectinload(Profile.roles).selectinload(UserRole.role_definition)).order_by(Profile.last_name)
 
     if role:
-        stmt = (
-            stmt.join(Profile.roles)
-            .join(UserRole.role_definition)
-            .where(RoleDefinition.role_name == role)
-        )
+        stmt = stmt.join(Profile.roles).join(UserRole.role_definition).where(RoleDefinition.role_name == role)
 
     if name:
         # Simple case-insensitive search on first or last name
         search = f"%{name}%"
-        stmt = stmt.where(
-            Profile.first_name.ilike(search) | Profile.last_name.ilike(search)
-        )
+        stmt = stmt.where(Profile.first_name.ilike(search) | Profile.last_name.ilike(search))
 
     result = await db.execute(stmt)
     return list(result.scalars().unique().all())
 
 
-async def soft_delete_profile(
-    db: AsyncSession, *, user_id: UUID, school_id: int
-) -> Optional[Profile]:
+async def soft_delete_profile(db: AsyncSession, *, user_id: UUID, school_id: int) -> Optional[Profile]:
     """
     Soft-deletes a profile by setting is_active to False.
     Ensures an admin can only delete users from their own school.
@@ -80,9 +67,7 @@ async def soft_delete_profile(
     return None
 
 
-async def admin_update_profile(
-    db: AsyncSession, *, db_obj: Profile, profile_in: ProfileUpdate
-) -> Profile:
+async def admin_update_profile(db: AsyncSession, *, db_obj: Profile, profile_in: ProfileUpdate) -> Profile:
     """
     Allows an Admin to update a user's profile.
     """

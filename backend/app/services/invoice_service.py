@@ -24,24 +24,18 @@ async def get_invoice(db: AsyncSession, invoice_id: int) -> Optional[Invoice]:
     return result.scalars().first()
 
 
-async def get_all_invoices_for_student(
-    db: AsyncSession, student_id: int
-) -> list[Invoice]:
+async def get_all_invoices_for_student(db: AsyncSession, student_id: int) -> list[Invoice]:
     """Retrieves all active invoices for a student (READ FILTER APPLIED)."""
     stmt = (
         select(Invoice)
         # FIX: Replaced '== True' with the idiomatic SQLAlchemy 'is_(True)'
-        .where(Invoice.student_id == student_id, Invoice.is_active.is_(True)).order_by(
-            Invoice.due_date.desc()
-        )
+        .where(Invoice.student_id == student_id, Invoice.is_active.is_(True)).order_by(Invoice.due_date.desc())
     )
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def update_invoice(
-    db: AsyncSession, *, db_obj: Invoice, obj_in: InvoiceUpdate
-) -> Invoice:
+async def update_invoice(db: AsyncSession, *, db_obj: Invoice, obj_in: InvoiceUpdate) -> Invoice:
     """Updates invoice details."""
     update_data = obj_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():

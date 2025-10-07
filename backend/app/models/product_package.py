@@ -22,9 +22,7 @@ class ProductPackage(Base):
     image_url = Column(String)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), default=func.now(), onupdate=func.now()
-    )
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
     # Relationships
     school = relationship("School")
 
@@ -32,6 +30,4 @@ class ProductPackage(Base):
     items = relationship("PackageItem", back_populates="package")
 
     # 2. Relationship to the target Product table, accessed via the junction
-    products = relationship(
-        "Product", secondary="package_items", back_populates="packages"
-    )
+    products = relationship("Product", secondary="package_items", back_populates="packages")

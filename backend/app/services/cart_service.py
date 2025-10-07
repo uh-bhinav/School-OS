@@ -26,16 +26,12 @@ async def get_or_create_cart(db: AsyncSession, user_id: UUID) -> Cart:
     return cart
 
 
-async def add_or_update_item(
-    db: AsyncSession, user_id: UUID, item_in: CartItemIn
-) -> Cart:
+async def add_or_update_item(db: AsyncSession, user_id: UUID, item_in: CartItemIn) -> Cart:
     """Adds a new item or updates the quantity of an existing item."""
     cart = await get_or_create_cart(db, user_id)
 
     # Check if item already exists in cart
-    stmt = select(CartItem).where(
-        CartItem.cart_id == cart.cart_id, CartItem.product_id == item_in.product_id
-    )
+    stmt = select(CartItem).where(CartItem.cart_id == cart.cart_id, CartItem.product_id == item_in.product_id)
     result = await db.execute(stmt)
     cart_item = result.scalars().first()
 
@@ -59,9 +55,7 @@ async def remove_item(db: AsyncSession, user_id: UUID, product_id: int) -> Cart:
     """Removes an item completely from the cart."""
     cart = await get_or_create_cart(db, user_id)
 
-    stmt = select(CartItem).where(
-        CartItem.cart_id == cart.cart_id, CartItem.product_id == product_id
-    )
+    stmt = select(CartItem).where(CartItem.cart_id == cart.cart_id, CartItem.product_id == product_id)
     result = await db.execute(stmt)
     cart_item = result.scalars().first()
 
@@ -70,9 +64,7 @@ async def remove_item(db: AsyncSession, user_id: UUID, product_id: int) -> Cart:
         await db.commit()
         return await get_cart(db, user_id)
 
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND, detail="Item not found in cart."
-    )
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found in cart.")
 
 
 async def clear_cart(db: AsyncSession, user_id: UUID) -> None:

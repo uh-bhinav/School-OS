@@ -30,22 +30,14 @@ async def get_subject(db: AsyncSession, subject_id: int) -> Optional[Subject]:
     return result.scalars().first()
 
 
-async def get_all_subjects_for_school(
-    db: AsyncSession, school_id: int
-) -> list[Subject]:
+async def get_all_subjects_for_school(db: AsyncSession, school_id: int) -> list[Subject]:
     """Gets all active subjects for a given school."""
-    stmt = (
-        select(Subject)
-        .where(Subject.school_id == school_id, Subject.is_active)
-        .order_by(Subject.name)
-    )
+    stmt = select(Subject).where(Subject.school_id == school_id, Subject.is_active).order_by(Subject.name)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
-async def update_subject(
-    db: AsyncSession, *, db_obj: Subject, subject_in: SubjectUpdate
-) -> Subject:
+async def update_subject(db: AsyncSession, *, db_obj: Subject, subject_in: SubjectUpdate) -> Subject:
     """Updates a subject's details."""
     update_data = subject_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -58,12 +50,7 @@ async def update_subject(
 
 async def soft_delete_subject(db: AsyncSession, subject_id: int) -> Optional[Subject]:
     """Soft-deletes a subject by setting its is_active flag to False."""
-    stmt = (
-        update(Subject)
-        .where(Subject.subject_id == subject_id, Subject.is_active)
-        .values(is_active=False)
-        .returning(Subject)
-    )
+    stmt = update(Subject).where(Subject.subject_id == subject_id, Subject.is_active).values(is_active=False).returning(Subject)
     result = await db.execute(stmt)
     await db.commit()
     return result.scalar_one_or_none()
@@ -76,18 +63,12 @@ async def get_subjects_for_class(db: AsyncSession, class_id: int) -> list[Subjec
     """
     Retrieves a list of all subjects taught in a specific class.
     """
-    stmt = (
-        select(Subject)
-        .join(ClassSubject, Subject.subject_id == ClassSubject.subject_id)
-        .where(ClassSubject.class_id == class_id, Subject.is_active)
-    )
+    stmt = select(Subject).join(ClassSubject, Subject.subject_id == ClassSubject.subject_id).where(ClassSubject.class_id == class_id, Subject.is_active)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
-async def get_teachers_for_subject(
-    db: AsyncSession, *, school_id: int, subject_id: int
-) -> list[Teacher]:
+async def get_teachers_for_subject(db: AsyncSession, *, school_id: int, subject_id: int) -> list[Teacher]:
     """
     Finds all active teachers in a school whose specialization matches
     a given subject.

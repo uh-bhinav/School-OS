@@ -23,9 +23,7 @@ router = APIRouter()
     dependencies=[Depends(require_role("Admin"))],
     tags=["E-commerce"],
 )
-async def create_new_package(
-    package_in: ProductPackageCreate, db: AsyncSession = Depends(get_db)
-):
+async def create_new_package(package_in: ProductPackageCreate, db: AsyncSession = Depends(get_db)):
     """
     Create a new product package/bundle,
     including its list of contained products. Admin only.
@@ -33,17 +31,13 @@ async def create_new_package(
     return await product_package_service.create_package(db=db, obj_in=package_in)
 
 
-@router.get(
-    "/school/{school_id}", response_model=list[ProductPackageOut], tags=["E-commerce"]
-)
+@router.get("/school/{school_id}", response_model=list[ProductPackageOut], tags=["E-commerce"])
 async def get_all_active_packages(school_id: int, db: AsyncSession = Depends(get_db)):
     """
     Get all active product packages for a school (available to all users via RLS).
     """
     # The service layer handles the 'is_active=True' filter.
-    return await product_package_service.get_all_packages_for_school(
-        db=db, school_id=school_id
-    )
+    return await product_package_service.get_all_packages_for_school(db=db, school_id=school_id)
 
 
 @router.get(
@@ -83,16 +77,10 @@ async def update_package_header_by_id(
 
     CRITICAL FIX: Uses db.get to retrieve the object regardless of 'is_active' status.
     """
-    package = await db.get(
-        ProductPackage, package_id
-    )  # Use direct ORM access to retrieve inactive items
+    package = await db.get(ProductPackage, package_id)  # Use direct ORM access to retrieve inactive items
     if not package:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Product Package not found"
-        )
-    return await product_package_service.update_package(
-        db=db, db_obj=package, obj_in=package_in
-    )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product Package not found")
+    return await product_package_service.update_package(db=db, db_obj=package, obj_in=package_in)
 
 
 @router.delete(
@@ -108,13 +96,9 @@ async def delete_package_by_id(package_id: int, db: AsyncSession = Depends(get_d
     CRITICAL FIX: Uses db.get to retrieve the object regardless of 'is_active' status
     before performing the soft delete.
     """
-    package = await db.get(
-        ProductPackage, package_id
-    )  # Use direct ORM access to retrieve inactive items
+    package = await db.get(ProductPackage, package_id)  # Use direct ORM access to retrieve inactive items
     if not package:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Product Package not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product Package not found")
 
     if not package.is_active:
         # If it's already inactive, the DELETE operation is implicitly successful.

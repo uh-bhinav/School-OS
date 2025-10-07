@@ -13,9 +13,7 @@ from app.models.product import Product  # Needed for price lookup and stock chec
 from app.schemas.order_schema import OrderCreate, OrderUpdate
 
 
-async def create_order(
-    db: AsyncSession, *, obj_in: OrderCreate, parent_user_id: UUID, order_number: str
-) -> Order:
+async def create_order(db: AsyncSession, *, obj_in: OrderCreate, parent_user_id: UUID, order_number: str) -> Order:
     """Creates a new order, calculates total, checks stock,
     creates order items, and updates product stock."""
     total_amount = Decimal(0)
@@ -24,11 +22,7 @@ async def create_order(
     # 1. Validate items, calculate total, and check stock within a transaction
     for item_in in obj_in.items:
         product = await db.get(Product, item_in.product_id)
-        if (
-            not product
-            or not product.is_active
-            or product.stock_quantity < item_in.quantity
-        ):
+        if not product or not product.is_active or product.stock_quantity < item_in.quantity:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Product ID {item_in.product_id} is out of stock or inactive.",
@@ -82,22 +76,14 @@ async def get_order(db: AsyncSession, order_id: int) -> Optional[Order]:
     return result.scalars().first()
 
 
-async def get_all_orders_for_parent(
-    db: AsyncSession, parent_user_id: UUID
-) -> list[Order]:
+async def get_all_orders_for_parent(db: AsyncSession, parent_user_id: UUID) -> list[Order]:
     """Retrieves all orders placed by a specific parent."""
-    stmt = (
-        select(Order)
-        .where(Order.parent_user_id == parent_user_id)
-        .order_by(Order.order_id.desc())
-    )
+    stmt = select(Order).where(Order.parent_user_id == parent_user_id).order_by(Order.order_id.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def update_order(
-    db: AsyncSession, *, db_obj: Order, obj_in: OrderUpdate
-) -> Order:
+async def update_order(db: AsyncSession, *, db_obj: Order, obj_in: OrderUpdate) -> Order:
     """Updates order status (e.g., from Pending to Completed/Cancelled)."""
     update_data = obj_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():

@@ -19,6 +19,4 @@ class Profile(Base):
     # New relationships to teacher and student records
     teacher = relationship("Teacher", back_populates="profile", uselist=False)
     student = relationship("Student", back_populates="profile", uselist=False)
-    contact_for_students = relationship(
-        "StudentContact", back_populates="parent_profile"
-    )
+    contact_for_students = relationship("StudentContact", back_populates="parent_profile")
