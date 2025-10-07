@@ -2,6 +2,7 @@
 from datetime import date
 from typing import Optional
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -19,7 +20,12 @@ async def create_attendance_record(
 ) -> AttendanceRecord:
     db_obj = AttendanceRecord(**attendance_in.model_dump())
     db.add(db_obj)
-    await db.commit()
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise
+
     await db.refresh(db_obj)
     return db_obj
 
@@ -105,7 +111,12 @@ async def bulk_create_attendance_records(
     """
     db_records = [AttendanceRecord(**record.model_dump()) for record in attendance_data]
     db.add_all(db_records)
-    await db.commit()
+
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise
 
     for record in db_records:
         await db.refresh(record)

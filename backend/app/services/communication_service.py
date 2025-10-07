@@ -2,6 +2,7 @@
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -34,7 +35,11 @@ async def create_conversation(
         )
         db.add(db_participant)
 
-    await db.commit()
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise
     stmt = (
         select(Conversation)
         .options(selectinload(Conversation.participants))

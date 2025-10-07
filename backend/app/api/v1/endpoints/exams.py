@@ -6,7 +6,6 @@ from app.core.security import require_role
 from app.db.session import get_db
 
 # CRITICAL IMPORT: Need to import the model directly for robust PUT/DELETE checks
-from app.models.exams import Exam
 from app.schemas.exam_schema import ExamCreate, ExamOut, ExamUpdate
 from app.services import exam_service
 
@@ -51,15 +50,12 @@ async def update_exam(
     exam_id: int, exam_in: ExamUpdate, db: AsyncSession = Depends(get_db)
 ):
     """Update an existing exam. Admin only."""
-    # CRITICAL FIX: Use db.get(Exam, id) to fetch
-    #  the object regardless of its active status.
-    db_obj = await db.get(Exam, exam_id)
-    if not db_obj:
+    updated = await exam_service.update_exam(db, exam_id=exam_id, exam_in=exam_in)
+    if not updated:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found."
         )
-
-    return await exam_service.update_exam(db, db_obj=db_obj, exam_in=exam_in)
+    return updated
 
 
 # Admin only: Delete an existing exam
@@ -70,19 +66,9 @@ async def update_exam(
 )
 async def delete_exam(exam_id: int, db: AsyncSession = Depends(get_db)):
     """Deactivate an exam (SOFT DELETE). Admin only."""
-    # CRITICAL FIX: Use db.get(Exam, id) to fetch
-    #  the object regardless of its active status.
-    db_obj = await db.get(Exam, exam_id)
-
-    if not db_obj:
+    deleted = await exam_service.delete_exam(db, exam_id=exam_id)
+    if deleted is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found."
         )
-
-    if not db_obj.is_active:
-        # If it's already inactive, consider the operation successful (Idempotency).
-        return None
-
-    # Call the service layer's soft delete function
-    await exam_service.delete_exam(db, db_obj=db_obj)
     return None  # Return 204 No Content

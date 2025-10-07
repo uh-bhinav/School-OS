@@ -1,3 +1,4 @@
+import inspect
 from typing import (
     Any,
     Optional,
@@ -15,20 +16,30 @@ from app.models.subject import Subject
 from app.schemas.exam_schema import ExamCreate, ExamUpdate
 
 
+async def _maybe_await(result):
+    if inspect.isawaitable(result):
+        return await result
+    return result
+
+
 async def create_exam(db: AsyncSession, exam_in: ExamCreate) -> Exam:
     db_obj = Exam(**exam_in.model_dump())
-    db.add(db_obj)
-    await db.commit()
+    await _maybe_await(db.add(db_obj))
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
     await db.refresh(db_obj)
     return db_obj
 
 
 async def get_exam_by_id(db: AsyncSession, exam_id: int) -> Optional[Exam]:
     """Retrieves an active exam by ID (READ FILTER APPLIED)."""
-    # NOTE: The critical filter required by project standards:
-    stmt = select(Exam).where(Exam.id == exam_id, Exam.is_active.is_(True))
-    result = await db.execute(stmt)
-    return result.scalars().first()
+    exam = await db.get(Exam, exam_id)
+    if not exam or getattr(exam, "is_active", True) is False:
+        return None
+    return exam
 
 
 async def get_all_exams_for_school(db: AsyncSession, school_id: int) -> list[Exam]:
@@ -39,22 +50,43 @@ async def get_all_exams_for_school(db: AsyncSession, school_id: int) -> list[Exa
     return result.scalars().all()
 
 
-async def update_exam(db: AsyncSession, db_obj: Exam, exam_in: ExamUpdate) -> Exam:
+async def update_exam(
+    db: AsyncSession, exam_id: int, exam_in: ExamUpdate
+) -> Optional[Exam]:
+    db_obj = await db.get(Exam, exam_id)
+    if not db_obj or getattr(db_obj, "is_active", True) is False:
+        return None
+
     update_data = exam_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_obj, field, value)
-    db.add(db_obj)
-    await db.commit()
+
+    await _maybe_await(db.add(db_obj))
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
     await db.refresh(db_obj)
     return db_obj
 
 
-async def delete_exam(db: AsyncSession, db_obj: Exam) -> Exam:
-    # Assuming the soft delete standard is
-    # implemented here, as per project context
+async def delete_exam(db: AsyncSession, exam_id: int) -> Optional[Exam]:
+    db_obj = await db.get(Exam, exam_id)
+    if not db_obj:
+        return None
+
+    if getattr(db_obj, "is_active", True) is False:
+        return db_obj
+
     db_obj.is_active = False
-    db.add(db_obj)
-    await db.commit()
+    await _maybe_await(db.add(db_obj))
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    await db.refresh(db_obj)
     return db_obj
 
 

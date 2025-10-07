@@ -2,6 +2,7 @@
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -33,7 +34,11 @@ async def create_announcement(
     )
 
     db.add(db_announcement)
-    await db.commit()
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise
     await db.refresh(db_announcement)
     await db.refresh(db_announcement, attribute_names=["targets"])
 

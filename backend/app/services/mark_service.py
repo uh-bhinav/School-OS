@@ -2,6 +2,7 @@
 from typing import Optional
 
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -24,7 +25,13 @@ def mark_relationship_options():
 async def create_mark(db: AsyncSession, mark_in: MarkCreate) -> Mark:
     db_obj = Mark(**mark_in.model_dump())
     db.add(db_obj)
-    await db.commit()
+
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise
+
     await db.refresh(db_obj)
     # FIX: Re-fetch the object using our getter to eager-load relationships
     return await get_mark_by_id(db, db_obj.id)
@@ -36,16 +43,25 @@ async def bulk_create_marks(
     """
     Creates multiple mark records.
     """
-    db_objects = [Mark(**mark.model_dump()) for mark in marks_in]
-    db.add_all(db_objects)
-    await db.flush()
-
-    if not db_objects:
-        await db.commit()
+    if not marks_in:
+        try:
+            await db.commit()
+        except SQLAlchemyError:
+            await db.rollback()
+            raise
         return []
 
-    ids = [mark.id for mark in db_objects]
-    await db.commit()
+    db_objects = [Mark(**mark.model_dump()) for mark in marks_in]
+    db.add_all(db_objects)
+
+    try:
+        await db.flush()
+        ids = [mark.id for mark in db_objects]
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise
+
     stmt = select(Mark).where(Mark.id.in_(ids)).options(*mark_relationship_options())
     result = await db.execute(stmt)
     return list(result.scalars().all())
