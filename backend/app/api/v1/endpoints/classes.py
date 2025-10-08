@@ -36,11 +36,17 @@ async def create_new_class(class_in: ClassCreate, db: AsyncSession = Depends(get
     response_model=ClassOut,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def get_class_by_id(class_id: int, db: AsyncSession = Depends(get_db)):
+async def get_class_by_id(
+    class_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     Get a single class by its ID.
     """
-    db_class = await class_service.get_class(db, class_id=class_id)
+    db_class = await class_service.get_class(
+        db, class_id=class_id, school_id=current_profile.school_id
+    )
     if not db_class:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
