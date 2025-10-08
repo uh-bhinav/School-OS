@@ -1,5 +1,6 @@
 # backend/tests/conftest.py
 import asyncio
+import os
 import sys
 from typing import AsyncGenerator
 
@@ -13,6 +14,8 @@ from app.main import app
 from app.models.profile import Profile
 from app.models.role_definition import RoleDefinition
 from app.models.user_roles import UserRole
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -92,4 +95,34 @@ def mock_admin_profile() -> Profile:
         last_name="Singh",
         is_active=True,
         roles=[UserRole(role_definition=RoleDefinition(role_id=1, role_name="Admin"))],
+    )
+
+
+@pytest.fixture(scope="session")
+def mock_teacher_profile() -> Profile:
+    """Provides a reusable mock teacher profile."""
+    return Profile(
+        user_id="6d2c3e0b-42e8-4e1c-8b97-d1c9f77f9f2a",
+        school_id=1,  # Must match SCHOOL_ID used in tests
+        first_name="Ravi",
+        last_name="Kumar",
+        is_active=True,
+        roles=[
+            UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))
+        ],
+    )
+
+
+@pytest.fixture(scope="session")
+def mock_parent_profile() -> Profile:
+    """
+    Returns a mock profile object for a Parent user.
+    """
+    return Profile(
+        user_id="de6535a5-6cc7-4740-a6b0-e5b7eb2cfaac",
+        school_id=1,
+        first_name="Kavya",
+        last_name="Joshi",
+        is_active=True,
+        roles=[UserRole(role_definition=RoleDefinition(role_id=4, role_name="Parent"))],
     )

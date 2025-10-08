@@ -1,4 +1,5 @@
 # REPLACE the entire import block at the top of the file with this:
+# student_serice.py
 from typing import Optional
 
 from sqlalchemy import func, select, update
@@ -26,11 +27,7 @@ async def create_student(
     db: AsyncSession, supabase: Client, *, student_in: StudentCreate
 ) -> Optional[Student]:
     """
-    Enrolls a new student. This is a multi-step process:
-    1. Create the user in Supabase Auth.
-    2. The DB trigger auto-creates the corresponding profile.
-    3. Create the student record in the public.students table.
-    4. Assign the 'Student' role in the public.user_roles table.
+    Enrolls a new student.
     """
     # 1. Create user in Supabase Auth
     try:
@@ -57,20 +54,29 @@ async def create_student(
         if not new_user:
             return None
     except Exception:
-        # User might already exist in Auth, which is an error for a new enrollment
         return None
 
-    # 2. Trigger creates the profile. We can now create the student record.
+    # 2. Create the profile record first (required for foreign key constraint)
+    db_profile = Profile(
+        user_id=new_user.id,
+        school_id=student_in.school_id,
+        first_name=student_in.first_name,
+        last_name=student_in.last_name,
+        is_active=True,
+    )
+    db.add(db_profile)
+
+    # 3. Create the student record.
+    # FIX: Removed 'school_id' from the constructor as it's not in the Student model.
     db_student = Student(
         user_id=new_user.id,
-        school_id=student_in.school_id,  # Added school_id
         current_class_id=student_in.current_class_id,
         roll_number=student_in.roll_number,
         enrollment_date=student_in.enrollment_date,
     )
     db.add(db_student)
 
-    # 3. Assign the 'Student' role (assuming role_id 3 is 'Student')
+    # 4. Assign the 'Student' role (assuming role_id 3 is 'Student')
     db_user_role = UserRole(user_id=new_user.id, role_id=3)
     db.add(db_user_role)
 

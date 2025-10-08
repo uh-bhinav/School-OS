@@ -10,7 +10,8 @@ from pydantic import BaseModel, Field
 # A minimal representation of a Subject to be included in the StreamOut response.
 # This avoids circular dependencies and keeps the payload lean.
 class SubjectForStreamOut(BaseModel):
-    subject_id: int
+    id: int
+    code: str
     name: str
 
     class Config:
