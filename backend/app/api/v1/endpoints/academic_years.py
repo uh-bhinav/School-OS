@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import require_role
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
+from app.models.profile import Profile
 from app.schemas.academic_year_schema import (
     AcademicYearCreate,
     AcademicYearOut,
@@ -21,17 +22,34 @@ router = APIRouter()
     dependencies=[Depends(require_role("Admin"))],
 )
 async def create_new_academic_year(
-    *, db: AsyncSession = Depends(get_db), year_in: AcademicYearCreate
+    *,
+    db: AsyncSession = Depends(get_db),
+    year_in: AcademicYearCreate,
+    current_profile: Profile = Depends(get_current_user_profile),
 ):
+    if year_in.school_id != current_profile.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only create academic years for your own school.",
+        )
     return await academic_year_service.create_academic_year(db=db, year_in=year_in)
 
 
 @router.get(
-    "/all",
+    "/school/{school_id}/all",
     response_model=list[AcademicYearOut],
     dependencies=[Depends(require_role("Admin"))],
 )
-async def get_all_academic_years(db: AsyncSession = Depends(get_db)):
+async def get_all_academic_years(
+    school_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    if school_id != current_profile.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view academic years for your own school.",
+        )
     return await academic_year_service.get_all_academic_years(db=db)
 
 
@@ -40,9 +58,13 @@ async def get_all_academic_years(db: AsyncSession = Depends(get_db)):
     response_model=AcademicYearOut,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def get_academic_year_details(year_id: int, db: AsyncSession = Depends(get_db)):
+async def get_academic_year_details(
+    year_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     year = await academic_year_service.get_academic_year(db, year_id)
-    if not year:
+    if not year or year.school_id != current_profile.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found"
         )
@@ -58,9 +80,10 @@ async def update_academic_year_details(
     year_id: int,
     year_in: AcademicYearUpdate,
     db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
 ):
     db_obj = await academic_year_service.get_academic_year(db, year_id)
-    if not db_obj:
+    if not db_obj or db_obj.school_id != current_profile.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found"
         )
@@ -74,11 +97,15 @@ async def update_academic_year_details(
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def delete_academic_year(year_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_academic_year(
+    year_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     deleted_year = await academic_year_service.soft_delete_academic_year(
         db, year_id=year_id
     )
-    if not deleted_year:
+    if not deleted_year or deleted_year.school_id != current_profile.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found"
         )
@@ -91,14 +118,18 @@ async def delete_academic_year(year_id: int, db: AsyncSession = Depends(get_db))
     response_model=AcademicYearOut,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def get_the_active_year(school_id: int, db: AsyncSession = Depends(get_db)):
+async def get_the_active_year(
+    school_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     Get the currently active academic year for a school.
     """
     active_year = await academic_year_service.get_active_academic_year(
         db=db, school_id=school_id
     )
-    if not active_year:
+    if not active_year or active_year.school_id != current_profile.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No active academic year found for this school.",
@@ -113,7 +144,10 @@ async def get_the_active_year(school_id: int, db: AsyncSession = Depends(get_db)
     dependencies=[Depends(require_role("Admin"))],
 )
 async def set_the_active_year(
-    school_id: int, academic_year_id: int, db: AsyncSession = Depends(get_db)
+    school_id: int,
+    academic_year_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
     Set a specific academic year as the active one for a school.
@@ -121,7 +155,7 @@ async def set_the_active_year(
     updated_year = await academic_year_service.set_active_academic_year(
         db=db, school_id=school_id, academic_year_id=academic_year_id
     )
-    if not updated_year:
+    if not updated_year or updated_year.school_id != current_profile.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=(
