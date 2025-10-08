@@ -102,13 +102,15 @@ async def delete_academic_year(
     db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
-    deleted_year = await academic_year_service.soft_delete_academic_year(
-        db, year_id=year_id
-    )
-    if not deleted_year or deleted_year.school_id != current_profile.school_id:
+    """Soft-deletes an academic year, ensuring it's from the admin's own school."""
+    db_obj = await academic_year_service.get_academic_year(db, year_id)
+    if not db_obj or db_obj.school_id != current_profile.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found"
         )
+
+    # Now that ownership is confirmed, proceed with the deletion.
+    await academic_year_service.soft_delete_academic_year(db, year_id=year_id)
     return None
 
 

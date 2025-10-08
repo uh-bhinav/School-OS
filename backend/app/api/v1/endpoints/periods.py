@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
+from app.models.class_model import Class
 from app.models.period import Period
 from app.models.profile import Profile
 from app.schemas.period_schema import PeriodCreate, PeriodOut, PeriodUpdate
@@ -158,11 +159,14 @@ async def get_periods_for_a_class(
     """
     Get all active, non-recess periods for the school that a specific class belongs to.
     """
-    if class_id.school_id != current_profile.school_id:
+    target_class = await db.get(Class, class_id)
+    if not target_class or target_class.school_id != current_profile.school_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot create periods for another school.",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Class not found in your school.",
         )
+
+    # Now that we've verified access, we can fetch the periods.
     return await period_service.fetch_periods_for_class(db=db, class_id=class_id)
 
 
