@@ -30,9 +30,7 @@ async def start_new_conversation(
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """Starts a new conversation thread with one or more recipients."""
-    conversation = await communication_service.create_conversation(
-        db=db, obj_in=conv_in, creator_user_id=current_profile.user_id
-    )
+    conversation = await communication_service.create_conversation(db=db, obj_in=conv_in, creator_user_id=current_profile.user_id)
     return ConversationOut.model_validate(conversation, from_attributes=True)
 
 
@@ -47,13 +45,8 @@ async def get_my_conversations(
 ):
     """Retrieves all conversations the current user is a participant in."""
     # RLS and service logic ensure the user only sees chats they belong to.
-    conversations = await communication_service.get_user_conversations(
-        db=db, user_id=current_profile.user_id
-    )
-    return [
-        ConversationOut.model_validate(conversation, from_attributes=True)
-        for conversation in conversations
-    ]
+    conversations = await communication_service.get_user_conversations(db=db, user_id=current_profile.user_id)
+    return [ConversationOut.model_validate(conversation, from_attributes=True) for conversation in conversations]
 
 
 # --- Message Endpoints ---
@@ -88,9 +81,5 @@ async def send_new_message(
 )
 async def get_chat_history(conversation_id: int, db: AsyncSession = Depends(get_db)):
     """Retrieves all messages for a specific conversation (RLS enforces access)."""
-    messages = await communication_service.get_messages_in_conversation(
-        db=db, conversation_id=conversation_id
-    )
-    return [
-        MessageOut.model_validate(message, from_attributes=True) for message in messages
-    ]
+    messages = await communication_service.get_messages_in_conversation(db=db, conversation_id=conversation_id)
+    return [MessageOut.model_validate(message, from_attributes=True) for message in messages]

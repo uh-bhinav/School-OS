@@ -34,13 +34,9 @@ async def test_assign_subjects_to_class_unit():
 
     # Since the service function calls another service function (get_class) at the end,
     # we use 'patch' to replace it with a mock for this test.
-    with patch(
-        "app.services.class_service.get_class", new_callable=AsyncMock
-    ) as mock_get_class:
+    with patch("app.services.class_service.get_class", new_callable=AsyncMock) as mock_get_class:
         # 2. Act: Call the function we are testing
-        await class_service.assign_subjects_to_class(
-            db=mock_db, db_class=mock_db_class, subject_ids=[10, 20]
-        )
+        await class_service.assign_subjects_to_class(db=mock_db, db_class=mock_db_class, subject_ids=[10, 20])
 
     # 3. Assert: Verify the function did what we expected
     # Did it try to find the subjects in the database?
@@ -69,13 +65,9 @@ async def test_assign_subjects_to_class_with_empty_list():
     mock_result.scalars.return_value.all.return_value = []
     mock_db.execute.return_value = mock_result
 
-    with patch(
-        "app.services.class_service.get_class", new_callable=AsyncMock
-    ) as mock_get_class:
+    with patch("app.services.class_service.get_class", new_callable=AsyncMock) as mock_get_class:
         # Act: Call the function with an empty list
-        await class_service.assign_subjects_to_class(
-            db=mock_db, db_class=mock_db_class, subject_ids=[]
-        )
+        await class_service.assign_subjects_to_class(db=mock_db, db_class=mock_db_class, subject_ids=[])
 
     # Assert: Verify the subjects list on the class is now empty
     assert mock_db_class.subjects == []
@@ -84,9 +76,7 @@ async def test_assign_subjects_to_class_with_empty_list():
 
 
 @pytest.mark.asyncio
-async def test_search_classes_dynamic_filters(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_search_classes_dynamic_filters(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Unit Test (Edge Case): Verifies the dynamic query building in search_classes.
     """
@@ -112,9 +102,7 @@ async def test_search_classes_dynamic_filters(
         mock_statement.options.return_value = mock_statement
 
         # 2. Act: Call the search function with a specific filter
-        result_classes = await class_service.search_classes(
-            db=mock_db, school_id=1, filters={"grade_level": 5}
-        )
+        result_classes = await class_service.search_classes(db=mock_db, school_id=1, filters={"grade_level": 5})
 
     # 3. Assert
     # Did the function return the list of classes we told the mock to provide?
@@ -136,9 +124,7 @@ async def test_search_classes_with_multiple_filters():
     mock_db.execute.return_value = mock_result
 
     # Act: Call the search function
-    result = await class_service.search_classes(
-        db=mock_db, school_id=1, filters={"grade_level": 5, "teacher_id": 10}
-    )
+    result = await class_service.search_classes(db=mock_db, school_id=1, filters={"grade_level": 5, "teacher_id": 10})
 
     # Assert: Verify the function returned the mocked data and called the db
     assert len(result) == 1

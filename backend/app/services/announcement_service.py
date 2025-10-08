@@ -26,10 +26,7 @@ async def create_announcement(
     db_announcement = Announcement(
         published_by_id=published_by_id,
         language=language,
-        targets=[
-            AnnouncementTarget(**target.model_dump())
-            for target in announcement_in.targets
-        ],
+        targets=[AnnouncementTarget(**target.model_dump()) for target in announcement_in.targets],
         **announcement_data,
     )
 
@@ -45,20 +42,14 @@ async def create_announcement(
     return db_announcement
 
 
-async def get_announcement_by_id(
-    db: AsyncSession, announcement_id: int
-) -> Optional[Announcement]:
+async def get_announcement_by_id(db: AsyncSession, announcement_id: int) -> Optional[Announcement]:
     """Retrieves a single announcement."""
-    stmt = select(Announcement).where(
-        Announcement.id == announcement_id, Announcement.is_active.is_(True)
-    )
+    stmt = select(Announcement).where(Announcement.id == announcement_id, Announcement.is_active.is_(True))
     result = await db.execute(stmt)
     return result.scalars().first()
 
 
-async def get_user_announcement_feed(
-    db: AsyncSession, user_id: UUID
-) -> list[Announcement]:
+async def get_user_announcement_feed(db: AsyncSession, user_id: UUID) -> list[Announcement]:
     """
     Retrieves announcements relevant to the
     user (Requires complex filtering/RLS).

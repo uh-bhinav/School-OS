@@ -16,9 +16,7 @@ router = APIRouter()
     response_model=UserInviteResponse,
     dependencies=[Depends(require_role("Admin"))],  # only admins can invite
 )
-async def invite_new_user(
-    request: UserInviteRequest, db: AsyncSession = Depends(get_db)
-):
+async def invite_new_user(request: UserInviteRequest, db: AsyncSession = Depends(get_db)):
     # 1. Call Supabase to invite and create user
     supabase_response = await invite_user(
         email=request.email,
@@ -35,9 +33,7 @@ async def invite_new_user(
         raise HTTPException(status_code=400, detail="Supabase did not return a user id")
 
     # 2. Ensure role exists in roles_definition
-    result = await db.execute(
-        select(RoleDefinition).where(RoleDefinition.role_name == request.role_name)
-    )
+    result = await db.execute(select(RoleDefinition).where(RoleDefinition.role_name == request.role_name))
     role_def = result.scalar_one_or_none()
 
     if not role_def:

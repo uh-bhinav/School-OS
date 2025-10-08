@@ -21,25 +21,17 @@ TIMETABLE_WITH_DETAILS_OPTIONS = [
 ]
 
 
-async def get_entry_with_details(
-    db: AsyncSession, entry_id: int
-) -> Optional[Timetable]:
+async def get_entry_with_details(db: AsyncSession, entry_id: int) -> Optional[Timetable]:
     """
     Gets a single timetable entry, preloading all nested relationships
     required by the TimetableEntryOut schema to prevent lazy-loading errors.
     """
-    stmt = (
-        select(Timetable)
-        .where(Timetable.id == entry_id, Timetable.is_active)
-        .options(*TIMETABLE_WITH_DETAILS_OPTIONS)
-    )
+    stmt = select(Timetable).where(Timetable.id == entry_id, Timetable.is_active).options(*TIMETABLE_WITH_DETAILS_OPTIONS)
     result = await db.execute(stmt)
     return result.scalars().first()
 
 
-async def create_timetable_entry(
-    db: AsyncSession, timetable_in: TimetableEntryCreate
-) -> Timetable:
+async def create_timetable_entry(db: AsyncSession, timetable_in: TimetableEntryCreate) -> Timetable:
     db_obj = Timetable(**timetable_in.model_dump())
     db.add(db_obj)
     await db.commit()
@@ -47,9 +39,7 @@ async def create_timetable_entry(
     return await get_entry_with_details(db=db, entry_id=db_obj.id)
 
 
-async def get_timetable_entry_by_id(
-    db: AsyncSession, entry_id: int
-) -> Optional[Timetable]:
+async def get_timetable_entry_by_id(db: AsyncSession, entry_id: int) -> Optional[Timetable]:
     # Use 'Timetable.is_active' directly for the boolean check
     stmt = select(Timetable).where(Timetable.id == entry_id, Timetable.is_active)
     result = await db.execute(stmt)
@@ -58,31 +48,19 @@ async def get_timetable_entry_by_id(
 
 async def get_class_timetable(db: AsyncSession, class_id: int) -> list[Timetable]:
     # Use 'Timetable.is_active' directly for the boolean check
-    stmt = (
-        select(Timetable)
-        .where(Timetable.class_id == class_id, Timetable.is_active)
-        .options(*TIMETABLE_WITH_DETAILS_OPTIONS)
-        .order_by(Timetable.day_of_week, Timetable.period_id)
-    )
+    stmt = select(Timetable).where(Timetable.class_id == class_id, Timetable.is_active).options(*TIMETABLE_WITH_DETAILS_OPTIONS).order_by(Timetable.day_of_week, Timetable.period_id)
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
 async def get_teacher_timetable(db: AsyncSession, teacher_id: int) -> list[Timetable]:
     # Use 'Timetable.is_active' directly for the boolean check
-    stmt = (
-        select(Timetable)
-        .where(Timetable.teacher_id == teacher_id, Timetable.is_active)
-        .options(*TIMETABLE_WITH_DETAILS_OPTIONS)
-        .order_by(Timetable.day_of_week, Timetable.period_id)
-    )
+    stmt = select(Timetable).where(Timetable.teacher_id == teacher_id, Timetable.is_active).options(*TIMETABLE_WITH_DETAILS_OPTIONS).order_by(Timetable.day_of_week, Timetable.period_id)
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def update_timetable_entry(
-    db: AsyncSession, db_obj: Timetable, timetable_in: TimetableEntryUpdate
-) -> Timetable:
+async def update_timetable_entry(db: AsyncSession, db_obj: Timetable, timetable_in: TimetableEntryUpdate) -> Timetable:
     update_data = timetable_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_obj, field, value)
@@ -92,20 +70,11 @@ async def update_timetable_entry(
     return await get_entry_with_details(db=db, entry_id=db_obj.id)
 
 
-async def soft_delete_timetable_entry(
-    db: AsyncSession, entry_id: int
-) -> Optional[Timetable]:
+async def soft_delete_timetable_entry(db: AsyncSession, entry_id: int) -> Optional[Timetable]:
     """
     Soft-deletes a timetable entry by setting its is_active flag to False.
     """
-    stmt = (
-        update(Timetable)
-        .where(
-            Timetable.id == entry_id, Timetable.is_active
-        )  # Use 'Timetable.is_active' directly
-        .values(is_active=False)
-        .returning(Timetable)
-    )
+    stmt = update(Timetable).where(Timetable.id == entry_id, Timetable.is_active).values(is_active=False).returning(Timetable)  # Use 'Timetable.is_active' directly
     result = await db.execute(stmt)
     await db.commit()
     return result.scalar_one_or_none()
@@ -148,9 +117,7 @@ async def get_schedule_for_day(
 
     elif target_type == "student":
         # For a student, first find their class ID
-        student_class_id_res = await db.execute(
-            select(Student.current_class_id).where(Student.student_id == target_id)
-        )
+        student_class_id_res = await db.execute(select(Student.current_class_id).where(Student.student_id == target_id))
         student_class_id = student_class_id_res.scalar_one_or_none()
 
         if not student_class_id:

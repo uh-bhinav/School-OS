@@ -7,9 +7,7 @@ dsn = "postgresql+psycopg://postgres.nrowqnfyfjbsjbzqvkzr:i9Tgl55S0KqvfEOl@aws-1
 
 async def main():
     try:
-        async with await psycopg.AsyncConnection.connect(
-            dsn.replace("+psycopg", "")
-        ) as conn:
+        async with await psycopg.AsyncConnection.connect(dsn.replace("+psycopg", "")) as conn:
             async with conn.cursor() as cur:
                 await cur.execute("SELECT 1;")
                 row = await cur.fetchone()

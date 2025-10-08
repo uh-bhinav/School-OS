@@ -17,9 +17,7 @@ SCHOOL_ID = 1
 
 
 # Note: Using the same ensure_teacher_record helper from the previous test file.
-async def ensure_teacher_record(
-    db_session: AsyncSession, mock_teacher_profile: Profile
-) -> tuple[uuid.UUID, int]:
+async def ensure_teacher_record(db_session: AsyncSession, mock_teacher_profile: Profile) -> tuple[uuid.UUID, int]:
     teacher_user_uuid = uuid.UUID(str(mock_teacher_profile.user_id))
 
     await db_session.execute(
@@ -115,17 +113,12 @@ async def test_create_single_attendance_record_as_teacher(
     test_user_id = uuid.uuid4()
     test_email = f"test.student.att.{uuid.uuid4()}@schoolos.dev"
     await db_session.execute(
-        text(
-            "INSERT INTO auth.users (id, email, created_at, updated_at)"
-            " VALUES (:user_id, :email, NOW(), NOW())"
-        ),
+        text("INSERT INTO auth.users (id, email, created_at, updated_at)" " VALUES (:user_id, :email, NOW(), NOW())"),
         {"user_id": test_user_id, "email": test_email},
     )
     await db_session.commit()
 
-    student = Student(
-        user_id=test_user_id, current_class_id=class_id, enrollment_date="2025-09-01"
-    )
+    student = Student(user_id=test_user_id, current_class_id=class_id, enrollment_date="2025-09-01")
     db_session.add(student)
     await db_session.commit()
     await db_session.refresh(student)
@@ -206,10 +199,7 @@ async def test_create_bulk_attendance_records_as_teacher(
         test_user_id = uuid.uuid4()
         test_email = f"test.student.bulk.att.{i}.{uuid.uuid4()}@schoolos.dev"
         await db_session.execute(
-            text(
-                "INSERT INTO auth.users (id, email, created_at, updated_at)"
-                " VALUES (:user_id, :email, NOW(), NOW())"
-            ),
+            text("INSERT INTO auth.users (id, email, created_at, updated_at)" " VALUES (:user_id, :email, NOW(), NOW())"),
             {"user_id": test_user_id, "email": test_email},
         )
         await db_session.commit()
@@ -322,17 +312,12 @@ async def test_get_attendance_records_by_date_range(
     test_user_id = uuid.uuid4()
     test_email = f"test.student.att.range.{uuid.uuid4()}@schoolos.dev"
     await db_session.execute(
-        text(
-            "INSERT INTO auth.users (id, email, created_at, updated_at) "
-            "VALUES (:user_id, :email, NOW(), NOW())"
-        ),
+        text("INSERT INTO auth.users (id, email, created_at, updated_at) " "VALUES (:user_id, :email, NOW(), NOW())"),
         {"user_id": test_user_id, "email": test_email},
     )
     await db_session.commit()
 
-    student = Student(
-        user_id=test_user_id, current_class_id=class_id, enrollment_date="2025-09-01"
-    )
+    student = Student(user_id=test_user_id, current_class_id=class_id, enrollment_date="2025-09-01")
     db_session.add(student)
     await db_session.commit()
     await db_session.refresh(student)
@@ -357,9 +342,7 @@ async def test_get_attendance_records_by_date_range(
     # --- Step 4: Make the GET request with a date range ---
     start_date = "2025-10-02"
     end_date = "2025-10-08"
-    response = await test_client.get(
-        f"/v1/attendance/?student_id={student_id}&start_date={start_date}&end_date={end_date}"
-    )
+    response = await test_client.get(f"/v1/attendance/?student_id={student_id}&start_date={start_date}&end_date={end_date}")
 
     # --- Step 5: Assertions ---
     assert response.status_code == status.HTTP_200_OK

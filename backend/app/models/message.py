@@ -13,14 +13,10 @@ class Message(Base):
     __tablename__ = "messages"
 
     message_id = Column(Integer, primary_key=True, index=True)
-    conversation_id = Column(
-        Integer, ForeignKey("conversations.conversation_id"), nullable=False
-    )
+    conversation_id = Column(Integer, ForeignKey("conversations.conversation_id"), nullable=False)
     sender_id = Column(UUID, ForeignKey("profiles.user_id"), nullable=False)
 
-    payload = Column(
-        JSON, nullable=False
-    )  # Stores the message content/rich media reference
+    payload = Column(JSON, nullable=False)  # Stores the message content/rich media reference
     is_read = Column(Boolean, default=False)
 
     # Relationships

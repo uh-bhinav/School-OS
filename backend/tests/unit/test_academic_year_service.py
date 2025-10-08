@@ -23,9 +23,7 @@ async def test_set_active_academic_year_unit():
     mock_db.get.return_value = mock_year_to_activate
 
     # 2. Act
-    result = await academic_year_service.set_active_academic_year(
-        db=mock_db, school_id=1, academic_year_id=10
-    )
+    result = await academic_year_service.set_active_academic_year(db=mock_db, school_id=1, academic_year_id=10)
 
     # 3. Assert
     # Did it correctly fetch the year by its ID?
@@ -59,9 +57,7 @@ async def test_set_active_academic_year_not_found():
 
     # 2. Act
     # Call the function with an ID that we've configured to be "not found".
-    result = await academic_year_service.set_active_academic_year(
-        db=mock_db, school_id=1, academic_year_id=999
-    )
+    result = await academic_year_service.set_active_academic_year(db=mock_db, school_id=1, academic_year_id=999)
 
     # 3. Assert
     # Did the function correctly return None?
@@ -89,9 +85,7 @@ async def test_set_active_academic_year_for_wrong_school_fails():
 
     # 2. Act
     # Attempt to activate this year for school 1
-    result = await academic_year_service.set_active_academic_year(
-        db=mock_db, school_id=1, academic_year_id=10
-    )
+    result = await academic_year_service.set_active_academic_year(db=mock_db, school_id=1, academic_year_id=10)
 
     # 3. Assert
     # Did the function correctly return None because of the school_id mismatch?

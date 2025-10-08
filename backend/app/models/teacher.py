@@ -50,9 +50,7 @@ class Teacher(Base):
     # Soft Delete & Timestamps
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), default=func.now(), onupdate=func.now()
-    )
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
 
     # Relationships
     # CHANGED: The relationship name is 'profile' to match the schema and service layers
