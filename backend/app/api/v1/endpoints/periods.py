@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
+from app.models.class_model import Class
 from app.models.period import Period
 from app.models.profile import Profile
 from app.schemas.period_schema import PeriodCreate, PeriodOut, PeriodUpdate
@@ -24,10 +25,18 @@ router = APIRouter()
     tags=["Periods"],
 )
 async def create_new_period(
-    *, db: AsyncSession = Depends(get_db), period_in: PeriodCreate
+    *,
+    db: AsyncSession = Depends(get_db),
+    period_in: PeriodCreate,
+    current_profile: Profile = Depends(get_current_user_profile),
 ):
     """Create a new period time slot (e.g., add
     9:00 AM - 9:45 AM slot). Admin only."""
+    if period_in.school_id != current_profile.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot create periods for another school.",
+        )
     return await period_service.create_period(db=db, period_in=period_in)
 
 
@@ -38,9 +47,18 @@ async def create_new_period(
     dependencies=[Depends(require_role("Admin"))],
     tags=["Periods"],
 )
-async def get_all_periods(school_id: int, db: AsyncSession = Depends(get_db)):
+async def get_all_periods(
+    school_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """Get all active periods for a school. Admin only."""
     # Service layer applies is_active filter
+    if school_id != current_profile.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot view periods for another school.",
+        )
     return await period_service.get_all_periods_for_school(db=db, school_id=school_id)
 
 
@@ -51,10 +69,14 @@ async def get_all_periods(school_id: int, db: AsyncSession = Depends(get_db)):
     dependencies=[Depends(require_role("Admin"))],
     tags=["Periods"],
 )
-async def get_period_by_id(period_id: int, db: AsyncSession = Depends(get_db)):
+async def get_period_by_id(
+    period_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """Get a single active period by ID. Admin only."""
     period = await period_service.get_period(db=db, period_id=period_id)
-    if not period:
+    if not period or period.school_id != current_profile.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Period not found or inactive"
         )
@@ -69,7 +91,11 @@ async def get_period_by_id(period_id: int, db: AsyncSession = Depends(get_db)):
     tags=["Periods"],
 )
 async def update_existing_period(
-    period_id: int, *, db: AsyncSession = Depends(get_db), period_in: PeriodUpdate
+    period_id: int,
+    *,
+    db: AsyncSession = Depends(get_db),
+    period_in: PeriodUpdate,
+    current_profile: Profile = Depends(get_current_user_profile),
 ):
     """Update period details (e.g., change start time). Admin only."""
     # The read filter is applied in get_period, but
@@ -77,7 +103,7 @@ async def update_existing_period(
     # We fetch by PK directly here to allow
     # Admin to revive or modify inactive period objects.
     db_period = await db.get(Period, period_id)
-    if not db_period:
+    if not db_period or db_period.school_id != current_profile.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Period not found"
         )
@@ -95,12 +121,16 @@ async def update_existing_period(
     dependencies=[Depends(require_role("Admin"))],
     tags=["Periods"],
 )
-async def delete_period_by_id(period_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_period_by_id(
+    period_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """Deactivate a period (Soft Delete). Admin only."""
     # Fetch by PK directly to find the period,
     # even if it's already inactive.
     db_period = await db.get(Period, period_id)
-    if not db_period:
+    if not db_period or db_period.school_id != current_profile.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Period not found"
         )
@@ -121,10 +151,22 @@ async def delete_period_by_id(period_id: int, db: AsyncSession = Depends(get_db)
     dependencies=[Depends(require_role("Admin", "Teacher"))],
     tags=["Periods"],
 )
-async def get_periods_for_a_class(class_id: int, db: AsyncSession = Depends(get_db)):
+async def get_periods_for_a_class(
+    class_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     Get all active, non-recess periods for the school that a specific class belongs to.
     """
+    target_class = await db.get(Class, class_id)
+    if not target_class or target_class.school_id != current_profile.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Class not found in your school.",
+        )
+
+    # Now that we've verified access, we can fetch the periods.
     return await period_service.fetch_periods_for_class(db=db, class_id=class_id)
 
 
