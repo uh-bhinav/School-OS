@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +36,6 @@ async def enroll_new_student(
     Enroll a new student. Only admins can perform this action.
     """
     try:
-        # --- FIX: Added the missing 'await' keyword ---
         response = supabase.auth.admin.create_user(
             {
                 "email": student_in.email,
@@ -61,7 +60,7 @@ async def enroll_new_student(
     return student
 
 
-@router.get("/search", response_model=List[StudentOut])
+@router.get("/search", response_model=list[StudentOut])
 async def search_for_students(
     name: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
@@ -83,14 +82,16 @@ async def get_student_by_id(
     db: AsyncSession = Depends(get_db),
     current_user: Profile = Depends(get_current_user_profile),
 ):
+    """
+    Retrieve details for a specific student by ID.
+    """
     student = await student_service.get_student_by_id(db=db, student_id=student_id)
     if not student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found.")
     return student
 
 
-# ... (The rest of your endpoint file remains unchanged) ...
-@router.get("/", response_model=List[StudentOut])
+@router.get("/", response_model=list[StudentOut])
 async def get_all_students(
     db: AsyncSession = Depends(get_db),
     current_user: Profile = Depends(get_current_user_profile),
@@ -106,7 +107,16 @@ async def get_all_students(
     response_model=StudentOut,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def update_existing_student(student_id: int, *, db: AsyncSession = Depends(get_db), student_in: StudentUpdate):
+async def update_existing_student(
+    student_id: int,
+    *,
+    db: AsyncSession = Depends(get_db),
+    student_in: StudentUpdate,
+):
+    """
+    Update details of an existing student.
+    Only Admins can perform this action.
+    """
     db_student = await student_service.get_student(db=db, student_id=student_id)
     if not db_student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
