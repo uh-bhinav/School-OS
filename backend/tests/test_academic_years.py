@@ -23,7 +23,7 @@ async def test_get_all_academic_years(
     """Tests retrieving all academic years for the school."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
     # CORRECTED ENDPOINT: The path is '/all'
-    response = await test_client.get("/v1/academic-years/all")
+    response = await test_client.get(f"/v1/academic-years/school/{SCHOOL_ID}/all")
 
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
