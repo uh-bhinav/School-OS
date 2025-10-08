@@ -1,7 +1,7 @@
 # backend/app/agents/modules/academics/leaves/subject_agent/tools.py
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 
@@ -21,7 +21,7 @@ BASE_URL = "http://localhost:8000/api/v1"
 
 
 @tool("list_subjects_for_class", args_schema=ListSubjectsForClassSchema)
-def list_subjects_for_class(class_name: str, academic_year: Optional[str] = None) -> Dict[str, Any]:
+def list_subjects_for_class(class_name: str, academic_year: Optional[str] = None) -> dict[str, Any]:
     """
     Lists all the subjects that are part of the curriculum for a specific class.
     Use this tool when a user asks about what subjects a class studies or what subjects are taught to a class.
@@ -107,7 +107,7 @@ def list_subjects_for_class(class_name: str, academic_year: Optional[str] = None
 
 
 @tool("get_teacher_for_subject", args_schema=GetTeacherForSubjectSchema)
-def get_teacher_for_subject(subject_name: str, class_name: str, academic_year: Optional[str] = None) -> Dict[str, Any]:
+def get_teacher_for_subject(subject_name: str, class_name: str, academic_year: Optional[str] = None) -> dict[str, Any]:
     """
     Identifies which teacher is assigned to teach a specific subject to a particular class.
     Use this tool when a user asks who teaches a subject, which teacher is assigned, or teacher information for a subject.
@@ -173,7 +173,7 @@ def assign_subject_to_class(
     academic_year: str,
     weekly_hours: Optional[int] = None,
     is_mandatory: Optional[bool] = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Assigns a subject to a class's curriculum for the academic year. (Admin-only operation)
     Use this tool when an administrator wants to add a subject to a class's curriculum.
@@ -231,7 +231,7 @@ def assign_subject_to_class(
 
 
 @tool("list_academic_streams", args_schema=ListAcademicStreamsSchema)
-def list_academic_streams(grade_level: Optional[str] = None, include_inactive: Optional[bool] = False) -> Dict[str, Any]:
+def list_academic_streams(grade_level: Optional[str] = None, include_inactive: Optional[bool] = False) -> dict[str, Any]:
     """
     Retrieves the available academic streams in the school (e.g., Science, Commerce, Arts).
     Use this tool when a user asks about available streams, specializations, or academic tracks.
@@ -331,7 +331,7 @@ def assign_teacher_to_subject(
     class_name: Optional[str] = None,
     academic_year: Optional[str] = None,
     is_primary_teacher: Optional[bool] = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Creates an association between a teacher and a subject, indicating their qualification to teach it. (Admin-only operation)
     Use this tool when an administrator wants to assign a teacher to teach a subject.

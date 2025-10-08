@@ -1,7 +1,9 @@
 # backend/app/agents/base_agent.py
 
+
 import logging
-from typing import Annotated, Sequence, TypedDict
+from collections.abc import Sequence
+from typing import Annotated, TypedDict
 
 from langchain_core.messages import BaseMessage, ToolMessage
 from langgraph.graph import END, StateGraph
