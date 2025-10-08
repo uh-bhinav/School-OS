@@ -1,5 +1,6 @@
 # backend/tests/conftest.py
 import asyncio
+import os
 import sys
 import uuid
 from typing import AsyncGenerator
@@ -24,6 +25,8 @@ from app.models.user_roles import UserRole
 app.include_router(teachers, prefix="/v1/teachers", tags=["teachers"])
 app.include_router(student_contacts, prefix="/v1/student-contacts", tags=["student-contacts"])
 app.include_router(employment_statuses, prefix="/v1/employment-statuses", tags=["employment-statuses"])
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())

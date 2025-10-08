@@ -47,7 +47,7 @@ class ClassOut(BaseModel):
     academic_year_id: int
     class_teacher_id: Optional[int] = None
     is_active: bool
-    subjects: list[SubjectOut] = []
+    subjects: Optional[list[SubjectOut]] = None  # <- change here
 
     class Config:
         from_attributes = True

@@ -8,7 +8,6 @@ from app.db.session import get_db
 from app.models.profile import Profile
 from app.schemas.mark_schema import (
     ClassPerformanceSummary,
-    MarkBulkCreate,
     MarkCreate,
     MarkOut,
     MarkUpdate,
@@ -23,15 +22,58 @@ router = APIRouter()
     "/",
     response_model=MarkOut,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[
-        Depends(require_role("teacher"))
-    ],  # Example: Teachers can submit marks
 )
-async def create_new_mark(mark_in: MarkCreate, db: AsyncSession = Depends(get_db)):
+async def create_new_mark(
+    mark_in: MarkCreate,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(require_role("Teacher")),
+):
     """
     Create a new mark record. Teacher only.
     """
-    return await mark_service.create_mark(db=db, mark_in=mark_in)
+    teacher_id = await mark_service.get_teacher_id_for_user(
+        db, user_id=current_profile.user_id
+    )
+    if teacher_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only users with a teacher record can submit marks.",
+        )
+
+    created_mark = await mark_service.create_mark(
+        db=db,
+        mark_in=mark_in,
+    )
+
+    mark_out = MarkOut.model_validate(created_mark, from_attributes=True)
+    return mark_out.model_copy(update={"entered_by_teacher_id": teacher_id})
+
+
+# Teacher/Admin: Fetch marks with query parameters
+@router.get(
+    "/",
+    response_model=list[MarkOut],
+)
+async def list_marks(
+    student_id: int,
+    exam_id: int | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(require_role("Teacher", "Admin")),
+):
+    marks = await mark_service.get_marks_for_student_and_exam(
+        db, student_id=student_id, exam_id=exam_id
+    )
+
+    teacher_id = await mark_service.get_teacher_id_for_user(
+        db, user_id=current_profile.user_id
+    )
+
+    return [
+        MarkOut.model_validate(mark, from_attributes=True).model_copy(
+            update={"entered_by_teacher_id": teacher_id}
+        )
+        for mark in marks
+    ]
 
 
 # Student/Parent only: Get marks for a specific student
@@ -83,30 +125,36 @@ async def delete_mark(mark_id: int, db: AsyncSession = Depends(get_db)):
     "/bulk",
     response_model=list[MarkOut],
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role("Teacher"))],  # Or "Admin"
 )
 async def submit_marks_in_bulk(
     *,
     db: AsyncSession = Depends(get_db),
-    marks_in: MarkBulkCreate,
-    current_profile: Profile = Depends(get_current_user_profile),
+    marks_in: list[MarkCreate],
+    current_profile: Profile = Depends(require_role("Teacher")),
 ):
     """
     Submit marks for multiple students at once. Teacher/Admin only.
     """
-    if not current_profile.teacher:
+    teacher_id = await mark_service.get_teacher_id_for_user(
+        db, user_id=current_profile.user_id
+    )
+    if teacher_id is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only users with a teacher record can submit marks.",
         )
 
-    # Pass the authenticated teacher's ID to the service function
     created_marks = await mark_service.bulk_create_marks(
         db=db,
-        marks_in=marks_in.marks,
-        entered_by_teacher_id=current_profile.teacher.teacher_id,
+        marks_in=marks_in,
     )
-    return created_marks
+
+    return [
+        MarkOut.model_validate(mark, from_attributes=True).model_copy(
+            update={"entered_by_teacher_id": teacher_id}
+        )
+        for mark in created_marks
+    ]
 
 
 @router.get("/report-card/student/{student_id}", response_model=list[MarkOut])
