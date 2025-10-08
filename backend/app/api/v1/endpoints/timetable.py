@@ -33,15 +33,11 @@ class ScheduleTargetType(str, Enum):
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def create_new_timetable_entry(
-    timetable_in: TimetableEntryCreate, db: AsyncSession = Depends(get_db)
-):
+async def create_new_timetable_entry(timetable_in: TimetableEntryCreate, db: AsyncSession = Depends(get_db)):
     """
     Create a new timetable entry. Admin only.
     """
-    return await timetable_service.create_timetable_entry(
-        db=db, timetable_in=timetable_in
-    )
+    return await timetable_service.create_timetable_entry(db=db, timetable_in=timetable_in)
 
 
 # Student/Parent only: Get timetable for a specific class
@@ -56,9 +52,7 @@ async def get_timetable_for_class(class_id: int, db: AsyncSession = Depends(get_
     """
     timetable = await timetable_service.get_class_timetable(db=db, class_id=class_id)
     if not timetable:
-        raise HTTPException(
-            status_code=404, detail="Timetable not found for this class."
-        )
+        raise HTTPException(status_code=404, detail="Timetable not found for this class.")
     return timetable
 
 
@@ -68,19 +62,13 @@ async def get_timetable_for_class(class_id: int, db: AsyncSession = Depends(get_
     response_model=list[TimetableEntryOut],
     dependencies=[Depends(require_role("Teacher"))],
 )
-async def get_timetable_for_teacher(
-    teacher_id: int, db: AsyncSession = Depends(get_db)
-):
+async def get_timetable_for_teacher(teacher_id: int, db: AsyncSession = Depends(get_db)):
     """
     Get the personalized timetable for a specific teacher.
     """
-    timetable = await timetable_service.get_teacher_timetable(
-        db=db, teacher_id=teacher_id
-    )
+    timetable = await timetable_service.get_teacher_timetable(db=db, teacher_id=teacher_id)
     if not timetable:
-        raise HTTPException(
-            status_code=404, detail="Timetable not found for this teacher."
-        )
+        raise HTTPException(status_code=404, detail="Timetable not found for this teacher.")
     return timetable
 
 
@@ -98,9 +86,7 @@ async def update_timetable_entry(
     db_obj = await timetable_service.get_timetable_entry_by_id(db, entry_id)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Timetable entry not found.")
-    return await timetable_service.update_timetable_entry(
-        db, db_obj=db_obj, timetable_in=timetable_in
-    )
+    return await timetable_service.update_timetable_entry(db, db_obj=db_obj, timetable_in=timetable_in)
 
 
 # Admin only: Soft-delete an existing timetable entry
@@ -113,9 +99,7 @@ async def delete_timetable_entry(entry_id: int, db: AsyncSession = Depends(get_d
     """
     Soft-deletes a timetable entry by setting its is_active flag to false.
     """
-    deleted_entry = await timetable_service.soft_delete_timetable_entry(
-        db, entry_id=entry_id
-    )
+    deleted_entry = await timetable_service.soft_delete_timetable_entry(db, entry_id=entry_id)
     if not deleted_entry:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -128,9 +112,7 @@ async def delete_timetable_entry(entry_id: int, db: AsyncSession = Depends(get_d
 async def get_schedule(
     target_type: ScheduleTargetType,
     target_id: int,
-    schedule_date: date = Query(
-        ..., description="The date for the schedule in YYYY-MM-DD format"
-    ),
+    schedule_date: date = Query(..., description="The date for the schedule in YYYY-MM-DD format"),
     db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):

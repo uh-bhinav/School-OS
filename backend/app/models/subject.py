@@ -28,6 +28,4 @@ class Subject(Base):
     marks_records = relationship("Mark", back_populates="subject")
 
     # 2. Relationship for Streams (from main/other branch)
-    streams = relationship(
-        "Stream", secondary=stream_subjects_association, back_populates="subjects"
-    )
+    streams = relationship("Stream", secondary=stream_subjects_association, back_populates="subjects")

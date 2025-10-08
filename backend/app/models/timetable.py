@@ -31,9 +31,7 @@ class Timetable(Base):
     # CRITICAL ADDITION: Soft Delete and Audit Fields
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), default=func.now(), onupdate=func.now()
-    )
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
 
     # Relationships
     # Add relationship for the new school_id column

@@ -25,6 +25,4 @@ class CartItem(Base):
 
     # Constraint ensures a user can only
     #  have one entry for a given product in their cart.
-    __table_args__ = (
-        UniqueConstraint("cart_id", "product_id", name="_cart_product_uc"),
-    )
+    __table_args__ = (UniqueConstraint("cart_id", "product_id", name="_cart_product_uc"),)

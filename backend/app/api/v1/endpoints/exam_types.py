@@ -18,9 +18,7 @@ router = APIRouter()
     status_code=status.HTTP_2_CREATED,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def create_new_exam_type(
-    *, db: AsyncSession = Depends(get_db), exam_type_in: ExamTypeCreate
-):
+async def create_new_exam_type(*, db: AsyncSession = Depends(get_db), exam_type_in: ExamTypeCreate):
     """
     Create a new exam type category for a school. Admin only.
     """
@@ -36,6 +34,4 @@ async def get_all_exam_types(school_id: int, db: AsyncSession = Depends(get_db))
     """
     Get all exam type categories for a school. Admin only.
     """
-    return await exam_type_service.get_all_exam_types_for_school(
-        db=db, school_id=school_id
-    )
+    return await exam_type_service.get_all_exam_types_for_school(db=db, school_id=school_id)

@@ -54,9 +54,7 @@ async def get_class_by_id(class_id: int, db: AsyncSession = Depends(get_db)):
     response_model=list[ClassOut],
     dependencies=[Depends(require_role("Admin"))],
 )
-async def get_all_classes_for_school(
-    school_id: int, db: AsyncSession = Depends(get_db)
-):
+async def get_all_classes_for_school(school_id: int, db: AsyncSession = Depends(get_db)):
     """
     Get all active classes for a specific school.
     """
@@ -76,16 +74,10 @@ async def assign_subjects(
     subjects_in: ClassSubjectsAssign,
     current_profile: Profile = Depends(get_current_user_profile),
 ):
-    db_class = await class_service.get_class(
-        db=db, class_id=class_id, school_id=current_profile.school_id
-    )
+    db_class = await class_service.get_class(db=db, class_id=class_id, school_id=current_profile.school_id)
     if not db_class:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Class not found"
-        )
-    return await class_service.assign_subjects_to_class(
-        db=db, db_class=db_class, subject_ids=subjects_in.subject_ids
-    )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Class not found")
+    return await class_service.assign_subjects_to_class(db=db, db_class=db_class, subject_ids=subjects_in.subject_ids)
 
 
 @router.get(
@@ -121,9 +113,7 @@ async def search_for_classes(
     if teacher_id is not None:
         filters["teacher_id"] = teacher_id
 
-    return await class_service.search_classes(
-        db=db, school_id=school_id, filters=filters
-    )
+    return await class_service.search_classes(db=db, school_id=school_id, filters=filters)
 
 
 @router.put(

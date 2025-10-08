@@ -22,9 +22,7 @@ router = APIRouter()
     dependencies=[Depends(require_role("Admin"))],
     tags=["Periods"],
 )
-async def create_new_period(
-    *, db: AsyncSession = Depends(get_db), period_in: PeriodCreate
-):
+async def create_new_period(*, db: AsyncSession = Depends(get_db), period_in: PeriodCreate):
     """Create a new period time slot (e.g., add
     9:00 AM - 9:45 AM slot). Admin only."""
     return await period_service.create_period(db=db, period_in=period_in)
@@ -54,9 +52,7 @@ async def get_period_by_id(period_id: int, db: AsyncSession = Depends(get_db)):
     """Get a single active period by ID. Admin only."""
     period = await period_service.get_period(db=db, period_id=period_id)
     if not period:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Period not found or inactive"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Period not found or inactive")
     return period
 
 
@@ -67,9 +63,7 @@ async def get_period_by_id(period_id: int, db: AsyncSession = Depends(get_db)):
     dependencies=[Depends(require_role("Admin"))],
     tags=["Periods"],
 )
-async def update_existing_period(
-    period_id: int, *, db: AsyncSession = Depends(get_db), period_in: PeriodUpdate
-):
+async def update_existing_period(period_id: int, *, db: AsyncSession = Depends(get_db), period_in: PeriodUpdate):
     """Update period details (e.g., change start time). Admin only."""
     # The read filter is applied in get_period, but
     #  Admin should be able to update inactive periods too.
@@ -77,13 +71,9 @@ async def update_existing_period(
     # Admin to revive or modify inactive period objects.
     db_period = await db.get(Period, period_id)
     if not db_period:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Period not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Period not found")
 
-    updated_period = await period_service.update_period(
-        db=db, db_obj=db_period, period_in=period_in
-    )
+    updated_period = await period_service.update_period(db=db, db_obj=db_period, period_in=period_in)
     return updated_period
 
 
@@ -100,9 +90,7 @@ async def delete_period_by_id(period_id: int, db: AsyncSession = Depends(get_db)
     # even if it's already inactive.
     db_period = await db.get(Period, period_id)
     if not db_period:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Period not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Period not found")
 
     if not db_period.is_active:
         # If already inactive, confirm success and return 204

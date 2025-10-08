@@ -11,9 +11,7 @@ from app.models.message import Message
 from app.schemas.communication_schema import ConversationCreate, MessageCreate
 
 
-async def create_conversation(
-    db: AsyncSession, *, obj_in: ConversationCreate, creator_user_id: UUID
-) -> Conversation:
+async def create_conversation(db: AsyncSession, *, obj_in: ConversationCreate, creator_user_id: UUID) -> Conversation:
     """
     Creates a new conversation and adds all participants (including the creator).
     """
@@ -46,9 +44,7 @@ async def get_user_conversations(db: AsyncSession, user_id: UUID) -> list[Conver
     return result.scalars().all()
 
 
-async def create_message(
-    db: AsyncSession, *, obj_in: MessageCreate, sender_id: UUID
-) -> Message:
+async def create_message(db: AsyncSession, *, obj_in: MessageCreate, sender_id: UUID) -> Message:
     """
     Creates a new message if the sender is a participant in the conversation.
     """
@@ -76,15 +72,9 @@ async def create_message(
     return db_message
 
 
-async def get_messages_in_conversation(
-    db: AsyncSession, conversation_id: int
-) -> list[Message]:
+async def get_messages_in_conversation(db: AsyncSession, conversation_id: int) -> list[Message]:
     """Retrieves all messages in a conversation
     (RLS handles participant read access)."""
-    stmt = (
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.message_id.asc())
-    )
+    stmt = select(Message).where(Message.conversation_id == conversation_id).order_by(Message.message_id.asc())
     result = await db.execute(stmt)
     return result.scalars().all()

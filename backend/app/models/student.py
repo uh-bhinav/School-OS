@@ -21,9 +21,7 @@ class Student(Base):
     __tablename__ = "students"
 
     student_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey("profiles.user_id"), nullable=False, unique=True
-    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id"), nullable=False, unique=True)
     school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False)
     current_class_id = Column(Integer, ForeignKey("classes.class_id"), nullable=True)
     roll_number = Column(String)

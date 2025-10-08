@@ -3,12 +3,12 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from supabase.lib.client_options import User
 
 from app.core.security import get_current_user, require_role
 from app.db.session import get_db
 from app.schemas.order_schema import OrderCreate, OrderOut, OrderUpdate
 from app.services import order_service
+from supabase.lib.client_options import User
 
 router = APIRouter()
 
@@ -55,16 +55,12 @@ async def place_new_order(
 
 
 @router.get("/my-orders", response_model=list[OrderOut], tags=["E-commerce: Orders"])
-async def get_my_orders(
-    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
-):
+async def get_my_orders(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Gets all orders placed by the current authenticated parent.
     """
     # RLS/Service layer logic ensures only the parent's orders are returned
-    return await order_service.get_all_orders_for_parent(
-        db=db, parent_user_id=current_user.id
-    )
+    return await order_service.get_all_orders_for_parent(db=db, parent_user_id=current_user.id)
 
 
 @router.get("/{order_id}", response_model=OrderOut, tags=["E-commerce: Orders"])
@@ -74,9 +70,7 @@ async def get_order_details(order_id: int, db: AsyncSession = Depends(get_db)):
     """
     order = await order_service.get_order(db=db, order_id=order_id)
     if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
     # Implicit RLS or explicit service logic handles parent/admin access check here
     return order
@@ -88,17 +82,13 @@ async def get_order_details(order_id: int, db: AsyncSession = Depends(get_db)):
     dependencies=[Depends(require_role("Admin"))],
     tags=["E-commerce: Orders"],
 )
-async def update_order_status(
-    order_id: int, order_in: OrderUpdate, db: AsyncSession = Depends(get_db)
-):
+async def update_order_status(order_id: int, order_in: OrderUpdate, db: AsyncSession = Depends(get_db)):
     """
     Updates the order status (e.g., Admin marks as Shipped/Completed). Admin only.
     """
     order = await order_service.get_order(db=db, order_id=order_id)
     if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
     return await order_service.update_order(db=db, db_obj=order, obj_in=order_in)
 

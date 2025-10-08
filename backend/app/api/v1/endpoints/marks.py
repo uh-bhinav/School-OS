@@ -23,9 +23,7 @@ router = APIRouter()
     "/",
     response_model=MarkOut,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[
-        Depends(require_role("teacher"))
-    ],  # Example: Teachers can submit marks
+    dependencies=[Depends(require_role("teacher"))],  # Example: Teachers can submit marks
 )
 async def create_new_mark(mark_in: MarkCreate, db: AsyncSession = Depends(get_db)):
     """
@@ -56,9 +54,7 @@ async def get_student_marks(student_id: int, db: AsyncSession = Depends(get_db))
     response_model=MarkOut,
     dependencies=[Depends(require_role("teacher"))],
 )
-async def update_mark(
-    mark_id: int, mark_in: MarkUpdate, db: AsyncSession = Depends(get_db)
-):
+async def update_mark(mark_id: int, mark_in: MarkUpdate, db: AsyncSession = Depends(get_db)):
     db_obj = await mark_service.get_mark_by_id(db, mark_id)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Mark not found.")
@@ -128,16 +124,10 @@ async def get_report_card(
     is_authorized = False
     if "Admin" in user_roles:
         is_authorized = True
-    elif (
-        "Student" in user_roles
-        and current_profile.student
-        and current_profile.student.student_id == student_id
-    ):
+    elif "Student" in user_roles and current_profile.student and current_profile.student.student_id == student_id:
         is_authorized = True
     elif "Parent" in user_roles:
-        is_authorized = await student_contact_service.is_user_linked_to_student(
-            db, user_id=current_profile.user_id, student_id=student_id
-        )
+        is_authorized = await student_contact_service.is_user_linked_to_student(db, user_id=current_profile.user_id, student_id=student_id)
 
     if not is_authorized:
         raise HTTPException(
@@ -145,9 +135,7 @@ async def get_report_card(
             detail="You are not authorized to view this report card.",
         )
 
-    return await mark_service.get_student_report_card(
-        db=db, student_id=student_id, academic_year_id=academic_year_id
-    )
+    return await mark_service.get_student_report_card(db=db, student_id=student_id, academic_year_id=academic_year_id)
 
 
 @router.get(
@@ -155,15 +143,11 @@ async def get_report_card(
     response_model=ClassPerformanceSummary,
     dependencies=[Depends(require_role("Admin"))],  # Or Teacher
 )
-async def get_class_performance(
-    class_id: int, exam_id: int, db: AsyncSession = Depends(get_db)
-):
+async def get_class_performance(class_id: int, exam_id: int, db: AsyncSession = Depends(get_db)):
     """
     Get a performance summary for a class in a specific exam.
     """
-    summary = await mark_service.get_class_performance_in_exam(
-        db=db, class_id=class_id, exam_id=exam_id
-    )
+    summary = await mark_service.get_class_performance_in_exam(db=db, class_id=class_id, exam_id=exam_id)
     if not summary:
         raise HTTPException(
             status_code=404,
@@ -188,6 +172,4 @@ async def get_grade_progression(
     """
     # Add security logic here similar to the get_report_card endpoint
     # to ensure only authorized users can access this data.
-    return await mark_service.get_student_grade_progression(
-        db=db, student_id=student_id, subject_id=subject_id
-    )
+    return await mark_service.get_student_grade_progression(db=db, student_id=student_id, subject_id=subject_id)

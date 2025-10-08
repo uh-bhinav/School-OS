@@ -29,23 +29,15 @@ async def get_current_user_profile(
         user_response = await supabase.auth.get_user(token)
         auth_user = user_response.user
         if not auth_user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
         # Fetch the user's profile and roles from your public schema
-        stmt = (
-            select(Profile)
-            .where(Profile.user_id == auth_user.id)
-            .options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
-        )
+        stmt = select(Profile).where(Profile.user_id == auth_user.id).options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
         result = await db.execute(stmt)
         profile = result.scalars().first()
 
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Profile not found"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Profile not found")
 
         return profile
     except Exception:

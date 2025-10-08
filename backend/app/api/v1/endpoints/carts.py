@@ -1,20 +1,18 @@
 # backend/app/api/v1/endpoints/carts.py
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from supabase.lib.client_options import User
 
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.schemas.cart_schema import CartItemIn, CartOut
 from app.services import cart_service
+from supabase.lib.client_options import User
 
 router = APIRouter()
 
 
 @router.get("/me", response_model=CartOut, tags=["E-commerce: Cart"])
-async def get_user_cart(
-    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
-):
+async def get_user_cart(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Retrieves the current user's shopping cart."""
     cart = await cart_service.get_cart(db=db, user_id=current_user.id)
     if not cart:
@@ -32,31 +30,21 @@ async def add_or_update_cart_item(
     current_user: User = Depends(get_current_user),
 ):
     """Adds an item to the cart or updates the quantity if it exists."""
-    return await cart_service.add_or_update_item(
-        db=db, user_id=current_user.id, item_in=item_in
-    )
+    return await cart_service.add_or_update_item(db=db, user_id=current_user.id, item_in=item_in)
 
 
-@router.delete(
-    "/me/items/{product_id}", response_model=CartOut, tags=["E-commerce: Cart"]
-)
+@router.delete("/me/items/{product_id}", response_model=CartOut, tags=["E-commerce: Cart"])
 async def remove_cart_item(
     product_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Removes a specific item from the cart."""
-    return await cart_service.remove_item(
-        db=db, user_id=current_user.id, product_id=product_id
-    )
+    return await cart_service.remove_item(db=db, user_id=current_user.id, product_id=product_id)
 
 
-@router.post(
-    "/me/clear", status_code=status.HTTP_204_NO_CONTENT, tags=["E-commerce: Cart"]
-)
-async def clear_shopping_cart(
-    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
-):
+@router.post("/me/clear", status_code=status.HTTP_204_NO_CONTENT, tags=["E-commerce: Cart"])
+async def clear_shopping_cart(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Clears all items in the cart (e.g., after successful order placement)."""
     await cart_service.clear_cart(db=db, user_id=current_user.id)
     return None

@@ -17,9 +17,7 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def create_new_subject(
-    *, db: AsyncSession = Depends(get_db), subject_in: SubjectCreate
-):
+async def create_new_subject(*, db: AsyncSession = Depends(get_db), subject_in: SubjectCreate):
     """Create a new subject. Admin only."""
     return await subject_service.create_subject(db=db, subject_in=subject_in)
 
@@ -43,9 +41,7 @@ async def get_subject_by_id(subject_id: int, db: AsyncSession = Depends(get_db))
     """Get a single subject by its ID."""
     db_subject = await subject_service.get_subject(db=db, subject_id=subject_id)
     if not db_subject:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
     return db_subject
 
 
@@ -54,13 +50,9 @@ async def get_subject_by_id(subject_id: int, db: AsyncSession = Depends(get_db))
     response_model=list[TeacherOut],
     dependencies=[Depends(require_role("Admin"))],
 )
-async def get_teachers_for_subject_endpoint(
-    subject_id: int, school_id: int, db: AsyncSession = Depends(get_db)
-):
+async def get_teachers_for_subject_endpoint(subject_id: int, school_id: int, db: AsyncSession = Depends(get_db)):
     """Find all teachers in a school qualified to teach a specific subject."""
-    teachers = await subject_service.get_teachers_for_subject(
-        db=db, school_id=school_id, subject_id=subject_id
-    )
+    teachers = await subject_service.get_teachers_for_subject(db=db, school_id=school_id, subject_id=subject_id)
     return teachers
 
 
@@ -69,19 +61,13 @@ async def get_teachers_for_subject_endpoint(
     response_model=SubjectOut,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def update_existing_subject(
-    subject_id: int, *, db: AsyncSession = Depends(get_db), subject_in: SubjectUpdate
-):
+async def update_existing_subject(subject_id: int, *, db: AsyncSession = Depends(get_db), subject_in: SubjectUpdate):
     """Update a subject's details. Admin only."""
     db_subject = await subject_service.get_subject(db=db, subject_id=subject_id)
     if not db_subject:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
 
-    updated_subject = await subject_service.update_subject(
-        db=db, db_obj=db_subject, subject_in=subject_in
-    )
+    updated_subject = await subject_service.update_subject(db=db, db_obj=db_subject, subject_in=subject_in)
     return updated_subject
 
 
@@ -92,9 +78,7 @@ async def update_existing_subject(
 )
 async def delete_subject(subject_id: int, db: AsyncSession = Depends(get_db)):
     """Soft-deletes a subject. Admin only."""
-    deleted_subject = await subject_service.soft_delete_subject(
-        db, subject_id=subject_id
-    )
+    deleted_subject = await subject_service.soft_delete_subject(db, subject_id=subject_id)
     if not deleted_subject:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

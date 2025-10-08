@@ -17,9 +17,7 @@ class ConversationParticipant(Base):
 
     # Use a surrogate key for primary key (PK)
     id = Column(Integer, primary_key=True, index=True)
-    conversation_id = Column(
-        Integer, ForeignKey("conversations.conversation_id"), nullable=False
-    )
+    conversation_id = Column(Integer, ForeignKey("conversations.conversation_id"), nullable=False)
     user_id = Column(UUID, ForeignKey("profiles.user_id"), nullable=False)
 
     role = Column(String)  # E.g., 'Initiator', 'Recipient'
@@ -29,6 +27,4 @@ class ConversationParticipant(Base):
     user = relationship("Profile")
 
     # Constraint to prevent a user from joining the same conversation twice
-    __table_args__ = (
-        UniqueConstraint("conversation_id", "user_id", name="_conversation_user_uc"),
-    )
+    __table_args__ = (UniqueConstraint("conversation_id", "user_id", name="_conversation_user_uc"),)

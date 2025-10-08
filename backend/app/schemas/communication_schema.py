@@ -10,9 +10,7 @@ from pydantic import BaseModel, Field
 class MessageCreate(BaseModel):
     """Input for sending a new message."""
 
-    conversation_id: int = Field(
-        ..., description="The conversation ID to send the message to."
-    )
+    conversation_id: int = Field(..., description="The conversation ID to send the message to.")
     payload: dict = Field(..., description="Message content (text, image URL, etc.).")
 
 

@@ -22,21 +22,13 @@ async def get_product(db: AsyncSession, product_id: int) -> Optional[Product]:
     return result.scalars().first()
 
 
-async def get_all_products_for_school(
-    db: AsyncSession, school_id: int, is_active: bool = True
-) -> list[Product]:
-    stmt = (
-        select(Product)
-        .where(Product.school_id == school_id, Product.is_active == is_active)
-        .order_by(Product.name)
-    )
+async def get_all_products_for_school(db: AsyncSession, school_id: int, is_active: bool = True) -> list[Product]:
+    stmt = select(Product).where(Product.school_id == school_id, Product.is_active == is_active).order_by(Product.name)
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def update_product(
-    db: AsyncSession, *, db_obj: Product, obj_in: ProductUpdate
-) -> Product:
+async def update_product(db: AsyncSession, *, db_obj: Product, obj_in: ProductUpdate) -> Product:
     update_data = obj_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_obj, field, value)

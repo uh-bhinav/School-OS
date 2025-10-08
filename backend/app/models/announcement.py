@@ -30,12 +30,8 @@ class Announcement(Base):
     content = Column(JSON)  # Stores the message body/rich text
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), default=func.now(), onupdate=func.now()
-    )
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
     published_at = Column(DateTime(timezone=True), default=func.now())
     language = Column(String)  # Character varying is String in SQLAlchemy
     # Relationships
-    targets = relationship(
-        "AnnouncementTarget", back_populates="announcement"
-    )  # Link to target audience
+    targets = relationship("AnnouncementTarget", back_populates="announcement")  # Link to target audience

@@ -59,9 +59,7 @@ async def get_all_classes_for_school(db: AsyncSession, school_id: int) -> list[C
     return list(result.scalars().all())
 
 
-async def update_class(
-    db: AsyncSession, *, db_obj: Class, class_in: ClassUpdate
-) -> Class:
+async def update_class(db: AsyncSession, *, db_obj: Class, class_in: ClassUpdate) -> Class:
     update_data = class_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_obj, field, value)
@@ -71,16 +69,12 @@ async def update_class(
     return db_obj
 
 
-async def assign_subjects_to_class(
-    db: AsyncSession, *, db_class: Class, subject_ids: list[int]
-) -> Class:
+async def assign_subjects_to_class(db: AsyncSession, *, db_class: Class, subject_ids: list[int]) -> Class:
     """
     Assigns a list of subjects to a class, replacing any existing assignments.
     """
     # Fetch the subject objects to assign
-    subjects = await db.execute(
-        select(Subject).where(Subject.subject_id.in_(subject_ids))
-    )
+    subjects = await db.execute(select(Subject).where(Subject.subject_id.in_(subject_ids)))
     db_class.subjects = list(subjects.scalars().all())
 
     db.add(db_class)
@@ -93,20 +87,13 @@ async def soft_delete_class(db: AsyncSession, class_id: int) -> Optional[Class]:
     """
     Soft-deletes a class by setting its is_active flag to False.
     """
-    stmt = (
-        update(Class)
-        .where(Class.class_id == class_id, Class.is_active)
-        .values(is_active=False)
-        .returning(Class)
-    )
+    stmt = update(Class).where(Class.class_id == class_id, Class.is_active).values(is_active=False).returning(Class)
     result = await db.execute(stmt)
     await db.commit()
     return result.scalar_one_or_none()
 
 
-async def search_classes(
-    db: AsyncSession, *, school_id: int, filters: dict
-) -> list[Class]:
+async def search_classes(db: AsyncSession, *, school_id: int, filters: dict) -> list[Class]:
     """
     Searches for classes based on a dynamic set of filters,
     preloading related data for a rich response.

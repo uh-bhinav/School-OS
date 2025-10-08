@@ -21,9 +21,7 @@ router = APIRouter()
     dependencies=[Depends(require_role("Admin"))],
     tags=["Fee Management"],
 )
-async def create_new_fee_template(
-    year_in: FeeTemplateCreate, db: AsyncSession = Depends(get_db)
-):
+async def create_new_fee_template(year_in: FeeTemplateCreate, db: AsyncSession = Depends(get_db)):
     """Create a new fee structure template. Admin only."""
     return await fee_template_service.create_template(db=db, obj_in=year_in)
 
@@ -58,9 +56,7 @@ async def get_fee_template_by_id(template_id: int, db: AsyncSession = Depends(ge
     """
     template = await fee_template_service.get_template(db=db, template_id=template_id)
     if not template:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Fee Template not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fee Template not found")
     return template
 
 
@@ -70,21 +66,15 @@ async def get_fee_template_by_id(template_id: int, db: AsyncSession = Depends(ge
     dependencies=[Depends(require_role("Admin"))],
     tags=["Fee Management"],
 )
-async def update_fee_template_by_id(
-    template_id: int, template_in: FeeTemplateUpdate, db: AsyncSession = Depends(get_db)
-):
+async def update_fee_template_by_id(template_id: int, template_in: FeeTemplateUpdate, db: AsyncSession = Depends(get_db)):
     """
     Update a fee template (e.g., change name or status). Admin only.
     """
     template = await fee_template_service.get_template(db=db, template_id=template_id)
     if not template:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Fee Template not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fee Template not found")
 
-    return await fee_template_service.update_template(
-        db=db, db_obj=template, obj_in=template_in
-    )
+    return await fee_template_service.update_template(db=db, db_obj=template, obj_in=template_in)
 
 
 @router.delete(
@@ -93,17 +83,13 @@ async def update_fee_template_by_id(
     dependencies=[Depends(require_role("Admin"))],
     tags=["Fee Management"],
 )
-async def delete_fee_template_by_id(
-    template_id: int, db: AsyncSession = Depends(get_db)
-):
+async def delete_fee_template_by_id(template_id: int, db: AsyncSession = Depends(get_db)):
     """
     Delete a fee template. Admin only (Use with caution in production).
     """
     template = await fee_template_service.get_template(db=db, template_id=template_id)
     if not template:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Fee Template not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fee Template not found")
 
     await fee_template_service.delete_template(db=db, db_obj=template)
     # Note: In a real system, you would check if this
