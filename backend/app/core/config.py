@@ -1,6 +1,7 @@
 import os
 from urllib.parse import unquote
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
 # This logic correctly sets the environment file for tests
@@ -8,6 +9,9 @@ if os.getenv("PYTEST") == "1":
     ENV_FILE = ".env.test"
 else:
     ENV_FILE = ".env"
+
+# Load the appropriate .env file
+load_dotenv(ENV_FILE)
 
 
 class Settings(BaseSettings):
@@ -21,8 +25,6 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     SUPABASE_PROJECT_REF: str
     TEST_ADMIN_TOKEN: str | None = None
-
-    # --- FIX: These lines now correctly use a colon (:) for type hinting ---
     SECRET_KEY: str
     ALGORITHM: str
 
