@@ -1,6 +1,4 @@
 # backend /app/agents/base_agent.py
-
-
 import logging
 from collections.abc import Sequence
 from typing import Annotated, TypedDict
