@@ -1,7 +1,7 @@
 # backend/app/agents/modules/academics/leaves/attendance_agent/main.py
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
@@ -42,17 +42,17 @@ class AttendanceAgent(BaseAgent):
         super().__init__(tools=attendance_agent_tools, llm_tier=llm_tier)
         logger.info(f"AttendanceAgent initialized with {len(attendance_agent_tools)} tools and '{llm_tier}' tier LLM")
 
-    def invoke(self, query: str, conversation_history: Optional[List] = None) -> Dict[str, Any]:
+    def invoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
         """
         Invokes the agent with a user query, automatically applying the system prompt.
 
         Args:
             query (str): The user's question or command.
-            conversation_history (Optional[List]): Previous conversation messages for context.
+            conversation_history (Optional[list]): Previous conversation messages for context.
                                                    Each item should be a LangChain message object.
 
         Returns:
-            Dict[str, Any]: A dictionary containing:
+            dict[str, Any]: A dictionary containing:
                 - 'response' (str): The final natural language response
                 - 'messages' (list): All messages including tool calls
                 - 'success' (bool): Whether the invocation was successful
@@ -101,7 +101,7 @@ class AttendanceAgent(BaseAgent):
                 "error": str(e),
             }
 
-    def invoke_with_retry(self, query: str, max_retries: int = 1) -> Dict[str, Any]:
+    def invoke_with_retry(self, query: str, max_retries: int = 1) -> dict[str, Any]:
         """
         Invokes the agent with automatic retry logic for failed attempts.
 
@@ -113,7 +113,7 @@ class AttendanceAgent(BaseAgent):
             max_retries (int): Maximum number of retry attempts. Defaults to 1.
 
         Returns:
-            Dict[str, Any]: Same as invoke() method
+            dict[str, Any]: Same as invoke() method
         """
         attempt = 0
         last_error = None
@@ -140,16 +140,16 @@ class AttendanceAgent(BaseAgent):
             "error": f"Failed after {max_retries + 1} attempts. Last error: {last_error}",
         }
 
-    def test_tool_selection(self, test_queries: List[str]) -> List[Dict[str, Any]]:
+    def test_tool_selection(self, test_queries: list[str]) -> list[dict[str, Any]]:
         """
         Tests the agent's tool selection logic with a list of queries.
         Useful for verification checklist item #3 (Tool Selection Logic).
 
         Args:
-            test_queries (List[str]): List of test queries to evaluate
+            test_queries (list[str]): List of test queries to evaluate
 
         Returns:
-            List[Dict[str, Any]]: Results for each test query including which tools were selected
+            list[dict[str, Any]]: Results for each test query including which tools were selected
         """
         results = []
 

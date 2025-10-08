@@ -1,7 +1,7 @@
 # backend/app/agents/modules/academics/leaves/class_agent/tools.py
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 
@@ -28,7 +28,7 @@ def create_new_class(
     grade_level: Optional[int] = None,
     section: Optional[str] = None,
     max_students: Optional[int] = 40,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Creates a new class or section for a specific academic year.
     Use this tool when a user wants to create or set up a new class.
@@ -88,7 +88,7 @@ def create_new_class(
 
 
 @tool("get_class_details", args_schema=GetClassDetailsSchema)
-def get_class_details(class_name: str) -> Dict[str, Any]:
+def get_class_details(class_name: str) -> dict[str, Any]:
     """
     Retrieves key details about a specific class.
     Use this tool when a user asks for information about a class.
@@ -148,7 +148,7 @@ def get_class_details(class_name: str) -> Dict[str, Any]:
 
 
 @tool("list_students_in_class", args_schema=ListStudentsInClassSchema)
-def list_students_in_class(class_name: str, include_details: Optional[bool] = False) -> Dict[str, Any]:
+def list_students_in_class(class_name: str, include_details: Optional[bool] = False) -> dict[str, Any]:
     """
     Provides a complete roster of all students enrolled in a specific class.
     Use this tool when a user asks for the student list or class roster.
@@ -229,7 +229,7 @@ def list_students_in_class(class_name: str, include_details: Optional[bool] = Fa
 
 
 @tool("get_class_schedule", args_schema=GetClassScheduleSchema)
-def get_class_schedule(class_name: str, day_of_week: Optional[str] = None) -> Dict[str, Any]:
+def get_class_schedule(class_name: str, day_of_week: Optional[str] = None) -> dict[str, Any]:
     """
     Fetches the weekly schedule or timetable for a given class.
     Use this tool when a user asks for the class timetable or schedule.
@@ -341,7 +341,7 @@ def get_class_schedule(class_name: str, day_of_week: Optional[str] = None) -> Di
 
 
 @tool("assign_class_teacher", args_schema=AssignClassTeacherSchema)
-def assign_class_teacher(class_name: str, teacher_name: str, effective_from: Optional[str] = None) -> Dict[str, Any]:
+def assign_class_teacher(class_name: str, teacher_name: str, effective_from: Optional[str] = None) -> dict[str, Any]:
     """
     Assigns or updates the main class teacher for a specific class.
     Use this tool when a user wants to assign a class teacher/proctor.
@@ -401,7 +401,7 @@ def list_all_classes(
     academic_year: Optional[str] = None,
     grade_level: Optional[int] = None,
     include_inactive: Optional[bool] = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Returns a list of all classes currently active in the school.
     Use this tool when a user asks for all classes or class list.

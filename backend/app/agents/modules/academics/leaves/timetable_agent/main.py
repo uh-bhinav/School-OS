@@ -1,7 +1,7 @@
 # backend/app/agents/modules/academics/leaves/timetable_agent/main.py
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
@@ -41,7 +41,7 @@ class TimetableAgent(BaseAgent):
         super().__init__(tools=timetable_agent_tools, llm_tier=llm_tier)
         logger.info("TimetableAgent initialized successfully.")
 
-    def invoke(self, query: str) -> Dict[str, Any]:
+    def invoke(self, query: str) -> dict[str, Any]:
         """
         Invokes the agent with a single query and returns the structured result.
 
@@ -91,7 +91,7 @@ class TimetableAgent(BaseAgent):
                 "messages": [SystemMessage(content=f"Error state: {e}")],
             }
 
-    def run_test_queries(self, queries: List[str]) -> List[Dict[str, Any]]:
+    def run_test_queries(self, queries: list[str]) -> list[dict[str, Any]]:
         """
         Runs a batch of test queries through the agent to validate its tool selection
         and response generation. This is a utility for development and testing.

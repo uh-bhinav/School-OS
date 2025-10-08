@@ -1,6 +1,6 @@
 # backend/app/agents/modules/academics/leaves/mark_agent/schemas.py
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic.v1 import BaseModel, Field, validator
 
@@ -75,7 +75,7 @@ class RecordStudentMarksSchema(BaseModel):
         description="The name or type of the exam for which marks are being recorded, e.g., 'Midterm', 'Final'.",
         min_length=2,
     )
-    marks: List[MarkInput] = Field(
+    marks: list[MarkInput] = Field(
         ...,
         description="A list of subjects and the marks obtained in each. Must contain at least one mark entry.",
         min_items=1,

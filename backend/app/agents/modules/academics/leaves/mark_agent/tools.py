@@ -1,7 +1,7 @@
 # backend/app/agents/modules/academics/leaves/mark_agent/tools.py
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 
@@ -27,7 +27,7 @@ def get_student_marks_for_exam(
     student_name: str,
     exam_name: Optional[str] = None,
     subject_name: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Fetches the marks for a specific student in a given exam.
     Use this tool when a user asks for a student's marks, grades, scores, or performance in an exam.
@@ -120,10 +120,10 @@ def get_student_marks_for_exam(
 def record_student_marks(
     student_name: str,
     exam_name: str,
-    marks: List[MarkInput],
+    marks: list[MarkInput],
     class_name: Optional[str] = None,
     exam_date: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Records new marks for a student for a specific exam.
     Use this tool when you need to save new marks/grades for a student.
@@ -189,7 +189,7 @@ def update_student_marks(
     subject_name: str,
     new_marks: float,
     reason: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Updates existing marks for a student in a specific subject and exam.
     Use this tool when correcting or modifying previously recorded marks.
@@ -254,7 +254,7 @@ def get_marksheet_for_exam(
     exam_name: str,
     include_percentage: bool = True,
     include_grade: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Generates a complete marksheet for a student for a specific exam.
     Use this tool when a user asks for a full marksheet, report card, or complete performance summary.
@@ -347,7 +347,7 @@ def get_class_performance_in_subject(
     subject_name: str,
     exam_name: Optional[str] = None,
     include_statistics: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Retrieves performance analytics for an entire class in a specific subject.
     Use this tool when asked about class average, class performance, top performers, or grade distribution.

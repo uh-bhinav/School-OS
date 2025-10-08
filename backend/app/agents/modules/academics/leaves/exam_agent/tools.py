@@ -1,7 +1,7 @@
 # backend/app/agents/modules/academics/leaves/exam_agent/tools.py
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 
@@ -28,7 +28,7 @@ def schedule_exam(
     start_time: Optional[str] = None,
     duration_minutes: Optional[int] = 60,
     max_marks: Optional[float] = 100.0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Schedules a new exam for a specific class and subject.
     Use this tool when a user wants to create or schedule an exam.
@@ -95,7 +95,7 @@ def get_exam_schedule_for_class(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     subject_name: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Retrieves the exam schedule for a specific class.
     Use this tool when a user asks for exam schedules, exam dates, or exam timetable for a class.
@@ -211,7 +211,7 @@ def get_upcoming_exams(
     class_name: Optional[str] = None,
     subject_name: Optional[str] = None,
     exam_type: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Retrieves upcoming exams within a specified time period.
     Use this tool when a user asks about upcoming exams, next exams, or exams in the near future.
@@ -293,7 +293,7 @@ def define_new_exam_type(
     exam_type_name: str,
     description: Optional[str] = None,
     weightage: Optional[float] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Defines a new exam type in the system.
     Use this tool when a user wants to create a new category of exam.

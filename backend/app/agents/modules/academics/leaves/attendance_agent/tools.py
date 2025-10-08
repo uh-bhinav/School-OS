@@ -1,7 +1,7 @@
 # backend/app/agents/modules/academics/leaves/attendance_agent/tools.py
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 
@@ -26,7 +26,7 @@ def mark_student_attendance(
     status: str,
     class_name: Optional[str] = None,
     remarks: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Marks a student's attendance status for a specific date.
     Use this tool when a user wants to record or update a student's attendance.
@@ -87,7 +87,7 @@ def mark_student_attendance(
     "get_student_attendance_for_date_range",
     args_schema=GetStudentAttendanceForDateRangeSchema,
 )
-def get_student_attendance_for_date_range(student_id: str, start_date: str, end_date: str, class_name: Optional[str] = None) -> Dict[str, Any]:
+def get_student_attendance_for_date_range(student_id: str, start_date: str, end_date: str, class_name: Optional[str] = None) -> dict[str, Any]:
     """
     Retrieves a student's complete attendance record between a specified start and end date.
     Use this tool when a user asks for a student's attendance history over a period.
@@ -181,7 +181,7 @@ def get_student_attendance_for_date_range(student_id: str, start_date: str, end_
 
 
 @tool("get_class_attendance_for_date", args_schema=GetClassAttendanceForDateSchema)
-def get_class_attendance_for_date(class_name: str, attendance_date: str) -> Dict[str, Any]:
+def get_class_attendance_for_date(class_name: str, attendance_date: str) -> dict[str, Any]:
     """
     Fetches the attendance records for all students in a specific class on a single given date.
     Use this tool when a user asks for class attendance on a particular day.
@@ -263,7 +263,7 @@ def get_student_attendance_summary(
     student_id: str,
     academic_term: Optional[str] = "current",
     class_name: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Calculates and returns a student's overall attendance percentage for the current academic term.
     Use this tool when a user asks for a student's overall attendance or attendance percentage.

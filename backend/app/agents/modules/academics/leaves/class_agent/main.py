@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -41,7 +41,7 @@ class ClassAgent(BaseAgent):
         super().__init__(tools=class_agent_tools, llm_tier=llm_tier)
         logger.info(f"ClassAgent initialized successfully with {len(self.tools)} tools.")
 
-    def invoke(self, query: str) -> Dict[str, Any]:
+    def invoke(self, query: str) -> dict[str, Any]:
         """
         Invokes the agent with a user query and returns a structured response.
         This method is the primary entry point for interacting with the agent.
@@ -50,7 +50,7 @@ class ClassAgent(BaseAgent):
             query (str): The user's question or command.
 
         Returns:
-            Dict[str, Any]: A dictionary containing the final response, success status, and any errors.
+            dict[str, Any]: A dictionary containing the final response, success status, and any errors.
         """
         logger.info(f"ClassAgent received query: '{query}'")
         messages = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=query)]
@@ -78,7 +78,7 @@ class ClassAgent(BaseAgent):
                 "messages": messages,
             }
 
-    async def invoke_with_retry(self, query: str, retries: int = 3, delay: int = 2) -> Dict[str, Any]:
+    async def invoke_with_retry(self, query: str, retries: int = 3, delay: int = 2) -> dict[str, Any]:
         """
         Invokes the agent with retry logic to handle transient errors (e.g., API rate limits).
         """
@@ -97,16 +97,16 @@ class ClassAgent(BaseAgent):
             "messages": [],
         }
 
-    def test_tool_selection(self, test_queries: List[str]) -> List[Dict[str, Any]]:
+    def test_tool_selection(self, test_queries: list[str]) -> list[dict[str, Any]]:
         """
         Runs a batch of test queries and returns which tool the agent would select for each,
         without actually executing the tool. This is for validation and debugging.
 
         Args:
-            test_queries (List[str]): A list of user queries to test.
+            test_queries (list[str]): A list of user queries to test.
 
         Returns:
-            List[Dict[str, Any]]: A list of results, each containing the query and the selected tools.
+            list[dict[str, Any]]: A list of results, each containing the query and the selected tools.
         """
         results = []
         for query in test_queries:

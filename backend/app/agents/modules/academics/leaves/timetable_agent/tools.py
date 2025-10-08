@@ -2,16 +2,16 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 
 from app.agents.modules.academics.leaves.timetable_agent.schemas import (
-    CreateOrUpdateTimetableEntrySchema,
     FindCurrentPeriodForClassSchema,
     FindFreeTeachersSchema,
     GetClassTimetableSchema,
     GetTeacherTimetableSchema,
+    UpdateTimetableEntrySchema,
 )
 
 # Set up logging for tool activity
@@ -22,19 +22,19 @@ BASE_URL = "http://localhost:8000/api/v1"
 
 
 @tool("get_class_timetable", args_schema=GetClassTimetableSchema)
-def get_class_timetable(class_name: str, day_of_week: Optional[str] = None) -> Dict[str, Any]:
+def get_class_timetable(class_name: str, day_of_week: Optional[str] = None) -> dict[str, Any]:
     """
     Retrieves the full weekly timetable for a specified class, showing all periods and subjects.
-    Use this tool when a user asks for a class schedule, timetable, or what subjects a class has.
+    Use this tool when a user asks for a class schedule, class timetable, or what subjects a class has on specific days.
 
     Args:
-        class_name: Name of the class (e.g., '10A', '12 Science')
-        day_of_week: Optional filter for specific day
+        class_name: Name of the class (e.g., '10A', 'Grade 12 Science')
+        day_of_week: Optional specific day (Monday-Friday). If not provided, returns the full week.
 
     Returns:
-        Dictionary containing timetable data or error information
+        Dictionary containing the timetable data or error information
     """
-    logger.info(f"[TOOL:get_class_timetable] Class: '{class_name}', " f"Day: {day_of_week or 'All days'}")
+    logger.info(f"[TOOL:get_class_timetable] Class: '{class_name}', Day: {day_of_week or 'Full Week'}")
 
     # Real implementation would be:
     # try:
@@ -56,310 +56,299 @@ def get_class_timetable(class_name: str, day_of_week: Optional[str] = None) -> D
     #     logger.error(f"API call failed: {e}")
     #     return {"error": f"Failed to fetch class timetable: {str(e)}"}
 
-    # Placeholder timetable for development/testing
-    if day_of_week:
-        # Single day timetable
-        return {
-            "status": "success",
-            "class_name": class_name,
-            "day_of_week": day_of_week,
-            "periods": [
-                {
-                    "period_number": 1,
-                    "subject_name": "Mathematics",
-                    "teacher_name": "Mr. Sharma",
-                    "start_time": "08:00",
-                    "end_time": "08:45",
-                    "room_number": "Room 301",
-                },
-                {
-                    "period_number": 2,
-                    "subject_name": "Physics",
-                    "teacher_name": "Mrs. Patel",
-                    "start_time": "08:50",
-                    "end_time": "09:35",
-                    "room_number": "Lab 1",
-                },
-                {
-                    "period_number": 3,
-                    "subject_name": "English",
-                    "teacher_name": "Ms. Verma",
-                    "start_time": "09:40",
-                    "end_time": "10:25",
-                    "room_number": "Room 205",
-                },
-                {
-                    "period_number": 4,
-                    "subject_name": "Break",
-                    "teacher_name": None,
-                    "start_time": "10:25",
-                    "end_time": "10:45",
-                    "room_number": None,
-                },
-                {
-                    "period_number": 5,
-                    "subject_name": "Chemistry",
-                    "teacher_name": "Dr. Kumar",
-                    "start_time": "10:45",
-                    "end_time": "11:30",
-                    "room_number": "Lab 2",
-                },
-                {
-                    "period_number": 6,
-                    "subject_name": "History",
-                    "teacher_name": "Mr. Reddy",
-                    "start_time": "11:35",
-                    "end_time": "12:20",
-                    "room_number": "Room 102",
-                },
-            ],
-            "total_periods": 6,
-        }
-    else:
-        # Full weekly timetable
-        return {
-            "status": "success",
-            "class_name": class_name,
-            "week_timetable": {
-                "Monday": [
-                    {
-                        "period_number": 1,
-                        "subject_name": "Mathematics",
-                        "teacher_name": "Mr. Sharma",
-                        "start_time": "08:00",
-                        "end_time": "08:45",
-                    },
-                    {
-                        "period_number": 2,
-                        "subject_name": "Physics",
-                        "teacher_name": "Mrs. Patel",
-                        "start_time": "08:50",
-                        "end_time": "09:35",
-                    },
-                    {
-                        "period_number": 3,
-                        "subject_name": "English",
-                        "teacher_name": "Ms. Verma",
-                        "start_time": "09:40",
-                        "end_time": "10:25",
-                    },
-                    {
-                        "period_number": 4,
-                        "subject_name": "Break",
-                        "teacher_name": None,
-                        "start_time": "10:25",
-                        "end_time": "10:45",
-                    },
-                    {
-                        "period_number": 5,
-                        "subject_name": "Chemistry",
-                        "teacher_name": "Dr. Kumar",
-                        "start_time": "10:45",
-                        "end_time": "11:30",
-                    },
-                    {
-                        "period_number": 6,
-                        "subject_name": "History",
-                        "teacher_name": "Mr. Reddy",
-                        "start_time": "11:35",
-                        "end_time": "12:20",
-                    },
-                ],
-                "Tuesday": [
-                    {
-                        "period_number": 1,
-                        "subject_name": "Chemistry",
-                        "teacher_name": "Dr. Kumar",
-                        "start_time": "08:00",
-                        "end_time": "08:45",
-                    },
-                    {
-                        "period_number": 2,
-                        "subject_name": "Mathematics",
-                        "teacher_name": "Mr. Sharma",
-                        "start_time": "08:50",
-                        "end_time": "09:35",
-                    },
-                    {
-                        "period_number": 3,
-                        "subject_name": "History",
-                        "teacher_name": "Mr. Reddy",
-                        "start_time": "09:40",
-                        "end_time": "10:25",
-                    },
-                    {
-                        "period_number": 4,
-                        "subject_name": "Break",
-                        "teacher_name": None,
-                        "start_time": "10:25",
-                        "end_time": "10:45",
-                    },
-                    {
-                        "period_number": 5,
-                        "subject_name": "English",
-                        "teacher_name": "Ms. Verma",
-                        "start_time": "10:45",
-                        "end_time": "11:30",
-                    },
-                    {
-                        "period_number": 6,
-                        "subject_name": "Physics",
-                        "teacher_name": "Mrs. Patel",
-                        "start_time": "11:35",
-                        "end_time": "12:20",
-                    },
-                ],
-                "Wednesday": [
-                    {
-                        "period_number": 1,
-                        "subject_name": "English",
-                        "teacher_name": "Ms. Verma",
-                        "start_time": "08:00",
-                        "end_time": "08:45",
-                    },
-                    {
-                        "period_number": 2,
-                        "subject_name": "History",
-                        "teacher_name": "Mr. Reddy",
-                        "start_time": "08:50",
-                        "end_time": "09:35",
-                    },
-                    {
-                        "period_number": 3,
-                        "subject_name": "Physics",
-                        "teacher_name": "Mrs. Patel",
-                        "start_time": "09:40",
-                        "end_time": "10:25",
-                    },
-                    {
-                        "period_number": 4,
-                        "subject_name": "Break",
-                        "teacher_name": None,
-                        "start_time": "10:25",
-                        "end_time": "10:45",
-                    },
-                    {
-                        "period_number": 5,
-                        "subject_name": "Mathematics",
-                        "teacher_name": "Mr. Sharma",
-                        "start_time": "10:45",
-                        "end_time": "11:30",
-                    },
-                    {
-                        "period_number": 6,
-                        "subject_name": "Chemistry",
-                        "teacher_name": "Dr. Kumar",
-                        "start_time": "11:35",
-                        "end_time": "12:20",
-                    },
-                ],
-                "Thursday": [
-                    {
-                        "period_number": 1,
-                        "subject_name": "Physics",
-                        "teacher_name": "Mrs. Patel",
-                        "start_time": "08:00",
-                        "end_time": "08:45",
-                    },
-                    {
-                        "period_number": 2,
-                        "subject_name": "English",
-                        "teacher_name": "Ms. Verma",
-                        "start_time": "08:50",
-                        "end_time": "09:35",
-                    },
-                    {
-                        "period_number": 3,
-                        "subject_name": "Mathematics",
-                        "teacher_name": "Mr. Sharma",
-                        "start_time": "09:40",
-                        "end_time": "10:25",
-                    },
-                    {
-                        "period_number": 4,
-                        "subject_name": "Break",
-                        "teacher_name": None,
-                        "start_time": "10:25",
-                        "end_time": "10:45",
-                    },
-                    {
-                        "period_number": 5,
-                        "subject_name": "History",
-                        "teacher_name": "Mr. Reddy",
-                        "start_time": "10:45",
-                        "end_time": "11:30",
-                    },
-                    {
-                        "period_number": 6,
-                        "subject_name": "Chemistry",
-                        "teacher_name": "Dr. Kumar",
-                        "start_time": "11:35",
-                        "end_time": "12:20",
-                    },
-                ],
-                "Friday": [
-                    {
-                        "period_number": 1,
-                        "subject_name": "History",
-                        "teacher_name": "Mr. Reddy",
-                        "start_time": "08:00",
-                        "end_time": "08:45",
-                    },
-                    {
-                        "period_number": 2,
-                        "subject_name": "Chemistry",
-                        "teacher_name": "Dr. Kumar",
-                        "start_time": "08:50",
-                        "end_time": "09:35",
-                    },
-                    {
-                        "period_number": 3,
-                        "subject_name": "Physics",
-                        "teacher_name": "Mrs. Patel",
-                        "start_time": "09:40",
-                        "end_time": "10:25",
-                    },
-                    {
-                        "period_number": 4,
-                        "subject_name": "Break",
-                        "teacher_name": None,
-                        "start_time": "10:25",
-                        "end_time": "10:45",
-                    },
-                    {
-                        "period_number": 5,
-                        "subject_name": "English",
-                        "teacher_name": "Ms. Verma",
-                        "start_time": "10:45",
-                        "end_time": "11:30",
-                    },
-                    {
-                        "period_number": 6,
-                        "subject_name": "Mathematics",
-                        "teacher_name": "Mr. Sharma",
-                        "start_time": "11:35",
-                        "end_time": "12:20",
-                    },
-                ],
+    # Placeholder timetable data for development/testing
+    full_week_schedule = {
+        "Monday": [
+            {
+                "period": 1,
+                "start_time": "08:00",
+                "end_time": "08:45",
+                "subject": "Mathematics",
+                "teacher": "Mrs. Sharma",
+                "room": "101",
             },
-            "total_days": 5,
+            {
+                "period": 2,
+                "start_time": "08:50",
+                "end_time": "09:35",
+                "subject": "Physics",
+                "teacher": "Mr. Kumar",
+                "room": "Lab-1",
+            },
+            {
+                "period": 3,
+                "start_time": "09:40",
+                "end_time": "10:25",
+                "subject": "Chemistry",
+                "teacher": "Dr. Patel",
+                "room": "Lab-2",
+            },
+            {
+                "period": 4,
+                "start_time": "10:45",
+                "end_time": "11:30",
+                "subject": "English",
+                "teacher": "Ms. Reddy",
+                "room": "102",
+            },
+            {
+                "period": 5,
+                "start_time": "11:35",
+                "end_time": "12:20",
+                "subject": "Biology",
+                "teacher": "Dr. Singh",
+                "room": "Lab-3",
+            },
+            {
+                "period": 6,
+                "start_time": "13:00",
+                "end_time": "13:45",
+                "subject": "Physical Education",
+                "teacher": "Mr. Mehta",
+                "room": "Playground",
+            },
+        ],
+        "Tuesday": [
+            {
+                "period": 1,
+                "start_time": "08:00",
+                "end_time": "08:45",
+                "subject": "Chemistry",
+                "teacher": "Dr. Patel",
+                "room": "Lab-2",
+            },
+            {
+                "period": 2,
+                "start_time": "08:50",
+                "end_time": "09:35",
+                "subject": "Mathematics",
+                "teacher": "Mrs. Sharma",
+                "room": "101",
+            },
+            {
+                "period": 3,
+                "start_time": "09:40",
+                "end_time": "10:25",
+                "subject": "English",
+                "teacher": "Ms. Reddy",
+                "room": "102",
+            },
+            {
+                "period": 4,
+                "start_time": "10:45",
+                "end_time": "11:30",
+                "subject": "Physics",
+                "teacher": "Mr. Kumar",
+                "room": "Lab-1",
+            },
+            {
+                "period": 5,
+                "start_time": "11:35",
+                "end_time": "12:20",
+                "subject": "Computer Science",
+                "teacher": "Mr. Gupta",
+                "room": "Computer Lab",
+            },
+            {
+                "period": 6,
+                "start_time": "13:00",
+                "end_time": "13:45",
+                "subject": "Social Studies",
+                "teacher": "Mrs. Nair",
+                "room": "103",
+            },
+        ],
+        "Wednesday": [
+            {
+                "period": 1,
+                "start_time": "08:00",
+                "end_time": "08:45",
+                "subject": "Biology",
+                "teacher": "Dr. Singh",
+                "room": "Lab-3",
+            },
+            {
+                "period": 2,
+                "start_time": "08:50",
+                "end_time": "09:35",
+                "subject": "English",
+                "teacher": "Ms. Reddy",
+                "room": "102",
+            },
+            {
+                "period": 3,
+                "start_time": "09:40",
+                "end_time": "10:25",
+                "subject": "Mathematics",
+                "teacher": "Mrs. Sharma",
+                "room": "101",
+            },
+            {
+                "period": 4,
+                "start_time": "10:45",
+                "end_time": "11:30",
+                "subject": "Physics",
+                "teacher": "Mr. Kumar",
+                "room": "Lab-1",
+            },
+            {
+                "period": 5,
+                "start_time": "11:35",
+                "end_time": "12:20",
+                "subject": "Chemistry",
+                "teacher": "Dr. Patel",
+                "room": "Lab-2",
+            },
+            {
+                "period": 6,
+                "start_time": "13:00",
+                "end_time": "13:45",
+                "subject": "Art",
+                "teacher": "Mrs. Joshi",
+                "room": "Art Room",
+            },
+        ],
+        "Thursday": [
+            {
+                "period": 1,
+                "start_time": "08:00",
+                "end_time": "08:45",
+                "subject": "Mathematics",
+                "teacher": "Mrs. Sharma",
+                "room": "101",
+            },
+            {
+                "period": 2,
+                "start_time": "08:50",
+                "end_time": "09:35",
+                "subject": "Social Studies",
+                "teacher": "Mrs. Nair",
+                "room": "103",
+            },
+            {
+                "period": 3,
+                "start_time": "09:40",
+                "end_time": "10:25",
+                "subject": "Computer Science",
+                "teacher": "Mr. Gupta",
+                "room": "Computer Lab",
+            },
+            {
+                "period": 4,
+                "start_time": "10:45",
+                "end_time": "11:30",
+                "subject": "English",
+                "teacher": "Ms. Reddy",
+                "room": "102",
+            },
+            {
+                "period": 5,
+                "start_time": "11:35",
+                "end_time": "12:20",
+                "subject": "Physics",
+                "teacher": "Mr. Kumar",
+                "room": "Lab-1",
+            },
+            {
+                "period": 6,
+                "start_time": "13:00",
+                "end_time": "13:45",
+                "subject": "Chemistry",
+                "teacher": "Dr. Patel",
+                "room": "Lab-2",
+            },
+        ],
+        "Friday": [
+            {
+                "period": 1,
+                "start_time": "08:00",
+                "end_time": "08:45",
+                "subject": "English",
+                "teacher": "Ms. Reddy",
+                "room": "102",
+            },
+            {
+                "period": 2,
+                "start_time": "08:50",
+                "end_time": "09:35",
+                "subject": "Biology",
+                "teacher": "Dr. Singh",
+                "room": "Lab-3",
+            },
+            {
+                "period": 3,
+                "start_time": "09:40",
+                "end_time": "10:25",
+                "subject": "Mathematics",
+                "teacher": "Mrs. Sharma",
+                "room": "101",
+            },
+            {
+                "period": 4,
+                "start_time": "10:45",
+                "end_time": "11:30",
+                "subject": "Social Studies",
+                "teacher": "Mrs. Nair",
+                "room": "103",
+            },
+            {
+                "period": 5,
+                "start_time": "11:35",
+                "end_time": "12:20",
+                "subject": "Physical Education",
+                "teacher": "Mr. Mehta",
+                "room": "Playground",
+            },
+            {
+                "period": 6,
+                "start_time": "13:00",
+                "end_time": "13:45",
+                "subject": "Library Period",
+                "teacher": "Mrs. Desai",
+                "room": "Library",
+            },
+        ],
+    }
+
+    # If a specific day is requested, filter the schedule
+    if day_of_week:
+        day_schedule = full_week_schedule.get(day_of_week.capitalize())
+        if not day_schedule:
+            return {
+                "status": "error",
+                "error": f"Invalid day: {day_of_week}. Please use Monday-Friday.",
+            }
+        return {
+            "status": "success",
+            "class_name": class_name,
+            "day_of_week": day_of_week.capitalize(),
+            "schedule": day_schedule,
+            "total_periods": len(day_schedule),
         }
+
+    # Return full week schedule
+    return {
+        "status": "success",
+        "class_name": class_name,
+        "week_schedule": full_week_schedule,
+        "total_days": len(full_week_schedule),
+    }
 
 
 @tool("get_teacher_timetable", args_schema=GetTeacherTimetableSchema)
-def get_teacher_timetable(teacher_name: str, day_of_week: Optional[str] = None) -> Dict[str, Any]:
+def get_teacher_timetable(teacher_name: str, day_of_week: Optional[str] = None) -> dict[str, Any]:
     """
     Fetches the weekly teaching schedule for a specific teacher, including classes and subjects.
-    Use this tool when a user asks about a teacher's schedule or what classes a teacher teaches.
+    Use this tool when a user asks about a teacher's schedule, which classes they teach, or their availability.
 
     Args:
-        teacher_name: Name of the teacher
-        day_of_week: Optional filter for specific day
+        teacher_name: Full name of the teacher
+        day_of_week: Optional specific day (Monday-Friday). If not provided, returns the full week.
 
     Returns:
-        Dictionary containing teacher timetable data or error information
+        Dictionary containing the teacher's timetable data or error information
     """
-    logger.info(f"[TOOL:get_teacher_timetable] Teacher: '{teacher_name}', " f"Day: {day_of_week or 'All days'}")
+    logger.info(f"[TOOL:get_teacher_timetable] Teacher: '{teacher_name}', Day: {day_of_week or 'Full Week'}")
 
     # Real implementation would be:
     # try:
@@ -381,289 +370,177 @@ def get_teacher_timetable(teacher_name: str, day_of_week: Optional[str] = None) 
     #     logger.error(f"API call failed: {e}")
     #     return {"error": f"Failed to fetch teacher timetable: {str(e)}"}
 
-    # Placeholder teacher timetable for development/testing
-    if day_of_week:
-        # Single day schedule
-        return {
-            "status": "success",
-            "teacher_name": teacher_name,
-            "day_of_week": day_of_week,
-            "periods": [
-                {
-                    "period_number": 1,
-                    "class_name": "10A",
-                    "subject_name": "Mathematics",
-                    "start_time": "08:00",
-                    "end_time": "08:45",
-                    "room_number": "Room 301",
-                },
-                {
-                    "period_number": 2,
-                    "class_name": "10B",
-                    "subject_name": "Mathematics",
-                    "start_time": "08:50",
-                    "end_time": "09:35",
-                    "room_number": "Room 302",
-                },
-                {
-                    "period_number": 3,
-                    "class_name": "Free",
-                    "subject_name": None,
-                    "start_time": "09:40",
-                    "end_time": "10:25",
-                    "room_number": None,
-                },
-                {
-                    "period_number": 5,
-                    "class_name": "11A",
-                    "subject_name": "Mathematics",
-                    "start_time": "10:45",
-                    "end_time": "11:30",
-                    "room_number": "Room 301",
-                },
-                {
-                    "period_number": 6,
-                    "class_name": "12A",
-                    "subject_name": "Mathematics",
-                    "start_time": "11:35",
-                    "end_time": "12:20",
-                    "room_number": "Room 305",
-                },
-            ],
-            "total_classes": 4,
-            "free_periods": 1,
-        }
-    else:
-        # Full weekly schedule
-        return {
-            "status": "success",
-            "teacher_name": teacher_name,
-            "week_schedule": {
-                "Monday": [
-                    {
-                        "period_number": 1,
-                        "class_name": "10A",
-                        "subject_name": "Mathematics",
-                        "start_time": "08:00",
-                        "end_time": "08:45",
-                        "room_number": "Room 301",
-                    },
-                    {
-                        "period_number": 2,
-                        "class_name": "10B",
-                        "subject_name": "Mathematics",
-                        "start_time": "08:50",
-                        "end_time": "09:35",
-                        "room_number": "Room 302",
-                    },
-                    {
-                        "period_number": 3,
-                        "class_name": "Free",
-                        "subject_name": None,
-                        "start_time": "09:40",
-                        "end_time": "10:25",
-                        "room_number": None,
-                    },
-                    {
-                        "period_number": 5,
-                        "class_name": "11A",
-                        "subject_name": "Mathematics",
-                        "start_time": "10:45",
-                        "end_time": "11:30",
-                        "room_number": "Room 301",
-                    },
-                    {
-                        "period_number": 6,
-                        "class_name": "12A",
-                        "subject_name": "Mathematics",
-                        "start_time": "11:35",
-                        "end_time": "12:20",
-                        "room_number": "Room 305",
-                    },
-                ],
-                "Tuesday": [
-                    {
-                        "period_number": 1,
-                        "class_name": "11B",
-                        "subject_name": "Mathematics",
-                        "start_time": "08:00",
-                        "end_time": "08:45",
-                        "room_number": "Room 303",
-                    },
-                    {
-                        "period_number": 2,
-                        "class_name": "10A",
-                        "subject_name": "Mathematics",
-                        "start_time": "08:50",
-                        "end_time": "09:35",
-                        "room_number": "Room 301",
-                    },
-                    {
-                        "period_number": 3,
-                        "class_name": "Free",
-                        "subject_name": None,
-                        "start_time": "09:40",
-                        "end_time": "10:25",
-                        "room_number": None,
-                    },
-                    {
-                        "period_number": 5,
-                        "class_name": "12B",
-                        "subject_name": "Mathematics",
-                        "start_time": "10:45",
-                        "end_time": "11:30",
-                        "room_number": "Room 306",
-                    },
-                    {
-                        "period_number": 6,
-                        "class_name": "10B",
-                        "subject_name": "Mathematics",
-                        "start_time": "11:35",
-                        "end_time": "12:20",
-                        "room_number": "Room 302",
-                    },
-                ],
-                "Wednesday": [
-                    {
-                        "period_number": 1,
-                        "class_name": "12A",
-                        "subject_name": "Mathematics",
-                        "start_time": "08:00",
-                        "end_time": "08:45",
-                        "room_number": "Room 305",
-                    },
-                    {
-                        "period_number": 2,
-                        "class_name": "Free",
-                        "subject_name": None,
-                        "start_time": "08:50",
-                        "end_time": "09:35",
-                        "room_number": None,
-                    },
-                    {
-                        "period_number": 3,
-                        "class_name": "11A",
-                        "subject_name": "Mathematics",
-                        "start_time": "09:40",
-                        "end_time": "10:25",
-                        "room_number": "Room 301",
-                    },
-                    {
-                        "period_number": 5,
-                        "class_name": "10A",
-                        "subject_name": "Mathematics",
-                        "start_time": "10:45",
-                        "end_time": "11:30",
-                        "room_number": "Room 301",
-                    },
-                    {
-                        "period_number": 6,
-                        "class_name": "10B",
-                        "subject_name": "Mathematics",
-                        "start_time": "11:35",
-                        "end_time": "12:20",
-                        "room_number": "Room 302",
-                    },
-                ],
-                "Thursday": [
-                    {
-                        "period_number": 1,
-                        "class_name": "Free",
-                        "subject_name": None,
-                        "start_time": "08:00",
-                        "end_time": "08:45",
-                        "room_number": None,
-                    },
-                    {
-                        "period_number": 2,
-                        "class_name": "11B",
-                        "subject_name": "Mathematics",
-                        "start_time": "08:50",
-                        "end_time": "09:35",
-                        "room_number": "Room 303",
-                    },
-                    {
-                        "period_number": 3,
-                        "class_name": "10A",
-                        "subject_name": "Mathematics",
-                        "start_time": "09:40",
-                        "end_time": "10:25",
-                        "room_number": "Room 301",
-                    },
-                    {
-                        "period_number": 5,
-                        "class_name": "12A",
-                        "subject_name": "Mathematics",
-                        "start_time": "10:45",
-                        "end_time": "11:30",
-                        "room_number": "Room 305",
-                    },
-                    {
-                        "period_number": 6,
-                        "class_name": "12B",
-                        "subject_name": "Mathematics",
-                        "start_time": "11:35",
-                        "end_time": "12:20",
-                        "room_number": "Room 306",
-                    },
-                ],
-                "Friday": [
-                    {
-                        "period_number": 1,
-                        "class_name": "10B",
-                        "subject_name": "Mathematics",
-                        "start_time": "08:00",
-                        "end_time": "08:45",
-                        "room_number": "Room 302",
-                    },
-                    {
-                        "period_number": 2,
-                        "class_name": "11A",
-                        "subject_name": "Mathematics",
-                        "start_time": "08:50",
-                        "end_time": "09:35",
-                        "room_number": "Room 301",
-                    },
-                    {
-                        "period_number": 3,
-                        "class_name": "Free",
-                        "subject_name": None,
-                        "start_time": "09:40",
-                        "end_time": "10:25",
-                        "room_number": None,
-                    },
-                    {
-                        "period_number": 5,
-                        "class_name": "10A",
-                        "subject_name": "Mathematics",
-                        "start_time": "10:45",
-                        "end_time": "11:30",
-                        "room_number": "Room 301",
-                    },
-                    {
-                        "period_number": 6,
-                        "class_name": "12A",
-                        "subject_name": "Mathematics",
-                        "start_time": "11:35",
-                        "end_time": "12:20",
-                        "room_number": "Room 305",
-                    },
-                ],
+    # Placeholder teacher schedule for development/testing
+    # Simulating Mrs. Sharma's Mathematics teaching schedule
+    teacher_week_schedule = {
+        "Monday": [
+            {
+                "period": 1,
+                "start_time": "08:00",
+                "end_time": "08:45",
+                "class": "10A",
+                "subject": "Mathematics",
+                "room": "101",
             },
-            "total_days": 5,
-            "total_classes_per_week": 20,
-            "free_periods_per_week": 5,
+            {
+                "period": 3,
+                "start_time": "09:40",
+                "end_time": "10:25",
+                "class": "9B",
+                "subject": "Mathematics",
+                "room": "105",
+            },
+            {
+                "period": 5,
+                "start_time": "11:35",
+                "end_time": "12:20",
+                "class": "11A",
+                "subject": "Mathematics",
+                "room": "201",
+            },
+        ],
+        "Tuesday": [
+            {
+                "period": 2,
+                "start_time": "08:50",
+                "end_time": "09:35",
+                "class": "10A",
+                "subject": "Mathematics",
+                "room": "101",
+            },
+            {
+                "period": 4,
+                "start_time": "10:45",
+                "end_time": "11:30",
+                "class": "12A",
+                "subject": "Mathematics",
+                "room": "202",
+            },
+            {
+                "period": 6,
+                "start_time": "13:00",
+                "end_time": "13:45",
+                "class": "9A",
+                "subject": "Mathematics",
+                "room": "104",
+            },
+        ],
+        "Wednesday": [
+            {
+                "period": 3,
+                "start_time": "09:40",
+                "end_time": "10:25",
+                "class": "10A",
+                "subject": "Mathematics",
+                "room": "101",
+            },
+            {
+                "period": 1,
+                "start_time": "08:00",
+                "end_time": "08:45",
+                "class": "11A",
+                "subject": "Mathematics",
+                "room": "201",
+            },
+            {
+                "period": 5,
+                "start_time": "11:35",
+                "end_time": "12:20",
+                "class": "9B",
+                "subject": "Mathematics",
+                "room": "105",
+            },
+        ],
+        "Thursday": [
+            {
+                "period": 1,
+                "start_time": "08:00",
+                "end_time": "08:45",
+                "class": "10A",
+                "subject": "Mathematics",
+                "room": "101",
+            },
+            {
+                "period": 4,
+                "start_time": "10:45",
+                "end_time": "11:30",
+                "class": "9A",
+                "subject": "Mathematics",
+                "room": "104",
+            },
+            {
+                "period": 6,
+                "start_time": "13:00",
+                "end_time": "13:45",
+                "class": "12A",
+                "subject": "Mathematics",
+                "room": "202",
+            },
+        ],
+        "Friday": [
+            {
+                "period": 3,
+                "start_time": "09:40",
+                "end_time": "10:25",
+                "class": "10A",
+                "subject": "Mathematics",
+                "room": "101",
+            },
+            {
+                "period": 2,
+                "start_time": "08:50",
+                "end_time": "09:35",
+                "class": "11A",
+                "subject": "Mathematics",
+                "room": "201",
+            },
+            {
+                "period": 5,
+                "start_time": "11:35",
+                "end_time": "12:20",
+                "class": "9B",
+                "subject": "Mathematics",
+                "room": "105",
+            },
+        ],
+    }
+
+    # If a specific day is requested, filter the schedule
+    if day_of_week:
+        day_schedule = teacher_week_schedule.get(day_of_week.capitalize())
+        if not day_schedule:
+            return {
+                "status": "error",
+                "error": f"Invalid day: {day_of_week}. Please use Monday-Friday.",
+            }
+        return {
+            "status": "success",
+            "teacher_name": teacher_name,
+            "day_of_week": day_of_week.capitalize(),
+            "schedule": day_schedule,
+            "total_periods": len(day_schedule),
+            "free_periods": 6 - len(day_schedule),
         }
+
+    # Return full week schedule
+    total_teaching_periods = sum(len(periods) for periods in teacher_week_schedule.values())
+    return {
+        "status": "success",
+        "teacher_name": teacher_name,
+        "week_schedule": teacher_week_schedule,
+        "total_teaching_periods": total_teaching_periods,
+        "total_free_periods": 30 - total_teaching_periods,  # Assuming 6 periods/day * 5 days = 30
+    }
 
 
 @tool("find_current_period_for_class", args_schema=FindCurrentPeriodForClassSchema)
-def find_current_period_for_class(class_name: str) -> Dict[str, Any]:
+def find_current_period_for_class(class_name: str) -> dict[str, Any]:
     """
     Identifies the subject and teacher for the ongoing period in a given class.
-    Use this tool when a user asks what class is happening now, what's the current period, or who's teaching now.
+    Use this tool when asked "what is happening right now", "current period", or "what class is going on".
 
     Args:
-        class_name: Name of the class to check
+        class_name: Name of the class
 
     Returns:
         Dictionary containing current period information or error information
@@ -673,7 +550,7 @@ def find_current_period_for_class(class_name: str) -> Dict[str, Any]:
     # Real implementation would be:
     # try:
     #     response = requests.get(
-    #         f"{BASE_URL}/timetable/class/{class_name}/current-period",
+    #         f"{BASE_URL}/timetable/current-period/{class_name}",
     #         timeout=10
     #     )
     #     response.raise_for_status()
@@ -683,49 +560,78 @@ def find_current_period_for_class(class_name: str) -> Dict[str, Any]:
     #     return {"error": "Request timed out. Please try again."}
     # except requests.RequestException as e:
     #     logger.error(f"API call failed: {e}")
-    #     return {"error": f"Failed to find current period: {str(e)}"}
+    #     return {"error": f"Failed to fetch current period: {str(e)}"}
 
-    # Get current time and day for simulation
-    now = datetime.now()
-    current_day = now.strftime("%A")
-    current_time = now.strftime("%H:%M")
+    # Simulate current time and determine current period
+    current_time = datetime.now()
+    current_day = current_time.strftime("%A")
 
-    # Placeholder current period for development/testing
-    # Simulating it's during period 2 on a weekday
+    # Check if it's a weekday
+    if current_day in ["Saturday", "Sunday"]:
+        return {
+            "status": "success",
+            "class_name": class_name,
+            "current_day": current_day,
+            "message": "It's a weekend. No classes scheduled.",
+            "is_class_time": False,
+        }
+
+    # Simulated time-based period detection (simplified)
+    current_hour = current_time.hour
+    current_minute = current_time.minute
+
+    # Define period timings
+    periods = [
+        {"period": 1, "start": (8, 0), "end": (8, 45)},
+        {"period": 2, "start": (8, 50), "end": (9, 35)},
+        {"period": 3, "start": (9, 40), "end": (10, 25)},
+        {"period": 4, "start": (10, 45), "end": (11, 30)},
+        {"period": 5, "start": (11, 35), "end": (12, 20)},
+        {"period": 6, "start": (13, 0), "end": (13, 45)},
+    ]
+
+    current_period = None
+    for period_info in periods:
+        start_h, start_m = period_info["start"]
+        end_h, end_m = period_info["end"]
+
+        if (current_hour > start_h or (current_hour == start_h and current_minute >= start_m)) and (current_hour < end_h or (current_hour == end_h and current_minute < end_m)):
+            current_period = period_info["period"]
+            break
+
+    if not current_period:
+        return {
+            "status": "success",
+            "class_name": class_name,
+            "current_day": current_day,
+            "message": "No class is currently in session. It might be a break or outside school hours.",
+            "is_class_time": False,
+        }
+
+    # Return placeholder data for the current period
     return {
         "status": "success",
         "class_name": class_name,
         "current_day": current_day,
-        "current_time": current_time,
-        "current_period": {
-            "period_number": 2,
-            "subject_name": "Physics",
-            "teacher_name": "Mrs. Patel",
-            "start_time": "08:50",
-            "end_time": "09:35",
-            "room_number": "Lab 1",
-            "time_remaining_minutes": 15,
-        },
-        "next_period": {
-            "period_number": 3,
-            "subject_name": "English",
-            "teacher_name": "Ms. Verma",
-            "start_time": "09:40",
-            "end_time": "10:25",
-            "room_number": "Room 205",
-        },
+        "current_period": current_period,
+        "subject": "Mathematics",
+        "teacher": "Mrs. Sharma",
+        "room": "101",
+        "start_time": "09:40",
+        "end_time": "10:25",
+        "is_class_time": True,
     }
 
 
 @tool("find_free_teachers", args_schema=FindFreeTeachersSchema)
-def find_free_teachers(day_of_week: str, period_number: int) -> Dict[str, Any]:
+def find_free_teachers(day_of_week: str, period_number: int) -> dict[str, Any]:
     """
     Lists all teachers who do not have a class assigned during a specific period.
-    Use this tool when a user asks for available teachers, free teachers, or teachers for substitution.
+    Use this tool when asked about teacher availability, free teachers, or who can substitute.
 
     Args:
-        day_of_week: The day to check (e.g., 'Monday')
-        period_number: The period number to check
+        day_of_week: Day of the week (Monday-Friday)
+        period_number: Period number (1-6)
 
     Returns:
         Dictionary containing list of free teachers or error information
@@ -750,74 +656,80 @@ def find_free_teachers(day_of_week: str, period_number: int) -> Dict[str, Any]:
     #     return {"error": "Request timed out. Please try again."}
     # except requests.RequestException as e:
     #     logger.error(f"API call failed: {e}")
-    #     return {"error": f"Failed to find free teachers: {str(e)}"}
+    #     return {"error": f"Failed to fetch free teachers: {str(e)}"}
 
-    # Placeholder free teachers list for development/testing
+    # Validate inputs
+    valid_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    if day_of_week.capitalize() not in valid_days:
+        return {
+            "status": "error",
+            "error": f"Invalid day: {day_of_week}. Please use Monday-Friday.",
+        }
+
+    if not 1 <= period_number <= 6:
+        return {
+            "status": "error",
+            "error": f"Invalid period number: {period_number}. Please use 1-6.",
+        }
+
+    # Placeholder data for free teachers
     return {
         "status": "success",
-        "day_of_week": day_of_week,
+        "day_of_week": day_of_week.capitalize(),
         "period_number": period_number,
-        "period_time": "08:50 - 09:35",
         "free_teachers": [
             {
-                "teacher_name": "Mr. Singh",
-                "subject_specialization": "Biology",
-                "department": "Science",
-                "contact_extension": "305",
-            },
-            {
-                "teacher_name": "Ms. Gupta",
-                "subject_specialization": "Computer Science",
-                "department": "Technology",
-                "contact_extension": "412",
-            },
-            {
                 "teacher_name": "Dr. Iyer",
-                "subject_specialization": "Chemistry",
-                "department": "Science",
-                "contact_extension": "307",
+                "department": "Mathematics",
+                "phone": "+91-9876543222",
+                "email": "dr.iyer@school.edu",
             },
             {
-                "teacher_name": "Mrs. Nair",
-                "subject_specialization": "Geography",
+                "teacher_name": "Mrs. Verma",
+                "department": "English",
+                "phone": "+91-9876543223",
+                "email": "verma@school.edu",
+            },
+            {
+                "teacher_name": "Mr. Rao",
                 "department": "Social Studies",
-                "contact_extension": "210",
+                "phone": "+91-9876543224",
+                "email": "rao@school.edu",
             },
         ],
-        "total_free_teachers": 4,
-        "note": "These teachers are available for substitution during this period",
+        "total_free_teachers": 3,
     }
 
 
-@tool("create_or_update_timetable_entry", args_schema=CreateOrUpdateTimetableEntrySchema)
-def create_or_update_timetable_entry(
+@tool("update_timetable_entry", args_schema=UpdateTimetableEntrySchema)
+def update_timetable_entry(
     class_name: str,
     day_of_week: str,
     period_number: int,
-    subject_name: str,
+    subject: str,
     teacher_name: str,
     start_time: Optional[str] = None,
     end_time: Optional[str] = None,
     room_number: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Creates or modifies a single entry in the timetable (Admin-only operation).
-    Use this tool when a user wants to schedule a class, assign a teacher, or update the timetable.
+    Use this tool when an administrator wants to update, create, or modify a timetable entry.
 
     Args:
         class_name: Name of the class
-        day_of_week: Day of the week
-        period_number: Period number
-        subject_name: Subject to be taught
-        teacher_name: Teacher assigned
-        start_time: Optional start time
-        end_time: Optional end time
+        day_of_week: Day of the week (Monday-Friday)
+        period_number: Period number (1-6)
+        subject: Subject name
+        teacher_name: Teacher assigned to this period
+        start_time: Optional start time (format: HH:MM)
+        end_time: Optional end time (format: HH:MM)
         room_number: Optional room number
 
     Returns:
         Dictionary containing success status or error information
     """
-    logger.info(f"[TOOL:create_or_update_timetable_entry] Class: '{class_name}', " f"Day: '{day_of_week}', Period: {period_number}, Subject: '{subject_name}', Teacher: '{teacher_name}'")
+    logger.info(f"[TOOL:update_timetable_entry] Class: '{class_name}', Day: '{day_of_week}', " f"Period: {period_number}, Subject: '{subject}', Teacher: '{teacher_name}'")
 
     # Real implementation would be:
     # try:
@@ -825,14 +737,14 @@ def create_or_update_timetable_entry(
     #         "class_name": class_name,
     #         "day_of_week": day_of_week,
     #         "period_number": period_number,
-    #         "subject_name": subject_name,
+    #         "subject": subject,
     #         "teacher_name": teacher_name,
     #         "start_time": start_time,
     #         "end_time": end_time,
     #         "room_number": room_number
     #     }
     #     response = requests.post(
-    #         f"{BASE_URL}/timetable/entry",
+    #         f"{BASE_URL}/timetable/update",
     #         json=payload,
     #         timeout=10
     #     )
@@ -843,24 +755,38 @@ def create_or_update_timetable_entry(
     #     return {"error": "Request timed out. Please try again."}
     # except requests.RequestException as e:
     #     logger.error(f"API call failed: {e}")
-    #     return {"error": f"Failed to create/update timetable entry: {str(e)}"}
+    #     return {"error": f"Failed to update timetable: {str(e)}"}
+
+    # Validate inputs
+    valid_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    if day_of_week.capitalize() not in valid_days:
+        return {
+            "status": "error",
+            "error": f"Invalid day: {day_of_week}. Please use Monday-Friday.",
+        }
+
+    if not 1 <= period_number <= 6:
+        return {
+            "status": "error",
+            "error": f"Invalid period number: {period_number}. Please use 1-6.",
+        }
 
     # Placeholder confirmation for development/testing
     return {
         "status": "success",
-        "message": f"Successfully created/updated timetable entry for {class_name} on {day_of_week}, Period {period_number}.",
-        "timetable_entry": {
+        "message": f"Successfully updated timetable entry for {class_name} on {day_of_week.capitalize()}, Period {period_number}.",
+        "entry_details": {
             "entry_id": "TT-2025-001",
             "class_name": class_name,
-            "day_of_week": day_of_week,
+            "day_of_week": day_of_week.capitalize(),
             "period_number": period_number,
-            "subject_name": subject_name,
+            "subject": subject,
             "teacher_name": teacher_name,
-            "start_time": start_time or "Not specified",
-            "end_time": end_time or "Not specified",
-            "room_number": room_number or "Not assigned",
-            "is_active": True,
-            "last_modified": "2025-10-06T10:30:00Z",
+            "start_time": start_time or "09:40",
+            "end_time": end_time or "10:25",
+            "room_number": room_number or "TBA",
+            "updated_at": datetime.now().isoformat(),
+            "updated_by": "ADMIN-001",
         },
     }
 
@@ -871,7 +797,7 @@ timetable_agent_tools = [
     get_teacher_timetable,
     find_current_period_for_class,
     find_free_teachers,
-    create_or_update_timetable_entry,
+    update_timetable_entry,
 ]
 
 # Export tool names for easy reference
@@ -881,5 +807,5 @@ __all__ = [
     "get_teacher_timetable",
     "find_current_period_for_class",
     "find_free_teachers",
-    "create_or_update_timetable_entry",
+    "update_timetable_entry",
 ]
