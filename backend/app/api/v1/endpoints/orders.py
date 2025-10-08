@@ -1,9 +1,12 @@
 # backend/app/api/v1/endpoints/orders.py
+# Standard library imports
 from uuid import uuid4
 
+# Third-party imports
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Local application imports
 from app.core.security import get_current_user, require_role
 from app.db.session import get_db
 from app.schemas.order_schema import OrderCreate, OrderOut, OrderUpdate

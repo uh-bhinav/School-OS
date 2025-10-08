@@ -10,6 +10,8 @@ from supabase.lib.client_options import User
 
 router = APIRouter()
 
+router = APIRouter()
+
 
 @router.get("/me", response_model=CartOut, tags=["E-commerce: Cart"])
 async def get_user_cart(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):

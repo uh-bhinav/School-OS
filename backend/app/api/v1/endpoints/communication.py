@@ -15,6 +15,8 @@ from supabase.lib.client_options import User
 
 router = APIRouter()
 
+router = APIRouter()
+
 # --- Conversation Endpoints ---
 
 
