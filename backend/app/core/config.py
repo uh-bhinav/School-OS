@@ -9,8 +9,9 @@ if os.getenv("PYTEST") == "1":
     ENV_FILE = ".env.test"
 else:
     ENV_FILE = ".env"
-
-# Load the appropriate .env file
+# --- THIS IS THE CRITICAL FIX ---
+# 2. Explicitly find and load the .env file into the environment.
+# This ensures that when Pydantic runs, the variables are already available.
 load_dotenv(ENV_FILE)
 
 
@@ -34,7 +35,6 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# This part of your file is correct and should remain
 if "%3D" in settings.DATABASE_URL:
     settings.DATABASE_URL = unquote(settings.DATABASE_URL)
 
@@ -43,3 +43,4 @@ if "options=project=" in settings.DATABASE_URL:
 
 print(">>> FINAL DATABASE_URL:", settings.DATABASE_URL)
 print(">>> Loaded from:", settings.Config.env_file)
+print(">>> .env file loaded and settings configured.")
