@@ -23,9 +23,11 @@ class Settings(BaseSettings):
     DATABASE_URL: str  # Your PostgreSQL connection string
     SUPABASE_PROJECT_REF: str
     TEST_ADMIN_TOKEN: str | None = None
+    TEST_TEACHER_TOKEN: str | None = None
 
     class Config:
         env_file = ENV_FILE
+        extra = "ignore"
 
 
 settings = Settings()

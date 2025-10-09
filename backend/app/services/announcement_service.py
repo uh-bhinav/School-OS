@@ -2,7 +2,8 @@
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy.exc import SQLAlchemyError
+from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -36,6 +37,15 @@ async def create_announcement(
     db.add(db_announcement)
     try:
         await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Invalid announcement target. Use target_type of 'SCHOOL', 'GRADE',"
+                " or 'CLASS' with a non-null target_id that passes database checks."
+            ),
+        ) from exc
     except SQLAlchemyError:
         await db.rollback()
         raise

@@ -1,6 +1,7 @@
 # backend/app/api/v1/endpoints/marks.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user_profile, require_role
@@ -144,10 +145,20 @@ async def submit_marks_in_bulk(
             detail="Only users with a teacher record can submit marks.",
         )
 
-    created_marks = await mark_service.bulk_create_marks(
-        db=db,
-        marks_in=marks_in,
-    )
+    try:
+        created_marks = await mark_service.bulk_create_marks(
+            db=db,
+            marks_in=marks_in,
+        )
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "One or more mark rows failed validation. "
+                "Verify student_id, exam_id, subject_id, school_id, and duplicates."
+            ),
+        ) from exc
 
     return [
         MarkOut.model_validate(mark, from_attributes=True).model_copy(

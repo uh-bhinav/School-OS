@@ -2,6 +2,7 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_role
@@ -132,9 +133,21 @@ async def create_bulk_attendance(
     """
     Create multiple attendance records for a class in a single transaction.
     """
-    records = await attendance_record_service.bulk_create_attendance_records(
-        db=db, attendance_data=attendance_in
-    )
+    try:
+        records = await attendance_record_service.bulk_create_attendance_records(
+            db=db, attendance_data=attendance_in
+        )
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Bulk attendance submission failed. "
+                "Verify class_id, student_id, period_id,"
+                " and duplicates before retrying."
+            ),
+        ) from exc
+
     return records
 
 
