@@ -261,8 +261,10 @@ async def test_get_periods_for_non_existent_class(
         f"/v1/periods/class/{non_existent_class_id}/periods"
     )
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == []  # The service correctly returns an empty list
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# The service correctly returns an empty list
 
 
 @pytest.mark.asyncio

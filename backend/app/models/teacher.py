@@ -42,6 +42,7 @@ class Teacher(Base):
     hire_date = Column(Date)
     years_of_experience = Column(Integer)
     is_certified = Column(Boolean)
+    school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False)
     bio = Column(Text)
     # ADDED: New column to store structured qualifications
     qualifications = Column(JSONB)

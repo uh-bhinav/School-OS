@@ -1,4 +1,4 @@
-# backend/app/models/exam.py
+# backend/app/models/exams.py
 from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 
@@ -25,3 +25,16 @@ class Exam(Base):
     exam_type = relationship("ExamType")
     academic_year = relationship("AcademicYear")
     marks_records = relationship("Mark", back_populates="exam")
+
+    def __init__(self, **kwargs):
+        if "total_marks" in kwargs and "marks" not in kwargs:
+            kwargs["marks"] = kwargs.pop("total_marks")
+        super().__init__(**kwargs)
+
+    @property
+    def total_marks(self):
+        return self.marks
+
+    @total_marks.setter
+    def total_marks(self, value):
+        self.marks = value

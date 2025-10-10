@@ -2,38 +2,46 @@
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.models.announcement import Announcement
 from app.models.announcement_target import AnnouncementTarget
-
-# Import for the Profile model to get the user's school ID
 from app.models.profile import Profile
 from app.schemas.announcement_schema import AnnouncementCreate
 
 
 async def create_announcement(
-    db: AsyncSession, *, obj_in: AnnouncementCreate, published_by_id: UUID
+    db: AsyncSession,
+    *,
+    announcement_in: AnnouncementCreate,
+    published_by_id: UUID,
+    language: Optional[str] = None,
 ) -> Announcement:
-    """
-    Creates a new announcement and its targets in a single transaction.
-    """
-    announcement_data = obj_in.model_dump(exclude={"targets"})
-    targets_data = obj_in.targets
+    """Create a new announcement along with its targets."""
 
-    db_announcement = Announcement(**announcement_data, published_by_id=published_by_id)
+    announcement_data = announcement_in.model_dump(exclude={"targets"})
+
+    db_announcement = Announcement(
+        published_by_id=published_by_id,
+        language=language,
+        targets=[
+            AnnouncementTarget(**target.model_dump())
+            for target in announcement_in.targets
+        ],
+        **announcement_data,
+    )
+
     db.add(db_announcement)
-    await db.flush()
-
-    for target in targets_data:
-        db_target = AnnouncementTarget(
-            announcement_id=db_announcement.id, **target.model_dump()
-        )
-        db.add(db_target)
-
-    await db.commit()
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise
     await db.refresh(db_announcement)
+    await db.refresh(db_announcement, attribute_names=["targets"])
+
     return db_announcement
 
 

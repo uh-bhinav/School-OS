@@ -89,7 +89,8 @@ async def assign_class_teacher(db: AsyncSession, *, teacher: Teacher, class_obj:
     This directly updates the `class_teacher_id` foreign key on the
     `classes` table.
     """
-    class_obj.class__teacher_id = teacher.teacher_id
+    # Fixed: Changed from class__teacher_id to class_teacher_id
+    class_obj.class_teacher_id = teacher.teacher_id
     db.add(class_obj)
     await db.commit()
     await db.refresh(class_obj)

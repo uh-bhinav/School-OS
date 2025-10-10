@@ -24,10 +24,19 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def create_new_class(class_in: ClassCreate, db: AsyncSession = Depends(get_db)):
+async def create_new_class(
+    class_in: ClassCreate,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     Create a new class. Admin only.
     """
+    if class_in.school_id != current_profile.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only create classes for your own school.",
+        )
     return await class_service.create_class(db=db, class_in=class_in)
 
 
@@ -36,11 +45,17 @@ async def create_new_class(class_in: ClassCreate, db: AsyncSession = Depends(get
     response_model=ClassOut,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def get_class_by_id(class_id: int, db: AsyncSession = Depends(get_db)):
+async def get_class_by_id(
+    class_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     Get a single class by its ID.
     """
-    db_class = await class_service.get_class(db, class_id=class_id)
+    db_class = await class_service.get_class(
+        db, class_id=class_id, school_id=current_profile.school_id
+    )
     if not db_class:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -55,11 +70,18 @@ async def get_class_by_id(class_id: int, db: AsyncSession = Depends(get_db)):
     dependencies=[Depends(require_role("Admin"))],
 )
 async def get_all_classes_for_school(
-    school_id: int, db: AsyncSession = Depends(get_db)
+    school_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
     Get all active classes for a specific school.
     """
+    if school_id != current_profile.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view classes for your own school.",
+        )
     return await class_service.get_all_classes_for_school(db, school_id=school_id)
 
 
@@ -157,10 +179,22 @@ async def update_class_details(
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def delete_class(class_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_class(
+    class_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     Soft-deletes a class.
     """
+    db_obj = await class_service.get_class(
+        db, class_id=class_id, school_id=current_profile.school_id
+    )
+    if not db_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Class not found"
+        )
+
     deleted_class = await class_service.soft_delete_class(db, class_id=class_id)
     if not deleted_class:
         raise HTTPException(

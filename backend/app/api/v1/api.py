@@ -3,11 +3,13 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     academic_years,
+    announcements,
     attendance_records,
     classes,
     communication,
     employment_statuses,
     exam_types,
+    exams,
     marks,
     periods,
     profiles,  # Added this import
@@ -41,6 +43,8 @@ api_router.include_router(
     tags=["Admin: Lookup Tables"],
 )
 api_router.include_router(exam_types.router, prefix="/exam-types", tags=["Admin: Lookup Tables"])
+api_router.include_router(students.router, prefix="/students", tags=["Students"])
+api_router.include_router(exams.router, prefix="/exams", tags=["Exams"])
 """api_router.include_router(
     product_categories.router,
     prefix="/product-categories",
@@ -55,9 +59,7 @@ api_router.include_router(marks.router, prefix="/marks", tags=["Marks"])
 )
 api_router.include_router(orders.router, prefix="/orders", tags=["E-commerce: Orders"])
 api_router.include_router(carts.router, prefix="/carts", tags=["E-commerce: Cart"])"""
-"""api_router.include_router(
-    announcements.router, prefix="/announcements", tags=["Communication: Announcements"]
-)"""
+api_router.include_router(announcements.router, prefix="/announcements", tags=["Communication: Announcements"])
 api_router.include_router(communication.router, prefix="/comms", tags=["Communication: Chat"])
 
 # Added the profiles router

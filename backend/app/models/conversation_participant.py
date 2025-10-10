@@ -1,5 +1,5 @@
 # backend/app/models/conversation_participant.py
-from sqlalchemy import UUID, Column, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import UUID, Column, ForeignKey, Integer, PrimaryKeyConstraint, String
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
@@ -15,8 +15,6 @@ class ConversationParticipant(Base):
 
     __tablename__ = "conversation_participants"
 
-    # Use a surrogate key for primary key (PK)
-    id = Column(Integer, primary_key=True, index=True)
     conversation_id = Column(
         Integer, ForeignKey("conversations.conversation_id"), nullable=False
     )
@@ -28,7 +26,8 @@ class ConversationParticipant(Base):
     conversation = relationship("Conversation", back_populates="participants")
     user = relationship("Profile")
 
-    # Constraint to prevent a user from joining the same conversation twice
     __table_args__ = (
-        UniqueConstraint("conversation_id", "user_id", name="_conversation_user_uc"),
+        PrimaryKeyConstraint(
+            "conversation_id", "user_id", name="pk_conversation_participants"
+        ),
     )

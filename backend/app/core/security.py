@@ -14,14 +14,14 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models.profile import Profile
 from app.models.user_roles import UserRole
-from supabase import Client, create_client
+from supabase import Client, create_async_client
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 # Dependency to get the Supabase client
 async def get_supabase_client() -> Client:
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+    return await create_async_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 
 # Dependency to get the current user's profile from your database
@@ -47,7 +47,8 @@ async def _get_current_user_profile_from_db(
             )
 
         return profile
-    except Exception:
+    except Exception as e:
+        print(f"Authentication error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
