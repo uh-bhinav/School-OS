@@ -25,9 +25,7 @@ mock_admin_profile = Profile(
 
 
 @pytest.mark.asyncio
-async def test_get_school_details_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_get_school_details_as_admin(test_client: AsyncClient, db_session: AsyncSession):
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     response = await test_client.get(f"/v1/schools/{VALID_SCHOOL_ID}")
@@ -41,18 +39,14 @@ async def test_get_school_details_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_update_school_details_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_update_school_details_as_admin(test_client: AsyncClient, db_session: AsyncSession):
     """Tests updating a school's details, as per the roadmap."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
     update_payload = {
         "phone_number": "+91 9999988888",
         "website": "https://www.new-tapasyavp.edu.in",
     }
-    response = await test_client.put(
-        f"/v1/schools/{VALID_SCHOOL_ID}", json=update_payload
-    )
+    response = await test_client.put(f"/v1/schools/{VALID_SCHOOL_ID}", json=update_payload)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
 
@@ -62,9 +56,7 @@ async def test_update_school_details_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_get_school_details_for_unauthorized_school_fails(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_get_school_details_for_unauthorized_school_fails(test_client: AsyncClient, db_session: AsyncSession):
     """Tests security rule: An admin from one school cannot access another's details."""
     # This admin belongs to school 99
     mock_other_school_admin = Profile(
@@ -81,9 +73,7 @@ async def test_get_school_details_for_unauthorized_school_fails(
 
 
 @pytest.mark.asyncio
-async def test_soft_delete_school_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_soft_delete_school_as_admin(test_client: AsyncClient, db_session: AsyncSession):
     """Tests soft-deleting a school, as per the roadmap."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
     # Delete the school

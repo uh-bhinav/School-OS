@@ -36,9 +36,7 @@ async def test_create_attendance_record_happy_path():
     # 2. Act
     # Patch the AttendanceRecord model to isolate the service from the DB model
     with (
-        patch(
-            "app.services.attendance_record_service.AttendanceRecord", autospec=True
-        ) as mock_attendance_model,
+        patch("app.services.attendance_record_service.AttendanceRecord", autospec=True) as mock_attendance_model,
         patch(
             "app.services.attendance_record_service.SQLAlchemyError",
             new=SQLAlchemyError,
@@ -48,9 +46,7 @@ async def test_create_attendance_record_happy_path():
         mock_instance.status = "Present"
 
         # Call the service function
-        result = await create_attendance_record(
-            db=mock_db_session, attendance_in=attendance_in
-        )
+        result = await create_attendance_record(db=mock_db_session, attendance_in=attendance_in)
 
     # 3. Assert
     # Verify the model was instantiated with the correct data
@@ -98,9 +94,7 @@ async def test_create_attendance_record_sad_path_db_error():
         ),
     ):
         with pytest.raises(SQLAlchemyError):
-            await create_attendance_record(
-                db=mock_db_session, attendance_in=attendance_in
-            )
+            await create_attendance_record(db=mock_db_session, attendance_in=attendance_in)
 
     # Verify the database transaction was attempted and then rolled back
     mock_db_session.add.assert_called_once()
@@ -162,14 +156,10 @@ async def test_bulk_create_attendance_records_happy_path():
         "app.services.attendance_record_service.AttendanceRecord",
         side_effect=lambda **kwargs: _make_record(**kwargs),
     ) as mock_attendance_model:
-        result = await bulk_create_attendance_records(
-            db=mock_db_session, attendance_data=attendance_list_in
-        )
+        result = await bulk_create_attendance_records(db=mock_db_session, attendance_data=attendance_list_in)
 
     assert mock_attendance_model.call_count == len(attendance_list_in)
-    for call_args, expected in zip(
-        mock_attendance_model.call_args_list, attendance_list_in
-    ):
+    for call_args, expected in zip(mock_attendance_model.call_args_list, attendance_list_in):
         assert call_args.kwargs == expected.model_dump()
 
     mock_db_session.add_all.assert_called_once()
@@ -177,9 +167,7 @@ async def test_bulk_create_attendance_records_happy_path():
     assert added_records == created_records
 
     mock_db_session.commit.assert_awaited_once()
-    mock_db_session.refresh.assert_has_awaits(
-        [call(record) for record in created_records]
-    )
+    mock_db_session.refresh.assert_has_awaits([call(record) for record in created_records])
 
     assert result == created_records
 
@@ -219,13 +207,9 @@ async def test_bulk_create_attendance_records_sad_path_db_error():
 
     # 2. Act & 3. Assert
     # Expect the SQLAlchemyError to be propagated by the service
-    with patch(
-        "app.services.attendance_record_service.AttendanceRecord", autospec=True
-    ):
+    with patch("app.services.attendance_record_service.AttendanceRecord", autospec=True):
         with pytest.raises(SQLAlchemyError):
-            await bulk_create_attendance_records(
-                db=mock_db_session, attendance_data=invalid_attendance_list
-            )
+            await bulk_create_attendance_records(db=mock_db_session, attendance_data=invalid_attendance_list)
 
     # Verify the transaction handling
     mock_db_session.add_all.assert_called_once()

@@ -8,9 +8,7 @@ from pydantic import BaseModel, Field
 # --- New: Defines the structure for a single item within the package ---
 class PackageItemIn(BaseModel):
     product_id: int = Field(..., description="ID of the product to include.")
-    quantity: int = Field(
-        1, ge=1, description="Quantity of the product in the package."
-    )
+    quantity: int = Field(1, ge=1, description="Quantity of the product in the package.")
 
 
 # --- Updated: ProductPackageCreate must now accept a list of items ---
@@ -22,9 +20,7 @@ class ProductPackageCreate(BaseModel):
     image_url: Optional[str] = None
 
     # CRITICAL ADDITION: List of items to be created in the junction table
-    items: list[PackageItemIn] = Field(
-        ..., description="List of products and quantities in this package."
-    )
+    items: list[PackageItemIn] = Field(..., description="List of products and quantities in this package.")
 
 
 # Properties to receive on update (Update only affects package header data)

@@ -15,18 +15,13 @@ SCHOOL_ID = 1
 
 
 # Re-using a simplified helper to ensure user/profile/teacher records exist for the test
-async def ensure_user_and_teacher_profile(
-    db_session: AsyncSession, profile: Profile
-) -> uuid.UUID:
+async def ensure_user_and_teacher_profile(db_session: AsyncSession, profile: Profile) -> uuid.UUID:
     user_uuid = uuid.UUID(str(profile.user_id))
     email = f"test.comms.{user_uuid}@schoolos.dev"
 
     # Ensure auth.users entry exists
     await db_session.execute(
-        text(
-            "INSERT INTO auth.users (id, email) "
-            "VALUES (:id, :email) ON CONFLICT (id) DO NOTHING"
-        ),
+        text("INSERT INTO auth.users (id, email) " "VALUES (:id, :email) ON CONFLICT (id) DO NOTHING"),
         {"id": user_uuid, "email": email},
     )
     # Ensure profiles entry exists
@@ -48,9 +43,7 @@ async def ensure_user_and_teacher_profile(
 
     # If it's a teacher profile, ensure the teacher record exists too
     if "Teacher" in profile.roles:
-        teacher_res = await db_session.execute(
-            text("SELECT 1 FROM teachers WHERE user_id=:id"), {"id": user_uuid}
-        )
+        teacher_res = await db_session.execute(text("SELECT 1 FROM teachers WHERE user_id=:id"), {"id": user_uuid})
         if not teacher_res.scalar_one_or_none():
             db_session.add(Teacher(user_id=user_uuid, school_id=SCHOOL_ID))
 
@@ -70,12 +63,8 @@ async def test_create_conversation_and_send_messages(
     and then sending/retrieving messages within it.
     """
     # --- Step 1: Ensure both users exist in the database ---
-    teacher_user_id = await ensure_user_and_teacher_profile(
-        db_session, mock_teacher_profile
-    )
-    parent_user_id = await ensure_user_and_teacher_profile(
-        db_session, mock_parent_profile
-    )
+    teacher_user_id = await ensure_user_and_teacher_profile(db_session, mock_teacher_profile)
+    parent_user_id = await ensure_user_and_teacher_profile(db_session, mock_parent_profile)
 
     # --- Step 2: Parent initiates a conversation with the teacher ---
     app.dependency_overrides[get_current_user_profile] = lambda: mock_parent_profile
@@ -86,17 +75,13 @@ async def test_create_conversation_and_send_messages(
         "participant_ids": [str(teacher_user_id)],
     }
 
-    response = await test_client.post(
-        "/v1/comms/conversations/", json=create_convo_payload
-    )
+    response = await test_client.post("/v1/comms/conversations/", json=create_convo_payload)
 
     # --- Step 3: Assert conversation was created ---
     assert response.status_code == status.HTTP_201_CREATED
     convo_data = response.json()
     assert convo_data["title"] == create_convo_payload["title"]
-    assert (
-        len(convo_data["participants"]) == 2
-    )  # Initiator (parent) + recipient (teacher)
+    assert len(convo_data["participants"]) == 2  # Initiator (parent) + recipient (teacher)
 
     participant_ids = {p["user_id"] for p in convo_data["participants"]}
     assert str(parent_user_id) in participant_ids
@@ -130,9 +115,7 @@ async def test_create_conversation_and_send_messages(
 
     # --- Step 6: Parent retrieves all messages in the conversation ---
     app.dependency_overrides[get_current_user_profile] = lambda: mock_parent_profile
-    response = await test_client.get(
-        f"/v1/comms/conversations/{conversation_id}/messages/"
-    )
+    response = await test_client.get(f"/v1/comms/conversations/{conversation_id}/messages/")
 
     assert response.status_code == status.HTTP_200_OK
     messages_data = response.json()

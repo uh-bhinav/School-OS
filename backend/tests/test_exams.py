@@ -15,9 +15,7 @@ SCHOOL_ID = 1
 
 
 @pytest.mark.asyncio
-async def test_create_exam_type_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_create_exam_type_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Tests that an Admin can successfully create a new exam type.
     """
@@ -47,9 +45,7 @@ async def test_create_exam_type_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_get_all_exam_types_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_all_exam_types_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Tests that an Admin can successfully retrieve all exam types for their school.
     """
@@ -81,9 +77,7 @@ async def test_get_all_exam_types_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_create_exam_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_create_exam_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Tests that an Admin can successfully create a new exam,
     ensuring all dependencies (academic year, exam type) are handled.
@@ -145,9 +139,7 @@ for route in app.routes:
 
 
 @pytest.mark.asyncio
-async def test_get_all_exams(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_all_exams(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Tests that any authenticated user can retrieve a list of all active exams
     for a specific school.
@@ -248,9 +240,7 @@ async def test_get_all_exams(
 
 
 @pytest.mark.asyncio
-async def test_update_exam_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_update_exam_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Tests that an Admin can successfully update an existing exam.
     """
@@ -284,9 +274,7 @@ async def test_update_exam_as_admin(
 
     # --- Step 2: Update the exam ---
     update_payload = {"exam_name": "Updated Exam Name"}
-    response = await test_client.put(
-        f"/v1/exams/{exam_id_to_update}", json=update_payload
-    )
+    response = await test_client.put(f"/v1/exams/{exam_id_to_update}", json=update_payload)
 
     # --- Step 3: Assert the results ---
     assert response.status_code == status.HTTP_200_OK
@@ -298,9 +286,7 @@ async def test_update_exam_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_soft_delete_exam_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_soft_delete_exam_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Tests that an Admin can successfully soft-delete an exam.
     The exam should no longer be retrievable via standard 'get' methods
@@ -347,9 +333,7 @@ async def test_soft_delete_exam_as_admin(
     # check as there's no GET /exams/{id} endpoint.
     from app.services import exam_service
 
-    deleted_exam = await exam_service.get_exam_by_id(
-        db=db_session, exam_id=exam_id_to_delete
-    )
+    deleted_exam = await exam_service.get_exam_by_id(db=db_session, exam_id=exam_id_to_delete)
     assert deleted_exam is None
 
     app.dependency_overrides.clear()

@@ -65,9 +65,7 @@ async def get_academic_year_details(
 ):
     year = await academic_year_service.get_academic_year(db, year_id)
     if not year or year.school_id != current_profile.school_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found")
     return year
 
 
@@ -84,12 +82,8 @@ async def update_academic_year_details(
 ):
     db_obj = await academic_year_service.get_academic_year(db, year_id)
     if not db_obj or db_obj.school_id != current_profile.school_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found"
-        )
-    return await academic_year_service.update_academic_year(
-        db, db_obj=db_obj, year_in=year_in
-    )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found")
+    return await academic_year_service.update_academic_year(db, db_obj=db_obj, year_in=year_in)
 
 
 @router.delete(
@@ -105,9 +99,7 @@ async def delete_academic_year(
     """Soft-deletes an academic year, ensuring it's from the admin's own school."""
     db_obj = await academic_year_service.get_academic_year(db, year_id)
     if not db_obj or db_obj.school_id != current_profile.school_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found")
 
     # Now that ownership is confirmed, proceed with the deletion.
     await academic_year_service.soft_delete_academic_year(db, year_id=year_id)
@@ -128,9 +120,7 @@ async def get_the_active_year(
     """
     Get the currently active academic year for a school.
     """
-    active_year = await academic_year_service.get_active_academic_year(
-        db=db, school_id=school_id
-    )
+    active_year = await academic_year_service.get_active_academic_year(db=db, school_id=school_id)
     if not active_year or active_year.school_id != current_profile.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -154,14 +144,10 @@ async def set_the_active_year(
     """
     Set a specific academic year as the active one for a school.
     """
-    updated_year = await academic_year_service.set_active_academic_year(
-        db=db, school_id=school_id, academic_year_id=academic_year_id
-    )
+    updated_year = await academic_year_service.set_active_academic_year(db=db, school_id=school_id, academic_year_id=academic_year_id)
     if not updated_year or updated_year.school_id != current_profile.school_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=(
-                "Academic year not found or does not belong to the " "specified school."
-            ),
+            detail=("Academic year not found or does not belong to the " "specified school."),
         )
     return updated_year

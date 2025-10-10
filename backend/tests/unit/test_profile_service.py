@@ -42,14 +42,10 @@ async def test_get_all_profiles_for_school_no_filters():
 
     mock_result = MagicMock()
     # This chained call was the long line. It has been broken up correctly now.
-    (
-        mock_result.scalars.return_value.unique.return_value.all.return_value
-    ) = mock_profiles
+    (mock_result.scalars.return_value.unique.return_value.all.return_value) = mock_profiles
     mock_db.execute.return_value = mock_result
 
-    result = await profile_service.get_all_profiles_for_school(
-        db=mock_db, school_id=school_id
-    )
+    result = await profile_service.get_all_profiles_for_school(db=mock_db, school_id=school_id)
 
     mock_db.execute.assert_awaited_once()
     assert len(result) == 1
@@ -72,9 +68,7 @@ async def test_soft_delete_profile_happy_path(monkeypatch):
     mock_get_profile = AsyncMock(return_value=mock_profile)
     monkeypatch.setattr(profile_service, "get_profile", mock_get_profile)
 
-    result = await profile_service.soft_delete_profile(
-        db=mock_db, user_id=user_id, school_id=school_id
-    )
+    result = await profile_service.soft_delete_profile(db=mock_db, user_id=user_id, school_id=school_id)
 
     mock_get_profile.assert_awaited_once_with(mock_db, user_id=user_id)
     assert mock_profile.is_active is False
@@ -93,9 +87,7 @@ async def test_admin_update_profile():
     mock_db_profile = MagicMock(spec=Profile)
     update_schema = ProfileUpdate(first_name="John", last_name="Doe")
 
-    updated_profile = await profile_service.admin_update_profile(
-        db=mock_db, db_obj=mock_db_profile, profile_in=update_schema
-    )
+    updated_profile = await profile_service.admin_update_profile(db=mock_db, db_obj=mock_db_profile, profile_in=update_schema)
 
     assert mock_db_profile.first_name == "John"
     assert mock_db_profile.last_name == "Doe"
@@ -135,9 +127,7 @@ async def test_soft_delete_profile_not_found(monkeypatch):
     mock_get_profile = AsyncMock(return_value=None)
     monkeypatch.setattr(profile_service, "get_profile", mock_get_profile)
 
-    result = await profile_service.soft_delete_profile(
-        db=mock_db, user_id=uuid.uuid4(), school_id=1
-    )
+    result = await profile_service.soft_delete_profile(db=mock_db, user_id=uuid.uuid4(), school_id=1)
 
     assert result is None
     mock_db.commit.assert_not_called()
@@ -154,9 +144,7 @@ async def test_soft_delete_profile_wrong_school(monkeypatch):
     mock_get_profile = AsyncMock(return_value=mock_profile)
     monkeypatch.setattr(profile_service, "get_profile", mock_get_profile)
 
-    result = await profile_service.soft_delete_profile(
-        db=mock_db, user_id=uuid.uuid4(), school_id=1
-    )
+    result = await profile_service.soft_delete_profile(db=mock_db, user_id=uuid.uuid4(), school_id=1)
 
     assert result is None
     mock_db.commit.assert_not_called()
@@ -172,9 +160,7 @@ async def test_soft_delete_profile_already_inactive(monkeypatch):
     mock_get_profile = AsyncMock(return_value=mock_profile)
     monkeypatch.setattr(profile_service, "get_profile", mock_get_profile)
 
-    result = await profile_service.soft_delete_profile(
-        db=mock_db, user_id=uuid.uuid4(), school_id=1
-    )
+    result = await profile_service.soft_delete_profile(db=mock_db, user_id=uuid.uuid4(), school_id=1)
 
     assert result is None
     mock_db.commit.assert_not_called()

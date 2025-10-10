@@ -20,7 +20,5 @@ class Conversation(Base):
 
     # Relationships
     school = relationship("School")
-    participants = relationship(
-        "ConversationParticipant", back_populates="conversation"
-    )
+    participants = relationship("ConversationParticipant", back_populates="conversation")
     messages = relationship("Message", back_populates="conversation")

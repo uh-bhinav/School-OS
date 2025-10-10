@@ -24,17 +24,13 @@ async def test_create_timetable_entry_unit():
     )
 
     # We patch the Timetable model to spy on its creation
-    with patch(
-        "app.services.timetable_service.Timetable", autospec=True
-    ) as mock_timetable_model:
+    with patch("app.services.timetable_service.Timetable", autospec=True) as mock_timetable_model:
         # We patch the re-fetch helper function that is called at the end
         with patch(
             "app.services.timetable_service.get_entry_with_details",
             new_callable=AsyncMock,
         ) as mock_get_entry:
-            await timetable_service.create_timetable_entry(
-                db=mock_db, timetable_in=timetable_in
-            )
+            await timetable_service.create_timetable_entry(db=mock_db, timetable_in=timetable_in)
 
     # Assert that the Timetable model was instantiated with the correct data
     mock_timetable_model.assert_called_once()
@@ -51,12 +47,8 @@ async def test_update_timetable_entry_unit():
     mock_db_obj = MagicMock(spec=Timetable)
     timetable_in = TimetableEntryUpdate(teacher_id=99)
 
-    with patch(
-        "app.services.timetable_service.get_entry_with_details", new_callable=AsyncMock
-    ) as mock_get_entry:
-        result = await timetable_service.update_timetable_entry(
-            db=mock_db, db_obj=mock_db_obj, timetable_in=timetable_in
-        )
+    with patch("app.services.timetable_service.get_entry_with_details", new_callable=AsyncMock) as mock_get_entry:
+        result = await timetable_service.update_timetable_entry(db=mock_db, db_obj=mock_db_obj, timetable_in=timetable_in)
 
     assert mock_db_obj.teacher_id == 99
     mock_db.commit.assert_awaited_once()
@@ -72,9 +64,7 @@ async def test_soft_delete_timetable_entry_not_found_unit():
     mock_result.scalar_one_or_none.return_value = None
     mock_db.execute.return_value = mock_result
 
-    result = await timetable_service.soft_delete_timetable_entry(
-        db=mock_db, entry_id=999
-    )
+    result = await timetable_service.soft_delete_timetable_entry(db=mock_db, entry_id=999)
 
     assert result is None
     mock_db.commit.assert_awaited_once()
@@ -131,15 +121,11 @@ async def test_get_schedule_for_day_for_student_happy_path():
 
     # 1. Mock the first DB call: finding the student's class_id
     mock_student_result = MagicMock()
-    mock_student_result.scalar_one_or_none.return_value = (
-        101  # The student is in class 101
-    )
+    mock_student_result.scalar_one_or_none.return_value = 101  # The student is in class 101
 
     # 2. Mock the second DB call: finding the timetable entries for that class
     mock_timetable_result = MagicMock()
-    mock_timetable_result.scalars.return_value.all.return_value = [
-        MagicMock(spec=Timetable)
-    ]
+    mock_timetable_result.scalars.return_value.all.return_value = [MagicMock(spec=Timetable)]
 
     # Configure the mock to return these results in sequence
     mock_db.execute.side_effect = [mock_student_result, mock_timetable_result]

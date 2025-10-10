@@ -43,16 +43,12 @@ async def get_exam_by_id(db: AsyncSession, exam_id: int) -> Optional[Exam]:
 
 
 async def get_all_exams_for_school(db: AsyncSession, school_id: int) -> list[Exam]:
-    stmt = (
-        select(Exam).where(Exam.school_id == school_id).order_by(Exam.start_date.desc())
-    )
+    stmt = select(Exam).where(Exam.school_id == school_id).order_by(Exam.start_date.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def update_exam(
-    db: AsyncSession, exam_id: int, exam_in: ExamUpdate
-) -> Optional[Exam]:
+async def update_exam(db: AsyncSession, exam_id: int, exam_in: ExamUpdate) -> Optional[Exam]:
     db_obj = await db.get(Exam, exam_id)
     if not db_obj or getattr(db_obj, "is_active", True) is False:
         return None
@@ -90,9 +86,7 @@ async def delete_exam(db: AsyncSession, exam_id: int) -> Optional[Exam]:
     return db_obj
 
 
-async def get_exam_mark_summary(
-    db: AsyncSession, exam_id: int, student_id: int
-) -> dict[str, Any]:
+async def get_exam_mark_summary(db: AsyncSession, exam_id: int, student_id: int) -> dict[str, Any]:
     """
     Agentic Function: Retrieves a student's
       consolidated results for all subjects
@@ -154,9 +148,7 @@ async def get_exam_mark_summary(
 # to resolve E402 and F811 errors (Imports must be at the top).
 
 
-async def fetch_exams_by_academic_year(
-    db: AsyncSession, academic_year_id: int
-) -> list[Exam]:
+async def fetch_exams_by_academic_year(db: AsyncSession, academic_year_id: int) -> list[Exam]:
     """
     Agentic Function: Retrieves all active
     exams scheduled within a specific academic year.

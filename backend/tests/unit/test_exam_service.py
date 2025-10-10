@@ -34,21 +34,15 @@ async def test_create_exam_type_unit():
 
     # 2. Act: Call the service function with the mocked database
     # We patch the ExamType model to ensure we are not hitting the real DB
-    with patch(
-        "app.services.exam_type_service.ExamType", autospec=True
-    ) as mock_exam_type_model:
+    with patch("app.services.exam_type_service.ExamType", autospec=True) as mock_exam_type_model:
         # Configure the mock model to return a specific instance
         mock_instance = mock_exam_type_model.return_value
 
-        result = await exam_type_service.create_exam_type(
-            db=mock_db_session, exam_type_in=exam_type_in
-        )
+        result = await exam_type_service.create_exam_type(db=mock_db_session, exam_type_in=exam_type_in)
 
     # 3. Assert: Verify the logic
     # Was the ExamType model instantiated with the correct data?
-    mock_exam_type_model.assert_called_once_with(
-        school_id=1, type_name="Unit Test Exam Type"
-    )
+    mock_exam_type_model.assert_called_once_with(school_id=1, type_name="Unit Test Exam Type")
 
     # Were the correct database session methods called?
     mock_db_session.add.assert_called_once_with(mock_instance)
@@ -68,9 +62,7 @@ async def test_create_exam_type_unit_db_error():
     # 1. Arrange: Set up mocks
     mock_db_session = AsyncMock()
     # Simulate a database commit failure
-    mock_db_session.commit.side_effect = SQLAlchemyError(
-        "Simulated unique constraint violation"
-    )
+    mock_db_session.commit.side_effect = SQLAlchemyError("Simulated unique constraint violation")
 
     exam_type_in = ExamTypeCreate(school_id=1, type_name="Duplicate Exam Type")
 
@@ -79,9 +71,7 @@ async def test_create_exam_type_unit_db_error():
     with patch("app.services.exam_type_service.ExamType", autospec=True):
         # We expect a SQLAlchemyError to be raised by the service
         with pytest.raises(SQLAlchemyError):
-            await exam_type_service.create_exam_type(
-                db=mock_db_session, exam_type_in=exam_type_in
-            )
+            await exam_type_service.create_exam_type(db=mock_db_session, exam_type_in=exam_type_in)
 
     # Verify the database transaction handling
     mock_db_session.add.assert_called_once()
@@ -115,9 +105,7 @@ async def test_get_all_exam_types_for_school_happy_path():
 
     # 2. Act
     # Call the service function with the mocked session
-    result = await get_all_exam_types_for_school(
-        db=mock_db_session, school_id=school_id_to_fetch
-    )
+    result = await get_all_exam_types_for_school(db=mock_db_session, school_id=school_id_to_fetch)
 
     # 3. Assert
     # Verify that the execute method was called on the session
@@ -148,9 +136,7 @@ async def test_get_all_exam_types_for_school_sad_path_empty():
 
     # 2. Act
     # Call the service function
-    result = await get_all_exam_types_for_school(
-        db=mock_db_session, school_id=school_id_with_no_types
-    )
+    result = await get_all_exam_types_for_school(db=mock_db_session, school_id=school_id_with_no_types)
 
     # 3. Assert
     # Verify that the database was queried
@@ -183,9 +169,7 @@ async def test_get_exam_type_id_by_name_happy_path():
 
     # 2. Act
     # Call the service function
-    result = await get_exam_type_id_by_name(
-        db=mock_db_session, school_id=school_id, type_name=type_name_to_find
-    )
+    result = await get_exam_type_id_by_name(db=mock_db_session, school_id=school_id, type_name=type_name_to_find)
 
     # 3. Assert
     # Verify that the database was queried
@@ -215,9 +199,7 @@ async def test_get_exam_type_id_by_name_sad_path_not_found():
 
     # 2. Act
     # Call the service function
-    result = await get_exam_type_id_by_name(
-        db=mock_db_session, school_id=school_id, type_name=type_name_to_find
-    )
+    result = await get_exam_type_id_by_name(db=mock_db_session, school_id=school_id, type_name=type_name_to_find)
 
     # 3. Assert
     # Verify that the database was queried
@@ -398,9 +380,7 @@ async def test_update_exam_happy_path():
 
     # 2. Act
     # Call the service function with the update data
-    result = await update_exam(
-        db=mock_db_session, exam_id=exam_id_to_update, exam_in=exam_update_data
-    )
+    result = await update_exam(db=mock_db_session, exam_id=exam_id_to_update, exam_in=exam_update_data)
 
     # 3. Assert
     # Verify that the session's get method was called to fetch the object
@@ -442,9 +422,7 @@ async def test_update_exam_sad_path_not_found():
 
     # 2. Act
     # Call the service function
-    result = await update_exam(
-        db=mock_db_session, exam_id=non_existent_exam_id, exam_in=exam_update_data
-    )
+    result = await update_exam(db=mock_db_session, exam_id=non_existent_exam_id, exam_in=exam_update_data)
 
     # 3. Assert
     # Verify that the session's get method was called
@@ -482,9 +460,7 @@ async def test_update_exam_sad_path_db_error():
     # 2. Act & 3. Assert
     # Expect a SQLAlchemyError to be raised from the service
     with pytest.raises(SQLAlchemyError):
-        await update_exam(
-            db=mock_db_session, exam_id=exam_id_to_update, exam_in=exam_update_data
-        )
+        await update_exam(db=mock_db_session, exam_id=exam_id_to_update, exam_in=exam_update_data)
 
     # Verify the full transaction flow was attempted
     mock_db_session.get.assert_awaited_once_with(Exam, exam_id_to_update)
@@ -507,9 +483,7 @@ async def test_delete_exam_happy_path():
     mock_db_session = AsyncMock()
 
     # The existing exam object that will be "deleted"
-    existing_exam = Exam(
-        id=101, exam_name="Exam to be deleted", is_active=True  # Initially active
-    )
+    existing_exam = Exam(id=101, exam_name="Exam to be deleted", is_active=True)  # Initially active
 
     # Configure the .get() method to return our existing exam
     mock_db_session.get.return_value = existing_exam

@@ -11,9 +11,7 @@ class AnnouncementTargetIn(BaseModel):
     """Defines a single target for the announcement."""
 
     target_type: str = Field(..., description="e.g., 'SCHOOL', 'GRADE', 'CLASS'")
-    target_id: int = Field(
-        ..., description="The ID corresponding to the target_type (e.g., a class_id)."
-    )
+    target_id: int = Field(..., description="The ID corresponding to the target_type (e.g., a class_id).")
 
 
 class AnnouncementCreate(BaseModel):
@@ -23,12 +21,8 @@ class AnnouncementCreate(BaseModel):
     # FIX: Title must be Optional to reflect
     #  DB nullability (though usually required by UX)
     title: Optional[str] = None
-    content: Union[dict, str] = Field(
-        ..., description="The message body as JSON/rich text or simple string."
-    )
-    targets: list[AnnouncementTargetIn] = Field(
-        ..., description="The audience to receive the announcement."
-    )
+    content: Union[dict, str] = Field(..., description="The message body as JSON/rich text or simple string.")
+    targets: list[AnnouncementTargetIn] = Field(..., description="The audience to receive the announcement.")
 
 
 # --- Output Schemas ---

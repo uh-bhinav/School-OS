@@ -15,9 +15,7 @@ SCHOOL_ID = 1
 
 
 @pytest.mark.asyncio
-async def test_period_crud_lifecycle_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_period_crud_lifecycle_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     INTEGRATION TEST: Tests the full Create, Read, Update, and
     Delete lifecycle for Periods.
@@ -48,9 +46,7 @@ async def test_period_crud_lifecycle_as_admin(
 
     # 3. UPDATE
     update_payload = {"end_time": "09:50:00"}
-    update_response = await test_client.put(
-        f"/v1/periods/{period_id}", json=update_payload
-    )
+    update_response = await test_client.put(f"/v1/periods/{period_id}", json=update_payload)
     assert update_response.status_code == status.HTTP_200_OK
     assert update_response.json()["end_time"] == "09:50:00"
 
@@ -64,17 +60,13 @@ async def test_period_crud_lifecycle_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_create_period_as_teacher_fails(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_create_period_as_teacher_fails(test_client: AsyncClient, db_session: AsyncSession):
     """SAD PATH: Tests that a non-admin cannot create a period."""
     mock_teacher_profile = Profile(
         user_id="teacher-user-id-periods",
         school_id=SCHOOL_ID,
         is_active=True,
-        roles=[
-            UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))
-        ],
+        roles=[UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))],
     )
     app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
 
@@ -96,26 +88,20 @@ async def test_create_period_as_teacher_fails(
 
 
 @pytest.mark.asyncio
-async def test_update_non_existent_period_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_update_non_existent_period_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """SAD PATH: Tests that updating a non-existent period ID returns a 404."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     non_existent_id = 99999
     update_payload = {"period_name": "This Should Fail"}
 
-    response = await test_client.put(
-        f"/v1/periods/{non_existent_id}", json=update_payload
-    )
+    response = await test_client.put(f"/v1/periods/{non_existent_id}", json=update_payload)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.asyncio
-async def test_delete_non_existent_period_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_delete_non_existent_period_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """SAD PATH: Tests that deleting a non-existent period ID returns a 404."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
@@ -127,9 +113,7 @@ async def test_delete_non_existent_period_fails(
 
 
 @pytest.mark.asyncio
-async def test_create_period_with_invalid_times_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_create_period_with_invalid_times_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """SAD PATH: Tests that creating a period with end_time before start_time fails."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
@@ -148,9 +132,7 @@ async def test_create_period_with_invalid_times_fails(
 
 
 @pytest.mark.asyncio
-async def test_get_all_periods_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_all_periods_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """HAPPY PATH: Tests retrieving a list of all periods for a school."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
@@ -175,9 +157,7 @@ async def test_get_all_periods_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_get_periods_for_class_as_teacher(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_periods_for_class_as_teacher(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """HAPPY PATH: Tests a teacher can fetch the period structure for a class."""
     # 1. ARRANGE: As an ADMIN, create the necessary class data.
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
@@ -189,9 +169,7 @@ async def test_get_periods_for_class_as_teacher(
         "school_id": SCHOOL_ID,
     }
     create_class_resp = await test_client.post("/v1/classes/", json=class_payload)
-    assert (
-        create_class_resp.status_code == status.HTTP_201_CREATED
-    ), "Setup failed: Could not create class as Admin."
+    assert create_class_resp.status_code == status.HTTP_201_CREATED, "Setup failed: Could not create class as Admin."
     class_id = create_class_resp.json()["class_id"]
 
     # 2. ACT: As a TEACHER, perform the action we want to test.
@@ -199,9 +177,7 @@ async def test_get_periods_for_class_as_teacher(
         user_id="teacher-for-class-periods",
         school_id=SCHOOL_ID,
         is_active=True,
-        roles=[
-            UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))
-        ],
+        roles=[UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))],
     )
     app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
     response = await test_client.get(f"/v1/periods/class/{class_id}/periods")
@@ -214,9 +190,7 @@ async def test_get_periods_for_class_as_teacher(
 
 
 @pytest.mark.asyncio
-async def test_get_recess_periods_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_recess_periods_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """HAPPY PATH: Tests fetching only the periods marked as recess."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
@@ -249,17 +223,13 @@ UNAUTHORIZED_SCHOOL_ID = 99
 
 
 @pytest.mark.asyncio
-async def test_get_periods_for_non_existent_class(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_periods_for_non_existent_class(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """SAD PATH: Tests that requesting periods for a non-existent
     class returns an empty list."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     non_existent_class_id = 99999
-    response = await test_client.get(
-        f"/v1/periods/class/{non_existent_class_id}/periods"
-    )
+    response = await test_client.get(f"/v1/periods/class/{non_existent_class_id}/periods")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -268,17 +238,13 @@ async def test_get_periods_for_non_existent_class(
 
 
 @pytest.mark.asyncio
-async def test_get_recess_for_unauthorized_school_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_recess_for_unauthorized_school_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """SAD PATH (SECURITY): Tests a user cannot get
     recess periods for another school."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # The admin from school 1 tries to access recess periods for school 99
-    response = await test_client.get(
-        f"/v1/periods/school/{UNAUTHORIZED_SCHOOL_ID}/recess"
-    )
+    response = await test_client.get(f"/v1/periods/school/{UNAUTHORIZED_SCHOOL_ID}/recess")
 
     # The request should be forbidden due to the security check we added
     assert response.status_code == status.HTTP_403_FORBIDDEN

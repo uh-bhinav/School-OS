@@ -14,9 +14,7 @@ SCHOOL_ID = 1
 
 
 @pytest.mark.asyncio
-async def test_create_school_wide_announcement_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_create_school_wide_announcement_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Tests that an Admin can create an announcement targeted to the entire school.
     """
@@ -52,17 +50,12 @@ async def test_create_school_wide_announcement_as_admin(
 
     # --- Step 5: Verify data in the database ---
     announcement_id = data["id"]
-    result = await db_session.execute(
-        text("SELECT title FROM announcements WHERE id = :id"), {"id": announcement_id}
-    )
+    result = await db_session.execute(text("SELECT title FROM announcements WHERE id = :id"), {"id": announcement_id})
     db_title = result.scalar_one_or_none()
     assert db_title == announcement_title
 
     target_result = await db_session.execute(
-        text(
-            "SELECT COUNT(*) FROM announcement_targets"
-            " WHERE announcement_id = :id AND target_type = 'SCHOOL'"
-        ),
+        text("SELECT COUNT(*) FROM announcement_targets" " WHERE announcement_id = :id AND target_type = 'SCHOOL'"),
         {"id": announcement_id},
     )
     assert target_result.scalar_one() == 1
@@ -71,9 +64,7 @@ async def test_create_school_wide_announcement_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_create_grade_targeted_announcement_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_create_grade_targeted_announcement_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Tests that an Admin can create an announcement targeted to a specific grade.
     """
@@ -102,10 +93,7 @@ async def test_create_grade_targeted_announcement_as_admin(
 
     # --- Step 2: Create the announcement payload ---
     announcement_title = f"Grade {grade_level_to_target} Meeting {uuid.uuid4()}"
-    announcement_content = (
-        f"There will be a special meeting for all students "
-        f"in Grade {grade_level_to_target}."
-    )
+    announcement_content = f"There will be a special meeting for all students " f"in Grade {grade_level_to_target}."
 
     announcement_payload = {
         "school_id": SCHOOL_ID,
@@ -130,10 +118,7 @@ async def test_create_grade_targeted_announcement_as_admin(
     # --- Step 5: Verify data in the database ---
     announcement_id = data["id"]
     target_result = await db_session.execute(
-        text(
-            "SELECT target_id FROM announcement_targets"
-            " WHERE announcement_id = :id AND target_type = 'GRADE'"
-        ),
+        text("SELECT target_id FROM announcement_targets" " WHERE announcement_id = :id AND target_type = 'GRADE'"),
         {"id": announcement_id},
     )
     db_target_id = target_result.scalar_one_or_none()
@@ -143,9 +128,7 @@ async def test_create_grade_targeted_announcement_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_create_class_targeted_announcement_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_create_class_targeted_announcement_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Tests that an Admin can create an announcement targeted to a specific class.
     """
@@ -174,10 +157,7 @@ async def test_create_class_targeted_announcement_as_admin(
 
     # --- Step 2: Create the announcement payload ---
     announcement_title = f"Class {class_id_to_target} Field Trip {uuid.uuid4()}"
-    announcement_content = (
-        f"Permission slips for the upcoming field trip for class "
-        f"{class_id_to_target} are due this Friday."
-    )
+    announcement_content = f"Permission slips for the upcoming field trip for class " f"{class_id_to_target} are due this Friday."
 
     announcement_payload = {
         "school_id": SCHOOL_ID,
@@ -202,10 +182,7 @@ async def test_create_class_targeted_announcement_as_admin(
     # --- Step 5: Verify data in the database ---
     announcement_id = data["id"]
     target_result = await db_session.execute(
-        text(
-            "SELECT target_id FROM announcement_targets "
-            "WHERE announcement_id = :id AND target_type = 'CLASS'"
-        ),
+        text("SELECT target_id FROM announcement_targets " "WHERE announcement_id = :id AND target_type = 'CLASS'"),
         {"id": announcement_id},
     )
     db_target_id = target_result.scalar_one_or_none()

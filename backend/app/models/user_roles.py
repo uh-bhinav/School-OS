@@ -7,14 +7,8 @@ from app.db.base_class import Base
 
 class UserRole(Base):
     __tablename__ = "user_roles"
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey("profiles.user_id"), primary_key=True
-    )  #
-    role_id = Column(
-        Integer, ForeignKey("roles_definition.role_id"), primary_key=True
-    )  #
+    user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id"), primary_key=True)  #
+    role_id = Column(Integer, ForeignKey("roles_definition.role_id"), primary_key=True)  #
 
     profile = relationship("Profile", back_populates="roles")
-    role_definition = relationship(
-        "RoleDefinition"
-    )  # Assumes you have a RoleDefinition model
+    role_definition = relationship("RoleDefinition")  # Assumes you have a RoleDefinition model

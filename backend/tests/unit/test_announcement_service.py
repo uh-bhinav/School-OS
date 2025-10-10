@@ -35,16 +35,12 @@ async def test_create_announcement_happy_path():
         ],
     )
 
-    target_instances = [
-        MagicMock(spec=AnnouncementTarget) for _ in announcement_in.targets
-    ]
+    target_instances = [MagicMock(spec=AnnouncementTarget) for _ in announcement_in.targets]
 
     # 2. Act
     # We patch the ORM models to isolate the service logic
     with (
-        patch(
-            "app.services.announcement_service.Announcement", autospec=True
-        ) as mock_ann_model,
+        patch("app.services.announcement_service.Announcement", autospec=True) as mock_ann_model,
         patch(
             "app.services.announcement_service.AnnouncementTarget",
             autospec=True,
@@ -65,18 +61,14 @@ async def test_create_announcement_happy_path():
     ann_call_kwargs = mock_ann_model.call_args.kwargs
     assert ann_call_kwargs["school_id"] == 1
     assert ann_call_kwargs["title"] == "Annual Sports Day"
-    assert ann_call_kwargs["content"] == {
-        "message": "The annual sports day is scheduled for next month."
-    }
+    assert ann_call_kwargs["content"] == {"message": "The annual sports day is scheduled for next month."}
     assert ann_call_kwargs["published_by_id"] == publisher_id
     assert ann_call_kwargs["language"] is None
     assert ann_call_kwargs["targets"] == target_instances
 
     # Verify that AnnouncementTarget was instantiated for each target in the payload
     assert mock_target_model.call_count == len(announcement_in.targets)
-    for call_args, expected in zip(
-        mock_target_model.call_args_list, announcement_in.targets
-    ):
+    for call_args, expected in zip(mock_target_model.call_args_list, announcement_in.targets):
         assert call_args.kwargs == expected.model_dump()
 
     # Verify the database transaction was handled correctly
@@ -103,9 +95,7 @@ async def test_create_announcement_sad_path_db_error():
     mock_db_session = AsyncMock()
     mock_db_session.add = MagicMock()
     # Configure the commit method to raise a database error
-    mock_db_session.commit.side_effect = SQLAlchemyError(
-        "Simulated DB connection error"
-    )
+    mock_db_session.commit.side_effect = SQLAlchemyError("Simulated DB connection error")
 
     publisher_id = uuid4()
     announcement_in = AnnouncementCreate(
@@ -117,9 +107,7 @@ async def test_create_announcement_sad_path_db_error():
 
     # 2. Act & 3. Assert
     # We expect the SQLAlchemyError to be propagated after being caught and rolled back
-    with patch("app.services.announcement_service.Announcement", autospec=True), patch(
-        "app.services.announcement_service.AnnouncementTarget", autospec=True
-    ):
+    with patch("app.services.announcement_service.Announcement", autospec=True), patch("app.services.announcement_service.AnnouncementTarget", autospec=True):
         with pytest.raises(SQLAlchemyError):
             await create_announcement(
                 db=mock_db_session,

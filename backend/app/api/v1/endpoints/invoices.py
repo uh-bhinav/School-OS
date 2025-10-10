@@ -17,9 +17,7 @@ router = APIRouter()
     dependencies=[Depends(require_role("Admin"))],
     tags=["Fee Management"],
 )
-async def create_new_invoice(
-    invoice_in: InvoiceCreate, db: AsyncSession = Depends(get_db)
-):
+async def create_new_invoice(invoice_in: InvoiceCreate, db: AsyncSession = Depends(get_db)):
     """Create a new invoice. Admin only (used for bulk generation)."""
     return await invoice_service.create_invoice(db=db, obj_in=invoice_in)
 
@@ -27,17 +25,13 @@ async def create_new_invoice(
 @router.get(
     "/student/{student_id}",
     response_model=list[InvoiceOut],
-    dependencies=[
-        Depends(require_role("Parent"))
-    ],  # RLS will enforce multi-tenancy and ownership
+    dependencies=[Depends(require_role("Parent"))],  # RLS will enforce multi-tenancy and ownership
     tags=["Fee Management"],
 )
 async def get_invoices_for_student(student_id: int, db: AsyncSession = Depends(get_db)):
     """Get all invoices for a specific student.
     Parent/Student access enforced by RLS."""
-    return await invoice_service.get_all_invoices_for_student(
-        db=db, student_id=student_id
-    )
+    return await invoice_service.get_all_invoices_for_student(db=db, student_id=student_id)
 
 
 # NOTE: You should also implement endpoints
@@ -59,9 +53,7 @@ async def get_invoice_by_id(invoice_id: int, db: AsyncSession = Depends(get_db))
     """
     invoice = await invoice_service.get_invoice(db=db, invoice_id=invoice_id)
     if not invoice:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
     return invoice
 
 
@@ -71,22 +63,16 @@ async def get_invoice_by_id(invoice_id: int, db: AsyncSession = Depends(get_db))
     dependencies=[Depends(require_role("Admin"))],
     tags=["Fee Management"],
 )
-async def update_invoice_by_id(
-    invoice_id: int, invoice_in: InvoiceUpdate, db: AsyncSession = Depends(get_db)
-):
+async def update_invoice_by_id(invoice_id: int, invoice_in: InvoiceUpdate, db: AsyncSession = Depends(get_db)):
     """
     Update an invoice (e.g., change status t
     o 'Paid' after manual payment). Admin only.
     """
     invoice = await invoice_service.get_invoice(db=db, invoice_id=invoice_id)
     if not invoice:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
 
-    return await invoice_service.update_invoice(
-        db=db, db_obj=invoice, obj_in=invoice_in
-    )
+    return await invoice_service.update_invoice(db=db, db_obj=invoice, obj_in=invoice_in)
 
 
 @router.delete(
@@ -102,9 +88,7 @@ async def delete_invoice_by_id(invoice_id: int, db: AsyncSession = Depends(get_d
     """
     invoice = await invoice_service.get_invoice(db=db, invoice_id=invoice_id)
     if not invoice:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
 
     # In a production environment, this would likely be a status change to 'Cancelled'.
     await invoice_service.delete_invoice(db=db, db_obj=invoice)

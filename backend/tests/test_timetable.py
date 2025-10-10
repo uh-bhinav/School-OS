@@ -19,9 +19,7 @@ EXISTING_CLASS_ID_WITH_STUDENT = 11
 
 
 @pytest.mark.asyncio
-async def test_timetable_crud_lifecycle_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_timetable_crud_lifecycle_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     INTEGRATION TEST: Tests the full lifecycle for Timetable entries.
     This test is self-sufficient and creates its own dependencies.
@@ -93,9 +91,7 @@ async def test_timetable_crud_lifecycle_as_admin(
     # UPDATE
     new_teacher_id = 12  # Assume a second teacher with ID 2 exists
     update_payload = {"teacher_id": new_teacher_id}
-    update_response = await test_client.put(
-        f"/v1/timetable/{entry_id}", json=update_payload
-    )
+    update_response = await test_client.put(f"/v1/timetable/{entry_id}", json=update_payload)
     assert update_response.status_code == status.HTTP_200_OK
     assert update_response.json()["teacher"]["teacher_id"] == new_teacher_id
 
@@ -105,18 +101,14 @@ async def test_timetable_crud_lifecycle_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_get_timetable_for_class_as_teacher(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_get_timetable_for_class_as_teacher(test_client: AsyncClient, db_session: AsyncSession):
     """HAPPY PATH: Tests that a teacher can successfully fetch a class timetable."""
     # Arrange: A teacher is logged in.
     mock_teacher_profile = Profile(
         user_id="teacher-timetable-test",
         school_id=SCHOOL_ID,
         is_active=True,
-        roles=[
-            UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))
-        ],
+        roles=[UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))],
     )
     app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
 
@@ -132,9 +124,7 @@ async def test_get_timetable_for_class_as_teacher(
 
 
 @pytest.mark.asyncio
-async def test_get_schedule_for_day_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_schedule_for_day_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     HAPPY PATH: Tests the agentic function 'get_schedule_for_day' for a class.
     This is a key function from the testing roadmap.
@@ -156,9 +146,7 @@ async def test_get_schedule_for_day_as_admin(
     # Act: Ask for the schedule for a specific Monday
     # Assuming the date is a Monday
     monday_date = "2025-10-06"
-    response = await test_client.get(
-        f"/v1/timetable/schedule-for-day?target_type=class&target_id={EXISTING_CLASS_ID}&schedule_date={monday_date}"
-    )
+    response = await test_client.get(f"/v1/timetable/schedule-for-day?target_type=class&target_id={EXISTING_CLASS_ID}&schedule_date={monday_date}")
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
@@ -169,17 +157,13 @@ async def test_get_schedule_for_day_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_create_timetable_entry_as_teacher_fails(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_create_timetable_entry_as_teacher_fails(test_client: AsyncClient, db_session: AsyncSession):
     """SAD PATH: Tests that a non-admin cannot create a timetable entry."""
     mock_teacher_profile = Profile(
         user_id="teacher-fail-create-timetable",
         school_id=SCHOOL_ID,
         is_active=True,
-        roles=[
-            UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))
-        ],
+        roles=[UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))],
     )
     app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
 
@@ -201,9 +185,7 @@ async def test_create_timetable_entry_as_teacher_fails(
 
 
 @pytest.mark.asyncio
-async def test_get_timetable_for_teacher_as_self(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_timetable_for_teacher_as_self(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     HAPPY PATH: Tests that a teacher can successfully fetch a timetable.
     """
@@ -230,9 +212,7 @@ async def test_get_timetable_for_teacher_as_self(
         user_id="any-teacher-can-view",
         school_id=SCHOOL_ID,
         is_active=True,
-        roles=[
-            UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))
-        ],
+        roles=[UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))],
     )
     app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
 
@@ -248,9 +228,7 @@ async def test_get_timetable_for_teacher_as_self(
 
 
 @pytest.mark.asyncio
-async def test_get_teacher_timetable_as_student_fails(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_get_teacher_timetable_as_student_fails(test_client: AsyncClient, db_session: AsyncSession):
     """SAD PATH (SECURITY): Tests that a Parent cannot access a teacher's timetable."""
     # Arrange: Log in as a student
     mock_student_profile = Profile(
@@ -299,9 +277,7 @@ async def test_get_schedule_for_day_all_targets(
         "end_date": "2025-12-31",
         "school_id": SCHOOL_ID,
     }
-    academic_year_id = (
-        await test_client.post("/v1/academic-years/", json=year_payload)
-    ).json()["id"]
+    academic_year_id = (await test_client.post("/v1/academic-years/", json=year_payload)).json()["id"]
 
     # Create a new timetable entry for a PRE-EXISTING class that has our student.
     entry_payload = {
@@ -325,9 +301,7 @@ async def test_get_schedule_for_day_all_targets(
 
     # 2. ACT
     monday_date = "2025-10-06"  # This must be a Monday
-    response = await test_client.get(
-        f"/v1/timetable/schedule-for-day?target_type={target_type}&target_id={target_id}&schedule_date={monday_date}"
-    )
+    response = await test_client.get(f"/v1/timetable/schedule-for-day?target_type={target_type}&target_id={target_id}&schedule_date={monday_date}")
 
     # 3. ASSERT
     assert response.status_code == status.HTTP_200_OK
@@ -337,18 +311,14 @@ async def test_get_schedule_for_day_all_targets(
 
 
 @pytest.mark.asyncio
-async def test_update_or_delete_non_existent_entry_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_update_or_delete_non_existent_entry_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """SAD PATH: Tests that updating or deleting a non-existent entry returns a 404."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
     non_existent_id = 99999
 
     # Test UPDATE
     update_payload = {"teacher_id": 11}
-    update_response = await test_client.put(
-        f"/v1/timetable/{non_existent_id}", json=update_payload
-    )
+    update_response = await test_client.put(f"/v1/timetable/{non_existent_id}", json=update_payload)
     assert update_response.status_code == status.HTTP_404_NOT_FOUND
 
     # Test DELETE

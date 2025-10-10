@@ -53,9 +53,7 @@ async def get_class_by_id(
     """
     Get a single class by its ID.
     """
-    db_class = await class_service.get_class(
-        db, class_id=class_id, school_id=current_profile.school_id
-    )
+    db_class = await class_service.get_class(db, class_id=class_id, school_id=current_profile.school_id)
     if not db_class:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -98,16 +96,10 @@ async def assign_subjects(
     subjects_in: ClassSubjectsAssign,
     current_profile: Profile = Depends(get_current_user_profile),
 ):
-    db_class = await class_service.get_class(
-        db=db, class_id=class_id, school_id=current_profile.school_id
-    )
+    db_class = await class_service.get_class(db=db, class_id=class_id, school_id=current_profile.school_id)
     if not db_class:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Class not found"
-        )
-    return await class_service.assign_subjects_to_class(
-        db=db, db_class=db_class, subject_ids=subjects_in.subject_ids
-    )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Class not found")
+    return await class_service.assign_subjects_to_class(db=db, db_class=db_class, subject_ids=subjects_in.subject_ids)
 
 
 @router.get(
@@ -143,9 +135,7 @@ async def search_for_classes(
     if teacher_id is not None:
         filters["teacher_id"] = teacher_id
 
-    return await class_service.search_classes(
-        db=db, school_id=school_id, filters=filters
-    )
+    return await class_service.search_classes(db=db, school_id=school_id, filters=filters)
 
 
 @router.put(
@@ -163,9 +153,7 @@ async def update_class_details(
     Update a class's details.
     """
 
-    db_obj = await class_service.get_class(
-        db, class_id=class_id, school_id=current_profile.school_id
-    )
+    db_obj = await class_service.get_class(db, class_id=class_id, school_id=current_profile.school_id)
     if not db_obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -187,13 +175,9 @@ async def delete_class(
     """
     Soft-deletes a class.
     """
-    db_obj = await class_service.get_class(
-        db, class_id=class_id, school_id=current_profile.school_id
-    )
+    db_obj = await class_service.get_class(db, class_id=class_id, school_id=current_profile.school_id)
     if not db_obj:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Class not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Class not found")
 
     deleted_class = await class_service.soft_delete_class(db, class_id=class_id)
     if not deleted_class:

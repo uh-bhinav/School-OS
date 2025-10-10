@@ -63,13 +63,9 @@ async def get_subject_by_id(
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """Get a single subject by its ID."""
-    db_subject = await subject_service.get_subject_with_streams(
-        db=db, subject_id=subject_id
-    )
+    db_subject = await subject_service.get_subject_with_streams(db=db, subject_id=subject_id)
     if not db_subject or db_subject.school_id != current_profile.school_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
     return db_subject
 
 
@@ -91,9 +87,7 @@ async def get_teachers_for_subject_endpoint(
             detail="You can only search for teachers in your own school.",
         )
 
-    teachers = await subject_service.get_teachers_for_subject(
-        db=db, school_id=school_id, subject_id=subject_id
-    )
+    teachers = await subject_service.get_teachers_for_subject(db=db, school_id=school_id, subject_id=subject_id)
     return teachers
 
 
@@ -110,18 +104,12 @@ async def update_existing_subject(
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """Update a subject's details. Admin only."""
-    db_subject = await subject_service.get_subject_with_streams(
-        db=db, subject_id=subject_id
-    )
+    db_subject = await subject_service.get_subject_with_streams(db=db, subject_id=subject_id)
 
     if not db_subject or db_subject.school_id != current_profile.school_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
 
-    updated_subject = await subject_service.update_subject(
-        db=db, db_obj=db_subject, subject_in=subject_in
-    )
+    updated_subject = await subject_service.update_subject(db=db, db_obj=db_subject, subject_in=subject_in)
     return updated_subject
 
 
@@ -136,13 +124,9 @@ async def delete_subject(
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """Soft-deletes a subject. Admin only."""
-    db_subject = await subject_service.get_subject_with_streams(
-        db=db, subject_id=subject_id
-    )
+    db_subject = await subject_service.get_subject_with_streams(db=db, subject_id=subject_id)
     if not db_subject or db_subject.school_id != current_profile.school_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
 
     await subject_service.soft_delete_subject(db, subject_id=subject_id)
     return None

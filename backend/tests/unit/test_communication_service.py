@@ -113,9 +113,7 @@ async def test_create_conversation_sad_path_db_error():
             added_objects[0].conversation_id = 99
 
     mock_db_session.flush.side_effect = flush_side_effect
-    mock_db_session.commit.side_effect = SQLAlchemyError(
-        "Simulated DB connection failure"
-    )
+    mock_db_session.commit.side_effect = SQLAlchemyError("Simulated DB connection failure")
 
     with pytest.raises(SQLAlchemyError):
         await create_conversation(

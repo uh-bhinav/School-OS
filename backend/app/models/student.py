@@ -24,9 +24,7 @@ class Student(Base):
     __tablename__ = "students"
 
     student_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey("profiles.user_id"), nullable=False, unique=True
-    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id"), nullable=False, unique=True)
     # REMOVED: The 'school_id' column does not exist on this table.
     # It is accessed via the relationship to the Profile model.
     # school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False)
@@ -38,9 +36,7 @@ class Student(Base):
     notes = Column(Text)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), default=func.now(), onupdate=func.now()
-    )
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
 
     # --- Relationships ---
     profile = relationship("Profile", back_populates="student")
