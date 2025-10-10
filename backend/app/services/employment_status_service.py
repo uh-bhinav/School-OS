@@ -7,9 +7,7 @@ from app.schemas.employment_status_schema import EmploymentStatusCreate
 
 
 # ... (create_status is unchanged) ...
-async def create_status(
-    db: AsyncSession, *, status_in: EmploymentStatusCreate
-) -> EmploymentStatus:
+async def create_status(db: AsyncSession, *, status_in: EmploymentStatusCreate) -> EmploymentStatus:
     db_obj = EmploymentStatus(**status_in.model_dump())
     db.add(db_obj)
     await db.commit()
@@ -17,9 +15,7 @@ async def create_status(
     return db_obj
 
 
-async def get_all_statuses_for_school(
-    db: AsyncSession, school_id: int
-) -> list[EmploymentStatus]:  # Changed from List to list
+async def get_all_statuses_for_school(db: AsyncSession, school_id: int) -> list[EmploymentStatus]:  # Changed from List to list
     stmt = select(EmploymentStatus).where(EmploymentStatus.school_id == school_id)
     result = await db.execute(stmt)
     return list(result.scalars().all())

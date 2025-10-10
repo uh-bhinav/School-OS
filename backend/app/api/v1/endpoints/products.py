@@ -19,9 +19,7 @@ router = APIRouter()
     dependencies=[Depends(require_role("Admin"))],
     tags=["E-commerce"],
 )
-async def create_new_product(
-    product_in: ProductCreate, db: AsyncSession = Depends(get_db)
-):
+async def create_new_product(product_in: ProductCreate, db: AsyncSession = Depends(get_db)):
     """Create a new product for sale. Admin only."""
     return await product_service.create_product(db=db, obj_in=product_in)
 
@@ -32,18 +30,12 @@ async def create_new_product(
     dependencies=[Depends(require_role("Admin"))],
     tags=["E-commerce"],
 )
-async def update_product_by_id(
-    product_id: int, product_in: ProductUpdate, db: AsyncSession = Depends(get_db)
-):
+async def update_product_by_id(product_id: int, product_in: ProductUpdate, db: AsyncSession = Depends(get_db)):
     """Update product details or stock quantity. Admin only."""
     product = await product_service.get_product(db=db, product_id=product_id)
     if not product:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
-        )
-    return await product_service.update_product(
-        db=db, db_obj=product, obj_in=product_in
-    )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    return await product_service.update_product(db=db, db_obj=product, obj_in=product_in)
 
 
 @router.delete(
@@ -60,9 +52,7 @@ async def delete_product_by_id(product_id: int, db: AsyncSession = Depends(get_d
     product = await db.get(product_service.Product, product_id)
 
     if not product:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
 
     if not product.is_active:
         # If it's already inactive, consider
@@ -85,9 +75,7 @@ async def get_product_by_id(product_id: int, db: AsyncSession = Depends(get_db))
     """Get a specific product (available to Parent/Student via RLS)."""
     product = await product_service.get_product(db=db, product_id=product_id)
     if not product:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     return product
 
 

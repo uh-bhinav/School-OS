@@ -15,9 +15,7 @@ class ConversationParticipant(Base):
 
     __tablename__ = "conversation_participants"
 
-    conversation_id = Column(
-        Integer, ForeignKey("conversations.conversation_id"), nullable=False
-    )
+    conversation_id = Column(Integer, ForeignKey("conversations.conversation_id"), nullable=False)
     user_id = Column(UUID, ForeignKey("profiles.user_id"), nullable=False)
 
     role = Column(String)  # E.g., 'Initiator', 'Recipient'
@@ -26,8 +24,4 @@ class ConversationParticipant(Base):
     conversation = relationship("Conversation", back_populates="participants")
     user = relationship("Profile")
 
-    __table_args__ = (
-        PrimaryKeyConstraint(
-            "conversation_id", "user_id", name="pk_conversation_participants"
-        ),
-    )
+    __table_args__ = (PrimaryKeyConstraint("conversation_id", "user_id", name="pk_conversation_participants"),)

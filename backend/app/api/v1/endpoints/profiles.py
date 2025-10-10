@@ -39,9 +39,7 @@ async def get_all_profiles(
     """
     Get all active user profiles for a school, with optional filters. Admin only.
     """
-    return await profile_service.get_all_profiles_for_school(
-        db=db, school_id=school_id, role=role, name=name
-    )
+    return await profile_service.get_all_profiles_for_school(db=db, school_id=school_id, role=role, name=name)
 
 
 @router.get(
@@ -55,9 +53,7 @@ async def get_profile_by_id(user_id: uuid.UUID, db: AsyncSession = Depends(get_d
     """
     db_profile = await profile_service.get_profile(db=db, user_id=user_id)
     if not db_profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
     return db_profile
 
 
@@ -74,9 +70,7 @@ async def delete_profile(
     """
     Soft-deletes a user profile. Admin only.
     """
-    deleted_profile = await profile_service.soft_delete_profile(
-        db, user_id=user_id, school_id=current_profile.school_id
-    )
+    deleted_profile = await profile_service.soft_delete_profile(db, user_id=user_id, school_id=current_profile.school_id)
     if not deleted_profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

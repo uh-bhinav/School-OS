@@ -22,9 +22,7 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def create_new_employment_status(
-    *, db: AsyncSession = Depends(get_db), status_in: EmploymentStatusCreate
-):
+async def create_new_employment_status(*, db: AsyncSession = Depends(get_db), status_in: EmploymentStatusCreate):
     """Create a new employment status category for a school. Admin only."""
     return await employment_status_service.create_status(db=db, status_in=status_in)
 
@@ -36,9 +34,7 @@ async def create_new_employment_status(
 )
 async def get_all_statuses(school_id: int, db: AsyncSession = Depends(get_db)):
     """Get all employment status categories for a school. Admin only."""
-    return await employment_status_service.get_all_statuses_for_school(
-        db=db, school_id=school_id
-    )
+    return await employment_status_service.get_all_statuses_for_school(db=db, school_id=school_id)
 
 
 # ADDED: Endpoint to get a single status by its ID
@@ -49,9 +45,7 @@ async def get_all_statuses(school_id: int, db: AsyncSession = Depends(get_db)):
 )
 async def get_status_by_id(status_id: int, db: AsyncSession = Depends(get_db)):
     """Get a specific employment status by its ID. Admin only."""
-    status = await employment_status_service.get_status_by_id(
-        db=db, status_id=status_id
-    )
+    status = await employment_status_service.get_status_by_id(db=db, status_id=status_id)
     if not status:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -73,17 +67,13 @@ async def update_existing_status(
     status_in: EmploymentStatusUpdate,
 ):
     """Update an employment status. Admin only."""
-    db_status = await employment_status_service.get_status_by_id(
-        db=db, status_id=status_id
-    )
+    db_status = await employment_status_service.get_status_by_id(db=db, status_id=status_id)
     if not db_status:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Employment status not found",
         )
-    return await employment_status_service.update_status(
-        db=db, db_obj=db_status, status_in=status_in
-    )
+    return await employment_status_service.update_status(db=db, db_obj=db_status, status_in=status_in)
 
 
 # ADDED: Endpoint to delete a status
@@ -94,9 +84,7 @@ async def update_existing_status(
 )
 async def delete_existing_status(status_id: int, db: AsyncSession = Depends(get_db)):
     """Permanently delete an employment status. Admin only."""
-    db_status = await employment_status_service.get_status_by_id(
-        db=db, status_id=status_id
-    )
+    db_status = await employment_status_service.get_status_by_id(db=db, status_id=status_id)
     if not db_status:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

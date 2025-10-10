@@ -107,9 +107,7 @@ def mock_teacher_profile() -> Profile:
         first_name="Ravi",
         last_name="Kumar",
         is_active=True,
-        roles=[
-            UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))
-        ],
+        roles=[UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))],
     )
 
 

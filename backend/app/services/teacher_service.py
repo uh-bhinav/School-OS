@@ -20,35 +20,21 @@ async def get_teacher(db: AsyncSession, teacher_id: int) -> Optional[Teacher]:
     """
     Get a single active teacher by their teacher_id, preloading profile info.
     """
-    stmt = (
-        select(Teacher)
-        .where(Teacher.teacher_id == teacher_id, Teacher.is_active)
-        .options(selectinload(Teacher.profile))
-    )
+    stmt = select(Teacher).where(Teacher.teacher_id == teacher_id, Teacher.is_active).options(selectinload(Teacher.profile))
     result = await db.execute(stmt)
     return result.scalars().first()
 
 
-async def get_all_teachers_for_school(
-    db: AsyncSession, school_id: int
-) -> list[Teacher]:
+async def get_all_teachers_for_school(db: AsyncSession, school_id: int) -> list[Teacher]:
     """
     Get all active teachers for a school, preloading their profile info.
     """
-    stmt = (
-        select(Teacher)
-        .join(Teacher.profile)
-        .where(Profile.school_id == school_id, Teacher.is_active)
-        .options(selectinload(Teacher.profile))
-        .order_by(Profile.first_name)
-    )
+    stmt = select(Teacher).join(Teacher.profile).where(Profile.school_id == school_id, Teacher.is_active).options(selectinload(Teacher.profile)).order_by(Profile.first_name)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
-async def update_teacher(
-    db: AsyncSession, *, db_obj: Teacher, teacher_in: TeacherUpdate
-) -> Teacher:
+async def update_teacher(db: AsyncSession, *, db_obj: Teacher, teacher_in: TeacherUpdate) -> Teacher:
     """
     Update a teacher's employment details.
     """
@@ -78,9 +64,7 @@ async def deactivate_teacher(db: AsyncSession, *, db_obj: Teacher) -> Teacher:
 # --- Other New Functions ---
 
 
-async def assign_class_teacher(
-    db: AsyncSession, *, teacher: Teacher, class_obj: Class
-) -> Class:
+async def assign_class_teacher(db: AsyncSession, *, teacher: Teacher, class_obj: Class) -> Class:
     """
     Assigns a teacher as the primary class teacher for a class.
 
@@ -94,9 +78,7 @@ async def assign_class_teacher(
     return class_obj
 
 
-async def get_teacher_timetable(
-    db: AsyncSession, *, teacher_id: int, academic_year_id: int
-) -> list[Timetable]:
+async def get_teacher_timetable(db: AsyncSession, *, teacher_id: int, academic_year_id: int) -> list[Timetable]:
     """
     Retrieves the full weekly timetable for a specific teacher for a given
     academic year.
@@ -131,12 +113,7 @@ async def get_proctored_students(db: AsyncSession, *, teacher_id: int) -> list[S
 
     This function supports the mentorship aspect of the school's operations.
     """
-    stmt = (
-        select(Student)
-        .where(Student.proctor_teacher_id == teacher_id, Student.is_active)
-        .options(selectinload(Student.profile))
-        .order_by(Student.roll_number)
-    )
+    stmt = select(Student).where(Student.proctor_teacher_id == teacher_id, Student.is_active).options(selectinload(Student.profile)).order_by(Student.roll_number)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -144,9 +121,7 @@ async def get_proctored_students(db: AsyncSession, *, teacher_id: int) -> list[S
 # --- YOUR NEWLY ADDED FUNCTION ---
 
 
-async def get_teacher_qualifications(
-    db: AsyncSession, *, teacher_id: int
-) -> Optional[TeacherQualification]:
+async def get_teacher_qualifications(db: AsyncSession, *, teacher_id: int) -> Optional[TeacherQualification]:
     """
     Retrieves a teacher's qualifications and years of experience.
 

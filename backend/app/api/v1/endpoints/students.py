@@ -39,72 +39,14 @@ async def enroll_new_student(
     """
     Enroll a new student into a school. Admin only.
     """
-    student = await student_service.create_student(
-        db=db, supabase=supabase, student_in=student_in
-    )
+    student = await student_service.create_student(db=db, supabase=supabase, student_in=student_in)
     if not student:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Failed to create student. The user may already exist "
-                "or input data is invalid."
-            ),
+            detail=("Failed to create student. The user may already exist " "or input data is invalid."),
         )
     # Re-fetch to load the nested profile data correctly for the response
     return await student_service.get_student(db=db, student_id=student.student_id)
-
-
-@router.get(
-    "/{student_id}",
-    response_model=StudentOut,
-    dependencies=[Depends(require_role("Admin", "Teacher"))],
-)
-async def get_student_by_id(student_id: int, db: AsyncSession = Depends(get_db)):
-    db_student = await student_service.get_student(db=db, student_id=student_id)
-    if not db_student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
-        )
-    return db_student
-
-
-@router.put(
-    "/{student_id}",
-    response_model=StudentOut,
-    dependencies=[Depends(require_role("Admin"))],
-)
-async def update_existing_student(
-    student_id: int, *, db: AsyncSession = Depends(get_db), student_in: StudentUpdate
-):
-    db_student = await student_service.get_student(db=db, student_id=student_id)
-    if not db_student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
-        )
-
-    return await student_service.update_student(
-        db=db, db_obj=db_student, student_in=student_in
-    )
-
-
-@router.delete(
-    "/{student_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_role("Admin"))],
-)
-async def delete_student(student_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    Soft-deletes a student and their associated profile.
-    """
-    deleted_student = await student_service.soft_delete_student(
-        db, student_id=student_id
-    )
-    if not deleted_student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Active student with id {student_id} not found",
-        )
-    return None
 
 
 @router.get(
@@ -137,6 +79,49 @@ async def search_for_students(
     return students
 
 
+@router.get(
+    "/{student_id}",
+    response_model=StudentOut,
+    dependencies=[Depends(require_role("Admin", "Teacher"))],
+)
+async def get_student_by_id(student_id: int, db: AsyncSession = Depends(get_db)):
+    db_student = await student_service.get_student(db=db, student_id=student_id)
+    if not db_student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    return db_student
+
+
+@router.put(
+    "/{student_id}",
+    response_model=StudentOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def update_existing_student(student_id: int, *, db: AsyncSession = Depends(get_db), student_in: StudentUpdate):
+    db_student = await student_service.get_student(db=db, student_id=student_id)
+    if not db_student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+    return await student_service.update_student(db=db, db_obj=db_student, student_in=student_in)
+
+
+@router.delete(
+    "/{student_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def delete_student(student_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Soft-deletes a student and their associated profile.
+    """
+    deleted_student = await student_service.soft_delete_student(db, student_id=student_id)
+    if not deleted_student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Active student with id {student_id} not found",
+        )
+    return None
+
+
 @router.post(
     "/promote",
     response_model=StudentBulkPromoteOut,
@@ -150,9 +135,7 @@ async def promote_students_in_bulk(
     """
     Promote a list of students to a new class.
     """
-    result = await student_service.bulk_promote_students(
-        db=db, promotion_data=promotion_in
-    )
+    result = await student_service.bulk_promote_students(db=db, promotion_data=promotion_in)
     if result["promoted_count"] == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -175,9 +158,7 @@ async def get_student_summary(
     Get a consolidated academic summary for a student,
     including attendance and marks.
     """
-    summary = await student_service.get_student_academic_summary(
-        db=db, student_id=student_id, academic_year_id=academic_year_id
-    )
+    summary = await student_service.get_student_academic_summary(db=db, student_id=student_id, academic_year_id=academic_year_id)
     if not summary:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

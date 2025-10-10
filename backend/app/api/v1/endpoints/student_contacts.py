@@ -29,16 +29,10 @@ async def update_student_contact_details(
     """
     Update a student contact's information. Admin only.
     """
-    db_contact = await student_contact_service.get_contact_by_id(
-        db=db, contact_id=contact_id
-    )
+    db_contact = await student_contact_service.get_contact_by_id(db=db, contact_id=contact_id)
     if not db_contact:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Student contact not found"
-        )
-    return await student_contact_service.update_contact(
-        db=db, db_obj=db_contact, contact_in=contact_in
-    )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student contact not found")
+    return await student_contact_service.update_contact(db=db, db_obj=db_contact, contact_in=contact_in)
 
 
 @router.delete(
@@ -53,12 +47,8 @@ async def delete_student_contact_link(
     """
     Soft-delete a student contact link. Admin only.
     """
-    db_contact = await student_contact_service.get_contact_by_id(
-        db=db, contact_id=contact_id
-    )
+    db_contact = await student_contact_service.get_contact_by_id(db=db, contact_id=contact_id)
     if not db_contact:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Student contact not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student contact not found")
     await student_contact_service.soft_delete_contact(db=db, db_obj=db_contact)
     return None

@@ -16,9 +16,7 @@ class Cart(Base):
     __tablename__ = "carts"
 
     cart_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(
-        UUID, ForeignKey("profiles.user_id"), nullable=False, unique=True
-    )  # One cart per user
+    user_id = Column(UUID, ForeignKey("profiles.user_id"), nullable=False, unique=True)  # One cart per user
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

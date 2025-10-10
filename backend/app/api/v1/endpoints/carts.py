@@ -22,8 +22,9 @@ async def get_user_cart(
         # Create an empty cart if one doesn't exist yet
         cart = await cart_service.get_or_create_cart(db, current_user.id)
 
-    # Note: Conversion to CartOut might need explicit item mapping due to async ORM
-    return cart
+
+#     # Note: Conversion to CartOut might need explicit item mapping due to async ORM
+#     return cart
 
 
 @router.post("/me/items", response_model=CartOut, tags=["E-commerce: Cart"])
@@ -33,28 +34,20 @@ async def add_or_update_cart_item(
     current_user: User = Depends(get_current_user_profile),
 ):
     """Adds an item to the cart or updates the quantity if it exists."""
-    return await cart_service.add_or_update_item(
-        db=db, user_id=current_user.id, item_in=item_in
-    )
+    return await cart_service.add_or_update_item(db=db, user_id=current_user.id, item_in=item_in)
 
 
-@router.delete(
-    "/me/items/{product_id}", response_model=CartOut, tags=["E-commerce: Cart"]
-)
+@router.delete("/me/items/{product_id}", response_model=CartOut, tags=["E-commerce: Cart"])
 async def remove_cart_item(
     product_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user_profile),
 ):
     """Removes a specific item from the cart."""
-    return await cart_service.remove_item(
-        db=db, user_id=current_user.id, product_id=product_id
-    )
+    return await cart_service.remove_item(db=db, user_id=current_user.id, product_id=product_id)
 
 
-@router.post(
-    "/me/clear", status_code=status.HTTP_204_NO_CONTENT, tags=["E-commerce: Cart"]
-)
+@router.post("/me/clear", status_code=status.HTTP_204_NO_CONTENT, tags=["E-commerce: Cart"])
 async def clear_shopping_cart(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user_profile),
