@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,7 +61,7 @@ async def enroll_new_student(
     return student
 
 
-@router.get("/search", response_model=List[StudentOut])
+@router.get("/search", response_model=list[StudentOut])
 async def search_for_students(
     name: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
@@ -90,7 +90,7 @@ async def get_student_by_id(
 
 
 # ... (The rest of your endpoint file remains unchanged) ...
-@router.get("/", response_model=List[StudentOut])
+@router.get("/", response_model=list[StudentOut])
 async def get_all_students(
     db: AsyncSession = Depends(get_db),
     current_user: Profile = Depends(get_current_user_profile),
