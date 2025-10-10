@@ -13,9 +13,7 @@ from app.models.message import Message
 from app.schemas.communication_schema import ConversationCreate, MessageCreate
 
 
-async def create_conversation(
-    db: AsyncSession, *, obj_in: ConversationCreate, creator_user_id: UUID
-) -> Conversation:
+async def create_conversation(db: AsyncSession, *, obj_in: ConversationCreate, creator_user_id: UUID) -> Conversation:
     """
     Creates a new conversation and adds all participants (including the creator).
     """
@@ -40,11 +38,7 @@ async def create_conversation(
     except SQLAlchemyError:
         await db.rollback()
         raise
-    stmt = (
-        select(Conversation)
-        .options(selectinload(Conversation.participants))
-        .where(Conversation.conversation_id == conversation_id)
-    )
+    stmt = select(Conversation).options(selectinload(Conversation.participants)).where(Conversation.conversation_id == conversation_id)
     result = await db.execute(stmt)
     return result.scalars().first()
 
@@ -52,12 +46,7 @@ async def create_conversation(
 async def get_user_conversations(db: AsyncSession, user_id: UUID) -> list[Conversation]:
     """Retrieves all conversations the user is a part of (filtered by RLS)."""
 
-    stmt = (
-        select(Conversation)
-        .join(ConversationParticipant)
-        .where(ConversationParticipant.user_id == user_id)
-        .options(selectinload(Conversation.participants))
-    )
+    stmt = select(Conversation).join(ConversationParticipant).where(ConversationParticipant.user_id == user_id).options(selectinload(Conversation.participants))
     result = await db.execute(stmt)
     return result.scalars().unique().all()
 
@@ -96,15 +85,9 @@ async def create_message(
     return db_message
 
 
-async def get_messages_in_conversation(
-    db: AsyncSession, conversation_id: int
-) -> list[Message]:
+async def get_messages_in_conversation(db: AsyncSession, conversation_id: int) -> list[Message]:
     """Retrieves all messages in a conversation
     (RLS handles participant read access)."""
-    stmt = (
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.message_id.desc())
-    )
+    stmt = select(Message).where(Message.conversation_id == conversation_id).order_by(Message.message_id.desc())
     result = await db.execute(stmt)
     return result.scalars().all()

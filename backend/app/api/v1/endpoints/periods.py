@@ -77,9 +77,7 @@ async def get_period_by_id(
     """Get a single active period by ID. Admin only."""
     period = await period_service.get_period(db=db, period_id=period_id)
     if not period or period.school_id != current_profile.school_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Period not found or inactive"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Period not found or inactive")
     return period
 
 
@@ -104,13 +102,9 @@ async def update_existing_period(
     # Admin to revive or modify inactive period objects.
     db_period = await db.get(Period, period_id)
     if not db_period or db_period.school_id != current_profile.school_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Period not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Period not found")
 
-    updated_period = await period_service.update_period(
-        db=db, db_obj=db_period, period_in=period_in
-    )
+    updated_period = await period_service.update_period(db=db, db_obj=db_period, period_in=period_in)
     return updated_period
 
 
@@ -131,9 +125,7 @@ async def delete_period_by_id(
     # even if it's already inactive.
     db_period = await db.get(Period, period_id)
     if not db_period or db_period.school_id != current_profile.school_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Period not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Period not found")
 
     if not db_period.is_active:
         # If already inactive, confirm success and return 204

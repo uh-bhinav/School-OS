@@ -17,9 +17,7 @@ SCHOOL_ID = 1
 
 
 @pytest.mark.asyncio
-async def test_get_all_academic_years(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_all_academic_years(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """Tests retrieving all academic years for the school."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
     # CORRECTED ENDPOINT: The path is '/all'
@@ -34,9 +32,7 @@ async def test_get_all_academic_years(
 
 
 @pytest.mark.asyncio
-async def test_create_and_get_one_academic_year(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_create_and_get_one_academic_year(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """Tests creating a new academic year with a unique name."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
@@ -61,9 +57,7 @@ async def test_create_and_get_one_academic_year(
 
 
 @pytest.mark.asyncio
-async def test_update_academic_year(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_update_academic_year(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
     payload = {
         "name": f"To Be Updated {uuid.uuid4()}",
@@ -75,18 +69,14 @@ async def test_update_academic_year(
     year_id_to_update = create_response.json()["id"]
 
     update_payload = {"name": "Updated Year Name"}
-    update_response = await test_client.put(
-        f"/v1/academic-years/{year_id_to_update}", json=update_payload
-    )
+    update_response = await test_client.put(f"/v1/academic-years/{year_id_to_update}", json=update_payload)
 
     assert update_response.status_code == status.HTTP_200_OK
     assert update_response.json()["name"] == "Updated Year Name"
 
 
 @pytest.mark.asyncio
-async def test_soft_delete_academic_year(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_soft_delete_academic_year(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
     payload = {
         "name": f"To Be Deleted {uuid.uuid4()}",
@@ -97,9 +87,7 @@ async def test_soft_delete_academic_year(
     create_response = await test_client.post("/v1/academic-years/", json=payload)
     year_id_to_delete = create_response.json()["id"]
 
-    delete_response = await test_client.delete(
-        f"/v1/academic-years/{year_id_to_delete}"
-    )
+    delete_response = await test_client.delete(f"/v1/academic-years/{year_id_to_delete}")
     assert delete_response.status_code == status.HTTP_204_NO_CONTENT
 
     get_response = await test_client.get(f"/v1/academic-years/{year_id_to_delete}")
@@ -107,9 +95,7 @@ async def test_soft_delete_academic_year(
 
 
 @pytest.mark.asyncio
-async def test_set_active_academic_year_deactivates_others(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_set_active_academic_year_deactivates_others(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     year_A_payload = {
@@ -124,18 +110,12 @@ async def test_set_active_academic_year_deactivates_others(
         "end_date": "2031-12-31",
         "school_id": SCHOOL_ID,
     }
-    year_A_id = (
-        await test_client.post("/v1/academic-years/", json=year_A_payload)
-    ).json()["id"]
-    year_B_id = (
-        await test_client.post("/v1/academic-years/", json=year_B_payload)
-    ).json()["id"]
+    year_A_id = (await test_client.post("/v1/academic-years/", json=year_A_payload)).json()["id"]
+    year_B_id = (await test_client.post("/v1/academic-years/", json=year_B_payload)).json()["id"]
 
     await test_client.put(f"/v1/academic-years/{SCHOOL_ID}/set-active/{year_A_id}")
 
-    response_B = await test_client.put(
-        f"/v1/academic-years/{SCHOOL_ID}/set-active/{year_B_id}"
-    )
+    response_B = await test_client.put(f"/v1/academic-years/{SCHOOL_ID}/set-active/{year_B_id}")
     assert response_B.status_code == status.HTTP_200_OK
     assert response_B.json()["is_active"] is True
 
@@ -151,9 +131,7 @@ async def test_set_active_academic_year_deactivates_others(
 
 
 @pytest.mark.asyncio
-async def test_create_academic_year_as_teacher_fails(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_create_academic_year_as_teacher_fails(test_client: AsyncClient, db_session: AsyncSession):
     """
     Tests that a user without the 'Admin' role cannot create an academic year.
     """
@@ -162,9 +140,7 @@ async def test_create_academic_year_as_teacher_fails(
         user_id="teacher-user-id-12345",
         school_id=SCHOOL_ID,
         is_active=True,
-        roles=[
-            UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))
-        ],
+        roles=[UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))],
     )
     app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
 
@@ -183,26 +159,20 @@ async def test_create_academic_year_as_teacher_fails(
 
 
 @pytest.mark.asyncio
-async def test_update_non_existent_academic_year_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_update_non_existent_academic_year_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """Tests that updating a non-existent year ID returns a 404 error."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     non_existent_id = 99999
     update_payload = {"name": "This Should Fail"}
 
-    response = await test_client.put(
-        f"/v1/academic-years/{non_existent_id}", json=update_payload
-    )
+    response = await test_client.put(f"/v1/academic-years/{non_existent_id}", json=update_payload)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.asyncio
-async def test_delete_non_existent_academic_year_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_delete_non_existent_academic_year_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """Tests that deleting a non-existent year ID returns a 404 error."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
@@ -214,9 +184,7 @@ async def test_delete_non_existent_academic_year_fails(
 
 
 @pytest.mark.asyncio
-async def test_create_academic_year_with_invalid_dates_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_create_academic_year_with_invalid_dates_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """Tests that creating a year with end_date before start_date fails."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 

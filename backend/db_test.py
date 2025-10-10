@@ -20,9 +20,7 @@ async def main():
         engine = create_async_engine(DATABASE_URL, echo=True)
 
         async with engine.connect() as conn:
-            result = await conn.execute(
-                text("SELECT school_id, name FROM schools LIMIT 2;")
-            )
+            result = await conn.execute(text("SELECT school_id, name FROM schools LIMIT 2;"))
             rows = result.fetchall()
             print("✅ Query successful:", rows)
 

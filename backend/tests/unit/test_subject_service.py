@@ -18,24 +18,18 @@ async def test_create_subject_unit():
     mock_db = AsyncMock()
 
     # Mock the incoming Pydantic schema
-    subject_in_schema = SubjectCreate(
-        name="Unit Test Subject", school_id=1, short_code="UTS101"
-    )
+    subject_in_schema = SubjectCreate(name="Unit Test Subject", school_id=1, short_code="UTS101")
 
     # We use 'patch' to temporarily replace the real Subject model with a mock.
     # This lets us check if it was called correctly.
-    with patch(
-        "app.services.subject_service.Subject", autospec=True
-    ) as mock_subject_model:
+    with patch("app.services.subject_service.Subject", autospec=True) as mock_subject_model:
         # Mock the re-fetch call that happens at the end of the service function
         with patch(
             "app.services.subject_service.get_subject_with_streams",
             new_callable=AsyncMock,
         ) as mock_get_subject:
             # 2. Act: Call the function we are testing
-            await subject_service.create_subject(
-                db=mock_db, subject_in=subject_in_schema
-            )
+            await subject_service.create_subject(db=mock_db, subject_in=subject_in_schema)
 
     # 3. Assert: Verify the logic
     # Was the Subject model class called with the data from the schema?
@@ -65,9 +59,7 @@ async def test_get_teachers_for_subject_happy_path():
 
     # Mock the final db.execute call as before
     mock_teacher_result = MagicMock()
-    mock_teacher_result.scalars.return_value.all.return_value = [
-        MagicMock(spec=Teacher)
-    ]
+    mock_teacher_result.scalars.return_value.all.return_value = [MagicMock(spec=Teacher)]
     mock_db.execute.return_value = mock_teacher_result
 
     # Mock the internal get_subject call as before
@@ -82,14 +74,10 @@ async def test_get_teachers_for_subject_happy_path():
             # .join() and .where() calls
             mock_statement = MagicMock()
             mock_select.return_value = mock_statement
-            mock_statement.join.return_value = (
-                mock_statement  # <-- Handle the .join() call
-            )
+            mock_statement.join.return_value = mock_statement  # <-- Handle the .join() call
             mock_statement.where.return_value = mock_statement
 
-            await subject_service.get_teachers_for_subject(
-                db=mock_db, school_id=1, subject_id=10
-            )
+            await subject_service.get_teachers_for_subject(db=mock_db, school_id=1, subject_id=10)
 
     # Assert that the .join() method was called on our query statement
     mock_get_subject.assert_awaited_once_with(mock_db, subject_id=10)
@@ -108,15 +96,11 @@ async def test_get_teachers_for_subject_not_found():
     mock_db = AsyncMock()
 
     # Use 'patch' to make the internal 'get_subject' call return None
-    with patch(
-        "app.services.subject_service.get_subject", new_callable=AsyncMock
-    ) as mock_get_subject:
+    with patch("app.services.subject_service.get_subject", new_callable=AsyncMock) as mock_get_subject:
         mock_get_subject.return_value = None
 
         # 2. Act
-        result = await subject_service.get_teachers_for_subject(
-            db=mock_db, school_id=1, subject_id=999
-        )
+        result = await subject_service.get_teachers_for_subject(db=mock_db, school_id=1, subject_id=999)
 
     # 3. Assert
     # Did the function correctly return an empty list?
@@ -154,12 +138,8 @@ async def test_update_subject_unit():
     mock_db_obj = MagicMock(spec=Subject)
     subject_in = SubjectUpdate(name="Updated Name")
 
-    with patch(
-        "app.services.subject_service.get_subject_with_streams", new_callable=AsyncMock
-    ) as mock_get_subject:
-        await subject_service.update_subject(
-            db=mock_db, db_obj=mock_db_obj, subject_in=subject_in
-        )
+    with patch("app.services.subject_service.get_subject_with_streams", new_callable=AsyncMock) as mock_get_subject:
+        await subject_service.update_subject(db=mock_db, db_obj=mock_db_obj, subject_in=subject_in)
 
     assert mock_db_obj.name == "Updated Name"
     mock_db.commit.assert_awaited_once()
@@ -200,9 +180,7 @@ async def test_get_teachers_for_subject_no_teacher_match():
         new_callable=AsyncMock,
         return_value=mock_subject,
     ):
-        result = await subject_service.get_teachers_for_subject(
-            db=mock_db, school_id=1, subject_id=10
-        )
+        result = await subject_service.get_teachers_for_subject(db=mock_db, school_id=1, subject_id=10)
 
     assert result == []
     mock_db.execute.assert_awaited_once()  # The query for teachers was still run

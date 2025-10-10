@@ -21,15 +21,11 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_role("Admin"))],
 )
-async def create_new_product_category(
-    *, db: AsyncSession = Depends(get_db), category_in: ProductCategoryCreate
-):
+async def create_new_product_category(*, db: AsyncSession = Depends(get_db), category_in: ProductCategoryCreate):
     """
     Create a new product category for a school. Admin only.
     """
-    return await product_category_service.create_product_category(
-        db=db, category_in=category_in
-    )
+    return await product_category_service.create_product_category(db=db, category_in=category_in)
 
 
 @router.get(
@@ -37,12 +33,8 @@ async def create_new_product_category(
     response_model=list[ProductCategoryOut],  # Changed from List to list
     dependencies=[Depends(require_role("Admin"))],
 )
-async def get_all_product_categories(
-    school_id: int, db: AsyncSession = Depends(get_db)
-):
+async def get_all_product_categories(school_id: int, db: AsyncSession = Depends(get_db)):
     """
     Get all product categories for a school. Admin only.
     """
-    return await product_category_service.get_all_product_categories_for_school(
-        db=db, school_id=school_id
-    )
+    return await product_category_service.get_all_product_categories_for_school(db=db, school_id=school_id)
