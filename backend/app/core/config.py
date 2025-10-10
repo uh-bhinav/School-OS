@@ -28,13 +28,9 @@ class Settings(BaseSettings):
     SUPABASE_PROJECT_REF: str | None = None
     TEST_ADMIN_TOKEN: str | None = None
 
-    SECRET_KEY: str
-    ALGORITHM: str
 
-
+# --- The rest of the file remains for database URL corrections ---
 settings = Settings()
-
-# This part of your file is correct and should remain
 
 if "%3D" in settings.DATABASE_URL:
     settings.DATABASE_URL = unquote(settings.DATABASE_URL)
@@ -43,5 +39,3 @@ if "options=project=" in settings.DATABASE_URL:
     settings.DATABASE_URL = settings.DATABASE_URL.replace("options=project=", "options=-c project=")
 
 print(">>> .env file loaded and settings configured.")
-print(">>> FINAL DATABASE_URL:", settings.DATABASE_URL)
-print(">>> Loaded from:", settings.Config.env_file)

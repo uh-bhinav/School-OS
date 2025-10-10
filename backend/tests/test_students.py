@@ -6,7 +6,7 @@ from fastapi import status
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_user_profile
+from app.core.security import get_current_user_profile, get_supabase_client
 from app.main import app
 from app.models.profile import Profile
 from app.models.student import Student
@@ -15,12 +15,10 @@ from app.models.student import Student
 @pytest.mark.asyncio
 async def test_enroll_new_student_as_admin(test_client: AsyncClient, mock_admin_profile: Profile, db_session: AsyncSession):
     """
-    Happy Path: Test enrolling a new student by mocking the service layer.
-    This avoids direct DB manipulation and Supabase auth calls.
+    Happy Path: Test enrolling a new student by mocking both Supabase and the service layer.
     """
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
-    # 1. Define the successful 'Student' object our mock service will return.
     mock_user_id = uuid.uuid4()
     mock_student_result = Student(
         student_id=101,
@@ -36,13 +34,24 @@ async def test_enroll_new_student_as_admin(test_client: AsyncClient, mock_admin_
         is_active=True,
     )
 
-    # 2. Patch the service function. When the endpoint calls it, our mock runs instead.
+    # Mock Supabase user creation response
+    mock_supabase_response = MagicMock()
+    mock_supabase_response.user.id = str(mock_user_id)
+    mock_supabase_response.user.email = "student@example.com"
+
+    # Create a mock Supabase client
+    mock_supabase_client = MagicMock()
+    mock_supabase_client.auth.admin.create_user.return_value = mock_supabase_response
+
+    # Override the Supabase dependency
+    app.dependency_overrides[get_supabase_client] = lambda: mock_supabase_client
+
+    # Patch the service function
     with patch(
         "app.api.v1.endpoints.students.student_service.create_student",
         new_callable=AsyncMock,
         return_value=mock_student_result,
     ) as mock_create_student:
-        # 3. Call the API endpoint.
         response = await test_client.post(
             "/v1/students/",
             json={
@@ -56,7 +65,6 @@ async def test_enroll_new_student_as_admin(test_client: AsyncClient, mock_admin_
             },
         )
 
-    # 4. Assert the endpoint behaved correctly.
     assert response.status_code == status.HTTP_201_CREATED, response.text
     mock_create_student.assert_awaited_once()
 
@@ -77,7 +85,6 @@ async def test_search_student_by_name(test_client: AsyncClient, mock_admin_profi
     unique_name = f"Searchable_{uuid.uuid4().hex}"
     mock_user_id = uuid.uuid4()
 
-    # Define the mock result the service will return
     profile = Profile(
         user_id=mock_user_id,
         school_id=1,
@@ -98,7 +105,6 @@ async def test_search_student_by_name(test_client: AsyncClient, mock_admin_profi
         new_callable=AsyncMock,
         return_value=[student],
     ) as mock_search:
-        # Corrected URL: added trailing slash to 'search'
         response = await test_client.get(f"/v1/students/search?name={unique_name}")
         print(response.text)
 
@@ -118,21 +124,19 @@ async def test_student_soft_deletion(test_client: AsyncClient, mock_admin_profil
     """
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
-    # 1. Mock the successful deletion call
     with patch(
         "app.api.v1.endpoints.students.student_service.soft_delete_student",
         new_callable=AsyncMock,
-        return_value=MagicMock(),  # A successful delete returns an object
+        return_value=MagicMock(),
     ) as mock_delete:
         delete_response = await test_client.delete("/v1/students/101")
         assert delete_response.status_code == status.HTTP_204_NO_CONTENT
         mock_delete.assert_awaited_once_with(db=db_session, student_id=101)
 
-    # 2. Mock the case where the student is not found
     with patch(
         "app.api.v1.endpoints.students.student_service.soft_delete_student",
         new_callable=AsyncMock,
-        return_value=None,  # A failed delete returns None
+        return_value=None,
     ) as mock_delete_fail:
         delete_non_existent_response = await test_client.delete("/v1/students/99999")
         assert delete_non_existent_response.status_code == status.HTTP_404_NOT_FOUND
@@ -156,7 +160,6 @@ async def test_bulk_promote_students(test_client: AsyncClient, mock_admin_profil
         return_value=mock_response,
     ) as mock_promote:
         promotion_payload = {"student_ids": [1, 2], "target_class_id": 2}
-        # Corrected URL: added trailing slash to 'promote'
         response = await test_client.post("/v1/students/promote", json=promotion_payload)
 
         assert response.status_code == status.HTTP_200_OK
@@ -171,8 +174,7 @@ async def test_bulk_promote_students(test_client: AsyncClient, mock_admin_profil
 @pytest.mark.asyncio
 async def test_enroll_student_as_non_admin_fails(test_client: AsyncClient, mock_normal_user_profile: Profile):
     """
-    Sad Path: Test that a non-admin cannot enroll a student. This tests the endpoint's
-    `require_role` dependency directly.
+    Sad Path: Test that a non-admin cannot enroll a student.
     """
     app.dependency_overrides[get_current_user_profile] = lambda: mock_normal_user_profile
     response = await test_client.post(
