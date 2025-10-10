@@ -1,27 +1,33 @@
-# backend/app/core/config.py
-
 import os
 from urllib.parse import unquote
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
-ENV_FILE = ".env.test"
+DEFAULT_ENV_FILE = ".env"
+ENV_FILE = ".env.test" if os.getenv("PYTEST") == "1" else DEFAULT_ENV_FILE
 
-# If a test env file exists, and we're in pytest, prefer it
-if os.getenv("PYTEST") == "1":
-    ENV_FILE = ".env.test"
+
+load_dotenv(ENV_FILE)
 
 
 class Settings(BaseSettings):
     """
-    Manages application settings and environment variables.
+    Manages application settings. Pydantic will now read the variables
+    that have been pre-loaded into the environment by load_dotenv().
     """
 
+    # NOTE: We no longer need the inner 'Config' or 'model_config'
+    # because the file is loaded manually.
+
+    # Define all required variables
     PROJECT_NAME: str = "SchoolOS API"
     SUPABASE_URL: str
     SUPABASE_KEY: str
-    DATABASE_URL: str  # Your PostgreSQL connection string
-    SUPABASE_PROJECT_REF: str
+    DATABASE_URL: str
+
+    # Optional variables
+    SUPABASE_PROJECT_REF: str | None = None
     TEST_ADMIN_TOKEN: str | None = None
     TEST_TEACHER_TOKEN: str | None = None
 
@@ -30,15 +36,15 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 
+# --- The rest of the file remains for database URL corrections ---
 settings = Settings()
+
 if "%3D" in settings.DATABASE_URL:
     settings.DATABASE_URL = unquote(settings.DATABASE_URL)
 
-# Also fix case where we need `-c project=...` for psycopg
 if "options=project=" in settings.DATABASE_URL:
     settings.DATABASE_URL = settings.DATABASE_URL.replace(
         "options=project=", "options=-c project="
     )
 
-print(">>> FINAL DATABASE_URL:", settings.DATABASE_URL)
-print(">>> Loaded from:", settings.DATABASE_URL)
+print(">>> .env file loaded and settings configured.")
