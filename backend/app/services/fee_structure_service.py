@@ -5,8 +5,10 @@ from typing import List
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.models.class_fee_structure import ClassFeeStructure
 from app.models.fee_component import FeeComponent
 from app.models.fee_template import FeeTemplate
+from app.models.fee_template_component import FeeTemplateComponent
 from app.models.fee_term import FeeTerm
 from app.schemas.class_fee_structure_schema import AssignTemplateToClassSchema
 from app.schemas.fee_component_schema import FeeComponentCreate
@@ -29,15 +31,37 @@ class FeeStructureService:
         return self.db.query(FeeComponent).filter(FeeComponent.school_id == school_id).all()
 
     # Fee Template and Term Methods
-    def create_fee_template_with_terms(self, template_data: FeeTemplateCreate) -> FeeTemplate:
-        template_dict = template_data.model_dump(exclude={"terms"})
-        new_template = FeeTemplate(**template_dict)
+    def create_fee_template(self, template_data: FeeTemplateCreate) -> FeeTemplate:
+        """
+        Creates a FeeTemplate, links its components, and defines its payment terms
+        all in a single, atomic transaction.
+        """
+        # 1. Separate the nested data from the main template data
+        component_ids = template_data.component_ids
+        terms_data = template_data.terms
+        template_dict = template_data.model_dump(exclude={"component_ids", "terms"})
 
-        # Create term objects from the nested data
-        for term_data in template_data.terms:
-            new_term = FeeTerm(**term_data.model_dump())
-            new_template.fee_terms.append(new_term)
+        # 2. Validate that all component IDs are valid for the given school
+        if component_ids:
+            valid_components_count = self.db.query(FeeComponent).filter(FeeComponent.id.in_(component_ids), FeeComponent.school_id == template_data.school_id).count()
+            if valid_components_count != len(component_ids):
+                raise HTTPException(status_code=400, detail="Invalid or mismatched component IDs.")
+
+        # 3. Create the main FeeTemplate record
+        new_template = FeeTemplate(**template_dict)
         self.db.add(new_template)
+        self.db.flush()  # Use flush to get the new_template.id for relationships
+
+        # 4. Create the links in the fee_template_components junction table
+        for comp_id in component_ids:
+            link = FeeTemplateComponent(fee_template_id=new_template.id, fee_component_id=comp_id)
+            self.db.add(link)
+
+        # 5. Create the FeeTerm records
+        for term_model in terms_data:
+            new_term = FeeTerm(**term_model.model_dump(), fee_template_id=new_template.id)
+            self.db.add(new_term)
+
         self.db.commit()
         self.db.refresh(new_template)
         return new_template
@@ -53,50 +77,29 @@ class FeeStructureService:
 
     def assign_template_to_class(self, assignment_data: AssignTemplateToClassSchema):
         """
-        Implements the user story of assigning a fee template to a class.
-        This finds all components in the template and creates the necessary
-        class_fee_structure records.
+        Implements the "Bulk Assignment" user story[cite: 1572].
+        Assigns all components from a fee template to a class for a given academic year.
         """
-        # 1. Find the Fee Template to ensure it exists
+        # 1. Fetch the template using its relationship to get all its components
         template = self.db.query(FeeTemplate).filter(FeeTemplate.id == assignment_data.template_id).first()
         if not template:
             raise HTTPException(status_code=404, detail="Fee Template not found")
 
-        # NOTE: The PDF mentions a `fee_template_components` table[cite: 1073].
-        # Your current schema doesn't have this. For this to work, we must assume a
-        # relationship exists linking templates to components. Let's pretend the `FeeTemplate`
-        # model has a `fee_components` list.
+        # 2. Iterate through the components linked to the template
+        for component in template.components:
+            # 3. Check if this specific assignment already exists to avoid duplicates
+            existing_assignment = self.db.query(ClassFeeStructure).filter_by(class_id=assignment_data.class_id, component_id=component.id, academic_year_id=assignment_data.academic_year_id).first()
 
-        # In a real application, you would query the linker table here.
-        # For now, we will simulate this with a placeholder.
-        # This is a critical point where the code depends on the full DB schema from the PDF.
+            if not existing_assignment:
+                # 4. Create a new record in class_fee_structure for each component
+                new_assignment = ClassFeeStructure(
+                    class_id=assignment_data.class_id,
+                    component_id=component.id,
+                    academic_year_id=assignment_data.academic_year_id,
+                    # The amount is copied from the component's default amount
+                    amount=component.base_amount,
+                )
+                self.db.add(new_assignment)
 
-        # Let's assume a template has components with amounts.
-        # A better model would have a `template_components` table with amounts.
-        # e.g., template.components = [(component1, 50000), (component2, 2000)]
-
-        # This service highlights the need for the full robust schema from the PDF.
-        # Let's write the code assuming the relationship is there.
-
-        # This is a conceptual example, as the models need the relationship defined.
-        # for component in template.fee_components:
-        #     new_assignment = ClassFeeStructure(
-        #         class_id=assignment_data.class_id,
-        #         component_id=component.id,
-        #         academic_year_id=assignment_data.academic_year_id,
-        #         amount=component.base_amount # Get amount from the component
-        #     )
-        #     self.db.add(new_assignment)
-
-        # self.db.commit()
-        # return {"detail": f"Template '{template.name}' assigned to class successfully."}
-
-        # Since the model relationship is missing, let's provide a service that works with the current models.
-        # The user will have to call it for each component.
-
-        # new_assignments = []
-        # This is a simplified logic. A real implementation needs the template->component link.
-        # For now, we return a message indicating the next step.
-
-        # Returning to the simpler, workable version for now.
-        pass  # Leaving this empty to discuss the schema dependency.
+        self.db.commit()
+        return {"detail": f"Template '{template.name}' and its components have been assigned successfully."}

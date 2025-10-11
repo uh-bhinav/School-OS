@@ -18,6 +18,7 @@ from app.api.v1.endpoints import (
     periods,
     profiles,  # Added this import
     schools,
+    student_fee_assignments,
     students,
     subjects,
     timetable,
@@ -70,3 +71,4 @@ api_router.include_router(users.router, prefix="/users", tags=["Users"])
 api_router.include_router(fee_structure.router, prefix="/finance", tags=["Finance - Structure"])
 api_router.include_router(discounts.router, prefix="/finance", tags=["Finance - Discounts"])
 api_router.include_router(invoices.router, prefix="/finance", tags=["Finance - Invoices & Payments"])
+api_router.include_router(student_fee_assignments.router, prefix="/finance", tags=["Finance - Overrides"])

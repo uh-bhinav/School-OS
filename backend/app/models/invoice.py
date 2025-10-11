@@ -43,3 +43,4 @@ class Invoice(Base):
     fee_template = relationship("FeeTemplate")
     fee_term = relationship("FeeTerm")
     payments = relationship("Payment", back_populates="invoice")
+    items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")

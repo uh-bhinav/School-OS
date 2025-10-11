@@ -22,3 +22,5 @@ class FeeComponent(Base):
 
     school = relationship("School", back_populates="fee_components")
     class_fee_structures = relationship("ClassFeeStructure", back_populates="fee_component")
+    templates = relationship("FeeTemplate", secondary="fee_template_components", back_populates="components")
+    student_assignments = relationship("StudentFeeAssignment", back_populates="fee_component")

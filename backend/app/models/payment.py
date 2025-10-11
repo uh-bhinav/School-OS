@@ -1,6 +1,7 @@
 # app/models/payment.py
 
-from sqlalchemy import TIMESTAMP, Column, ForeignKey, Integer, Numeric, String
+from sqlalchemy import JSONB, TIMESTAMP, Column, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import ENUM, UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
@@ -11,12 +12,31 @@ class Payment(Base):
 
     id = Column(Integer, primary_key=True)
     invoice_id = Column(Integer, ForeignKey("invoices.id"))
+    school_id = Column(Integer, ForeignKey("schools.school_id"))
+    student_id = Column(Integer, ForeignKey("students.student_id"))
+    user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id"))
 
-    amount_paid = Column(Numeric)
-    transaction_id = Column(String)
-    payment_date = Column(TIMESTAMP(timezone=True))
-    payment_method = Column(String)
-    status = Column(String)
+    amount_paid = Column(Numeric(10, 2))
+    currency = Column(String(3), nullable=False, default="INR")
 
-    # A payment belongs to a single invoice
+    # --- Gateway Specific Fields ---
+    gateway_name = Column(String(50), nullable=False, default="razorpay")
+    gateway_payment_id = Column(String(255), unique=True)
+    gateway_order_id = Column(String(255))
+    gateway_signature = Column(Text)
+
+    # --- Status and Metadata Fields ---
+    status = Column(ENUM("pending", "authorized", "captured", "failed", "refunded", "partially_refunded", name="payment_status", create_type=False), default="pending")
+    reconciliation_status = Column(ENUM("pending", "reconciled", "discrepancy", "under_review", "settled", name="reconciliation_status", create_type=False), default="pending")
+    method = Column(String(50))
+    error_code = Column(String(255))
+    error_description = Column(Text)
+    metadata = Column(JSONB)
+
+    created_at = Column(TIMESTAMP(timezone=True), server_default="now()")
+    updated_at = Column(TIMESTAMP(timezone=True), server_default="now()", onupdate="now()")
+
+    # Relationships
     invoice = relationship("Invoice", back_populates="payments")
+    student = relationship("Student")
+    user = relationship("Profile")

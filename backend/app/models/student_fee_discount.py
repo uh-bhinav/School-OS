@@ -6,7 +6,7 @@ from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 
 
-class FeeDiscount(Base):
+class StudentFeeDiscount(Base):
     __tablename__ = "fee_discounts"
 
     id = Column(Integer, primary_key=True)

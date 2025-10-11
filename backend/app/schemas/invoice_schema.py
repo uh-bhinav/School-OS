@@ -4,6 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, computed_field
 
+from .invoice_item_schema import InvoiceItemOut
+
 
 # ADDED: A minimal PaymentOut schema for nesting inside InvoiceOut.
 # This should ideally be in its own payment_schema.py file.
@@ -33,6 +35,11 @@ class InvoiceUpdate(BaseModel):
     payment_method: Optional[str] = None
 
 
+class BulkInvoiceCreate(BaseModel):
+    class_id: int
+    fee_term_id: int
+
+
 # Properties to return to the client
 class InvoiceOut(BaseModel):
     id: int
@@ -46,6 +53,7 @@ class InvoiceOut(BaseModel):
 
     # CHANGE: Added a nested list to show all payments for this invoice.
     payments: list[PaymentOut] = []
+    items: list[InvoiceItemOut] = []
 
     # CHANGE: Implemented total_due as a computed field.
     @computed_field

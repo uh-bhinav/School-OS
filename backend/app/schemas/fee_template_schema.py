@@ -19,6 +19,7 @@ class FeeTemplateCreate(BaseModel):
     end_date: Optional[date] = None
     # CHANGE: Added a list to accept fee terms. Using built-in 'list' as requested.
     terms: list[FeeTermCreate] = []
+    component_ids: list[int] = []
 
 
 # Properties to receive on update

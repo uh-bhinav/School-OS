@@ -26,3 +26,4 @@ class FeeTemplate(Base):
     school = relationship("School", back_populates="fee_templates")
     academic_year = relationship("AcademicYear")  # This is likely one-way, no back_populates needed unless defined in AcademicYear
     fee_terms = relationship("FeeTerm", back_populates="fee_template", cascade="all, delete-orphan")
+    components = relationship("FeeComponent", secondary="fee_template_components", back_populates="templates")

@@ -1,24 +1,16 @@
 # app/schemas/fee_discount.py
 
-from typing import Optional
 
 from pydantic import BaseModel
 
 
-class FeeDiscountBase(BaseModel):
-    amount: float
-    reason: Optional[str] = None
-
-
-class FeeDiscountCreate(FeeDiscountBase):
+class StudentFeeDiscountCreate(BaseModel):
     student_id: int
-    fee_term_id: int
+    discount_id: int
 
 
-class FeeDiscountOut(FeeDiscountBase):
+class StudentFeeDiscountOut(StudentFeeDiscountCreate):
     id: int
-    student_id: int
-    fee_term_id: int
 
     class Config:
         from_attributes = True
