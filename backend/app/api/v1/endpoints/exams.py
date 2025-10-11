@@ -57,18 +57,12 @@ async def get_all_exams(
 
 
 # Admin only: Update an existing exam
-@router.put(
-    "/{exam_id}", response_model=ExamOut, dependencies=[Depends(require_role("Admin"))]
-)
-async def update_exam(
-    exam_id: int, exam_in: ExamUpdate, db: AsyncSession = Depends(get_db)
-):
+@router.put("/{exam_id}", response_model=ExamOut, dependencies=[Depends(require_role("Admin"))])
+async def update_exam(exam_id: int, exam_in: ExamUpdate, db: AsyncSession = Depends(get_db)):
     """Update an existing exam. Admin only."""
     updated = await exam_service.update_exam(db, exam_id=exam_id, exam_in=exam_in)
     if not updated:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found.")
     return updated
 
 
@@ -82,7 +76,5 @@ async def delete_exam(exam_id: int, db: AsyncSession = Depends(get_db)):
     """Deactivate an exam (SOFT DELETE). Admin only."""
     deleted = await exam_service.delete_exam(db, exam_id=exam_id)
     if deleted is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found.")
     return None  # Return 204 No Content

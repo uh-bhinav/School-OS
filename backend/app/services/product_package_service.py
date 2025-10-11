@@ -11,24 +11,14 @@ from app.schemas.product_package_schema import (
 # --- Existing functions (create_package, get_package) are assumed to be here ---
 
 
-async def get_all_packages_for_school(
-    db: AsyncSession, school_id: int, is_active: bool = True
-) -> list[ProductPackage]:
+async def get_all_packages_for_school(db: AsyncSession, school_id: int, is_active: bool = True) -> list[ProductPackage]:
     """Retrieves all active product packages for a specific school."""
-    stmt = (
-        select(ProductPackage)
-        .where(
-            ProductPackage.school_id == school_id, ProductPackage.is_active == is_active
-        )
-        .order_by(ProductPackage.name)
-    )
+    stmt = select(ProductPackage).where(ProductPackage.school_id == school_id, ProductPackage.is_active == is_active).order_by(ProductPackage.name)
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def update_package(
-    db: AsyncSession, *, db_obj: ProductPackage, obj_in: ProductPackageUpdate
-) -> ProductPackage:
+async def update_package(db: AsyncSession, *, db_obj: ProductPackage, obj_in: ProductPackageUpdate) -> ProductPackage:
     """Updates package details (name, price, or status)."""
     update_data = obj_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():

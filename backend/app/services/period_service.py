@@ -27,18 +27,12 @@ async def get_period(db: AsyncSession, period_id: int) -> Optional[Period]:
 
 async def get_all_periods_for_school(db: AsyncSession, school_id: int) -> list[Period]:
     """Retrieves all active periods for a school (READ FILTER APPLIED)."""
-    stmt = (
-        select(Period)
-        .where(Period.school_id == school_id, Period.is_active.is_(True))
-        .order_by(Period.period_number)
-    )
+    stmt = select(Period).where(Period.school_id == school_id, Period.is_active.is_(True)).order_by(Period.period_number)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
-async def update_period(
-    db: AsyncSession, *, db_obj: Period, period_in: PeriodUpdate
-) -> Period:
+async def update_period(db: AsyncSession, *, db_obj: Period, period_in: PeriodUpdate) -> Period:
     """Updates period details."""
     update_data = period_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():

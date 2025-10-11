@@ -15,9 +15,7 @@ SCHOOL_ID = 1
 
 
 @pytest.mark.asyncio
-async def test_subject_crud_lifecycle_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_subject_crud_lifecycle_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     INTEGRATION TEST: Tests the full Create,Read,Update,and Delete
     lifecycle for Subjects
@@ -46,9 +44,7 @@ async def test_subject_crud_lifecycle_as_admin(
 
     # 3. UPDATE
     update_payload = {"description": "An updated course description."}
-    update_response = await test_client.put(
-        f"/v1/subjects/{subject_id}", json=update_payload
-    )
+    update_response = await test_client.put(f"/v1/subjects/{subject_id}", json=update_payload)
     assert update_response.status_code == status.HTTP_200_OK
     assert update_response.json()["description"] == "An updated course description."
 
@@ -62,17 +58,13 @@ async def test_subject_crud_lifecycle_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_create_subject_as_teacher_fails(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_create_subject_as_teacher_fails(test_client: AsyncClient, db_session: AsyncSession):
     """SAD PATH: Tests that a non-admin user cannot create a subject."""
     mock_teacher_profile = Profile(
         user_id="teacher-user-id-subjects",
         school_id=SCHOOL_ID,
         is_active=True,
-        roles=[
-            UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))
-        ],
+        roles=[UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))],
     )
     app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
 
@@ -83,26 +75,20 @@ async def test_create_subject_as_teacher_fails(
 
 
 @pytest.mark.asyncio
-async def test_update_non_existent_subject_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_update_non_existent_subject_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """SAD PATH: Tests that updating a non-existent subject ID returns a 404."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     non_existent_id = 99999
     update_payload = {"description": "This should fail"}
 
-    response = await test_client.put(
-        f"/v1/subjects/{non_existent_id}", json=update_payload
-    )
+    response = await test_client.put(f"/v1/subjects/{non_existent_id}", json=update_payload)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.asyncio
-async def test_delete_non_existent_subject_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_delete_non_existent_subject_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """SAD PATH: Tests that deleting a non-existent subject ID returns a 404."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 

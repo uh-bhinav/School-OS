@@ -27,10 +27,7 @@ async def create_announcement(
     db_announcement = Announcement(
         published_by_id=published_by_id,
         language=language,
-        targets=[
-            AnnouncementTarget(**target.model_dump())
-            for target in announcement_in.targets
-        ],
+        targets=[AnnouncementTarget(**target.model_dump()) for target in announcement_in.targets],
         **announcement_data,
     )
 
@@ -41,10 +38,7 @@ async def create_announcement(
         await db.rollback()
         raise HTTPException(
             status_code=400,
-            detail=(
-                "Invalid announcement target. Use target_type of 'SCHOOL', 'GRADE',"
-                " or 'CLASS' with a non-null target_id that passes database checks."
-            ),
+            detail=("Invalid announcement target. Use target_type of 'SCHOOL', 'GRADE'," " or 'CLASS' with a non-null target_id that passes database checks."),
         ) from exc
     except SQLAlchemyError:
         await db.rollback()
@@ -55,20 +49,14 @@ async def create_announcement(
     return db_announcement
 
 
-async def get_announcement_by_id(
-    db: AsyncSession, announcement_id: int
-) -> Optional[Announcement]:
+async def get_announcement_by_id(db: AsyncSession, announcement_id: int) -> Optional[Announcement]:
     """Retrieves a single announcement."""
-    stmt = select(Announcement).where(
-        Announcement.id == announcement_id, Announcement.is_active.is_(True)
-    )
+    stmt = select(Announcement).where(Announcement.id == announcement_id, Announcement.is_active.is_(True))
     result = await db.execute(stmt)
     return result.scalars().first()
 
 
-async def get_user_announcement_feed(
-    db: AsyncSession, user_id: UUID
-) -> list[Announcement]:
+async def get_user_announcement_feed(db: AsyncSession, user_id: UUID) -> list[Announcement]:
     """
     Retrieves announcements relevant to the
     user (Requires complex filtering/RLS).

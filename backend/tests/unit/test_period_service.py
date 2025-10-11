@@ -23,9 +23,7 @@ async def test_create_period_unit():
     )
 
     # We use 'patch' to spy on the Period model's constructor
-    with patch(
-        "app.services.period_service.Period", autospec=True
-    ) as mock_period_model:
+    with patch("app.services.period_service.Period", autospec=True) as mock_period_model:
         # We need to know what instance the mocked constructor will create
         mock_instance = mock_period_model.return_value
 
@@ -56,9 +54,7 @@ async def test_update_period_unit():
     mock_db_obj = MagicMock(spec=Period, period_name="Old Name")
     period_in = PeriodUpdate(period_name="New Updated Name")
 
-    await period_service.update_period(
-        db=mock_db, db_obj=mock_db_obj, period_in=period_in
-    )
+    await period_service.update_period(db=mock_db, db_obj=mock_db_obj, period_in=period_in)
 
     # Assert that the function correctly modified the object's attribute
     assert mock_db_obj.period_name == "New Updated Name"

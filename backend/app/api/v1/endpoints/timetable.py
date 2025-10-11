@@ -82,9 +82,7 @@ async def create_new_timetable_entry(
             detail="The specified period does not belong to your school.",
         )
 
-    return await timetable_service.create_timetable_entry(
-        db=db, timetable_in=timetable_in
-    )
+    return await timetable_service.create_timetable_entry(db=db, timetable_in=timetable_in)
 
 
 # Student/Parent only: Get timetable for a specific class
@@ -107,9 +105,7 @@ async def get_timetable_for_class(
 
     timetable = await timetable_service.get_class_timetable(db=db, class_id=class_id)
     if not timetable:
-        raise HTTPException(
-            status_code=404, detail="Timetable not found for this class."
-        )
+        raise HTTPException(status_code=404, detail="Timetable not found for this class.")
     return timetable
 
 
@@ -131,13 +127,9 @@ async def get_timetable_for_teacher(
     if not target_teacher or target_teacher.school_id != current_profile.school_id:
         raise HTTPException(status_code=404, detail="Teacher not found.")
 
-    timetable = await timetable_service.get_teacher_timetable(
-        db=db, teacher_id=teacher_id
-    )
+    timetable = await timetable_service.get_teacher_timetable(db=db, teacher_id=teacher_id)
     if not timetable:
-        raise HTTPException(
-            status_code=404, detail="Timetable not found for this teacher."
-        )
+        raise HTTPException(status_code=404, detail="Timetable not found for this teacher.")
     return timetable
 
 
@@ -156,9 +148,7 @@ async def update_timetable_entry(
     db_obj = await timetable_service.get_timetable_entry_by_id(db, entry_id)
     if not db_obj or db_obj.school_id != current_profile.school_id:
         raise HTTPException(status_code=404, detail="Timetable entry not found.")
-    return await timetable_service.update_timetable_entry(
-        db, db_obj=db_obj, timetable_in=timetable_in
-    )
+    return await timetable_service.update_timetable_entry(db, db_obj=db_obj, timetable_in=timetable_in)
 
 
 # Admin only: Soft-delete an existing timetable entry
@@ -179,9 +169,7 @@ async def delete_timetable_entry(
     if not db_obj or db_obj.school_id != current_profile.school_id:
         raise HTTPException(status_code=404, detail="Timetable entry not found.")
 
-    deleted_entry = await timetable_service.soft_delete_timetable_entry(
-        db, entry_id=entry_id
-    )
+    deleted_entry = await timetable_service.soft_delete_timetable_entry(db, entry_id=entry_id)
     if not deleted_entry:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -194,9 +182,7 @@ async def delete_timetable_entry(
 async def get_schedule(
     target_type: ScheduleTargetType,
     target_id: int,
-    schedule_date: date = Query(
-        ..., description="The date for the schedule in YYYY-MM-DD format"
-    ),
+    schedule_date: date = Query(..., description="The date for the schedule in YYYY-MM-DD format"),
     db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):

@@ -8,9 +8,7 @@ from pydantic import BaseModel, Field
 
 # Properties to receive on creation
 class FeeTemplateCreate(BaseModel):
-    school_id: int = Field(
-        ..., description="The ID of the school this fee structure belongs to."
-    )
+    school_id: int = Field(..., description="The ID of the school this fee structure belongs to.")
     academic_year_id: int
     name: str
     description: Optional[str] = None

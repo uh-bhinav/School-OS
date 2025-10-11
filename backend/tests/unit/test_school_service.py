@@ -24,14 +24,10 @@ async def test_update_school_unit():
     mock_db_school = MagicMock(spec=School)
 
     # This is the incoming data from the API.
-    update_schema = SchoolUpdate(
-        name="New School Name", website="https://new.example.com"
-    )
+    update_schema = SchoolUpdate(name="New School Name", website="https://new.example.com")
 
     # 2. Act: Call the function we want to test
-    updated_school = await school_service.update_school(
-        db=mock_db, db_obj=mock_db_school, school_in=update_schema
-    )
+    updated_school = await school_service.update_school(db=mock_db, db_obj=mock_db_school, school_in=update_schema)
 
     # 3. Assert: Check if the logic was correct
     # Did the function correctly change the name attribute on our mock object?
@@ -90,13 +86,9 @@ async def test_update_school_happy_path():
     mock_db = AsyncMock()
     mock_db_school = MagicMock(spec=School)
 
-    update_schema = SchoolUpdate(
-        name="New School Name", website="https://new.example.com"
-    )
+    update_schema = SchoolUpdate(name="New School Name", website="https://new.example.com")
 
-    await school_service.update_school(
-        db=mock_db, db_obj=mock_db_school, school_in=update_schema
-    )
+    await school_service.update_school(db=mock_db, db_obj=mock_db_school, school_in=update_schema)
 
     assert mock_db_school.name == "New School Name"
     expected_website = str(HttpUrl("https://new.example.com"))

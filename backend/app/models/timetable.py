@@ -25,9 +25,7 @@ class Timetable(Base):
     academic_year_id = Column(Integer, ForeignKey("academic_years.id"))
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), default=func.now(), onupdate=func.now()
-    )
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
 
     # Relationships
     school = relationship("School")

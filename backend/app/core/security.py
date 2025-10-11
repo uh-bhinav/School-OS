@@ -3,11 +3,13 @@ import asyncio
 import base64
 import json
 import uuid
-from typing import Any, Iterable
+from datetime import datetime, timedelta, timezone
+from typing import Any, Iterable, Union
 
 import requests
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -62,9 +64,7 @@ async def _fetch_profile_for_role(
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                f"No {role_name.lower()} profile associated with test credentials."
-            ),
+            detail=(f"No {role_name.lower()} profile associated with test credentials."),
         )
 
     if not profile.is_active:
@@ -122,15 +122,9 @@ async def _get_current_user_profile_from_db(
         user_response = await asyncio.to_thread(supabase.auth.get_user, token)
         auth_user = user_response.user
         if not auth_user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-        stmt = (
-            select(Profile)
-            .where(Profile.user_id == auth_user.id)
-            .options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
-        )
+        stmt = select(Profile).where(Profile.user_id == auth_user.id).options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
         result = await db.execute(stmt)
         profile = result.scalars().first()
 
@@ -167,10 +161,7 @@ def require_role(*required_roles: str):
         if user_roles.isdisjoint(required_roles_set):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    "Operation not permitted. "
-                    f"Requires one of: {', '.join(required_roles)}."
-                ),
+                detail=("Operation not permitted. " f"Requires one of: {', '.join(required_roles)}."),
             )
         return profile
 
@@ -218,3 +209,24 @@ async def invite_user(
         )
 
     return response.json()
+
+
+def create_access_token(subject: Union[str, Any], roles: list[str] = [], expires_delta: timedelta = None) -> str:
+    """
+    Generates a JWT access token for testing purposes.
+    """
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        # Default to a 15-minute expiration
+        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "roles": roles,  # Include roles in the token
+    }
+    # NOTE: In a real app, the SECRET_KEY should be much more complex and kept secret.
+    # For testing, we'll use a simple key defined in settings.
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt

@@ -16,9 +16,7 @@ class OrderItemCreate(BaseModel):
 class OrderCreate(BaseModel):
     student_id: int = Field(..., description="Student the order is being placed for.")
     # parent_user_id will be derived from the authenticated user (JWT)
-    items: list[OrderItemCreate] = Field(
-        ..., description="List of products in the order."
-    )
+    items: list[OrderItemCreate] = Field(..., description="List of products in the order.")
 
 
 # Order update (Admin use)
