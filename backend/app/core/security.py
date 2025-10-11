@@ -3,8 +3,9 @@ import asyncio
 import base64
 import json
 import uuid
+from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
-from typing import Any, Iterable, Union
+from typing import Any, Union
 
 import requests
 from fastapi import Depends, HTTPException, status
