@@ -197,6 +197,55 @@ async def test_get_all_exams(
     app.dependency_overrides.clear()
 
 
+@pytest.mark.asyncio
+async def test_teacher_cannot_view_other_school_exams(
+    test_client: AsyncClient, mock_teacher_profile: Profile
+):
+    """Teacher tokens should be scoped to their own school."""
+
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
+
+    response = await test_client.get("/v1/exams/all/2")
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == (
+        "Access to exams for other schools is not permitted."
+    )
+
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_parent_can_view_their_school_exams(
+    test_client: AsyncClient, mock_parent_profile: Profile
+):
+    """Parent profile should read their school's exams."""
+
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_parent_profile
+
+    response = await test_client.get(f"/v1/exams/all/{mock_parent_profile.school_id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert isinstance(response.json(), list)
+
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_parent_blocked_from_other_school_exams(
+    test_client: AsyncClient, mock_parent_profile: Profile
+):
+    """Parent should hit 403 when requesting another school's exams."""
+
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_parent_profile
+
+    response = await test_client.get("/v1/exams/all/2")
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    app.dependency_overrides.clear()
+
+
 # @pytest.mark.asyncio
 # async def test_update_exam_as_admin(
 #     test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
