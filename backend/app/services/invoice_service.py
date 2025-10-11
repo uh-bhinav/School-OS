@@ -3,9 +3,11 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
+from app.db.session import get_db
 from app.models.class_fee_structure import ClassFeeStructure
 from app.models.fee_component import FeeComponent
 from app.models.fee_term import FeeTerm
@@ -19,8 +21,10 @@ from app.models.student import Student
 from app.models.student_fee_assignment import StudentFeeAssignment
 from app.models.student_fee_discount import StudentFeeDiscount
 from app.schemas.invoice_schema import BulkInvoiceCreate, InvoiceCreate, InvoiceUpdate
+from app.schemas.log_schema import LogCreate
 from app.schemas.payment_allocation_schema import PaymentAllocationCreate
-from app.schemas.payment_schema import PaymentCreate  # Assuming schema is in its own file
+from app.schemas.payment_schema import PaymentCreate
+from app.services import logging_service
 
 
 async def get_invoice(db: AsyncSession, invoice_id: int) -> Optional[Invoice]:
@@ -98,14 +102,11 @@ async def generate_invoice_for_student(db: AsyncSession, *, obj_in: InvoiceCreat
             # If the student has opted out, remove the component from their bill
             del billable_components[override.fee_component_id]
 
-    # [cite_start]4. Apply Student-Level Discounts [cite: 1088-1092]
-    # This is a simplified discount application. A full implementation would parse the 'rules' JSON.
-    student_discounts_stmt = select(StudentFeeDiscount).where(StudentFeeDiscount.student_id == student.student_id)
-    _ = await db.execute(student_discounts_stmt)
-
-    # We will just calculate a total discount for now for simplicity.
-    # The logic to apply discounts per-component based on rules would go here.
-    # For now, we will simulate this by fetching all discounts and applying them to the total.
+    # --- NEW: ENHANCED DISCOUNT LOGIC ---
+    # 4. Fetch all of the student's discounts and their rules at once
+    student_discounts_stmt = select(StudentFeeDiscount).options(selectinload(StudentFeeDiscount.discount)).where(StudentFeeDiscount.student_id == student.student_id)  # Eager load the master discount template
+    student_discounts_result = await db.execute(student_discounts_stmt)
+    applied_discounts = student_discounts_result.scalars().all()
 
     # 5. Create Final Invoice Items and Calculate Total
     invoice_items_to_create = []
@@ -116,10 +117,35 @@ async def generate_invoice_for_student(db: AsyncSession, *, obj_in: InvoiceCreat
         components_result = await db.execute(select(FeeComponent).where(FeeComponent.id.in_(component_ids)))
         components_map = {c.id: c.component_name for c in components_result.scalars().all()}
 
-        for component_id, amount in billable_components.items():
-            item = InvoiceItem(fee_component_id=component_id, component_name=components_map.get(component_id, "Unknown Fee"), amount=amount)
+        for component_id, original_amount in billable_components.items():
+            item_amount = original_amount
+
+            # For this specific item, check if any of the student's discounts apply
+            for applied_discount in applied_discounts:
+                discount_template = applied_discount.discount
+                if not discount_template or not discount_template.is_active:
+                    continue
+
+                # Check the 'rules' JSON to see if this discount applies to this component
+                rules = discount_template.rules or {}
+                applicable_ids = rules.get("applicable_to_component_ids")
+
+                # The discount applies if there are no rules, or if the component is in the list
+                if applicable_ids is None or component_id in applicable_ids:
+                    if discount_template.type == "percentage":
+                        discount_value = item_amount * (Decimal(discount_template.value) / Decimal(100))
+                    else:  # fixed_amount
+                        discount_value = Decimal(discount_template.value)
+
+                    item_amount -= discount_value
+
+            # Ensure the final amount for an item isn't negative
+            if item_amount < 0:
+                item_amount = Decimal("0.0")
+
+            item = InvoiceItem(fee_component_id=component_id, component_name=components_map.get(component_id, "Unknown Fee"), amount=item_amount)
             invoice_items_to_create.append(item)
-            final_amount_due += amount
+            final_amount_due += item_amount
 
     # 6. Fetch Fee Term for due date and other details
     fee_term = await db.get(FeeTerm, obj_in.fee_term_id)
@@ -150,7 +176,10 @@ async def allocate_payment_to_invoice_items(db: AsyncSession, *, payment_id: int
     Allocates funds from a successful payment across its invoice's line items.
     This creates an immutable audit trail for how money was distributed.
     """
-    payment = await db.get(Payment, payment_id)
+    # Use selectinload to fetch the related invoice efficiently
+    payment_stmt = select(Payment).options(selectinload(Payment.invoice)).where(Payment.id == payment_id)
+    payment_result = await db.execute(payment_stmt)
+    payment = payment_result.scalars().first()
     if not payment or not payment.invoice_id:
         raise ValueError("Payment or associated invoice not found.")
 
@@ -161,29 +190,56 @@ async def allocate_payment_to_invoice_items(db: AsyncSession, *, payment_id: int
     invoice_items = items_result.scalars().all()
 
     amount_to_allocate = Decimal(payment.amount_paid)
-    allocations = []
+    allocations_to_create = []
 
     for item in invoice_items:
         if amount_to_allocate <= 0:
             break
 
-        # A more advanced version would check how much is already paid on this item
-        amount_needed = Decimal(item.amount)
+        # --- NEW: PARTIAL PAYMENT LOGIC ---
+        # 2. Calculate how much has already been paid on this specific item from previous payments
+        paid_stmt = select(func.sum(PaymentAllocation.amount_allocated)).where(PaymentAllocation.invoice_item_id == item.id)
+        paid_result = await db.execute(paid_stmt)
+        already_paid_on_item = paid_result.scalar_one_or_none() or Decimal("0.0")
 
+        # 3. Determine the remaining amount needed for this item
+        amount_needed = Decimal(item.amount) - already_paid_on_item
+        if amount_needed <= 0:
+            continue  # This item is already fully paid, skip to the next one
+
+        # 4. Allocate the smaller of the two amounts: what's left of the payment, or what's needed for the item
         allocation_amount = min(amount_to_allocate, amount_needed)
 
         allocation_data = PaymentAllocationCreate(payment_id=payment.id, invoice_item_id=item.id, amount_allocated=allocation_amount, allocated_by_user_id=user_id)
         new_allocation = PaymentAllocation(**allocation_data.model_dump())
-        db.add(new_allocation)
-        allocations.append(new_allocation)
+        allocations_to_create.append(new_allocation)
 
         amount_to_allocate -= allocation_amount
 
-    # In a real transaction, you would also update the invoice and invoice_item statuses here
-    # e.g., mark the invoice as 'partially_paid' or 'paid'.
+    if allocations_to_create:
+        db.add_all(allocations_to_create)
+        await db.commit()
+
+    # --- NEW: INVOICE STATUS UPDATE LOGIC ---
+    # 2. After allocations are saved, calculate the new total paid on the invoice
+    total_paid_stmt = select(func.sum(PaymentAllocation.amount_allocated)).join(PaymentAllocation.invoice_item).where(InvoiceItem.invoice_id == payment.invoice_id)
+    total_paid_result = await db.execute(total_paid_stmt)
+    total_paid_so_far = total_paid_result.scalar_one_or_none() or Decimal("0.0")
+
+    # 3. Update the parent invoice's status and amount_paid
+    invoice = payment.invoice
+    invoice.amount_paid = total_paid_so_far
+
+    if total_paid_so_far >= Decimal(invoice.amount_due):
+        invoice.payment_status = "paid"
+    elif total_paid_so_far > 0:
+        invoice.payment_status = "partially_paid"
+    else:
+        invoice.payment_status = "unpaid"
 
     await db.commit()
-    return allocations
+
+    return allocations_to_create
 
 
 async def generate_invoices_for_class(db: AsyncSession, *, obj_in: BulkInvoiceCreate) -> dict:
@@ -202,20 +258,31 @@ async def generate_invoices_for_class(db: AsyncSession, *, obj_in: BulkInvoiceCr
     successful_invoices = 0
     failed_invoices = 0
 
-    # 2. Loop through each student and generate their invoice
-    for student in students:
-        try:
-            single_invoice_data = InvoiceCreate(student_id=student.student_id, fee_term_id=obj_in.fee_term_id)
-            # We reuse the robust single-invoice generator
-            await generate_invoice_for_student(db=db, obj_in=single_invoice_data)
-            successful_invoices += 1
-        except Exception as e:
-            # In a production system, you'd log this error with the student ID
-            print(f"Failed to generate invoice for student {student.student_id}: {e}")
-            failed_invoices += 1
+    # --- NEW: ATOMIC TRANSACTION LOGIC ---
+    try:
+        # Start a transaction that will encompass the entire loop
+        async with db.begin_nested():
+            for student in students:
+                single_invoice_data = InvoiceCreate(student_id=student.student_id, fee_term_id=obj_in.fee_term_id)
+                # We call the single-invoice generator for each student
+                await generate_invoice_for_student(db=db, obj_in=single_invoice_data)
+                successful_invoices += 1
+        # If the loop completes without error, the transaction is automatically committed here.
+    except Exception as e:
+        # --- NEW: ROBUST LOGGING LOGIC ---
+        # If the transaction fails, log the error to the database before re-raising.
+        log_message = "Critical failure during bulk invoice generation. Operation rolled back."
+        log_details = {"class_id": obj_in.class_id, "fee_term_id": obj_in.fee_term_id, "total_students_affected": len(students), "error_type": type(e).__name__, "error_message": str(e)}
+        log_entry = LogCreate(log_level="CRITICAL", message=log_message, details=log_details)
 
-    # This process should ideally be wrapped in a single transaction,
-    # but for individual error handling, we commit per student.
-    # For a full rollback on any failure, you'd handle the transaction scope outside the loop.
+        # We create a separate, independent database session for logging
+        # to ensure the log is saved even if the main session is rolled back.
+        # This requires your get_db dependency to be set up to yield a new session.
+        async for log_db in get_db():  # A way to get a fresh session
+            await logging_service.create_log_entry(db=log_db, log_data=log_entry)
+
+        failed_invoices = len(students)
+        successful_invoices = 0
+        raise ValueError(log_message)
 
     return {"detail": "Bulk invoice generation complete.", "successful": successful_invoices, "failed": failed_invoices}
