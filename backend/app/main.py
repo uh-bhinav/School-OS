@@ -5,8 +5,10 @@ import sys
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.agents.api import router as agents_router
 
@@ -123,25 +125,52 @@ logger.info("Agents router registered at /agents")
 # ============================================================================
 
 
-@app.exception_handler(404)
-async def not_found_handler(request, exc):
-    """Custom 404 handler"""
-    return {
-        "error": "Not Found",
-        "message": f"The endpoint {request.url.path} does not exist",
-        "status_code": 404,
-    }
+# @app.exception_handler(404)
+# async def not_found_handler(request, exc):
+#     """Custom 404 handler"""
+#     return {
+#         "error": "Not Found",
+#         "message": f"The endpoint {request.url.path} does not exist",
+#         "status_code": 404,
+#     }
 
 
-@app.exception_handler(500)
-async def internal_error_handler(request, exc):
-    """Custom 500 handler"""
+# @app.exception_handler(500)
+# async def internal_error_handler(request, exc):
+#     """Custom 500 handler"""
+#     logger.error(f"Internal server error: {exc}", exc_info=True)
+#     return JSONResponse(
+#         status_code=exc.status_code,
+#         content={"detail": exc.detail},
+#     )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """
+    Custom exception handler to ensure all HTTPExceptions return a
+    proper JSONResponse, preventing the 'dict is not callable' TypeError.
+    """
+    # ...and correctly wrap the error detail in a JSONResponse object.
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    """
+    Handles any unexpected, unhandled exception and returns a generic
+    500 Internal Server Error, preventing the application from crashing
+    and leaking raw exception objects.
+    """
+    # Log the full error for debugging
     logger.error(f"Internal server error: {exc}", exc_info=True)
-    return {
-        "error": "Internal Server Error",
-        "message": "An unexpected error occurred. Please try again later.",
-        "status_code": 500,
-    }
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred."},
+    )
 
 
 if __name__ == "__main__":
