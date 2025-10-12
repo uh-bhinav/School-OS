@@ -3,8 +3,12 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     academic_years,
+    admin_product_categories,
+    admin_product_packages,
+    admin_products,
     announcements,
     attendance_records,
+    carts,
     classes,
     communication,
     discounts,
@@ -15,7 +19,9 @@ from app.api.v1.endpoints import (
     fee_templates,
     invoices,
     marks,
+    orders,
     periods,
+    products,
     profiles,  # Added this import
     schools,
     student_fee_assignments,
@@ -49,18 +55,15 @@ api_router.include_router(attendance_records.router, prefix="/attendance", tags=
 api_router.include_router(timetable.router, prefix="/timetable", tags=["Timetable"])
 api_router.include_router(marks.router, prefix="/marks", tags=["Marks"])
 
-"""api_router.include_router(products.router, prefix="/products", tags=["E-commerce"])"""
-"""api_router.include_router(
-    product_categories.router,
-    prefix="/product-categories",
-    tags=["Admin: Lookup Tables"],
-)"""
-"""api_router.include_router(
-    product_packages.router, prefix="/product-packages", tags=["E-commerce"]
-)
-api_router.include_router(orders.router, prefix="/orders", tags=["E-commerce: Orders"])
-api_router.include_router(carts.router, prefix="/carts", tags=["E-commerce: Cart"])"""
+# Admin Endpoints - Catalog Management
+api_router.include_router(admin_product_categories.router, tags=["Admin - Product Categories"])
+api_router.include_router(admin_products.router, tags=["Admin - Products"])
+api_router.include_router(admin_product_packages.router, tags=["Admin - Product Packages"])
 
+# Parent-Facing Endpoints - Shopping Experience
+api_router.include_router(products.router, tags=["Products - Parent Store"])
+api_router.include_router(carts.router, tags=["Shopping Cart"])
+api_router.include_router(orders.router, tags=["Orders"])
 api_router.include_router(announcements.router, prefix="/announcements", tags=["Communication: Announcements"])
 api_router.include_router(communication.router, prefix="/comms", tags=["Communication: Chat"])
 

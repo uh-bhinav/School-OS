@@ -53,17 +53,13 @@ class Product(Base):
     category = relationship("ProductCategory", back_populates="products")
 
     # One-to-many relationship with CartItem
-    # A product can be in many different users' carts.
     cart_items = relationship("CartItem", back_populates="product")
 
     # One-to-many relationship with OrderItem
-    # A product can be part of many different orders.
     order_items = relationship("OrderItem", back_populates="product")
 
-    # Many-to-many relationship with ProductPackage
-    # A product can belong to multiple packages (e.g., a shirt in both "Full Uniform" and "Summer Kit")
-    # CRITICAL: Use string reference to avoid circular import
-    packages = relationship("ProductPackage", secondary="package_items", back_populates="items")  # Reference by table name string, not imported object
+    # One-to-many relationship with PackageItem (association object)
+    package_items = relationship("PackageItem", back_populates="product")
 
     # --- Constraints ---
     __table_args__ = (

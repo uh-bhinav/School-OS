@@ -2,13 +2,13 @@
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Column,
     DateTime,
     ForeignKey,
     Integer,
     Numeric,
     String,
-    Table,
     Text,
 )
 from sqlalchemy.orm import relationship
@@ -16,13 +16,27 @@ from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 
-# Association Table for the many-to-many relationship between ProductPackage and Product
-package_items_association = Table(
-    "package_items",
-    Base.metadata,
-    Column("package_id", Integer, ForeignKey("product_packages.id"), primary_key=True),
-    Column("product_id", Integer, ForeignKey("products.product_id"), primary_key=True),
-)
+
+class PackageItem(Base):
+    """
+    SQLAlchemy model for the package_items table.
+    Represents the association between a package and its products with quantity support.
+
+    This is an association object (not a simple Table) to support the quantity field.
+    """
+
+    __tablename__ = "package_items"
+
+    package_id = Column(Integer, ForeignKey("product_packages.id"), primary_key=True)
+    product_id = Column(Integer, ForeignKey("products.product_id"), primary_key=True)
+    quantity = Column(Integer, nullable=False, default=1)
+
+    # Relationships
+    package = relationship("ProductPackage", back_populates="items")
+    product = relationship("Product", back_populates="package_items")
+
+    # Constraints
+    __table_args__ = (CheckConstraint("quantity > 0", name="chk_package_item_quantity_positive"),)
 
 
 class ProductPackage(Base):
@@ -42,7 +56,7 @@ class ProductPackage(Base):
     price = Column(Numeric)
     image_url = Column(String)
     category = Column(String)
-    academic_year = Column(String)  # Note: As per schema, could be academic_year_id FK in a future version.
+    academic_year = Column(String)
     is_active = Column(Boolean, default=True)
 
     created_at = Column(DateTime(timezone=True), default=func.now())
@@ -53,6 +67,5 @@ class ProductPackage(Base):
     # Many-to-one relationship with School
     school = relationship("School", back_populates="product_packages")
 
-    # Many-to-many relationship with Product
-    # This allows a package to contain multiple products, and a product to be in multiple packages.
-    items = relationship("Product", secondary=package_items_association, back_populates="packages")
+    # One-to-many relationship with PackageItem (association object)
+    items = relationship("PackageItem", back_populates="package", cascade="all, delete-orphan")
