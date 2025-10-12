@@ -6,7 +6,6 @@ from app.db.base_class import Base
 
 
 class FeeTemplate(Base):
-
     """SQLAlchemy model for the fee_templates table (Fee Structure)."""
 
     __tablename__ = "fee_templates"

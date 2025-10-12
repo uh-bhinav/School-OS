@@ -13,9 +13,7 @@ from app.models.user_roles import UserRole
 
 
 @pytest.mark.asyncio
-async def test_get_my_profile(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_my_profile(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Happy Path: Tests that an authenticated user can retrieve their own profile.
     """
@@ -28,9 +26,7 @@ async def test_get_my_profile(
 
 
 @pytest.mark.asyncio
-async def test_get_all_profiles_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_all_profiles_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Happy Path: Tests that an Admin can retrieve all profiles for their school.
     """
@@ -45,9 +41,7 @@ async def test_get_all_profiles_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_get_all_profiles_as_teacher_fails(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_get_all_profiles_as_teacher_fails(test_client: AsyncClient, db_session: AsyncSession):
     """
     Sad Path: Tests that a non-Admin user receives a 403 Forbidden error.
     """
@@ -55,22 +49,16 @@ async def test_get_all_profiles_as_teacher_fails(
         user_id=uuid.uuid4(),
         school_id=1,
         is_active=True,
-        roles=[
-            UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))
-        ],
+        roles=[UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))],
     )
     app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
-    response = await test_client.get(
-        f"/v1/profiles/school/{mock_teacher_profile.school_id}"
-    )
+    response = await test_client.get(f"/v1/profiles/school/{mock_teacher_profile.school_id}")
     assert response.status_code == status.HTTP_403_FORBIDDEN
     app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
-async def test_get_all_profiles_as_admin_filter_by_role(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_all_profiles_as_admin_filter_by_role(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Happy Path: Tests that an Admin can filter profiles by role.
     """
@@ -88,9 +76,7 @@ async def test_get_all_profiles_as_admin_filter_by_role(
 
 
 @pytest.mark.asyncio
-async def test_get_specific_profile_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_specific_profile_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Happy Path: Tests an admin can fetch a specific user profile by its UUID.
     """
@@ -105,9 +91,7 @@ async def test_get_specific_profile_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_get_nonexistent_profile_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_get_nonexistent_profile_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Sad Path: Tests that fetching a non-existent profile UUID returns a 404 error.
     """
@@ -119,9 +103,7 @@ async def test_get_nonexistent_profile_fails(
 
 
 @pytest.mark.asyncio
-async def test_delete_profile_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_delete_profile_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """
     Happy Path & Sad Path: Tests an admin can soft-delete a user in their school,
     and that deleting a non-existent user fails correctly.

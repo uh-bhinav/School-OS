@@ -19,9 +19,7 @@ EXISTING_ACADEMIC_YEAR_ID = 2
 
 
 @pytest.mark.asyncio
-async def test_create_class_as_admin(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_create_class_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """Tests creating a new class with a valid section length."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
@@ -45,9 +43,7 @@ async def test_create_class_as_admin(
 
 
 @pytest.mark.asyncio
-async def test_search_for_class_by_grade_level(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_search_for_class_by_grade_level(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """Tests searching for a class using the correct URL structure."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
@@ -62,9 +58,7 @@ async def test_search_for_class_by_grade_level(
     await test_client.post("/v1/classes/", json=payload)
 
     # FIX 2: Use the correct search URL, including the school_id in the path
-    response = await test_client.get(
-        f"/v1/classes/search/{SCHOOL_ID}?grade_level={test_grade}"
-    )
+    response = await test_client.get(f"/v1/classes/search/{SCHOOL_ID}?grade_level={test_grade}")
 
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
@@ -74,9 +68,7 @@ async def test_search_for_class_by_grade_level(
 
 
 @pytest.mark.asyncio
-async def test_update_class_details(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_update_class_details(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """Tests updating a class's details, for example, changing the teacher."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
@@ -94,9 +86,7 @@ async def test_update_class_details(
     # 2. Now, update its teacher. Assume teacher #2 exists in dummy data.
     NEW_TEACHER_ID = 12
     update_payload = {"class_teacher_id": NEW_TEACHER_ID}
-    response = await test_client.put(
-        f"/v1/classes/{class_id_to_update}", json=update_payload
-    )
+    response = await test_client.put(f"/v1/classes/{class_id_to_update}", json=update_payload)
 
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
@@ -104,9 +94,7 @@ async def test_update_class_details(
 
 
 @pytest.mark.asyncio
-async def test_assign_subjects_to_class(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_assign_subjects_to_class(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """Tests the special function to assign a list of subjects to a class."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
@@ -127,9 +115,7 @@ async def test_assign_subjects_to_class(
     assign_payload = {"subject_ids": subject_ids_to_assign}
 
     # 3. Call the special endpoint to assign them
-    response = await test_client.post(
-        f"/v1/classes/{class_id_to_update}/subjects", json=assign_payload
-    )
+    response = await test_client.post(f"/v1/classes/{class_id_to_update}/subjects", json=assign_payload)
 
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
@@ -144,18 +130,14 @@ async def test_assign_subjects_to_class(
 
 
 @pytest.mark.asyncio
-async def test_create_class_as_teacher_fails(
-    test_client: AsyncClient, db_session: AsyncSession
-):
+async def test_create_class_as_teacher_fails(test_client: AsyncClient, db_session: AsyncSession):
     """SAD PATH: Tests that a user without the 'Admin' role cannot create a class."""
     # Create a mock profile for a 'Teacher'
     mock_teacher_profile = Profile(
         user_id="teacher-user-id-classes",
         school_id=SCHOOL_ID,
         is_active=True,
-        roles=[
-            UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))
-        ],
+        roles=[UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))],
     )
     app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
 
@@ -173,17 +155,13 @@ async def test_create_class_as_teacher_fails(
 
 
 @pytest.mark.asyncio
-async def test_update_non_existent_class_fails(
-    test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile
-):
+async def test_update_non_existent_class_fails(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
     """SAD PATH: Tests that updating a non-existent class ID returns a 404."""
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     non_existent_id = 99999
     update_payload = {"section": "This Should Fail"}
 
-    response = await test_client.put(
-        f"/v1/classes/{non_existent_id}", json=update_payload
-    )
+    response = await test_client.put(f"/v1/classes/{non_existent_id}", json=update_payload)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND

@@ -16,9 +16,7 @@ from app.models.teacher import Teacher
 SCHOOL_ID = 1
 
 
-async def ensure_teacher_record(
-    db_session: AsyncSession, mock_teacher_profile: Profile
-) -> tuple[uuid.UUID, int]:
+async def ensure_teacher_record(db_session: AsyncSession, mock_teacher_profile: Profile) -> tuple[uuid.UUID, int]:
     teacher_user_uuid = uuid.UUID(str(mock_teacher_profile.user_id))
 
     await db_session.execute(
@@ -53,9 +51,7 @@ async def ensure_teacher_record(
     )
     await db_session.commit()
 
-    teacher_result = await db_session.execute(
-        select(Teacher).where(Teacher.user_id == teacher_user_uuid)
-    )
+    teacher_result = await db_session.execute(select(Teacher).where(Teacher.user_id == teacher_user_uuid))
     teacher = teacher_result.scalars().first()
     if not teacher:
         teacher = Teacher(user_id=teacher_user_uuid, school_id=SCHOOL_ID)
@@ -134,10 +130,7 @@ async def test_create_single_mark_as_teacher(
     # Insert a user into auth.users to satisfy
     # the foreign key and trigger profile creation
     await db_session.execute(
-        text(
-            "INSERT INTO auth.users (id, email, created_at, updated_at)"
-            " VALUES (:user_id, :email, NOW(), NOW())"
-        ),
+        text("INSERT INTO auth.users (id, email, created_at, updated_at)" " VALUES (:user_id, :email, NOW(), NOW())"),
         {"user_id": test_user_id, "email": test_email},
     )
     # The trigger will auto-create the profile, so we need to commit to see it
@@ -240,10 +233,7 @@ async def test_create_bulk_marks_as_teacher(
         test_user_id = uuid.uuid4()
         test_email = f"test.student.bulk.{i}.{uuid.uuid4()}@schoolos.dev"
         await db_session.execute(
-            text(
-                "INSERT INTO auth.users (id, email, created_at, updated_at) "
-                "VALUES (:user_id, :email, NOW(), NOW())"
-            ),
+            text("INSERT INTO auth.users (id, email, created_at, updated_at) " "VALUES (:user_id, :email, NOW(), NOW())"),
             {"user_id": test_user_id, "email": test_email},
         )
         await db_session.commit()
@@ -261,9 +251,7 @@ async def test_create_bulk_marks_as_teacher(
     # --- Step 3: Switch to Teacher for bulk mark entry ---
     app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
 
-    teacher_user_uuid, teacher_id = await ensure_teacher_record(
-        db_session, mock_teacher_profile
-    )
+    teacher_user_uuid, teacher_id = await ensure_teacher_record(db_session, mock_teacher_profile)
 
     bulk_marks_payload = [
         {
@@ -374,17 +362,12 @@ async def test_get_student_marks_for_report_card(
     test_user_id = uuid.uuid4()
     test_email = f"test.student.report.{uuid.uuid4()}@schoolos.dev"
     await db_session.execute(
-        text(
-            "INSERT INTO auth.users (id, email, created_at, updated_at) "
-            "VALUES (:user_id, :email, NOW(), NOW())"
-        ),
+        text("INSERT INTO auth.users (id, email, created_at, updated_at) " "VALUES (:user_id, :email, NOW(), NOW())"),
         {"user_id": test_user_id, "email": test_email},
     )
     await db_session.commit()
 
-    student = Student(
-        user_id=test_user_id, current_class_id=class_id, enrollment_date="2025-09-01"
-    )
+    student = Student(user_id=test_user_id, current_class_id=class_id, enrollment_date="2025-09-01")
     db_session.add(student)
     await db_session.commit()
     await db_session.refresh(student)
@@ -411,9 +394,7 @@ async def test_get_student_marks_for_report_card(
         await test_client.post("/v1/marks/", json=mark_payload)
 
     # --- Step 4: Make the GET request to fetch the report card data ---
-    response = await test_client.get(
-        f"/v1/marks/?student_id={student_id}&exam_id={exam_id}"
-    )
+    response = await test_client.get(f"/v1/marks/?student_id={student_id}&exam_id={exam_id}")
 
     # --- Step 5: Assertions ---
     assert response.status_code == status.HTTP_200_OK
