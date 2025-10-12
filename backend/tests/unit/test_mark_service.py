@@ -67,9 +67,7 @@ async def test_create_mark_sad_path_db_error():
     # 1. Arrange
     mock_db_session = AsyncMock()
     mock_db_session.add = MagicMock()
-    mock_db_session.commit.side_effect = SQLAlchemyError(
-        "Simulated foreign key violation"
-    )
+    mock_db_session.commit.side_effect = SQLAlchemyError("Simulated foreign key violation")
 
     mark_in = MarkCreate(
         school_id=10,
@@ -150,9 +148,7 @@ async def test_bulk_create_marks_happy_path():
     mock_db_session.add_all.assert_called_once()
     added_marks = mock_db_session.add_all.call_args[0][0]
     assert len(added_marks) == len(marks_in)
-    assert [mark.student_id for mark in added_marks] == [
-        mark.student_id for mark in marks_in
-    ]
+    assert [mark.student_id for mark in added_marks] == [mark.student_id for mark in marks_in]
 
     mock_db_session.flush.assert_awaited_once()
     mock_db_session.commit.assert_awaited_once()
@@ -170,21 +166,15 @@ async def test_bulk_create_marks_sad_path_db_error():
     # 1. Arrange
     mock_db_session = AsyncMock()
     mock_db_session.add_all = MagicMock()
-    mock_db_session.flush = AsyncMock(
-        side_effect=SQLAlchemyError("Simulated bulk insert violation")
-    )
+    mock_db_session.flush = AsyncMock(side_effect=SQLAlchemyError("Simulated bulk insert violation"))
     mock_db_session.commit = AsyncMock()
     mock_db_session.rollback = AsyncMock()
     mock_db_session.execute = AsyncMock()
 
     marks_in = [
-        MarkCreate(
-            school_id=1, student_id=1, exam_id=101, subject_id=5, marks_obtained=95.0
-        ),
+        MarkCreate(school_id=1, student_id=1, exam_id=101, subject_id=5, marks_obtained=95.0),
         # This record might be invalid in a real scenario, triggering the error
-        MarkCreate(
-            school_id=1, student_id=999, exam_id=101, subject_id=5, marks_obtained=88.0
-        ),
+        MarkCreate(school_id=1, student_id=999, exam_id=101, subject_id=5, marks_obtained=88.0),
     ]
 
     # 2. Act & 3. Assert

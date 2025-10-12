@@ -16,7 +16,6 @@ from app.db.base_class import Base
 
 
 class Invoice(Base):
-
     """SQLAlchemy model for the invoices table."""
 
     __tablename__ = "invoices"
