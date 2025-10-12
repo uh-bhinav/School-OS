@@ -3166,6 +3166,21 @@ files = [
 ]
 
 [[package]]
+name = "razorpay"
+version = "2.0.0"
+description = "Razorpay Python Client"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "razorpay-2.0.0-py3-none-any.whl", hash = "sha256:524cf1726f673fc72d448f83fd2ea479526d2dd48641ca75ee9a58e25300784a"},
+    {file = "razorpay-2.0.0.tar.gz", hash = "sha256:929aef2f4aec8190dfe12b79ba09e83c39086f6ea0bffa0586b719c5b9054450"},
+]
+
+[package.dependencies]
+requests = "*"
+
+[[package]]
 name = "realtime"
 version = "2.21.1"
 description = ""
@@ -4453,4 +4468,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "a68d5f8e0d58b141d061f97dcc039b6f28ee049ceee1bfdb9f3ea46935e3b956"
+content-hash = "bb61f0fa10fe92af9f573a94e14c8f42d5a407bb3b52119d5691a3533b4c9b7b"

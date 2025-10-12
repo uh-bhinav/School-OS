@@ -20,6 +20,8 @@ from app.api.v1.endpoints import (
     invoices,
     marks,
     orders,
+    payment_gateway,
+    payments,
     periods,
     products,
     profiles,  # Added this import
@@ -30,6 +32,7 @@ from app.api.v1.endpoints import (
     subjects,
     timetable,
     users,
+    webhooks,
 )
 
 api_router = APIRouter()
@@ -77,3 +80,6 @@ api_router.include_router(discounts.router, prefix="/finance", tags=["Finance - 
 api_router.include_router(invoices.router, prefix="/finance", tags=["Finance - Invoices & Payments"])
 api_router.include_router(student_fee_assignments.router, prefix="/finance", tags=["Finance - Overrides"])
 api_router.include_router(refunds.router, prefix="/finance/refunds", tags=["Finance - Refunds"])
+api_router.include_router(payment_gateway.router, prefix="/finance/gateway", tags=["Finance - Gateway Configuration"])
+api_router.include_router(payments.router, prefix="/finance/payments", tags=["Finance - Payments"])
+api_router.include_router(webhooks.router, prefix="/webhooks", tags=["Webhooks"])
