@@ -1,12 +1,16 @@
 # app/services/discount_service.py
 
+from uuid import UUID
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models import Discount, FeeDiscount
 from app.models.student_fee_discount import StudentFeeDiscount
+from app.schemas.audit_schema import AuditCreate
 from app.schemas.discount_schema import DiscountCreate
 from app.schemas.student_fee_discount_schema import StudentFeeDiscountCreate
+from app.services import audit_service
 
 
 class DiscountService:
@@ -44,7 +48,7 @@ class DiscountService:
 
     # --- Methods for Applying Discounts ---
 
-    def apply_discount_to_student(self, application_data: StudentFeeDiscountCreate) -> StudentFeeDiscount:
+    def apply_discount_to_student(self, *, application_data: StudentFeeDiscountCreate, user_id: UUID, ip_address: str) -> StudentFeeDiscount:
         """
         Applies a discount template to a student by creating a record
         in the 'student_fee_discounts' link table [cite: 1028-1030].
@@ -58,6 +62,12 @@ class DiscountService:
 
         new_application = StudentFeeDiscount(**application_data.model_dump())
         self.db.add(new_application)
+        self.db.flush()
+
+        # Create the audit log for this action
+        audit_log = AuditCreate(user_id=user_id, action_type="CREATE", table_name="student_fee_discounts", record_id=str(new_application.id), ip_address=ip_address, new_data=application_data.model_dump())
+        audit_service.create_audit_log(db=self.db, audit_data=audit_log)
+
         self.db.commit()
         self.db.refresh(new_application)
         return new_application

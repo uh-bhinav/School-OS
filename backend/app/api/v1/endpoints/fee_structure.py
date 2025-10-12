@@ -3,7 +3,9 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import get_current_user, require_role
 from app.db.session import get_db
+from app.schemas.class_fee_structure_schema import AssignTemplateToClassSchema
 from app.schemas.fee_component_schema import FeeComponentCreate, FeeComponentOut
 from app.schemas.fee_template_schema import FeeTemplateCreate, FeeTemplateOut
 from app.services.fee_structure_service import FeeStructureService
@@ -15,7 +17,7 @@ def get_fee_structure_service(db: AsyncSession = Depends(get_db)):
     return FeeStructureService(db)
 
 
-@router.post("/fee-components", response_model=FeeComponentOut, status_code=201)
+@router.post("/fee-components", response_model=FeeComponentOut, status_code=201, dependencies=[Depends(require_role("Admin"))])
 async def create_fee_component(
     component_in: FeeComponentCreate,
     service: FeeStructureService = Depends(get_fee_structure_service),
@@ -24,7 +26,7 @@ async def create_fee_component(
     return await service.create_fee_component(component_data=component_in)
 
 
-@router.get("/fee-components/school/{school_id}", response_model=List[FeeComponentOut])
+@router.get("/fee-components/school/{school_id}", response_model=List[FeeComponentOut], dependencies=[Depends(get_current_user)])
 async def get_fee_components_for_school(
     school_id: int,
     service: FeeStructureService = Depends(get_fee_structure_service),
@@ -33,19 +35,31 @@ async def get_fee_components_for_school(
     return await service.get_fee_components_by_school(school_id=school_id)
 
 
-@router.post("/fee-templates", response_model=FeeTemplateOut, status_code=201)
+@router.post("/fee-templates", response_model=FeeTemplateOut, status_code=201, dependencies=[Depends(require_role("Admin"))])
 async def create_fee_template(
     template_in: FeeTemplateCreate,
     service: FeeStructureService = Depends(get_fee_structure_service),
 ):
     """Create a new fee template with its associated payment terms."""
-    return await service.create_fee_template_with_terms(template_data=template_in)
+    return await service.create_fee_template(template_data=template_in)
 
 
-@router.get("/fee-templates/school/{school_id}", response_model=List[FeeTemplateOut])
+@router.get("/fee-templates/school/{school_id}", response_model=List[FeeTemplateOut], dependencies=[Depends(get_current_user)])
 async def get_fee_templates_for_school(
     school_id: int,
     service: FeeStructureService = Depends(get_fee_structure_service),
 ):
     """Get all fee templates for a specific school."""
     return await service.get_fee_templates_by_school(school_id=school_id)
+
+
+@router.post("/assign-template-to-class", status_code=200, dependencies=[Depends(require_role("Admin"))])
+async def assign_template_to_class(
+    assignment_in: AssignTemplateToClassSchema,
+    service: FeeStructureService = Depends(get_fee_structure_service),
+):
+    """
+    Assign a fee template to a class for an academic year.
+    This sets the default fees for all students in that class.
+    """
+    return await service.assign_template_to_class(assignment_data=assignment_in)

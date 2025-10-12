@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
+from app.models.applied_discount import AppliedDiscount
 from app.models.class_fee_structure import ClassFeeStructure
 from app.models.fee_component import FeeComponent
 from app.models.fee_term import FeeTerm
@@ -111,6 +112,7 @@ async def generate_invoice_for_student(db: AsyncSession, *, obj_in: InvoiceCreat
     # 5. Create Final Invoice Items and Calculate Total
     invoice_items_to_create = []
     final_amount_due = Decimal("0.0")
+    applied_discounts_to_log = []
 
     if billable_components:
         component_ids = list(billable_components.keys())
@@ -136,6 +138,9 @@ async def generate_invoice_for_student(db: AsyncSession, *, obj_in: InvoiceCreat
                         discount_value = item_amount * (Decimal(discount_template.value) / Decimal(100))
                     else:  # fixed_amount
                         discount_value = Decimal(discount_template.value)
+
+                    if discount_value > 0:
+                        applied_discounts_to_log.append({"discount_id": discount_template.id, "amount_discounted": discount_value})
 
                     item_amount -= discount_value
 
@@ -164,8 +169,13 @@ async def generate_invoice_for_student(db: AsyncSession, *, obj_in: InvoiceCreat
         status="due",
         items=invoice_items_to_create,  # Link the items to the invoice
     )
-
     db.add(db_obj)
+    await db.flush()
+
+    for discount_log in applied_discounts_to_log:
+        audit_record = AppliedDiscount(invoice_id=db_obj.id, discount_id=discount_log["discount_id"], amount_discounted=discount_log["amount_discounted"])
+        db.add(audit_record)
+
     await db.commit()
     await db.refresh(db_obj)
     return db_obj
