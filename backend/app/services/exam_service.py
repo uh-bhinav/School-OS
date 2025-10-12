@@ -1,18 +1,15 @@
 import inspect
-from typing import (
-    Any,
-    Optional,
-)
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from typing import Any, Optional
 
-# FIX 1: Import Dict, Any, List from typing
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from app.models.exams import Exam
-from app.models.mark import Mark  # Assuming you have a Mark model
+from app.models.mark import Mark
+from app.models.student import Student
 from app.models.subject import Subject
-
-# Assuming you have a Subject model
 from app.schemas.exam_schema import ExamCreate, ExamUpdate
 
 
@@ -87,60 +84,88 @@ async def delete_exam(db: AsyncSession, exam_id: int) -> Optional[Exam]:
 
 
 async def get_exam_mark_summary(db: AsyncSession, exam_id: int, student_id: int) -> dict[str, Any]:
-    """
-    Agentic Function: Retrieves a student's
-      consolidated results for all subjects
-    in a specific, active exam.
-    """
+    """Return aggregate exam results for a single student."""
 
-    # 1. Select the necessary data by joining Marks, Subjects, and Exams.
-    stmt = (
+    exam_stmt = select(Exam).where(Exam.id == exam_id, Exam.is_active.is_(True))
+    exam = (await db.execute(exam_stmt)).scalar_one_or_none()
+    if not exam:
+        raise ValueError(f"Active exam {exam_id} was not found.")
+
+    student_stmt = select(Student).options(selectinload(Student.profile)).where(Student.student_id == student_id, Student.is_active.is_(True))
+    student = (await db.execute(student_stmt)).scalar_one_or_none()
+    if not student:
+        raise ValueError(f"Active student {student_id} was not found.")
+
+    if not student.profile:
+        raise ValueError("Student profile is required to summarise exam marks.")
+
+    marks_stmt = (
         select(
             Mark.marks_obtained,
-            Mark.total_marks,
-            Mark.grade_letter,
+            Mark.max_marks,
             Subject.name.label("subject_name"),
-            Exam.exam_name,
         )
         .join(Subject, Mark.subject_id == Subject.subject_id)
-        .join(Exam, Mark.exam_id == Exam.id)
-        .where(
-            Mark.student_id == student_id,
-            Mark.exam_id == exam_id,
-            # FIX 2: Ensure filter is on a separate
-            #  line if needed, but keeping it clean
-            Exam.is_active.is_(True),
-        )
+        .where(Mark.exam_id == exam_id, Mark.student_id == student_id)
     )
+    mark_rows = (await db.execute(marks_stmt)).all()
 
-    result = await db.execute(stmt)
-    mark_records = result.all()
+    if not mark_rows:
+        raise ValueError("No marks found for the requested exam/student combination.")
 
-    if not mark_records:
-        return {
-            "status": "not_found",
-            "message": f"No active results- {student_id} in Exam {exam_id}.",
+    total_obtained = sum(_to_decimal(row.marks_obtained) for row in mark_rows)
+    max_total_marks = sum(_to_decimal(row.max_marks) for row in mark_rows)
+
+    percentage = Decimal("0")
+    if max_total_marks:
+        percentage = (total_obtained / max_total_marks) * Decimal("100")
+
+    student_name = " ".join(part for part in [student.profile.first_name, student.profile.last_name] if part).strip()
+    if not student_name:
+        student_name = "Unknown Student"
+
+    subject_breakdown = [
+        {
+            "subject_name": row.subject_name,
+            "score": _format_decimal(_to_decimal(row.marks_obtained)),
+            "max_marks": _format_decimal(_to_decimal(row.max_marks)),
         }
-    # 2. Format the results into a clean,
-    #  structured dictionary for the Agent.
-    summary = {
+        for row in mark_rows
+    ]
+
+    return {
         "student_id": student_id,
-        # FIX 3: E501 line break applied here
-        "exam_name": mark_records[0].exam_name,
-        "total_marks_obtained": sum(r.marks_obtained for r in mark_records),
-        "performance_by_subject": [
-            {
-                "subject": r.subject_name,
-                "obtained": float(r.marks_obtained),
-                "total": float(r.total_marks),
-                "grade": r.grade_letter,
-            }
-            for r in mark_records
-        ],
-        "status": "complete",
+        "student_name": student_name,
+        "exam_id": exam_id,
+        "exam_name": exam.exam_name,
+        "total_marks_obtained": _format_decimal(total_obtained),
+        "max_total_marks": _format_decimal(max_total_marks),
+        "percentage": _format_decimal(percentage),
+        "result": "Pass" if percentage >= 50 else "Fail",
+        "marks_by_subject": subject_breakdown,
     }
 
-    return summary
+
+def _to_decimal(value: Any) -> Decimal:
+    """Convert DB numeric values into a Decimal for precise aggregation."""
+
+    if value is None:
+        return Decimal("0")
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError) as exc:
+        raise ValueError("Numeric value could not be converted to Decimal.") from exc
+
+
+def _format_decimal(value: Decimal) -> float | int:
+    """Round to two decimal places and drop trailing zeros when integral."""
+
+    quantized = value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if quantized == quantized.to_integral():
+        return int(quantized)
+    return float(quantized)
 
 
 # --- Agentic Function ---

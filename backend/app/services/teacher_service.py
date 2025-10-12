@@ -140,16 +140,20 @@ async def get_proctored_students(db: AsyncSession, *, teacher_id: int) -> list[S
 
 
 async def get_teacher_qualifications(db: AsyncSession, *, teacher_id: int) -> Optional[TeacherQualification]:
-    """
-    Retrieves a teacher's qualifications and years of experience.
-    Returns None if the teacher doesn't exist.
-    """
-    stmt = select(Teacher).where(Teacher.teacher_id == teacher_id)
+    """Return a teacher's experience and qualifications if the record is active."""
+
+    stmt = select(Teacher).where(
+        Teacher.teacher_id == teacher_id,
+        Teacher.is_active.is_(True),
+    )
     result = await db.execute(stmt)
     teacher = result.scalars().first()
-
     if not teacher:
         return None
 
-    # Use Pydantic schema to structure the response
-    return TeacherQualification.model_validate(teacher)
+    qualifications = teacher.qualifications if isinstance(teacher.qualifications, list) else []
+
+    return TeacherQualification(
+        years_of_experience=teacher.years_of_experience,
+        qualifications=qualifications,
+    )
