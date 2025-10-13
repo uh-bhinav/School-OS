@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.dependencies.auth import get_current_user
-from app.core.security import require_role
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
-from app.models import User
+from app.models.profile import Profile as User
 from app.schemas.discount_schema import DiscountCreate, DiscountOut
 from app.schemas.student_fee_discount_schema import StudentFeeDiscountCreate, StudentFeeDiscountOut
 from app.services.discount_service import DiscountService
@@ -42,7 +41,7 @@ def apply_discount_to_student(
     application_in: StudentFeeDiscountCreate,
     request: Request,
     service: DiscountService = Depends(get_discount_service),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_profile),
 ):
     """
     Apply a discount template to a specific student.

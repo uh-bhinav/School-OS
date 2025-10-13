@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.models import Discount, FeeDiscount
+from app.models.discount import Discount
 from app.models.student_fee_discount import StudentFeeDiscount
 from app.schemas.audit_schema import AuditCreate
 from app.schemas.discount_schema import DiscountCreate
@@ -72,9 +72,9 @@ class DiscountService:
         self.db.refresh(new_application)
         return new_application
 
-    def get_discounts_for_student(self, student_id: int) -> list[FeeDiscount]:
+    def get_discounts_for_student(self, student_id: int) -> list[StudentFeeDiscount]:
         """Gets all specific discounts applied to a student."""
-        return self.db.query(FeeDiscount).filter(FeeDiscount.student_id == student_id).all()
+        return self.db.query(StudentFeeDiscount).filter(StudentFeeDiscount.student_id == student_id).all()
 
     def get_discount_templates_by_school(self, school_id: int) -> list[Discount]:
         """
