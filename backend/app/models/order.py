@@ -38,6 +38,7 @@ class Order(Base):
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
 
     # Link to payment (one-to-one)
+
     payment = relationship("Payment", back_populates="order", uselist=False)
 
     # --- Indexes for Performance ---
