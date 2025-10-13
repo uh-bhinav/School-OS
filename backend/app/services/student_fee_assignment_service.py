@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.models import StudentFeeAssignment
+from app.models.student_fee_assignment import StudentFeeAssignment
 from app.schemas.audit_schema import AuditCreate
 from app.schemas.student_fee_assignment_schema import StudentFeeAssignmentCreate
 from app.services import audit_service

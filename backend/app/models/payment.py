@@ -16,6 +16,7 @@ class Payment(Base):
     school_id = Column(Integer, ForeignKey("schools.school_id"))
     student_id = Column(Integer, ForeignKey("students.student_id"))
     user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id"))
+    order_id = Column(Integer, ForeignKey("orders.order_id"))
 
     amount_paid = Column(Numeric(10, 2))
     currency = Column(String(3), nullable=False, default="INR")
@@ -32,13 +33,15 @@ class Payment(Base):
     method = Column(String(50))
     error_code = Column(String(255))
     error_description = Column(Text)
-    metadata = Column(JSONB)
+
+    payment_metadata = Column("metadata", JSONB)
 
     created_at = Column(TIMESTAMP(timezone=True), server_default="now()")
     updated_at = Column(TIMESTAMP(timezone=True), server_default="now()", onupdate="now()")
 
     # Relationships
     invoice = relationship("Invoice", back_populates="payments")
+    order = relationship("Order", back_populates="payment")
     student = relationship("Student")
     user = relationship("Profile")
 

@@ -20,6 +20,7 @@ class Order(Base):
     order_id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False)
     parent_user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id"), nullable=False)
+    school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False)  # ADD IF MISSING
 
     order_number = Column(String, unique=True, nullable=False, index=True)
     # NOTE: Generated in service layer as f"ORD-{school_id}-{timestamp}-{order_id}"
@@ -37,6 +38,7 @@ class Order(Base):
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
 
     # Link to payment (one-to-one)
+
     payment = relationship("Payment", back_populates="order", uselist=False)
 
     # --- Indexes for Performance ---

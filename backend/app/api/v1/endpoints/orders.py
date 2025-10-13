@@ -21,13 +21,14 @@ from app.models.profile import Profile
 from app.schemas.enums import OrderStatus
 from app.schemas.order_schema import (
     OrderCancel,
-    OrderCheckoutResponse,
     OrderCreateFromCart,
     OrderOut,
     OrderStatistics,
     OrderUpdate,
 )
+from app.schemas.payment_schema import PaymentInitiateRequest
 from app.services.order_service import OrderService
+from app.services.payment_service import PaymentService
 
 router = APIRouter(
     prefix="/orders",
@@ -35,59 +36,81 @@ router = APIRouter(
 )
 
 
+# Dependency injector for PaymentService
+def get_payment_service(db: Session = Depends(get_db)) -> PaymentService:
+    return PaymentService(db)
+
+
 @router.post(
     "/checkout",
-    response_model=OrderCheckoutResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def checkout(
     checkout_data: OrderCreateFromCart,
     db: Session = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
+    payment_service: PaymentService = Depends(get_payment_service),
 ):
     """
-    Create an order from cart (Parent checkout flow).
+    UNIFIED CHECKOUT: Creates order + initiates payment in single atomic flow.
 
     This is the PRIMARY e-commerce flow and the most critical endpoint.
 
     CRITICAL BUSINESS LOGIC:
-    - Converts cart contents to permanent order
-    - Uses pessimistic locking to prevent race conditions
-    - Validates stock availability AFTER acquiring locks
-    - Decrements stock atomically
-    - Clears cart on success
-    - Creates order with status 'pending_payment'
+    - Step 1: Converts cart contents to permanent order
+    - Step 2: Immediately initiates payment via unified payment engine
+    - Step 3: Returns order + payment details for Razorpay frontend integration
+
+    Flow:
+    1. Cart → Order (status: pending_payment)
+    2. Order → Payment (status: pending, creates Razorpay order)
+    3. Response → Frontend launches Razorpay Checkout UI
+    4. Parent completes payment
+    5. Frontend calls POST /api/v1/payments/verify
+    6. Backend verifies signature → Updates Payment + Order status
 
     Request Body:
     - student_id: Student for whom order is being placed
     - delivery_notes: Optional delivery instructions
 
     Returns:
-    - Order ID and total amount for payment initiation
-
-    Next Step:
-    Frontend uses order_id to call: POST /api/v1/payments/initiate
+    - Unified response with order details + Razorpay credentials
 
     Raises:
     - 400: If cart is empty or insufficient stock
     - 403: If student doesn't belong to parent
     - 404: If student not found
+    - 503: If payment gateway not configured
     """
+    # Step 1: Create order from cart (atomic transaction with stock locking)
     db_order = await OrderService.create_order_from_cart(
         db=db,
         checkout_data=checkout_data,
         current_profile=current_profile,
     )
 
-    # Return checkout response
-    return OrderCheckoutResponse(
-        success=True,
-        message="Order created successfully. Please proceed to payment.",
-        order_id=db_order.order_id,
-        order_number=db_order.order_number,
-        total_amount=db_order.total_amount,
-        order=None,  # Optionally include full order details
-    )
+    # Step 2: Initiate payment via unified payment engine
+    payment_request = PaymentInitiateRequest(invoice_id=None, order_id=db_order.order_id)  # Link payment to order
+
+    payment_response = await payment_service.initiate_payment(request_data=payment_request, user_id=str(current_profile.user_id))
+
+    # Step 3: Return unified response (order + payment details)
+    return {
+        "success": True,
+        "message": "Order created successfully. Please complete payment.",
+        # Order details
+        "order_id": db_order.order_id,
+        "order_number": db_order.order_number,
+        "total_amount": str(db_order.total_amount),
+        "status": db_order.status.value,
+        # Payment details (for Razorpay frontend integration)
+        "razorpay_order_id": payment_response["razorpay_order_id"],
+        "razorpay_key_id": payment_response["razorpay_key_id"],
+        "amount": payment_response["amount"],
+        "internal_payment_id": payment_response["internal_payment_id"],
+        "school_name": payment_response["school_name"],
+        "description": payment_response["description"],
+    }
 
 
 @router.get(

@@ -179,6 +179,7 @@ class OrderService:
                 total_amount=total_amount,
                 status=OrderStatus.PENDING_PAYMENT,
                 delivery_notes=checkout_data.delivery_notes,
+                school_id=current_profile.school_id,
             )
 
             db.add(db_order)

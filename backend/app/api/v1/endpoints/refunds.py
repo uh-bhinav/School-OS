@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
-from app.models import User  # Assuming your user model is named User
+from app.models.profile import Profile  # Assuming your user model is named User
 from app.schemas.refund_schema import RefundCreate, RefundOut
 from app.services.refund_service import RefundService
 
@@ -18,7 +18,7 @@ def get_refund_service(db: AsyncSession = Depends(get_db)) -> RefundService:
 async def create_refund(
     refund_in: RefundCreate,
     service: RefundService = Depends(get_refund_service),
-    current_user: User = Depends(get_current_user),
+    current_user: Profile = Depends(get_current_user_profile),
 ):
     """
     Process a refund for a captured payment. This action is restricted to Admins.
