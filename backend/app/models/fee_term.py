@@ -18,4 +18,4 @@ class FeeTerm(Base):
 
     # The relationship syntax itself does not change
     fee_template = relationship("FeeTemplate", back_populates="fee_terms")
-    discounts = relationship("FeeDiscount", back_populates="fee_term")
+    discounts = relationship("StudentFeeDiscount", back_populates="fee_term")

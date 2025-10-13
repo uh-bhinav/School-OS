@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user
-from app.core.security import require_role
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
-from app.models import User
+from app.models.profile import Profile
 from app.schemas.student_fee_assignment_schema import StudentFeeAssignmentCreate, StudentFeeAssignmentOut
 from app.services.student_fee_assignment_service import StudentFeeAssignmentService
 
@@ -20,7 +19,7 @@ def set_student_fee_override(
     override_in: StudentFeeAssignmentCreate,
     request: Request,
     service: StudentFeeAssignmentService = Depends(get_assignment_service),
-    current_user: User = Depends(get_current_user),
+    current_user: Profile = Depends(get_current_user_profile),
 ):
     """
     Create or update a fee override for a student.

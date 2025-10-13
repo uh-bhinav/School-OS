@@ -26,7 +26,7 @@ class Cart(Base):
 
     # One-to-one relationship with Profile
     # Each cart belongs to exactly one user profile.
-    user = relationship("Profile", back_populates="cart")
+    profile = relationship("Profile", back_populates="cart")
 
     # One-to-many relationship with CartItem
     # A cart can hold multiple items.

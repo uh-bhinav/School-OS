@@ -34,4 +34,6 @@ class School(Base):
     discounts = relationship("Discount", back_populates="school")
     fee_components = relationship("FeeComponent", back_populates="school")
     fee_templates = relationship("FeeTemplate", back_populates="school")
-    school = relationship("School", back_populates="product_packages")
+    product_packages = relationship("ProductPackage", back_populates="school")
+    products = relationship("Product", back_populates="school")
+    product_categories = relationship("ProductCategory", back_populates="school")

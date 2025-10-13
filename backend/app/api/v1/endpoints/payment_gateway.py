@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
-from app.models import User
+from app.models.profile import Profile
 from app.schemas.payment_gateway_schema import GatewayCredentialsCreate
 from app.services.payment_gateway_service import PaymentGatewayService
 
@@ -18,7 +18,7 @@ def get_gateway_service(db: AsyncSession = Depends(get_db)) -> PaymentGatewaySer
 async def configure_payment_gateway(
     credentials_in: GatewayCredentialsCreate,
     service: PaymentGatewayService = Depends(get_gateway_service),
-    current_user: User = Depends(get_current_user),
+    current_user: Profile = Depends(get_current_user_profile),
 ):
     """
     Configure Razorpay credentials for the admin's school.

@@ -45,5 +45,6 @@ class Student(Base):
     attendance_records = relationship("AttendanceRecord", back_populates="student")
     contacts = relationship("StudentContact", back_populates="student")
     invoices = relationship("Invoice", back_populates="student")
-    fee_discounts = relationship("FeeDiscount", back_populates="student")
+    fee_discounts = relationship("StudentFeeDiscount", back_populates="student")
     fee_assignments = relationship("StudentFeeAssignment", back_populates="student")
+    orders = relationship("Order", back_populates="student")

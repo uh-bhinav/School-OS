@@ -32,7 +32,8 @@ class Payment(Base):
     method = Column(String(50))
     error_code = Column(String(255))
     error_description = Column(Text)
-    metadata = Column(JSONB)
+
+    payment_metadata = Column("metadata", JSONB)
 
     created_at = Column(TIMESTAMP(timezone=True), server_default="now()")
     updated_at = Column(TIMESTAMP(timezone=True), server_default="now()", onupdate="now()")
