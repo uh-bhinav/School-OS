@@ -1,7 +1,8 @@
 # app/models/payment.py
 
-from sqlalchemy import JSONB, TIMESTAMP, CheckConstraint, Column, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import TIMESTAMP, CheckConstraint, Column, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import ENUM, UUID
+from sqlalchemy.dialects.postgresql.json import JSONB
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base

@@ -1,9 +1,7 @@
-from typing import List
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
 from app.schemas.class_fee_structure_schema import AssignTemplateToClassSchema
 from app.schemas.fee_component_schema import FeeComponentCreate, FeeComponentOut
@@ -26,7 +24,7 @@ async def create_fee_component(
     return await service.create_fee_component(component_data=component_in)
 
 
-@router.get("/fee-components/school/{school_id}", response_model=List[FeeComponentOut], dependencies=[Depends(get_current_user)])
+@router.get("/fee-components/school/{school_id}", response_model=list[FeeComponentOut], dependencies=[Depends(get_current_user_profile)])
 async def get_fee_components_for_school(
     school_id: int,
     service: FeeStructureService = Depends(get_fee_structure_service),
@@ -44,7 +42,7 @@ async def create_fee_template(
     return await service.create_fee_template(template_data=template_in)
 
 
-@router.get("/fee-templates/school/{school_id}", response_model=List[FeeTemplateOut], dependencies=[Depends(get_current_user)])
+@router.get("/fee-templates/school/{school_id}", response_model=list[FeeTemplateOut], dependencies=[Depends(get_current_user_profile)])
 async def get_fee_templates_for_school(
     school_id: int,
     service: FeeStructureService = Depends(get_fee_structure_service),
