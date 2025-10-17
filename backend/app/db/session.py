@@ -1,7 +1,12 @@
 # app/db/session.py
+from collections.abc import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
+
+# Import models to register SQLAlchemy mappers before creating sessions
+from app.db import base as _models  # noqa: F401
 
 # Shared context so tests can override
 db_context: dict = {}
@@ -34,7 +39,9 @@ def init_engine():
 
 
 # FastAPI dependency
-async def get_db() -> AsyncSession:
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     SessionLocal = db_context.get("SessionLocal")
     if SessionLocal is None:
         raise RuntimeError("Database engine not initialized. Call init_engine() first.")

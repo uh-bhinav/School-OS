@@ -13,7 +13,8 @@ from app.schemas.class_schema import (
     ClassSubjectsAssign,
     ClassUpdate,
 )
-from app.services import class_service
+from app.schemas.student_schema import StudentOut
+from app.services import class_service, student_service
 
 router = APIRouter()
 
@@ -81,6 +82,35 @@ async def get_all_classes_for_school(
             detail="You can only view classes for your own school.",
         )
     return await class_service.get_all_classes_for_school(db, school_id=school_id)
+
+
+@router.get(
+    "/{class_id}/students",
+    response_model=list[StudentOut],
+    dependencies=[Depends(require_role("Admin", "Teacher"))],
+)
+async def get_students_for_class(
+    class_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Allow admins or the assigned class teacher to view the students in a class.
+    """
+    db_class = await class_service.get_class(db=db, class_id=class_id, school_id=current_profile.school_id)
+    if not db_class:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Class not found")
+
+    is_admin = any(role.role_definition.role_name == "Admin" for role in current_profile.roles)
+    if not is_admin:
+        teacher_record = getattr(current_profile, "teacher", None)
+        if not teacher_record or db_class.class_teacher_id != teacher_record.teacher_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to view students for this class.",
+            )
+
+    return await student_service.get_all_students_for_class(db=db, class_id=class_id)
 
 
 # NEW: Endpoint to assign subjects to a class
