@@ -99,13 +99,11 @@ async def get_timetable_for_class(
     """
     Get the timetable for a specific class.
     """
-    target_class = await db.get(Class, class_id)
-    if not target_class or target_class.school_id != current_profile.school_id:
-        raise HTTPException(status_code=404, detail="Class not found.")
-
-    timetable = await timetable_service.get_class_timetable(db=db, class_id=class_id)
-    if not timetable:
-        raise HTTPException(status_code=404, detail="Timetable not found for this class.")
+    timetable = await timetable_service.get_class_timetable(
+        db=db,
+        class_id=class_id,
+        school_id=current_profile.school_id,
+    )
     return timetable
 
 
@@ -127,9 +125,11 @@ async def get_timetable_for_teacher(
     if not target_teacher or target_teacher.school_id != current_profile.school_id:
         raise HTTPException(status_code=404, detail="Teacher not found.")
 
-    timetable = await timetable_service.get_teacher_timetable(db=db, teacher_id=teacher_id)
-    if not timetable:
-        raise HTTPException(status_code=404, detail="Timetable not found for this teacher.")
+    timetable = await timetable_service.get_teacher_timetable(
+        db=db,
+        teacher_id=teacher_id,
+        school_id=current_profile.school_id,
+    )
     return timetable
 
 
@@ -163,7 +163,11 @@ async def get_teacher_schedule(
             schedule_date=schedule_date,
         )
 
-    return await timetable_service.get_teacher_timetable(db=db, teacher_id=teacher_id)
+    return await timetable_service.get_teacher_timetable(
+        db=db,
+        teacher_id=teacher_id,
+        school_id=current_profile.school_id,
+    )
 
 
 # Admin only: Update an existing timetable entry
