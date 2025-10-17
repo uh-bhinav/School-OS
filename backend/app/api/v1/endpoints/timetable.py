@@ -16,7 +16,9 @@ from app.schemas.timetable_schema import (
     TimetableEntryOut,
     TimetableEntryUpdate,
 )
-from app.schemas.timetable_schema import TimetableEntryOut as TimetableOut
+from app.schemas.timetable_schema import (
+    TimetableEntryOut as TimetableOut,
+)
 from app.services import timetable_service
 
 router = APIRouter()
@@ -138,7 +140,7 @@ async def get_teacher_schedule(
     schedule_date: date
     | None = Query(
         None,
-        description="Optional date filter (YYYY-MM-DD) to retrieve a specific day's schedule.",
+        description=("Optional date filter (YYYY-MM-DD) to retrieve a specific day's schedule."),
     ),
     db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
