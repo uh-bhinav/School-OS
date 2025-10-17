@@ -133,6 +133,39 @@ async def get_timetable_for_teacher(
     return timetable
 
 
+@router.get(
+    "/teacher/{teacher_id}/schedule",
+    response_model=list[TimetableOut],
+    dependencies=[Depends(require_role("Teacher"))],
+)
+async def get_teacher_schedule(
+    teacher_id: int,
+    schedule_date: date
+    | None = Query(
+        None,
+        description="Optional date filter (YYYY-MM-DD) to retrieve a specific day's schedule.",
+    ),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """Return either the full timetable or a specific day's schedule for a teacher."""
+
+    target_teacher = await db.get(Teacher, teacher_id)
+    if not target_teacher or target_teacher.school_id != current_profile.school_id:
+        raise HTTPException(status_code=404, detail="Teacher not found.")
+
+    if schedule_date:
+        return await timetable_service.get_schedule_for_day(
+            db=db,
+            school_id=current_profile.school_id,
+            target_type="teacher",
+            target_id=teacher_id,
+            schedule_date=schedule_date,
+        )
+
+    return await timetable_service.get_teacher_timetable(db=db, teacher_id=teacher_id)
+
+
 # Admin only: Update an existing timetable entry
 @router.put(
     "/{entry_id}",

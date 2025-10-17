@@ -30,3 +30,15 @@ async def create_announcement(
         language=getattr(current_profile, "preferred_language", None),
     )
     return announcement
+
+
+@router.get("/", response_model=list[AnnouncementOut])
+async def list_announcements(
+    db: AsyncSession = Depends(get_db),
+    current_profile=Depends(get_current_user_profile),
+):
+    """
+    Return the announcements that are visible to the authenticated user.
+    """
+    announcements = await announcement_service.get_user_announcement_feed(db=db, user_id=current_profile.user_id)
+    return announcements

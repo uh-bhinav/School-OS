@@ -33,6 +33,21 @@ async def get_all_academic_years(db: AsyncSession) -> list[AcademicYear]:
     return list(result.scalars().all())
 
 
+async def get_academic_years_for_school(
+    db: AsyncSession,
+    *,
+    school_id: int,
+    include_inactive: bool = False,
+) -> list[AcademicYear]:
+    """Fetch academic years scoped to a single school."""
+    stmt = select(AcademicYear).where(AcademicYear.school_id == school_id)
+    if not include_inactive:
+        stmt = stmt.where(AcademicYear.is_active.is_(True))
+    stmt = stmt.order_by(AcademicYear.start_date)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def update_academic_year(db: AsyncSession, *, db_obj: AcademicYear, year_in: AcademicYearUpdate) -> AcademicYear:
     """Updates academic year details."""
     update_data = year_in.model_dump(exclude_unset=True)

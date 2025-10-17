@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from app.models.announcement import Announcement
 from app.models.announcement_target import AnnouncementTarget
@@ -67,10 +68,14 @@ async def get_user_announcement_feed(db: AsyncSession, user_id: UUID) -> list[An
         return []
 
     # 2. Add the essential multi-tenancy filter to the query.
-    stmt = select(Announcement).where(
-        Announcement.is_active.is_(True),
-        Announcement.school_id == user_profile.school_id,
-        # CRITICAL: Filter by school
+    stmt = (
+        select(Announcement)
+        .where(
+            Announcement.is_active.is_(True),
+            Announcement.school_id == user_profile.school_id,
+        )
+        .options(selectinload(Announcement.targets))
+        .order_by(Announcement.published_at.desc())
     )
 
     # RLS will apply the fine-grained logic for targets (CLASS, GRADE)

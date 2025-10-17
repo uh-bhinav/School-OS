@@ -1,6 +1,6 @@
 # backend/app/core/security.py
-import asyncio
 import base64
+import inspect
 import json
 import uuid
 from collections.abc import Iterable
@@ -40,7 +40,11 @@ async def _fetch_profile_for_role(
         .join(UserRole, UserRole.user_id == Profile.user_id)
         .join(RoleDefinition, RoleDefinition.role_id == UserRole.role_id)
         .where(RoleDefinition.role_name == role_name)
-        .options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
+        .options(
+            selectinload(Profile.roles).selectinload(UserRole.role_definition),
+            selectinload(Profile.teacher),
+            selectinload(Profile.student),
+        )
     )
 
     if user_uuid:
@@ -57,7 +61,11 @@ async def _fetch_profile_for_role(
             .join(UserRole, UserRole.user_id == Profile.user_id)
             .join(RoleDefinition, RoleDefinition.role_id == UserRole.role_id)
             .where(RoleDefinition.role_name == role_name)
-            .options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
+            .options(
+                selectinload(Profile.roles).selectinload(UserRole.role_definition),
+                selectinload(Profile.teacher),
+                selectinload(Profile.student),
+            )
         )
         result = await db.execute(fallback_stmt)
         profile = result.scalars().first()
@@ -120,12 +128,24 @@ async def _get_current_user_profile_from_db(
                     user_uuid=user_uuid,
                 )
 
-        user_response = await asyncio.to_thread(supabase.auth.get_user, token)
+        get_user_result = supabase.auth.get_user(token)
+        if inspect.isawaitable(get_user_result):
+            user_response = await get_user_result
+        else:
+            user_response = get_user_result
         auth_user = user_response.user
         if not auth_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-        stmt = select(Profile).where(Profile.user_id == auth_user.id).options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
+        stmt = (
+            select(Profile)
+            .where(Profile.user_id == auth_user.id)
+            .options(
+                selectinload(Profile.roles).selectinload(UserRole.role_definition),
+                selectinload(Profile.teacher),
+                selectinload(Profile.student),
+            )
+        )
         result = await db.execute(stmt)
         profile = result.scalars().first()
 
