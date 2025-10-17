@@ -1,5 +1,3 @@
-# backend/app/api/v1/endpoints/timetable.py
-
 from datetime import date
 from enum import Enum
 
@@ -46,9 +44,6 @@ async def create_new_timetable_entry(
     Create a new timetable entry. Admin only.
     """
     timetable_in.school_id = current_profile.school_id
-
-    # CRITICAL SECURITY FIX: Verify that all foreign keys belong to the user's school.
-    # We fetch each parent object to confirm its existence and school_id.
 
     # Verify Class
     target_class = await db.get(Class, timetable_in.class_id)
