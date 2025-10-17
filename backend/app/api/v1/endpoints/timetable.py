@@ -30,7 +30,6 @@ class ScheduleTargetType(str, Enum):
     STUDENT = "student"
 
 
-# Admin only: Create a new timetable entry
 @router.post(
     "/",
     response_model=TimetableEntryOut,
@@ -104,7 +103,6 @@ async def get_timetable_for_class(
     return timetable
 
 
-# Teacher only: Get personalized timetable
 @router.get(
     "/teachers/{teacher_id}",
     response_model=list[TimetableEntryOut],
@@ -140,12 +138,13 @@ async def get_teacher_schedule(
     schedule_date: date
     | None = Query(
         None,
-        description=("Optional date filter (YYYY-MM-DD) to retrieve a specific day's schedule."),
+        description=("Optional date filter (YYYY-MM-DD) to retrieve a" " specific day's schedule."),
     ),
     db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
-    """Return either the full timetable or a specific day's schedule for a teacher."""
+    """Return either the full timetable or a specific
+    day's schedule for a teacher."""
 
     target_teacher = await db.get(Teacher, teacher_id)
     if not target_teacher or target_teacher.school_id != current_profile.school_id:
@@ -167,7 +166,6 @@ async def get_teacher_schedule(
     )
 
 
-# Admin only: Update an existing timetable entry
 @router.put(
     "/{entry_id}",
     response_model=TimetableEntryOut,
@@ -185,7 +183,6 @@ async def update_timetable_entry(
     return await timetable_service.update_timetable_entry(db, db_obj=db_obj, timetable_in=timetable_in)
 
 
-# Admin only: Soft-delete an existing timetable entry
 @router.delete(
     "/{entry_id}",
     status_code=status.HTTP_204_NO_CONTENT,
