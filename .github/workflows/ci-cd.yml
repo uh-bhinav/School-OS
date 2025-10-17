@@ -20,30 +20,30 @@ jobs:
         working-directory: ./backend
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-    - name: Install dependencies
-      run: |
-        pip install poetry
-        poetry install
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
 
-    - name: Lint with Ruff
-      run: poetry run ruff check app
+      - name: Lint with Ruff
+        run: poetry run ruff check app
 
-    - name: Format with Black
-      run: poetry run black --check app
+      - name: Format with Black
+        run: poetry run black app
 
-    - name: Run tests
-      env:
-        # Populate environment variables from GitHub Secrets
-        SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
-        SUPABASE_KEY: ${{ secrets.TEST_SUPABASE_KEY }}
-        DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
-        SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-      run: poetry run pytest
+      - name: Run tests
+        env:
+          # Populate environment variables from GitHub Secrets
+          SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.TEST_SUPABASE_KEY }}
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: poetry run pytest
