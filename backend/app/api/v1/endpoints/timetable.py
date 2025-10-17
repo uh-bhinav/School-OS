@@ -1,3 +1,5 @@
+# backend/app/api/v1/endpoints/timetable.py
+
 from datetime import date
 from enum import Enum
 
@@ -16,9 +18,7 @@ from app.schemas.timetable_schema import (
     TimetableEntryOut,
     TimetableEntryUpdate,
 )
-from app.schemas.timetable_schema import (
-    TimetableEntryOut as TimetableOut,
-)
+from app.schemas.timetable_schema import TimetableEntryOut as TimetableOut
 from app.services import timetable_service
 
 router = APIRouter()
@@ -30,6 +30,7 @@ class ScheduleTargetType(str, Enum):
     STUDENT = "student"
 
 
+# Admin only: Create a new timetable entry
 @router.post(
     "/",
     response_model=TimetableEntryOut,
@@ -45,6 +46,9 @@ async def create_new_timetable_entry(
     Create a new timetable entry. Admin only.
     """
     timetable_in.school_id = current_profile.school_id
+
+    # CRITICAL SECURITY FIX: Verify that all foreign keys belong to the user's school.
+    # We fetch each parent object to confirm its existence and school_id.
 
     # Verify Class
     target_class = await db.get(Class, timetable_in.class_id)
@@ -95,14 +99,17 @@ async def get_timetable_for_class(
     """
     Get the timetable for a specific class.
     """
-    timetable = await timetable_service.get_class_timetable(
-        db=db,
-        class_id=class_id,
-        school_id=current_profile.school_id,
-    )
+    target_class = await db.get(Class, class_id)
+    if target_class and target_class.school_id != current_profile.school_id:
+        return []
+    if target_class is None:
+        return []
+
+    timetable = await timetable_service.get_class_timetable(db=db, class_id=class_id)
     return timetable
 
 
+# Teacher only: Get personalized timetable
 @router.get(
     "/teachers/{teacher_id}",
     response_model=list[TimetableEntryOut],
@@ -120,11 +127,9 @@ async def get_timetable_for_teacher(
     if not target_teacher or target_teacher.school_id != current_profile.school_id:
         raise HTTPException(status_code=404, detail="Teacher not found.")
 
-    timetable = await timetable_service.get_teacher_timetable(
-        db=db,
-        teacher_id=teacher_id,
-        school_id=current_profile.school_id,
-    )
+    timetable = await timetable_service.get_teacher_timetable(db=db, teacher_id=teacher_id)
+    if not timetable:
+        raise HTTPException(status_code=404, detail="Timetable not found for this teacher.")
     return timetable
 
 
@@ -143,8 +148,7 @@ async def get_teacher_schedule(
     db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
-    """Return either the full timetable or a specific
-    day's schedule for a teacher."""
+    """Return either the full timetable or a specific day's schedule for a teacher."""
 
     target_teacher = await db.get(Teacher, teacher_id)
     if not target_teacher or target_teacher.school_id != current_profile.school_id:
@@ -159,13 +163,10 @@ async def get_teacher_schedule(
             schedule_date=schedule_date,
         )
 
-    return await timetable_service.get_teacher_timetable(
-        db=db,
-        teacher_id=teacher_id,
-        school_id=current_profile.school_id,
-    )
+    return await timetable_service.get_teacher_timetable(db=db, teacher_id=teacher_id)
 
 
+# Admin only: Update an existing timetable entry
 @router.put(
     "/{entry_id}",
     response_model=TimetableEntryOut,
@@ -183,6 +184,7 @@ async def update_timetable_entry(
     return await timetable_service.update_timetable_entry(db, db_obj=db_obj, timetable_in=timetable_in)
 
 
+# Admin only: Soft-delete an existing timetable entry
 @router.delete(
     "/{entry_id}",
     status_code=status.HTTP_204_NO_CONTENT,

@@ -46,34 +46,16 @@ async def get_timetable_entry_by_id(db: AsyncSession, entry_id: int) -> Optional
     return result.scalars().first()
 
 
-async def get_class_timetable(
-    db: AsyncSession,
-    class_id: int,
-    *,
-    school_id: int | None = None,
-) -> list[Timetable]:
+async def get_class_timetable(db: AsyncSession, class_id: int) -> list[Timetable]:
     # Use 'Timetable.is_active' directly for the boolean check
     stmt = select(Timetable).where(Timetable.class_id == class_id, Timetable.is_active).options(*TIMETABLE_WITH_DETAILS_OPTIONS).order_by(Timetable.day_of_week, Timetable.period_id)
-
-    if school_id is not None:
-        stmt = stmt.where(Timetable.school_id == school_id)
-
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def get_teacher_timetable(
-    db: AsyncSession,
-    teacher_id: int,
-    *,
-    school_id: int | None = None,
-) -> list[Timetable]:
+async def get_teacher_timetable(db: AsyncSession, teacher_id: int) -> list[Timetable]:
     # Use 'Timetable.is_active' directly for the boolean check
     stmt = select(Timetable).where(Timetable.teacher_id == teacher_id, Timetable.is_active).options(*TIMETABLE_WITH_DETAILS_OPTIONS).order_by(Timetable.day_of_week, Timetable.period_id)
-
-    if school_id is not None:
-        stmt = stmt.where(Timetable.school_id == school_id)
-
     result = await db.execute(stmt)
     return result.scalars().all()
 
