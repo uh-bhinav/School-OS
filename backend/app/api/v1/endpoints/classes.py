@@ -13,6 +13,7 @@ from app.schemas.class_schema import (
     ClassSubjectsAssign,
     ClassUpdate,
 )
+from app.schemas.student_schema import StudentOut
 from app.services import class_service
 
 router = APIRouter()
@@ -41,9 +42,46 @@ async def create_new_class(
 
 
 @router.get(
+    "/{class_id}/students",
+    response_model=list[StudentOut],
+    dependencies=[Depends(require_role("Admin", "Teacher"))],
+)
+async def get_students_in_class(
+    class_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get all students enrolled in a specific class.
+    Teachers can only access students in their own classes.
+    """
+    # First, verify the class exists and belongs to the school
+    db_class = await class_service.get_class(db, class_id=class_id, school_id=current_profile.school_id)
+    if not db_class:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Class not found",
+        )
+
+    # Add a security check for teachers
+    if "Teacher" in current_profile.roles and db_class.class_teacher_id != current_profile.teacher.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to view students in this class.",
+        )
+
+    # This assumes you have a function in `class_service` to get students.
+    # You may need to create this service function as well.
+    students = await class_service.get_students_by_class(db=db, class_id=class_id)
+    if not students:
+        return []
+    return students
+
+
+@router.get(
     "/{class_id}",
     response_model=ClassOut,
-    dependencies=[Depends(require_role("Admin"))],
+    dependencies=[Depends(require_role("Admin", "Teacher"))],
 )
 async def get_class_by_id(
     class_id: int,

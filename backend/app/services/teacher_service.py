@@ -139,6 +139,15 @@ async def get_proctored_students(db: AsyncSession, *, teacher_id: int) -> list[S
 # --- YOUR NEWLY ADDED FUNCTION ---
 
 
+async def get_students_by_teacher(db: AsyncSession, *, teacher_id: int) -> list[Student]:
+    """
+    Retrieves all students assigned to classes taught by a specific teacher.
+    """
+    stmt = select(Student).join(Class, Student.current_class_id == Class.class_id).where(Class.class_teacher_id == teacher_id).options(selectinload(Student.profile)).order_by(Student.roll_number)  # Eager load profile to avoid extra queries
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def get_teacher_qualifications(db: AsyncSession, *, teacher_id: int) -> Optional[TeacherQualification]:
     """
     Retrieves a teacher's qualifications and years of experience.

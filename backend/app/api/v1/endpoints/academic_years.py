@@ -36,6 +36,28 @@ async def create_new_academic_year(
 
 
 @router.get(
+    "/school/{school_id}",
+    response_model=list[AcademicYearOut],
+    dependencies=[Depends(require_role("Teacher"))],  # Teachers can view
+)
+async def get_school_academic_years(
+    school_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get all active academic years for a school.
+    Teachers can only view academic years from their own school.
+    """
+    if school_id != current_profile.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view academic years for your own school.",
+        )
+    return await academic_year_service.get_all_academic_years(db=db)
+
+
+@router.get(
     "/school/{school_id}/all",
     response_model=list[AcademicYearOut],
     dependencies=[Depends(require_role("Admin"))],
