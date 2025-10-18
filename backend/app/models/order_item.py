@@ -27,6 +27,6 @@ class OrderItem(Base):
     status = Column(String)  # Individual item status (e.g., 'pending', 'fulfilled')
 
     # --- Relationships ---
-    order = relationship("Order", back_populates="items")
-    product = relationship("Product", back_populates="order_items")
+    order = relationship("Order", back_populates="items", lazy="selectin")
+    product = relationship("Product", back_populates="order_items", lazy="selectin")
     package = relationship("ProductPackage")

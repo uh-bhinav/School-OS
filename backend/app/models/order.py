@@ -33,9 +33,9 @@ class Order(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
 
     # --- Relationships ---
-    student = relationship("Student", back_populates="orders")
+    student = relationship("Student", back_populates="orders", lazy="selectin")
     parent = relationship("Profile", foreign_keys=[parent_user_id])
-    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan", lazy="selectin")
 
     # Link to payment (one-to-one)
 

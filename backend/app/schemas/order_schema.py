@@ -258,7 +258,7 @@ class OrderUpdate(BaseModel):
 
     tracking_number: Optional[str] = Field(None, max_length=100, description="Shipping tracking number (set when status changes to 'shipped')")
 
-    admin_notes: Optional[str] = Field(None, max_length=1000, description="Internal notes (not visible to parents)")
+    # admin_notes: Optional[str] = Field(None, max_length=1000, description="Internal notes (not visible to parents)")
 
     class Config:
         json_schema_extra = {"example": {"status": "shipped", "tracking_number": "TRK123456789", "admin_notes": "Dispatched via BlueDart"}}
@@ -321,7 +321,7 @@ class OrderOut(BaseModel):
 
     delivery_notes: Optional[str] = None
     tracking_number: Optional[str] = None
-    admin_notes: Optional[str] = None
+    # admin_notes: Optional[str] = None
 
     # Order items (hydrated with product details)
     items: list[OrderItemOut] = Field(default_factory=list, description="List of order items with product details")
@@ -427,7 +427,7 @@ class OrderOut(BaseModel):
                 "status": "processing",
                 "delivery_notes": "Please deliver to admin office",
                 "tracking_number": None,
-                "admin_notes": None,
+                # "admin_notes": None,
                 "items": [{"id": 201, "order_id": 101, "product_id": 42, "item_name": "House T-Shirt (Blue)", "quantity": 2, "price_at_time_of_order": "750.00", "status": "pending", "line_total": "1500.00"}],
                 "payment_id": 601,
                 "payment_status": "captured",

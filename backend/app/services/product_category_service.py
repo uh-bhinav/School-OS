@@ -1,6 +1,6 @@
 # backend/app/services/product_category_service.py
 """
-Product Category Service Layer for SchoolOS E-commerce Module.
+Product Category Service Layer for SchoolOS E-commerce Module (ASYNC REFACTORED).
 
 This service handles all business logic for managing product categories.
 All category operations are school-scoped and multi-tenant secure.
@@ -11,10 +11,10 @@ Security Architecture:
 - RLS policies provide defense-in-depth at database layer
 """
 
-
 from fastapi import HTTPException, status
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.models.product import Product
 from app.models.product_category import ProductCategory
@@ -27,14 +27,12 @@ from app.schemas.product_category_schema import (
 
 
 class ProductCategoryService:
-    """Service class for product category operations."""
+    """Service class for asynchronous product category operations."""
 
-    @staticmethod
-    async def create_category(
-        db: AsyncSession,
-        category_in: ProductCategoryCreate,
-        current_profile: Profile,
-    ) -> ProductCategory:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def create_category(self, category_in: ProductCategoryCreate, current_profile: Profile) -> ProductCategory:
         """
         Create a new product category (Admin only).
 
@@ -47,7 +45,6 @@ class ProductCategoryService:
         - Name is stored in title case (normalized in schema)
 
         Args:
-            db: Database session
             category_in: Category creation data
             current_profile: Authenticated user profile (contains school_id)
 
@@ -62,10 +59,10 @@ class ProductCategoryService:
             and_(
                 ProductCategory.school_id == current_profile.school_id,
                 func.lower(ProductCategory.category_name) == category_in.category_name.lower(),
-                ProductCategory.is_active.isTrue(),
+                # ProductCategory.is_active.is_(True),
             )
         )
-        result = await db.execute(stmt)
+        result = await self.db.execute(stmt)
         existing = result.scalar_one_or_none()
 
         if existing:
@@ -78,29 +75,23 @@ class ProductCategoryService:
         db_category = ProductCategory(
             school_id=current_profile.school_id,  # CRITICAL: From JWT, not client
             category_name=category_in.category_name,
-            description=category_in.description,
-            display_order=category_in.display_order,
-            icon_url=category_in.icon_url,
-            is_active=True,
+            # description=category_in.description,
+            # display_order=category_in.display_order,
+            # icon_url=category_in.icon_url,
+            # is_active=True,
         )
 
-        db.add(db_category)
-        await db.commit()
-        await db.refresh(db_category)
+        self.db.add(db_category)
+        await self.db.commit()
+        await self.db.refresh(db_category)
 
         return db_category
 
-    @staticmethod
-    async def get_category_by_id(
-        db: AsyncSession,
-        category_id: int,
-        school_id: int,
-    ) -> ProductCategory:
+    async def get_category_by_id(self, category_id: int, school_id: int) -> ProductCategory:
         """
         Get a single category by ID.
 
         Args:
-            db: Database session
             category_id: Category ID
             school_id: School ID (for multi-tenant security)
 
@@ -116,7 +107,7 @@ class ProductCategoryService:
                 ProductCategory.school_id == school_id,
             )
         )
-        result = await db.execute(stmt)
+        result = await self.db.execute(stmt)
         db_category = result.scalar_one_or_none()
 
         if not db_category:
@@ -127,17 +118,11 @@ class ProductCategoryService:
 
         return db_category
 
-    @staticmethod
-    async def get_all_categories(
-        db: AsyncSession,
-        school_id: int,
-        include_inactive: bool = False,
-    ) -> list[ProductCategory]:
+    async def get_all_categories(self, school_id: int, include_inactive: bool = False) -> list[ProductCategory]:
         """
         Get all categories for a school.
 
         Args:
-            db: Database session
             school_id: School ID
             include_inactive: Whether to include soft-deleted categories (admin only)
 
@@ -148,29 +133,24 @@ class ProductCategoryService:
 
         # Parents should only see active categories
         if not include_inactive:
-            stmt = stmt.where(ProductCategory.is_active.isTrue())
+            stmt = stmt.where(ProductCategory.is_active.is_(True))
 
-        # Order by display_order (nulls last), then by name
+        # Order by display_order (nulls first), then by name
         stmt = stmt.order_by(
             ProductCategory.display_order.asc().nulls_first(),
             ProductCategory.category_name.asc(),
         )
 
-        result = await db.execute(stmt)
+        result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    @staticmethod
-    async def get_categories_with_product_counts(
-        db: AsyncSession,
-        school_id: int,
-    ) -> list[ProductCategoryWithCount]:
+    async def get_categories_with_product_counts(self, school_id: int) -> list[ProductCategoryWithCount]:
         """
         Get all categories with product counts (Admin dashboard).
 
         This uses subqueries to efficiently compute product counts.
 
         Args:
-            db: Database session
             school_id: School ID
 
         Returns:
@@ -196,7 +176,7 @@ class ProductCategoryService:
             .where(
                 and_(
                     Product.school_id == school_id,
-                    Product.is_active.isTrue(),
+                    Product.is_active.is_(True),
                 )
             )
             .group_by(Product.category_id)
@@ -225,7 +205,7 @@ class ProductCategoryService:
             )
         )
 
-        result = await db.execute(stmt)
+        result = await self.db.execute(stmt)
         categories = result.all()
 
         # Convert to schema objects
@@ -249,19 +229,13 @@ class ProductCategoryService:
 
         return result_list
 
-    @staticmethod
-    async def update_category(
-        db: AsyncSession,
-        db_category: ProductCategory,
-        category_update: ProductCategoryUpdate,
-    ) -> ProductCategory:
+    async def update_category(self, db_category: ProductCategory, category_update: ProductCategoryUpdate) -> ProductCategory:
         """
         Update an existing category.
 
         Design Pattern: Partial update (only provided fields are updated).
 
         Args:
-            db: Database session
             db_category: Existing category instance (fetched by get_category_by_id)
             category_update: Update data
 
@@ -278,10 +252,10 @@ class ProductCategoryService:
                     ProductCategory.school_id == db_category.school_id,
                     func.lower(ProductCategory.category_name) == category_update.category_name.lower(),
                     ProductCategory.category_id != db_category.category_id,
-                    ProductCategory.is_active.isTrue(),
+                    ProductCategory.is_active.is_(True),
                 )
             )
-            result = await db.execute(stmt)
+            result = await self.db.execute(stmt)
             existing = result.scalar_one_or_none()
 
             if existing:
@@ -295,16 +269,12 @@ class ProductCategoryService:
         for field, value in update_data.items():
             setattr(db_category, field, value)
 
-        await db.commit()
-        await db.refresh(db_category)
+        await self.db.commit()
+        await self.db.refresh(db_category)
 
         return db_category
 
-    @staticmethod
-    async def delete_category(
-        db: AsyncSession,
-        db_category: ProductCategory,
-    ) -> ProductCategory:
+    async def delete_category(self, db_category: ProductCategory) -> ProductCategory:
         """
         Soft-delete a category (sets is_active = False).
 
@@ -312,7 +282,6 @@ class ProductCategoryService:
         Products in this category remain linked but category becomes hidden.
 
         Args:
-            db: Database session
             db_category: Category instance to delete
 
         Returns:
@@ -325,10 +294,10 @@ class ProductCategoryService:
         stmt = select(func.count(Product.product_id)).where(
             and_(
                 Product.category_id == db_category.category_id,
-                Product.is_active.isTrue(),
+                Product.is_active.is_(True),
             )
         )
-        result = await db.execute(stmt)
+        result = await self.db.execute(stmt)
         active_product_count = result.scalar()
 
         if active_product_count > 0:
@@ -339,24 +308,18 @@ class ProductCategoryService:
 
         # Soft delete
         db_category.is_active = False
-        await db.commit()
-        await db.refresh(db_category)
+        await self.db.commit()
+        await self.db.refresh(db_category)
 
         return db_category
 
-    @staticmethod
-    async def bulk_reorder_categories(
-        db: AsyncSession,
-        school_id: int,
-        category_orders: list[dict],
-    ) -> list[ProductCategory]:
+    async def bulk_reorder_categories(self, school_id: int, category_orders: list[dict]) -> list[ProductCategory]:
         """
         Bulk update display_order for multiple categories.
 
         Use Case: Admin drags categories to reorder in UI.
 
         Args:
-            db: Database session
             school_id: School ID (for security)
             category_orders: List of {"category_id": int, "display_order": int}
 
@@ -379,7 +342,7 @@ class ProductCategoryService:
                     ProductCategory.school_id == school_id,
                 )
             )
-            result = await db.execute(stmt)
+            result = await self.db.execute(stmt)
             db_category = result.scalar_one_or_none()
 
             if not db_category:
@@ -391,28 +354,21 @@ class ProductCategoryService:
             db_category.display_order = new_order
             updated_categories.append(db_category)
 
-        await db.commit()
+        await self.db.commit()
 
         # Refresh all updated categories
         for category in updated_categories:
-            await db.refresh(category)
+            await self.db.refresh(category)
 
         return updated_categories
 
-    @staticmethod
-    async def bulk_activate_categories(
-        db: AsyncSession,
-        school_id: int,
-        category_ids: list[int],
-        is_active: bool,
-    ) -> list[ProductCategory]:
+    async def bulk_activate_categories(self, school_id: int, category_ids: list[int], is_active: bool) -> list[ProductCategory]:
         """
         Bulk activate/deactivate categories.
 
         Use Case: Admin hides seasonal categories temporarily.
 
         Args:
-            db: Database session
             school_id: School ID (for security)
             category_ids: List of category IDs
             is_active: True to activate, False to deactivate
@@ -430,7 +386,7 @@ class ProductCategoryService:
                 ProductCategory.school_id == school_id,
             )
         )
-        result = await db.execute(stmt)
+        result = await self.db.execute(stmt)
         categories = list(result.scalars().all())
 
         # Validate all categories were found
@@ -446,10 +402,10 @@ class ProductCategoryService:
         for category in categories:
             category.is_active = is_active
 
-        await db.commit()
+        await self.db.commit()
 
         # Refresh all
         for category in categories:
-            await db.refresh(category)
+            await self.db.refresh(category)
 
         return categories

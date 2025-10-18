@@ -26,10 +26,10 @@ class CartItem(Base):
     # --- Relationships ---
 
     # Many-to-one relationship with Cart
-    cart = relationship("Cart", back_populates="items")
+    cart = relationship("Cart", back_populates="items", lazy="selectin")
 
     # Many-to-one relationship with Product
-    product = relationship("Product", back_populates="cart_items")
+    product = relationship("Product", back_populates="cart_items", lazy="selectin")
 
     # --- Constraints ---
     __table_args__ = (

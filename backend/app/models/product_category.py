@@ -23,8 +23,8 @@ class ProductCategory(Base):
 
     # Many-to-one relationship with School
     # This assumes the 'School' model has a 'product_categories' back-reference.
-    school = relationship("School", back_populates="product_categories")
+    school = relationship("School", back_populates="product_categories", lazy="selectin")
 
     # One-to-many relationship with Product
     # A category can contain multiple products.
-    products = relationship("Product", back_populates="category")
+    products = relationship("Product", back_populates="category", lazy="selectin")
