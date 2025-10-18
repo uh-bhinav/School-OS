@@ -39,4 +39,13 @@ async def get_db() -> AsyncSession:
     if SessionLocal is None:
         raise RuntimeError("Database engine not initialized. Call init_engine() first.")
     async with SessionLocal() as session:
-        yield session
+        try:
+            yield session
+            # If the route completes successfully, commit
+            await session.commit()
+        except Exception:
+            # If an error occurs, rollback
+            await session.rollback()
+            raise
+        finally:
+            await session.close()

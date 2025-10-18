@@ -50,9 +50,9 @@ class InvoiceOut(BaseModel):
     status: str
     fine_amount: Optional[Decimal]
     payment_date: Optional[date]
+    payment_status: str
 
     # CHANGE: Added a nested list to show all payments for this invoice.
-    payments: list[PaymentOut] = []
     items: list[InvoiceItemOut] = []
 
     # CHANGE: Implemented total_due as a computed field.

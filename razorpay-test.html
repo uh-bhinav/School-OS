@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Razorpay Test Payment - School OS</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-initiate {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-initiate:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-pay {
+            background: #10b981;
+            color: white;
+            grid-column: 1 / -1;
+        }
+
+        .btn-pay:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-pay:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .response-box {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+            color: #333;
+        }
+
+        .response-label {
+            color: #666;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-family: sans-serif;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-weight: 600;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #7f1d1d;
+            border: 1px solid #fecaca;
+        }
+
+        .status.loading {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .copy-btn {
+            background: #6b7280;
+            color: white;
+            padding: 6px 12px;
+            font-size: 12px;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .copy-btn:hover {
+            background: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 School OS - Payment Test</h1>
+        <p class="subtitle">Simulate Razorpay payment for testing</p>
+
+        <div class="info-box">
+            <strong>Test Mode Instructions:</strong><br>
+            1. Enter backend URL and invoice ID<br>
+            2. Click "Step 1: Initiate Payment" to get Razorpay Order ID<br>
+            3. Click "Step 2: Pay Now" to open Razorpay checkout<br>
+            4. Use test card: <strong>4111 1111 1111 1111</strong>, any expiry, any CVV<br>
+            5. Payment details will appear below
+        </div>
+
+        <div class="form-group">
+            <label for="backendUrl">Backend URL:</label>
+            <input type="text" id="backendUrl" value="http://127.0.0.1:8000" placeholder="http://127.0.0.1:8000">
+        </div>
+
+        <div class="form-group">
+            <label for="invoiceId">Invoice ID:</label>
+            <input type="number" id="invoiceId" value="105" placeholder="105">
+        </div>
+
+        <div class="form-group">
+            <label for="token">Auth Token (if needed):</label>
+            <input type="text" id="token" placeholder="Leave empty if no auth" style="font-size: 12px;">
+        </div>
+
+        <div class="button-group">
+            <button class="btn-initiate" onclick="initiatePayment()">Step 1: Initiate Payment</button>
+            <button class="btn-pay" id="payBtn" disabled onclick="openCheckout()">Step 2: Pay Now</button>
+        </div>
+
+        <div id="status" class="hidden"></div>
+
+        <div id="responseBox" class="hidden">
+            <div class="response-label">Payment Response:</div>
+            <div class="response-box" id="response"></div>
+            <button class="copy-btn" onclick="copyResponse()">Copy Response</button>
+        </div>
+    </div>
+
+    <script>
+        let paymentData = null;
+        const backendUrl = () => document.getElementById('backendUrl').value;
+        const invoiceId = () => document.getElementById('invoiceId').value;
+        const token = () => document.getElementById('token').value;
+
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.classList.remove('hidden');
+        }
+
+        function showResponse(data) {
+            const responseEl = document.getElementById('responseBox');
+            const responseContent = document.getElementById('response');
+            responseContent.textContent = JSON.stringify(data, null, 2);
+            responseEl.classList.remove('hidden');
+        }
+
+        async function initiatePayment() {
+            showStatus('Initiating payment...', 'loading');
+
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+
+                if (token()) {
+                    headers['Authorization'] = `Bearer ${token()}`;
+                }
+
+                const response = await fetch(
+                    `${backendUrl()}/api/v1/finance/payments/initiate`,
+                    {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({
+                            invoice_id: parseInt(invoiceId())
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to initiate payment');
+                }
+
+                paymentData = await response.json();
+
+                showStatus('✅ Payment initiated successfully! Click "Step 2: Pay Now"', 'success');
+                document.getElementById('payBtn').disabled = false;
+                showResponse(paymentData);
+
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        function openCheckout() {
+            if (!paymentData) {
+                showStatus('Please initiate payment first', 'error');
+                return;
+            }
+
+            const options = {
+                key: paymentData.razorpay_key_id,
+                order_id: paymentData.razorpay_order_id,
+                amount: paymentData.amount,
+                currency: 'INR',
+                name: paymentData.school_name || 'School OS',
+                description: paymentData.description || 'Fee Payment',
+
+                handler: function(response) {
+                    showStatus('💳 Payment successful! Processing...', 'loading');
+
+                    // Show the payment response
+                    const fullResponse = {
+                        step: 'Payment Completed',
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_signature: response.razorpay_signature,
+                        internal_payment_id: paymentData.internal_payment_id,
+                        next_step: 'Send these values to /payments/verify endpoint'
+                    };
+
+                    showResponse(fullResponse);
+                    showStatus('✅ Payment received! Use the data above to verify payment on backend', 'success');
+
+                    console.log('Razorpay Payment Response:', response);
+                },
+
+                prefill: {
+                    name: 'Test Student',
+                    email: 'test@school.os',
+                    contact: '9876543210'
+                },
+
+                theme: {
+                    color: '#667eea'
+                },
+
+                modal: {
+                    ondismiss: function() {
+                        showStatus('Payment cancelled by user', 'error');
+                    }
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+
+        function copyResponse() {
+            const responseContent = document.getElementById('response').textContent;
+            navigator.clipboard.writeText(responseContent).then(() => {
+                alert('Response copied to clipboard!');
+            });
+        }
+    </script>
+</body>
+</html>

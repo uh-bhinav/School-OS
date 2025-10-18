@@ -12,7 +12,7 @@ class Payment(Base):
     __tablename__ = "payments"
 
     id = Column(Integer, primary_key=True)
-    invoice_id = Column(Integer, ForeignKey("invoices.id"))
+    invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="CASCADE"), nullable=True)
     school_id = Column(Integer, ForeignKey("schools.school_id"))
     student_id = Column(Integer, ForeignKey("students.student_id"))
     user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id"))

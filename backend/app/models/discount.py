@@ -1,7 +1,6 @@
 # app/models/discount.py
 
-from sqlalchemy import JSON, TIMESTAMP, Boolean, CheckConstraint, Column, ForeignKey, Integer, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy import JSON, TIMESTAMP, Boolean, CheckConstraint, Column, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
@@ -19,7 +18,16 @@ class Discount(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
 
-    type = Column(ENUM(DiscountType, name="discount_type", create_type=False), nullable=False)
+    type = Column(
+        Enum(
+            DiscountType,
+            name="discount_type",
+            create_type=False,
+            # This line is the critical fix. It tells SQLAlchemy to use the enum's value.
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+    )
     value = Column(Numeric(10, 2), nullable=False)
     rules = Column(JSON, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)

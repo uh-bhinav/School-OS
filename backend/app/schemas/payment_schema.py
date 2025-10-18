@@ -1,21 +1,25 @@
 # app/schemas/payment.py
 
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 
 class PaymentBase(BaseModel):
-    amount_paid: float
-    payment_method: str
-    status: str
+    amount_paid: Optional[Decimal]
+    payment_method: Optional[str]
+    status: Optional[str]
     transaction_id: Optional[str] = None
-    payment_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    payment_date: Optional[datetime] = None
 
 
 class PaymentCreate(PaymentBase):
     invoice_id: int
+    amount_paid: Decimal  # Required when creating a payment log
+    payment_method: str  # Required when creating a payment log
+    payment_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class PaymentOut(PaymentBase):

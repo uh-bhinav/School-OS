@@ -6,12 +6,16 @@ from app.schemas.audit_schema import AuditCreate
 
 async def create_audit_log(db: AsyncSession, *, audit_data: AuditCreate) -> Audit:
     """
-    Creates a new entry in the audits table to record a user action.
+    Creates a new audit log entry and adds it to the current session
+    WITHOUT committing the transaction.
     """
     db_audit = Audit(**audit_data.model_dump())
     db.add(db_audit)
-    # The commit here is crucial. We want the audit log to be saved
-    # as part of the main transaction of the calling service.
-    # The calling service will be responsible for the final db.commit().
-    await db.flush()  # Use flush to assign the audit_id without ending the transaction
+
+    # --- THIS IS THE CRITICAL PART ---
+    # We use flush() to send the data to the DB and get an ID,
+    # but the transaction remains open.
+    # We DO NOT call commit() here.
+    await db.flush()
+
     return db_audit

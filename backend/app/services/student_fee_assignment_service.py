@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.student_fee_assignment import StudentFeeAssignment
 from app.schemas.audit_schema import AuditCreate
@@ -9,34 +10,41 @@ from app.services import audit_service
 
 
 class StudentFeeAssignmentService:
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
-    def create_or_update_override(self, *, override_data: StudentFeeAssignmentCreate, user_id: UUID, ip_address: str) -> StudentFeeAssignment:
+    async def create_or_update_override(self, *, override_data: StudentFeeAssignmentCreate, user_id: UUID, ip_address: str) -> StudentFeeAssignment:
         """
-        Creates or updates a fee override for a specific student.
-        This allows an admin to selectively disable a fee component, like 'Bus Fee',
-        for a student who deviates from their class default [cite: 324-325].
+        Creates a new fee override or updates an existing one for a student,
+        using fully asynchronous database patterns.
         """
-        # Check if an override for this student and component already exists
-        existing_override = self.db.query(StudentFeeAssignment).filter_by(student_id=override_data.student_id, fee_component_id=override_data.fee_component_id).first()
+        # --- FIX: Use the correct async 'select' pattern ---
+        stmt = select(StudentFeeAssignment).where(StudentFeeAssignment.student_id == override_data.student_id, StudentFeeAssignment.fee_component_id == override_data.fee_component_id)
+        result = await self.db.execute(stmt)
+        existing_override = result.scalars().first()
 
         action_type = "UPDATE" if existing_override else "CREATE"
 
         if existing_override:
-            # If it exists, update it with the new 'is_active' status
+            # Update the existing record
             existing_override.is_active = override_data.is_active
-            db_obj = existing_override
+            override_to_return = existing_override
         else:
-            # If it doesn't exist, create a new override record
-            db_obj = StudentFeeAssignment(**override_data.model_dump())
-            self.db.add(db_obj)
+            # Create a new record
+            new_override = StudentFeeAssignment(**override_data.model_dump())
+            self.db.add(new_override)
+            override_to_return = new_override
 
-        self.db.flush()
+        await self.db.flush()  # Flush to get the ID for the audit log
 
-        audit_log = AuditCreate(user_id=user_id, action_type=action_type, table_name="student_fee_assignments", record_id=str(db_obj.id), ip_address=ip_address, new_data=override_data.model_dump())
-        audit_service.create_audit_log(db=self.db, audit_data=audit_log)
+        # Create the audit log
+        audit_log = AuditCreate(user_id=user_id, action_type=action_type, table_name="student_fee_assignments", record_id=str(override_to_return.id), ip_address=ip_address, new_data=override_data.model_dump())
 
-        self.db.commit()
-        self.db.refresh(db_obj)
-        return db_obj
+        # Call the audit service (which correctly does not commit)
+        await audit_service.create_audit_log(db=self.db, audit_data=audit_log)
+
+        # Commit the entire transaction and refresh the object
+        await self.db.commit()
+        await self.db.refresh(override_to_return)
+
+        return override_to_return

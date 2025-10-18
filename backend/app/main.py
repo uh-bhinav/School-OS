@@ -26,14 +26,21 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 logger.info("Environment variables loaded")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan manager for the FastAPI application.
+    This function will be called once when the application starts.
+    """
+    init_engine()
+    yield
+    # Any cleanup code would go here, after the yield.
+
+
 # Initialize FastAPI application
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    description="SchoolOS - Comprehensive School Management ERP System with AI Agents",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json", description="SchoolOS - Comprehensive School Management ERP System with AI Agents", version="1.0.0", docs_url="/docs", redoc_url="/redoc", lifespan=lifespan
 )
 
 # Set up CORS middleware for development
@@ -41,8 +48,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
 )
 logger.info("CORS middleware configured")
 
@@ -67,19 +74,7 @@ async def shutdown_event():
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """
-    Lifespan manager for the FastAPI application.
-    This function will be called once when the application starts.
-    """
-    init_engine()
-    yield
-    # Any cleanup code would go here, after the yield.
-
-
-app = FastAPI(title="SchoolOS API", lifespan=lifespan)
+# app = FastAPI(title="SchoolOS API", lifespan=lifespan)
 
 app.include_router(v1_api_router, prefix="/v1")
 

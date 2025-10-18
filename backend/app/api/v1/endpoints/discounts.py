@@ -15,8 +15,8 @@ def get_discount_service(db: AsyncSession = Depends(get_db)):
     return DiscountService(db)
 
 
-@router.post("/templates", response_model=DiscountOut, status_code=201, dependencies=[Depends(require_role("Admin"))])
-def create_discount_template(
+@router.post("/discounts/templates", response_model=DiscountOut, status_code=201, dependencies=[Depends(require_role("Admin"))])
+async def create_discount_template(
     discount_in: DiscountCreate,
     service: DiscountService = Depends(get_discount_service),
 ):
@@ -24,7 +24,7 @@ def create_discount_template(
     Create a new reusable discount template (e.g., "Scholarship").
     This is the endpoint an admin like Mr. Verma uses to populate the discount library [cite: 507-509].
     """
-    return service.create_discount_template(discount_data=discount_in)
+    return await service.create_discount_template(discount_data=discount_in)
 
 
 @router.get("/discounts/templates/school/{school_id}", response_model=list[DiscountOut])
@@ -36,8 +36,8 @@ async def get_discount_templates_for_school(
     return await service.get_discounts_by_school(school_id=school_id)
 
 
-@router.post("/apply-to-student", response_model=StudentFeeDiscountOut, status_code=201, dependencies=[Depends(require_role("Admin"))])
-def apply_discount_to_student(
+@router.post("/discounts/apply-to-student", response_model=StudentFeeDiscountOut, status_code=201, dependencies=[Depends(require_role("Admin"))])
+async def apply_discount_to_student(
     application_in: StudentFeeDiscountCreate,
     request: Request,
     service: DiscountService = Depends(get_discount_service),
@@ -47,7 +47,7 @@ def apply_discount_to_student(
     Apply a discount template to a specific student.
     This creates the link in the student_fee_discounts table [cite: 518-520].
     """
-    return service.apply_discount_to_student(application_data=application_in, user_id=current_user.id, ip_address=request.client.host)
+    return await service.apply_discount_to_student(application_data=application_in, user_id=current_user.user_id, ip_address=request.client.host)
 
 
 @router.get("/templates/school/{school_id}", response_model=list[DiscountOut])

@@ -1,7 +1,12 @@
 # backend/app/core/security.py
+import os
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
 import requests
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -115,3 +120,28 @@ async def invite_user(
         )
 
     return response.json()
+
+
+# --- SECURITY CRITICAL ---
+# These values MUST be set in your .env file
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
+
+
+def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
+    """
+    Creates a new JWT access token.
+
+    :param subject: The subject of the token (e.g., user ID).
+    :param expires_delta: Optional timedelta for token expiry.
+    :return: The encoded JWT token string.
+    """
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    to_encode = {"exp": expire, "sub": str(subject)}
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
