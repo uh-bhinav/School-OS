@@ -1,6 +1,6 @@
 # backend/app/services/product_service.py
 """
-Product Service Layer for SchoolOS E-commerce Module.
+Product Service Layer for SchoolOS E-commerce Module (ASYNC REFACTORED).
 
 This service handles all business logic for managing products (inventory items).
 All product operations are school-scoped and multi-tenant secure.
@@ -13,7 +13,9 @@ Security Architecture:
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_, func
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from app.models.product import Product
 from app.models.product_category import ProductCategory
@@ -22,14 +24,12 @@ from app.schemas.product_schema import ProductCreate, ProductStockAdjustment, Pr
 
 
 class ProductService:
-    """Service class for product operations."""
+    """Service class for asynchronous product operations."""
 
-    @staticmethod
-    async def create_product(
-        db: Session,
-        product_in: ProductCreate,
-        current_profile: Profile,
-    ) -> Product:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def create_product(self, product_in: ProductCreate, current_profile: Profile) -> Product:
         """
         Create a new product (Admin only).
 
@@ -43,7 +43,6 @@ class ProductService:
         - Category must exist and belong to same school
 
         Args:
-            db: Database session
             product_in: Product creation data
             current_profile: Authenticated user profile (contains school_id)
 
@@ -56,16 +55,14 @@ class ProductService:
         """
         # Validate category exists and belongs to school
         if product_in.category_id:
-            category = (
-                db.query(ProductCategory)
-                .filter(
-                    and_(
-                        ProductCategory.category_id == product_in.category_id,
-                        ProductCategory.school_id == current_profile.school_id,
-                    )
+            stmt = select(ProductCategory).where(
+                and_(
+                    ProductCategory.category_id == product_in.category_id,
+                    ProductCategory.school_id == current_profile.school_id,
                 )
-                .first()
             )
+            result = await self.db.execute(stmt)
+            category = result.scalars().first()
 
             if not category:
                 raise HTTPException(
@@ -74,17 +71,15 @@ class ProductService:
                 )
 
         # Check for duplicate product name within school
-        existing = (
-            db.query(Product)
-            .filter(
-                and_(
-                    Product.school_id == current_profile.school_id,
-                    func.lower(Product.name) == product_in.name.lower(),
-                    Product.is_active.is_(True),
-                )
+        stmt = select(Product).where(
+            and_(
+                Product.school_id == current_profile.school_id,
+                func.lower(Product.name) == product_in.name.lower(),
+                Product.is_active.is_(True),
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        existing = result.scalars().first()
 
         if existing:
             raise HTTPException(
@@ -94,7 +89,9 @@ class ProductService:
 
         # Check for duplicate SKU (globally unique)
         if product_in.sku:
-            existing_sku = db.query(Product).filter(Product.sku == product_in.sku).first()
+            stmt = select(Product).where(Product.sku == product_in.sku)
+            result = await self.db.execute(stmt)
+            existing_sku = result.scalars().first()
 
             if existing_sku:
                 raise HTTPException(
@@ -118,23 +115,17 @@ class ProductService:
             is_active=product_in.is_active,
         )
 
-        db.add(db_product)
-        db.commit()
-        db.refresh(db_product)
+        self.db.add(db_product)
+        await self.db.commit()
+        await self.db.refresh(db_product)
 
         return db_product
 
-    @staticmethod
-    async def get_product_by_id(
-        db: Session,
-        product_id: int,
-        school_id: int,
-    ) -> Product:
+    async def get_product_by_id(self, product_id: int, school_id: int) -> Product:
         """
         Get a single product by ID with category details.
 
         Args:
-            db: Database session
             product_id: Product ID
             school_id: School ID (for multi-tenant security)
 
@@ -144,17 +135,18 @@ class ProductService:
         Raises:
             HTTPException 404: If product not found or belongs to different school
         """
-        db_product = (
-            db.query(Product)
-            .options(joinedload(Product.category))
-            .filter(
+        stmt = (
+            select(Product)
+            .options(selectinload(Product.category))
+            .where(
                 and_(
                     Product.product_id == product_id,
                     Product.school_id == school_id,
                 )
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        db_product = result.scalars().first()
 
         if not db_product:
             raise HTTPException(
@@ -164,9 +156,8 @@ class ProductService:
 
         return db_product
 
-    @staticmethod
     async def get_all_products(
-        db: Session,
+        self,
         school_id: int,
         category_id: int = None,
         include_inactive: bool = False,
@@ -175,7 +166,6 @@ class ProductService:
         Get all products for a school with optional filters.
 
         Args:
-            db: Database session
             school_id: School ID
             category_id: Optional category filter
             include_inactive: Whether to include inactive products (admin only)
@@ -183,34 +173,29 @@ class ProductService:
         Returns:
             List of Product instances with category loaded, ordered by name
         """
-        query = db.query(Product).options(joinedload(Product.category)).filter(Product.school_id == school_id)
+        stmt = select(Product).options(selectinload(Product.category)).where(Product.school_id == school_id)
 
         # Filter by category if provided
         if category_id:
-            query = query.filter(Product.category_id == category_id)
+            stmt = stmt.where(Product.category_id == category_id)
 
         # Parents should only see active products
         if not include_inactive:
-            query = query.filter(Product.is_active.is_(True))
+            stmt = stmt.where(Product.is_active.is_(True))
 
         # Order by name
-        query = query.order_by(Product.name.asc())
+        stmt = stmt.order_by(Product.name.asc())
 
-        return query.all()
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
 
-    @staticmethod
-    async def update_product(
-        db: Session,
-        db_product: Product,
-        product_update: ProductUpdate,
-    ) -> Product:
+    async def update_product(self, db_product: Product, product_update: ProductUpdate) -> Product:
         """
         Update an existing product.
 
         Design Pattern: Partial update (only provided fields are updated).
 
         Args:
-            db: Database session
             db_product: Existing product instance (fetched by get_product_by_id)
             product_update: Update data
 
@@ -223,18 +208,16 @@ class ProductService:
         """
         # Check for name conflict if name is being changed
         if product_update.name and product_update.name.lower() != db_product.name.lower():
-            existing = (
-                db.query(Product)
-                .filter(
-                    and_(
-                        Product.school_id == db_product.school_id,
-                        func.lower(Product.name) == product_update.name.lower(),
-                        Product.product_id != db_product.product_id,
-                        Product.is_active.is_(True),
-                    )
+            stmt = select(Product).where(
+                and_(
+                    Product.school_id == db_product.school_id,
+                    func.lower(Product.name) == product_update.name.lower(),
+                    Product.product_id != db_product.product_id,
+                    Product.is_active.is_(True),
                 )
-                .first()
             )
+            result = await self.db.execute(stmt)
+            existing = result.scalars().first()
 
             if existing:
                 raise HTTPException(
@@ -244,16 +227,14 @@ class ProductService:
 
         # Check for SKU conflict if SKU is being changed
         if product_update.sku and product_update.sku != db_product.sku:
-            existing_sku = (
-                db.query(Product)
-                .filter(
-                    and_(
-                        Product.sku == product_update.sku,
-                        Product.product_id != db_product.product_id,
-                    )
+            stmt = select(Product).where(
+                and_(
+                    Product.sku == product_update.sku,
+                    Product.product_id != db_product.product_id,
                 )
-                .first()
             )
+            result = await self.db.execute(stmt)
+            existing_sku = result.scalars().first()
 
             if existing_sku:
                 raise HTTPException(
@@ -263,16 +244,14 @@ class ProductService:
 
         # Validate new category if being changed
         if product_update.category_id and product_update.category_id != db_product.category_id:
-            category = (
-                db.query(ProductCategory)
-                .filter(
-                    and_(
-                        ProductCategory.category_id == product_update.category_id,
-                        ProductCategory.school_id == db_product.school_id,
-                    )
+            stmt = select(ProductCategory).where(
+                and_(
+                    ProductCategory.category_id == product_update.category_id,
+                    ProductCategory.school_id == db_product.school_id,
                 )
-                .first()
             )
+            result = await self.db.execute(stmt)
+            category = result.scalars().first()
 
             if not category:
                 raise HTTPException(
@@ -285,23 +264,18 @@ class ProductService:
         for field, value in update_data.items():
             setattr(db_product, field, value)
 
-        db.commit()
-        db.refresh(db_product)
+        await self.db.commit()
+        await self.db.refresh(db_product)
 
         return db_product
 
-    @staticmethod
-    async def delete_product(
-        db: Session,
-        db_product: Product,
-    ) -> Product:
+    async def delete_product(self, db_product: Product) -> Product:
         """
         Soft-delete a product (sets is_active = False).
 
         Business Rule: Products are NEVER hard-deleted to preserve order history.
 
         Args:
-            db: Database session
             db_product: Product instance to delete
 
         Returns:
@@ -313,15 +287,9 @@ class ProductService:
         # Check if product is in any active packages
         from app.models.product_package import PackageItem
 
-        active_package_count = (
-            db.query(func.count(PackageItem.package_id))
-            .filter(
-                and_(
-                    PackageItem.product_id == db_product.product_id,
-                )
-            )
-            .scalar()
-        )
+        stmt = select(func.count(PackageItem.package_id)).where(PackageItem.product_id == db_product.product_id)
+        result = await self.db.execute(stmt)
+        active_package_count = result.scalar()
 
         if active_package_count > 0:
             raise HTTPException(
@@ -331,17 +299,12 @@ class ProductService:
 
         # Soft delete
         db_product.is_active = False
-        db.commit()
-        db.refresh(db_product)
+        await self.db.commit()
+        await self.db.refresh(db_product)
 
         return db_product
 
-    @staticmethod
-    async def adjust_stock(
-        db: Session,
-        db_product: Product,
-        adjustment: ProductStockAdjustment,
-    ) -> Product:
+    async def adjust_stock(self, db_product: Product, adjustment: ProductStockAdjustment) -> Product:
         """
         Adjust product stock quantity (Admin only).
 
@@ -351,7 +314,6 @@ class ProductService:
         - Manual inventory correction
 
         Args:
-            db: Database session
             db_product: Product instance
             adjustment: Adjustment amount and reason
 
@@ -380,25 +342,18 @@ class ProductService:
         #     details={"adjustment": adjustment.adjustment, "reason": adjustment.reason}
         # )
 
-        db.commit()
-        db.refresh(db_product)
+        await self.db.commit()
+        await self.db.refresh(db_product)
 
         return db_product
 
-    @staticmethod
-    async def bulk_update_category(
-        db: Session,
-        school_id: int,
-        product_ids: list[int],
-        new_category_id: int,
-    ) -> list[Product]:
+    async def bulk_update_category(self, school_id: int, product_ids: list[int], new_category_id: int) -> list[Product]:
         """
         Bulk update category for multiple products (Admin only).
 
         Use Case: Admin reorganizes product catalog.
 
         Args:
-            db: Database session
             school_id: School ID (for security)
             product_ids: List of product IDs to update
             new_category_id: New category ID
@@ -410,16 +365,14 @@ class ProductService:
             HTTPException 404: If category or any product doesn't exist
         """
         # Validate category exists and belongs to school
-        category = (
-            db.query(ProductCategory)
-            .filter(
-                and_(
-                    ProductCategory.category_id == new_category_id,
-                    ProductCategory.school_id == school_id,
-                )
+        stmt = select(ProductCategory).where(
+            and_(
+                ProductCategory.category_id == new_category_id,
+                ProductCategory.school_id == school_id,
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        category = result.scalars().first()
 
         if not category:
             raise HTTPException(
@@ -428,16 +381,14 @@ class ProductService:
             )
 
         # Fetch all products in one query
-        products = (
-            db.query(Product)
-            .filter(
-                and_(
-                    Product.product_id.in_(product_ids),
-                    Product.school_id == school_id,
-                )
+        stmt = select(Product).where(
+            and_(
+                Product.product_id.in_(product_ids),
+                Product.school_id == school_id,
             )
-            .all()
         )
+        result = await self.db.execute(stmt)
+        products = list(result.scalars().all())
 
         # Validate all products were found
         if len(products) != len(product_ids):
@@ -452,10 +403,10 @@ class ProductService:
         for product in products:
             product.category_id = new_category_id
 
-        db.commit()
+        await self.db.commit()
 
         # Refresh all
         for product in products:
-            db.refresh(product)
+            await self.db.refresh(product)
 
         return products

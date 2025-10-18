@@ -65,7 +65,7 @@ class ProductPackage(Base):
     # --- Relationships ---
 
     # Many-to-one relationship with School
-    school = relationship("School", back_populates="product_packages")
+    school = relationship("School", back_populates="product_packages", lazy="selectin")
 
     # One-to-many relationship with PackageItem (association object)
     items = relationship("PackageItem", back_populates="package", cascade="all, delete-orphan")

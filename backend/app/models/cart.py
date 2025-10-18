@@ -32,4 +32,4 @@ class Cart(Base):
     # A cart can hold multiple items.
     # 'delete-orphan' cascade ensures that if an item is removed from the cart's
     # 'items' list, the CartItem record is deleted from the database.
-    items = relationship("CartItem", back_populates="cart", cascade="all, delete-orphan")
+    items = relationship("CartItem", back_populates="cart", lazy="selectin", cascade="all, delete-orphan")

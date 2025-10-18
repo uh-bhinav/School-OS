@@ -1,6 +1,6 @@
 # backend/app/services/cart_service.py
 """
-Cart Service Layer for SchoolOS E-commerce Module.
+Cart Service Layer for SchoolOS E-commerce Module (ASYNC REFACTORED).
 
 This service manages the shopping cart for authenticated users.
 Each user has exactly one cart (1:1 relationship with user_id).
@@ -19,7 +19,9 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_, func
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from app.models.cart import Cart
 from app.models.cart_item import CartItem
@@ -28,42 +30,38 @@ from app.schemas.cart_schema import CartItemIn
 
 
 class CartService:
-    """Service class for shopping cart operations."""
+    """Service class for asynchronous shopping cart operations."""
 
-    @staticmethod
-    async def get_or_create_cart(
-        db: Session,
-        user_id: UUID,
-    ) -> Cart:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def get_or_create_cart(self, user_id: UUID) -> Cart:
         """
         Get user's cart or create one if it doesn't exist.
 
         Business Rule: Each user has exactly ONE cart (enforced by unique constraint on user_id).
 
         Args:
-            db: Database session
             user_id: User ID from JWT
 
         Returns:
             Cart instance (existing or newly created)
         """
         # Try to find existing cart
-        cart = db.query(Cart).filter(Cart.user_id == user_id).first()
+        stmt = select(Cart).where(Cart.user_id == user_id)
+        result = await self.db.execute(stmt)
+        cart = result.scalars().first()
 
         # Create if doesn't exist
         if not cart:
             cart = Cart(user_id=user_id)
-            db.add(cart)
-            db.commit()
-            db.refresh(cart)
+            self.db.add(cart)
+            await self.db.commit()
+            await self.db.refresh(cart)
 
         return cart
 
-    @staticmethod
-    async def get_hydrated_cart(
-        db: Session,
-        user_id: UUID,
-    ) -> Cart:
+    async def get_hydrated_cart(self, user_id: UUID) -> Cart:
         """
         Get user's cart with full product details (hydrated response).
 
@@ -77,29 +75,25 @@ class CartService:
         - Optimized for mobile apps with limited bandwidth
 
         Args:
-            db: Database session
             user_id: User ID from JWT
 
         Returns:
             Cart instance with items.product and items.product.category loaded
         """
-        cart = db.query(Cart).options(joinedload(Cart.items).joinedload(CartItem.product).joinedload(Product.category)).filter(Cart.user_id == user_id).first()
+        stmt = select(Cart).options(selectinload(Cart.items).selectinload(CartItem.product).selectinload(Product.category)).where(Cart.user_id == user_id)
+        result = await self.db.execute(stmt)
+        cart = result.scalars().first()
 
         # Create cart if doesn't exist
         if not cart:
             cart = Cart(user_id=user_id)
-            db.add(cart)
-            db.commit()
-            db.refresh(cart)
+            self.db.add(cart)
+            await self.db.commit()
+            await self.db.refresh(cart)
 
         return cart
 
-    @staticmethod
-    async def add_item_to_cart(
-        db: Session,
-        user_id: UUID,
-        item_in: CartItemIn,
-    ) -> Cart:
+    async def add_item_to_cart(self, user_id: UUID, item_in: CartItemIn) -> Cart:
         """
         Add a product to cart or update quantity if already exists.
 
@@ -109,7 +103,6 @@ class CartService:
         - If product already in cart, quantities are updated (not duplicated)
 
         Args:
-            db: Database session
             user_id: User ID from JWT
             item_in: Product ID and quantity to add
 
@@ -120,11 +113,15 @@ class CartService:
             HTTPException 404: If product doesn't exist
             HTTPException 400: If product is inactive or insufficient stock
         """
+        print("DEBUG: entering add_item_to_cart with", item_in)
+
         # Get or create cart
-        cart = await CartService.get_or_create_cart(db, user_id)
+        cart = await self.get_or_create_cart(user_id)
 
         # Validate product exists and is active
-        product = db.query(Product).filter(Product.product_id == item_in.product_id).first()
+        stmt = select(Product).where(Product.product_id == item_in.product_id)
+        result = await self.db.execute(stmt)
+        product = result.scalars().first()
 
         if not product:
             raise HTTPException(
@@ -139,16 +136,14 @@ class CartService:
             )
 
         # Check if product already in cart
-        existing_item = (
-            db.query(CartItem)
-            .filter(
-                and_(
-                    CartItem.cart_id == cart.cart_id,
-                    CartItem.product_id == item_in.product_id,
-                )
+        stmt = select(CartItem).where(
+            and_(
+                CartItem.cart_id == cart.cart_id,
+                CartItem.product_id == item_in.product_id,
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        existing_item = result.scalars().first()
 
         if existing_item:
             # Update quantity (add to existing)
@@ -173,23 +168,17 @@ class CartService:
                 product_id=item_in.product_id,
                 quantity=item_in.quantity,
             )
-            db.add(new_item)
+            self.db.add(new_item)
 
         # Update cart timestamp
         cart.updated_at = func.now()
 
-        db.commit()
+        await self.db.commit()
 
         # Return hydrated cart
-        return await CartService.get_hydrated_cart(db, user_id)
+        return await self.get_hydrated_cart(user_id)
 
-    @staticmethod
-    async def update_item_quantity(
-        db: Session,
-        user_id: UUID,
-        product_id: int,
-        new_quantity: int,
-    ) -> Cart:
+    async def update_item_quantity(self, user_id: UUID, product_id: int, new_quantity: int) -> Cart:
         """
         Update the quantity of a specific cart item.
 
@@ -199,7 +188,6 @@ class CartService:
         - Quantity must be between 1-100 (validated in schema)
 
         Args:
-            db: Database session
             user_id: User ID from JWT
             product_id: Product ID to update
             new_quantity: New quantity
@@ -212,19 +200,17 @@ class CartService:
             HTTPException 400: If insufficient stock
         """
         # Get cart
-        cart = await CartService.get_or_create_cart(db, user_id)
+        cart = await self.get_or_create_cart(user_id)
 
         # Find cart item
-        cart_item = (
-            db.query(CartItem)
-            .filter(
-                and_(
-                    CartItem.cart_id == cart.cart_id,
-                    CartItem.product_id == product_id,
-                )
+        stmt = select(CartItem).where(
+            and_(
+                CartItem.cart_id == cart.cart_id,
+                CartItem.product_id == product_id,
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        cart_item = result.scalars().first()
 
         if not cart_item:
             raise HTTPException(
@@ -233,7 +219,9 @@ class CartService:
             )
 
         # Validate stock
-        product = db.query(Product).filter(Product.product_id == product_id).first()
+        stmt = select(Product).where(Product.product_id == product_id)
+        result = await self.db.execute(stmt)
+        product = result.scalars().first()
 
         if new_quantity > product.stock_quantity:
             raise HTTPException(
@@ -247,22 +235,16 @@ class CartService:
         # Update cart timestamp
         cart.updated_at = func.now()
 
-        db.commit()
+        await self.db.commit()
 
         # Return hydrated cart
-        return await CartService.get_hydrated_cart(db, user_id)
+        return await self.get_hydrated_cart(user_id)
 
-    @staticmethod
-    async def remove_item_from_cart(
-        db: Session,
-        user_id: UUID,
-        product_id: int,
-    ) -> Cart:
+    async def remove_item_from_cart(self, user_id: UUID, product_id: int) -> Cart:
         """
         Remove a product from the cart.
 
         Args:
-            db: Database session
             user_id: User ID from JWT
             product_id: Product ID to remove
 
@@ -273,19 +255,17 @@ class CartService:
             HTTPException 404: If cart item doesn't exist
         """
         # Get cart
-        cart = await CartService.get_or_create_cart(db, user_id)
+        cart = await self.get_or_create_cart(user_id)
 
-        # Find and delete cart item
-        cart_item = (
-            db.query(CartItem)
-            .filter(
-                and_(
-                    CartItem.cart_id == cart.cart_id,
-                    CartItem.product_id == product_id,
-                )
+        # Find cart item
+        stmt = select(CartItem).where(
+            and_(
+                CartItem.cart_id == cart.cart_id,
+                CartItem.product_id == product_id,
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        cart_item = result.scalars().first()
 
         if not cart_item:
             raise HTTPException(
@@ -293,43 +273,43 @@ class CartService:
                 detail=f"Product {product_id} not found in your cart",
             )
 
-        db.delete(cart_item)
+        await self.db.delete(cart_item)
 
         # Update cart timestamp
         cart.updated_at = func.now()
 
-        db.commit()
+        await self.db.commit()
 
         # Return hydrated cart
-        return await CartService.get_hydrated_cart(db, user_id)
+        return await self.get_hydrated_cart(user_id)
 
-    @staticmethod
-    async def clear_cart(
-        db: Session,
-        user_id: UUID,
-    ) -> Cart:
+    async def clear_cart(self, user_id: UUID) -> Cart:
         """
         Clear all items from user's cart.
 
         Use Case: Called after successful checkout.
 
         Args:
-            db: Database session
             user_id: User ID from JWT
 
         Returns:
             Empty Cart instance
         """
         # Get cart
-        cart = await CartService.get_or_create_cart(db, user_id)
+        cart = await self.get_or_create_cart(user_id)
 
         # Delete all cart items
-        db.query(CartItem).filter(CartItem.cart_id == cart.cart_id).delete()
+        stmt = select(CartItem).where(CartItem.cart_id == cart.cart_id)
+        result = await self.db.execute(stmt)
+        cart_items = result.scalars().all()
+
+        for item in cart_items:
+            await self.db.delete(item)
 
         # Update cart timestamp
         cart.updated_at = func.now()
 
-        db.commit()
+        await self.db.commit()
 
         # Return empty cart
-        return await CartService.get_hydrated_cart(db, user_id)
+        return await self.get_hydrated_cart(user_id)
