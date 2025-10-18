@@ -22,7 +22,8 @@ async def create_category(
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),
 ):
-    return await ProductCategoryService.create_category(db, category_in, current_profile)
+    service = ProductCategoryService(db)
+    return await service.create_category(category_in, current_profile)
 
 
 # GET SINGLE CATEGORY
@@ -32,7 +33,8 @@ async def get_category(
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),
 ):
-    return await ProductCategoryService.get_category_by_id(db, category_id, current_profile.school_id)
+    service = ProductCategoryService(db)
+    return await service.get_category_by_id(category_id, current_profile.school_id)
 
 
 # GET ALL CATEGORIES
@@ -42,7 +44,8 @@ async def get_all_categories(
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),
 ):
-    return await ProductCategoryService.get_all_categories(db, current_profile.school_id, include_inactive)
+    service = ProductCategoryService(db)
+    return await service.get_all_categories(current_profile.school_id, include_inactive)
 
 
 # GET CATEGORIES WITH PRODUCT COUNTS
@@ -51,19 +54,22 @@ async def get_categories_with_counts(
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),
 ):
-    return await ProductCategoryService.get_categories_with_product_counts(db, current_profile.school_id)
+    service = ProductCategoryService(db)
+    return await service.get_categories_with_product_counts(current_profile.school_id)
 
 
 # UPDATE CATEGORY
 @router.patch("/{category_id}", response_model=ProductCategoryOut)
+@router.put("/{category_id}", response_model=ProductCategoryOut)
 async def update_category(
     category_id: int,
     category_update: ProductCategoryUpdate,
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),
 ):
-    db_category = await ProductCategoryService.get_category_by_id(db, category_id, current_profile.school_id)
-    return await ProductCategoryService.update_category(db, db_category, category_update)
+    service = ProductCategoryService(db)
+    db_category = await service.get_category_by_id(category_id, current_profile.school_id)
+    return await service.update_category(db_category, category_update)
 
 
 # DELETE CATEGORY
@@ -73,8 +79,9 @@ async def delete_category(
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),
 ):
-    db_category = await ProductCategoryService.get_category_by_id(db, category_id, current_profile.school_id)
-    return await ProductCategoryService.delete_category(db, db_category)
+    service = ProductCategoryService(db)
+    db_category = await service.get_category_by_id(category_id, current_profile.school_id)
+    return await service.delete_category(db_category)
 
 
 # BULK REORDER
@@ -84,7 +91,8 @@ async def bulk_reorder(
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),
 ):
-    return await ProductCategoryService.bulk_reorder_categories(db, current_profile.school_id, category_orders)
+    service = ProductCategoryService(db)
+    return await service.bulk_reorder_categories(current_profile.school_id, category_orders)
 
 
 # BULK ACTIVATE/DEACTIVATE
@@ -95,4 +103,5 @@ async def bulk_activate(
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),
 ):
-    return await ProductCategoryService.bulk_activate_categories(db, current_profile.school_id, category_ids, is_active)
+    service = ProductCategoryService(db)
+    return await service.bulk_activate_categories(current_profile.school_id, category_ids, is_active)
