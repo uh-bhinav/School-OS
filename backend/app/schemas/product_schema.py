@@ -382,3 +382,32 @@ class ProductFilterParams(BaseModel):
     max_price: Optional[Decimal] = Field(None, ge=0, description="Maximum price filter")
     availability: Optional[ProductAvailability] = Field(None, description="Filter by availability (in_stock, low_stock, out_of_stock, discontinued)")
     search: Optional[str] = Field(None, max_length=100, description="Search in product name and description")
+
+
+# ============================================================================
+# BULK OPERATION SCHEMAS
+# ============================================================================
+
+
+class CategoryReorderItem(BaseModel):
+    """Schema for bulk reorder operation."""
+
+    category_id: int = Field(..., gt=0)
+    display_order: int = Field(..., ge=0)
+
+
+class BulkActivateRequest(BaseModel):
+    """Schema for bulk activate/deactivate operation."""
+
+    category_ids: list[int] = Field(..., min_length=1)
+    is_active: bool
+
+
+class BulkUpdateCategoryRequest(BaseModel):
+    """Schema for bulk category update for products."""
+
+    product_ids: list[int] = Field(..., min_length=1, description="List of product IDs to update")
+    new_category_id: int = Field(..., gt=0, description="New category ID")
+
+    class Config:
+        json_schema_extra = {"example": {"product_ids": [103, 104, 105], "new_category_id": 2}}

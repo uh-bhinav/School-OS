@@ -14,7 +14,7 @@ Security:
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user_profile, get_db, require_role
 from app.models.profile import Profile
@@ -36,20 +36,14 @@ router = APIRouter(
 )
 
 
-# Dependency injector for PaymentService
-def get_payment_service(db: Session = Depends(get_db)) -> PaymentService:
-    return PaymentService(db)
-
-
 @router.post(
     "/checkout",
     status_code=status.HTTP_201_CREATED,
 )
 async def checkout(
     checkout_data: OrderCreateFromCart,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
-    payment_service: PaymentService = Depends(get_payment_service),
 ):
     """
     UNIFIED CHECKOUT: Creates order + initiates payment in single atomic flow.
@@ -83,14 +77,15 @@ async def checkout(
     - 503: If payment gateway not configured
     """
     # Step 1: Create order from cart (atomic transaction with stock locking)
-    db_order = await OrderService.create_order_from_cart(
-        db=db,
+    order_service = OrderService(db)
+    db_order = await order_service.create_order_from_cart(
         checkout_data=checkout_data,
         current_profile=current_profile,
     )
 
     # Step 2: Initiate payment via unified payment engine
-    payment_request = PaymentInitiateRequest(invoice_id=None, order_id=db_order.order_id)  # Link payment to order
+    payment_service = PaymentService(db)
+    payment_request = PaymentInitiateRequest(invoice_id=None, order_id=db_order.order_id)
 
     payment_response = await payment_service.initiate_payment(request_data=payment_request, user_id=str(current_profile.user_id))
 
@@ -119,8 +114,8 @@ async def checkout(
 )
 async def get_my_orders(
     student_id: Optional[int] = Query(None, description="Filter by student ID"),
-    status: Optional[OrderStatus] = Query(None, description="Filter by order status"),
-    db: Session = Depends(get_db),
+    status_filter: Optional[OrderStatus] = Query(None, alias="status", description="Filter by order status"),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -133,11 +128,11 @@ async def get_my_orders(
     Returns:
     - List of orders with items and student details
     """
-    return await OrderService.get_user_orders(
-        db=db,
+    service = OrderService(db)
+    return await service.get_user_orders(
         user_id=current_profile.user_id,
         student_id=student_id,
-        status=status,
+        status=status_filter,
     )
 
 
@@ -147,7 +142,7 @@ async def get_my_orders(
 )
 async def get_order_details(
     order_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -160,8 +155,8 @@ async def get_order_details(
     Returns:
     - Complete order details with items, student, payment info
     """
-    return await OrderService.get_order_by_id(
-        db=db,
+    service = OrderService(db)
+    return await service.get_order_by_id(
         order_id=order_id,
         user_id=current_profile.user_id,
         is_admin=False,
@@ -175,7 +170,7 @@ async def get_order_details(
 async def cancel_order(
     order_id: int,
     cancel_data: OrderCancel,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -193,16 +188,16 @@ async def cancel_order(
     Returns:
     - Cancelled order
     """
+    service = OrderService(db)
+
     # Fetch order (validates ownership)
-    db_order = await OrderService.get_order_by_id(
-        db=db,
+    db_order = await service.get_order_by_id(
         order_id=order_id,
         user_id=current_profile.user_id,
         is_admin=False,
     )
 
-    return await OrderService.cancel_order(
-        db=db,
+    return await service.cancel_order(
         db_order=db_order,
         cancel_data=cancel_data,
         cancelled_by_user_id=current_profile.user_id,
@@ -221,8 +216,8 @@ async def cancel_order(
 )
 async def admin_get_all_orders(
     student_id: Optional[int] = Query(None),
-    status: Optional[OrderStatus] = Query(None),
-    db: Session = Depends(get_db),
+    status_filter: Optional[OrderStatus] = Query(None, alias="status"),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -235,9 +230,12 @@ async def admin_get_all_orders(
     Returns:
     - List of all orders in school
     """
-    # TODO: Implement admin version that filters by school_id
-    # For now, return empty list
-    return []
+    service = OrderService(db)
+    return await service.get_school_orders(
+        school_id=current_profile.school_id,
+        student_id=student_id,
+        status=status_filter,
+    )
 
 
 @router.get(
@@ -247,7 +245,7 @@ async def admin_get_all_orders(
 )
 async def admin_get_order(
     order_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -255,8 +253,8 @@ async def admin_get_order(
 
     Admins can view any order in their school.
     """
-    return await OrderService.get_order_by_id(
-        db=db,
+    service = OrderService(db)
+    return await service.get_order_by_id(
         order_id=order_id,
         user_id=current_profile.user_id,
         is_admin=True,
@@ -271,7 +269,7 @@ async def admin_get_order(
 async def admin_update_order(
     order_id: int,
     order_update: OrderUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -288,16 +286,16 @@ async def admin_update_order(
     - tracking_number: Shipping tracking number
     - admin_notes: Internal notes
     """
+    service = OrderService(db)
+
     # Fetch order (admin can access any order in school)
-    db_order = await OrderService.get_order_by_id(
-        db=db,
+    db_order = await service.get_order_by_id(
         order_id=order_id,
         user_id=current_profile.user_id,
         is_admin=True,
     )
 
-    return await OrderService.update_order(
-        db=db,
+    return await service.update_order(
         db_order=db_order,
         order_update=order_update,
     )
@@ -311,7 +309,7 @@ async def admin_update_order(
 async def admin_cancel_order(
     order_id: int,
     cancel_data: OrderCancel,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -319,16 +317,16 @@ async def admin_cancel_order(
 
     Admins can cancel any order in their school.
     """
+    service = OrderService(db)
+
     # Fetch order
-    db_order = await OrderService.get_order_by_id(
-        db=db,
+    db_order = await service.get_order_by_id(
         order_id=order_id,
         user_id=current_profile.user_id,
         is_admin=True,
     )
 
-    return await OrderService.cancel_order(
-        db=db,
+    return await service.cancel_order(
         db_order=db_order,
         cancel_data=cancel_data,
         cancelled_by_user_id=current_profile.user_id,
@@ -341,7 +339,7 @@ async def admin_cancel_order(
     dependencies=[Depends(require_role("Admin"))],
 )
 async def get_order_statistics(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -354,8 +352,8 @@ async def get_order_statistics(
     - Pending revenue
     - Average order value
     """
-    stats = await OrderService.get_order_statistics(
-        db=db,
+    service = OrderService(db)
+    stats = await service.get_order_statistics(
         school_id=current_profile.school_id,
     )
 

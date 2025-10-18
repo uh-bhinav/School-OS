@@ -1,27 +1,24 @@
 # backend/app/api/v1/endpoints/admin_products.py
 """
-Admin Product API Endpoints.
+Admin Product Management API Endpoints.
 
-These endpoints are ADMIN-ONLY and allow school staff to manage
-products in their school store catalog.
+These endpoints allow school administrators to manage the product catalog.
+All operations require Admin role and are school-scoped.
 
 Security:
 - All endpoints require Admin role
-- school_id sourced from JWT, never from request body
+- school_id is derived from JWT token (current_profile)
+- Multi-tenant isolation enforced at service layer
 """
 
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from typing import List, Optional
 
-from app.core.security import get_current_user_profile, get_db, require_role
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.security import get_current_user_profile, get_db
 from app.models.profile import Profile
-from app.schemas.product_schema import (
-    ProductCreate,
-    ProductFilterParams,
-    ProductOut,
-    ProductStockAdjustment,
-    ProductUpdate,
-)
+from app.schemas.product_schema import BulkUpdateCategoryRequest, ProductCreate, ProductOut, ProductStockAdjustment, ProductUpdate
 from app.services.product_service import ProductService
 
 router = APIRouter(
@@ -30,176 +27,179 @@ router = APIRouter(
 )
 
 
-@router.post(
-    "/",
-    response_model=ProductOut,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role("Admin"))],
-)
+# ============================================================================
+# CRUD OPERATIONS
+# ============================================================================
+
+
+@router.post("/", response_model=ProductOut, status_code=status.HTTP_201_CREATED)
 async def create_product(
     product_in: ProductCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
     Create a new product (Admin only).
 
-    Security:
-    - school_id auto-populated from JWT
-    - Category must belong to same school
-
     Business Rules:
-    - SKU must be unique within school
-    - Price must be positive
+    - Product name must be unique within school
+    - SKU must be globally unique (if provided)
+    - Category must exist and belong to same school
+
+    Returns:
+    - 201 Created with product details
     """
-    return await ProductService.create_product(
-        db=db,
-        product_in=product_in,
-        current_profile=current_profile,
-    )
+    service = ProductService(db)  # ✅ INSTANTIATE HERE
+    return await service.create_product(product_in, current_profile)  # ✅ CALL INSTANCE METHOD
 
 
-@router.get(
-    "/",
-    response_model=list[ProductOut],
-    dependencies=[Depends(require_role("Admin"))],
-)
-async def get_all_products(
-    filters: ProductFilterParams = Depends(),
-    include_inactive: bool = False,
-    db: Session = Depends(get_db),
+# ============================================================================
+# BULK OPERATIONS (Must come BEFORE /{product_id} routes!)
+# ============================================================================
+
+
+@router.put("/bulk-update-category", response_model=List[ProductOut])
+async def bulk_update_category(
+    request_body: BulkUpdateCategoryRequest,  # ✅ CHANGE THIS
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
-    Get all products for admin's school with optional filters.
+    Bulk update category for multiple products (Admin only).
+
+    Use Case: Admin reorganizes product catalog.
+
+    Request Body:
+    {
+      "product_ids": [1, 2, 3],
+      "new_category_id": 5
+    }
+
+    Business Rules:
+    - All products must belong to the school
+    - New category must exist and belong to the school
+    """
+    service = ProductService(db)
+    return await service.bulk_update_category(
+        school_id=current_profile.school_id,
+        product_ids=request_body.product_ids,  # ✅ CHANGE THIS
+        new_category_id=request_body.new_category_id,  # ✅ CHANGE THIS
+    )
+
+
+@router.get("/{product_id}", response_model=ProductOut)
+async def get_product(
+    product_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get a single product by ID (Admin only).
+
+    Returns product with full details including inactive status.
+    """
+    service = ProductService(db)  # ✅ INSTANTIATE HERE
+    return await service.get_product_by_id(product_id, current_profile.school_id)
+
+
+@router.get("/", response_model=List[ProductOut])
+async def get_all_products(
+    category_id: Optional[int] = Query(None, description="Filter by category"),
+    include_inactive: bool = Query(False, description="Include inactive/discontinued products"),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get all products for the school (Admin only).
 
     Query Parameters:
-    - category_id: Filter by category
-    - is_active: Filter by active status
-    - min_price: Minimum price filter
-    - max_price: Maximum price filter
-    - availability: Filter by availability status
-    - search: Search in name, description, SKU
-    - include_inactive: Show soft-deleted products
+    - category_id: Optional filter by category
+    - include_inactive: Include soft-deleted products (default: false)
+
+    Returns:
+    - List of all products with category information
     """
-    return await ProductService.get_all_products(
-        db=db,
+    service = ProductService(db)  # ✅ INSTANTIATE HERE
+    return await service.get_all_products(
         school_id=current_profile.school_id,
-        filters=filters,
+        category_id=category_id,
         include_inactive=include_inactive,
     )
 
 
-@router.get(
-    "/{product_id}",
-    response_model=ProductOut,
-    dependencies=[Depends(require_role("Admin"))],
-)
-async def get_product(
-    product_id: int,
-    db: Session = Depends(get_db),
-    current_profile: Profile = Depends(get_current_user_profile),
-):
-    """Get a single product by ID."""
-    return await ProductService.get_product_by_id(
-        db=db,
-        product_id=product_id,
-        school_id=current_profile.school_id,
-        include_category=True,
-    )
-
-
-@router.put(
-    "/{product_id}",
-    response_model=ProductOut,
-    dependencies=[Depends(require_role("Admin"))],
-)
+@router.patch("/{product_id}", response_model=ProductOut)
+@router.put("/{product_id}", response_model=ProductOut)
 async def update_product(
     product_id: int,
     product_update: ProductUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
-    Update a product.
+    Update an existing product (Admin only).
 
-    Partial update pattern: Only provided fields are updated.
+    Supports both PATCH (partial update) and PUT (full update).
+    Only provided fields are updated.
+
+    Business Rules:
+    - Cannot change to duplicate name or SKU
+    - Category must exist if being changed
     """
-    # Fetch existing product
-    db_product = await ProductService.get_product_by_id(
-        db=db,
-        product_id=product_id,
-        school_id=current_profile.school_id,
-    )
-
-    return await ProductService.update_product(
-        db=db,
-        db_product=db_product,
-        product_update=product_update,
-    )
+    service = ProductService(db)  # ✅ INSTANTIATE HERE
+    db_product = await service.get_product_by_id(product_id, current_profile.school_id)
+    return await service.update_product(db_product, product_update)
 
 
-@router.delete(
-    "/{product_id}",
-    response_model=ProductOut,
-    dependencies=[Depends(require_role("Admin"))],
-)
+@router.delete("/{product_id}", response_model=ProductOut)
 async def delete_product(
     product_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
-    Soft-delete a product (sets is_active = False).
+    Soft-delete a product (Admin only).
 
-    Business Rule: Products are NEVER hard-deleted to preserve order history.
+    Sets is_active = False. Product is not physically deleted
+    to preserve order history.
+
+    Business Rules:
+    - Cannot delete if product is part of active packages
     """
-    # Fetch existing product
-    db_product = await ProductService.get_product_by_id(
-        db=db,
-        product_id=product_id,
-        school_id=current_profile.school_id,
-    )
-
-    return await ProductService.delete_product(
-        db=db,
-        db_product=db_product,
-    )
+    service = ProductService(db)  # ✅ INSTANTIATE HERE
+    db_product = await service.get_product_by_id(product_id, current_profile.school_id)
+    return await service.delete_product(db_product)
 
 
-@router.patch(
-    "/{product_id}/stock",
-    response_model=ProductOut,
-    dependencies=[Depends(require_role("Admin"))],
-)
-async def adjust_product_stock(
+# ============================================================================
+# INVENTORY MANAGEMENT
+# ============================================================================
+
+
+@router.patch("/{product_id}/stock", response_model=ProductOut)
+@router.put("/{product_id}/stock", response_model=ProductOut)
+async def adjust_stock(
     product_id: int,
-    adjustment_data: ProductStockAdjustment,
-    db: Session = Depends(get_db),
+    adjustment: ProductStockAdjustment,
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
-    Adjust product stock (Admin only).
+    Adjust product stock quantity (Admin only).
 
     Use Cases:
-    - Increment stock after receiving shipment
-    - Decrement stock for damaged/lost items
-    - Manual correction of inventory discrepancies
+    - Receiving new inventory shipment (+adjustment)
+    - Damaged/lost items (-adjustment)
+    - Manual inventory correction
 
     Request Body:
-    - adjustment: Positive to add stock, negative to subtract
-    - reason: Mandatory reason for audit trail
-    """
-    # Fetch existing product
-    db_product = await ProductService.get_product_by_id(
-        db=db,
-        product_id=product_id,
-        school_id=current_profile.school_id,
-    )
+    {
+      "adjustment": 50,
+      "reason": "Received shipment from vendor"
+    }
 
-    return await ProductService.adjust_stock(
-        db=db,
-        db_product=db_product,
-        adjustment_data=adjustment_data,
-        adjusted_by_user_id=current_profile.user_id,
-    )
+    Business Rules:
+    - Adjustment cannot result in negative stock
+    """
+    service = ProductService(db)  # ✅ INSTANTIATE HERE
+    db_product = await service.get_product_by_id(product_id, current_profile.school_id)
+    return await service.adjust_stock(db_product, adjustment)

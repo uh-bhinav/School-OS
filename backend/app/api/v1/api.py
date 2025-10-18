@@ -65,7 +65,7 @@ api_router.include_router(admin_products.router, tags=["Admin - Products"])
 api_router.include_router(admin_product_packages.router, tags=["Admin - Product Packages"])
 
 # Parent-Facing Endpoints - Shopping Experience
-api_router.include_router(products.router, tags=["Products - Parent Store"])
+api_router.include_router(products.router, prefix="/products", tags=["Products - Parent Store"])
 api_router.include_router(carts.router, tags=["Shopping Cart"])
 api_router.include_router(orders.router, tags=["Orders"])
 api_router.include_router(announcements.router, prefix="/announcements", tags=["Communication: Announcements"])

@@ -11,11 +11,13 @@ Security:
 - school_id must be provided in path (no JWT required for browsing)
 """
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_db
-from app.schemas.product_schema import ProductFilterParams, ProductListOut, ProductOut
+from app.schemas.product_schema import ProductOut
 from app.services.product_service import ProductService
 
 router = APIRouter(
@@ -26,12 +28,12 @@ router = APIRouter(
 
 @router.get(
     "/school/{school_id}",
-    response_model=list[ProductListOut],
+    response_model=list[ProductOut],
 )
 async def browse_products(
     school_id: int,
-    filters: ProductFilterParams = Depends(),
-    db: Session = Depends(get_db),
+    category_id: Optional[int] = Query(None, description="Filter by category ID"),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Browse school store catalog (Parent-facing).
@@ -40,19 +42,15 @@ async def browse_products(
     Only active products are returned.
 
     Query Parameters:
-    - category_id: Filter by category
-    - min_price: Minimum price filter
-    - max_price: Maximum price filter
-    - availability: Filter by availability (in_stock, low_stock)
-    - search: Search in product name and description
+    - category_id: Optional filter by category
 
     Returns:
-    - Lightweight product list optimized for catalog browsing
+    - List of active products with category information
     """
-    return await ProductService.get_all_products(
-        db=db,
+    service = ProductService(db)
+    return await service.get_all_products(
         school_id=school_id,
-        filters=filters,
+        category_id=category_id,
         include_inactive=False,  # Parents only see active products
     )
 
@@ -63,8 +61,8 @@ async def browse_products(
 )
 async def get_product_details(
     product_id: int,
-    school_id: int,
-    db: Session = Depends(get_db),
+    school_id: int = Query(..., description="School ID for validation"),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get detailed product information (Parent-facing).
@@ -75,9 +73,8 @@ async def get_product_details(
     Returns:
     - Complete product details with category information
     """
-    return await ProductService.get_product_by_id(
-        db=db,
+    service = ProductService(db)
+    return await service.get_product_by_id(
         product_id=product_id,
         school_id=school_id,
-        include_category=True,
     )

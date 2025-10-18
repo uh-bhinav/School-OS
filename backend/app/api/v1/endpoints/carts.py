@@ -11,7 +11,7 @@ Security:
 """
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user_profile, get_db
 from app.models.profile import Profile
@@ -29,7 +29,7 @@ router = APIRouter(
     response_model=CartOut,
 )
 async def get_my_cart(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -40,8 +40,8 @@ async def get_my_cart(
     - Computed totals and availability flags
     - Empty cart if no items
     """
-    return await CartService.get_hydrated_cart(
-        db=db,
+    service = CartService(db)
+    return await service.get_hydrated_cart(
         user_id=current_profile.user_id,
     )
 
@@ -53,7 +53,7 @@ async def get_my_cart(
 )
 async def add_item_to_cart(
     item_in: CartItemIn,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -75,8 +75,8 @@ async def add_item_to_cart(
     - 404: If product doesn't exist
     - 400: If product is inactive or insufficient stock
     """
-    return await CartService.add_item_to_cart(
-        db=db,
+    service = CartService(db)
+    return await service.add_item_to_cart(
         user_id=current_profile.user_id,
         item_in=item_in,
     )
@@ -86,10 +86,14 @@ async def add_item_to_cart(
     "/me/items/{product_id}",
     response_model=CartOut,
 )
+@router.put(
+    "/me/items/{product_id}",
+    response_model=CartOut,
+)
 async def update_cart_item_quantity(
     product_id: int,
     quantity_update: CartItemUpdateQuantity,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -105,8 +109,8 @@ async def update_cart_item_quantity(
     - 404: If product not in cart
     - 400: If insufficient stock
     """
-    return await CartService.update_item_quantity(
-        db=db,
+    service = CartService(db)
+    return await service.update_item_quantity(
         user_id=current_profile.user_id,
         product_id=product_id,
         new_quantity=quantity_update.quantity,
@@ -119,7 +123,7 @@ async def update_cart_item_quantity(
 )
 async def remove_item_from_cart(
     product_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -131,8 +135,8 @@ async def remove_item_from_cart(
     Raises:
     - 404: If product not in cart
     """
-    return await CartService.remove_item_from_cart(
-        db=db,
+    service = CartService(db)
+    return await service.remove_item_from_cart(
         user_id=current_profile.user_id,
         product_id=product_id,
     )
@@ -143,7 +147,7 @@ async def remove_item_from_cart(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def clear_cart(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -156,8 +160,8 @@ async def clear_cart(
     Returns:
     - 204 No Content
     """
-    await CartService.clear_cart(
-        db=db,
+    service = CartService(db)
+    await service.clear_cart(
         user_id=current_profile.user_id,
     )
     return None
