@@ -77,45 +77,48 @@ class OrderItemCreate(BaseModel):
 class OrderItemOut(BaseModel):
     """
     Complete order item representation with product details.
-
-    This schema represents a historical snapshot of a product/package
-    at the time the order was placed.
-
-    Design Decisions:
-    - Includes product_name (from JOIN) for display without additional queries
-    - price_at_time_of_order is immutable (preserves historical pricing)
-    - status allows item-level tracking (pending, fulfilled, shipped, cancelled)
-
-    Used in: OrderOut.items, OrderDetailOut.items
     """
 
     id: int
     order_id: int
 
     product_id: Optional[int] = Field(None, description="Product ID (null if this is a package item)")
-
     package_id: Optional[int] = Field(None, description="Package ID (null if this is a product item)")
 
     # Hydrated product/package name (from JOIN)
     item_name: str = Field(..., description="Product or package name at time of order")
-
     item_image_url: Optional[str] = Field(None, description="Product or package image URL")
-
     item_sku: Optional[str] = Field(None, description="Product SKU (null for packages)")
 
     quantity: int
-
     price_at_time_of_order: Decimal = Field(..., description="Price per unit at time of order (immutable historical record)")
-
     status: Optional[OrderItemStatus] = Field(None, description="Individual item fulfillment status")
+
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        """Custom validation to handle OrderItem model with product relationship."""
+        if hasattr(obj, "product") and obj.product:
+            # It's an OrderItem model with product relationship
+            return cls(
+                id=obj.id,
+                order_id=obj.order_id,
+                product_id=obj.product_id,
+                package_id=obj.package_id,
+                item_name=obj.product.name,
+                item_image_url=obj.product.image_url,
+                item_sku=obj.product.sku,
+                quantity=obj.quantity,
+                price_at_time_of_order=obj.price_at_time_of_order,
+                status=obj.status,
+            )
+        # Otherwise use default validation
+        return super().model_validate(obj, **kwargs)
 
     @computed_field
     @property
     def line_total(self) -> Decimal:
         """
         Computed field: Line item total (price × quantity).
-
-        This is the historical total, based on price_at_time_of_order.
         """
         return self.price_at_time_of_order * Decimal(self.quantity)
 

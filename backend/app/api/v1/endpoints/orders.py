@@ -56,27 +56,46 @@ async def checkout(
     This is the PRIMARY e-commerce flow and the most critical endpoint.
 
     CRITICAL BUSINESS LOGIC:
-    - Step 1: Converts cart contents to permanent order
+    - Step 1: Converts cart contents to permanent order (atomic transaction with stock locking)
     - Step 2: Immediately initiates payment via unified payment engine
     - Step 3: Returns order + payment details for Razorpay frontend integration
 
-    Flow:
+    Transaction Flow:
     1. Cart → Order (status: pending_payment)
+       - Validates student ownership
+       - Locks products (SELECT FOR UPDATE)
+       - Re-validates stock & product status
+       - Creates order record
+       - Creates order_items (snapshot of prices)
+       - Decrements product stock
+       - Clears cart
+       - Commits transaction
+
     2. Order → Payment (status: pending, creates Razorpay order)
+       - Fetches school's Razorpay credentials
+       - Calls Razorpay Orders API
+       - Creates internal payment record
+       - Links payment to order
+       - Commits transaction
+
     3. Response → Frontend launches Razorpay Checkout UI
-    4. Parent completes payment
-    5. Frontend calls POST /api/v1/payments/verify
-    6. Backend verifies signature → Updates Payment + Order status
+       - Frontend receives razorpay_order_id, razorpay_key_id, amount
+       - Parent completes payment in Razorpay modal
+       - Frontend calls POST /api/v1/payments/verify
+       - Backend verifies signature → Updates Payment + Order status
 
     Request Body:
     - student_id: Student for whom order is being placed
     - delivery_notes: Optional delivery instructions
 
     Returns:
-    - Unified response with order details + Razorpay credentials
+    Unified JSON response containing:
+    - Order details: order_id, order_number, total_amount, status
+    - Payment credentials: razorpay_order_id, razorpay_key_id, amount
+    - Metadata: internal_payment_id, school_name, description
 
     Raises:
-    - 400: If cart is empty or insufficient stock
+    - 400: If cart is empty, insufficient stock, or product inactive
     - 403: If student doesn't belong to parent
     - 404: If student not found
     - 503: If payment gateway not configured
@@ -90,7 +109,7 @@ async def checkout(
 
     # Step 2: Initiate payment via unified payment engine
     payment_service = PaymentService(db)
-    payment_request = PaymentInitiateRequest(invoice_id=None, order_id=db_order.order_id)
+    payment_request = PaymentInitiateRequest(invoice_id=None, order_id=db_order.order_id)  # E-commerce orders don't use invoices
 
     payment_response = await payment_service.initiate_payment(request_data=payment_request, user_id=str(current_profile.user_id))
 
@@ -161,7 +180,7 @@ async def get_order_details(
     - Complete order details with items, student, payment info
     """
     service = OrderService(db)
-    return await service.get_order_by_id(
+    return await service.get_order_by_id_for_user(
         order_id=order_id,
         user_id=current_profile.user_id,
         is_admin=False,
@@ -195,15 +214,10 @@ async def cancel_order(
     """
     service = OrderService(db)
 
-    # Fetch order (validates ownership)
-    db_order = await service.get_order_by_id(
+    return await service.cancel_order(
         order_id=order_id,
         user_id=current_profile.user_id,
         is_admin=False,
-    )
-
-    return await service.cancel_order(
-        db_order=db_order,
         cancel_data=cancel_data,
         cancelled_by_user_id=current_profile.user_id,
     )
@@ -286,7 +300,7 @@ async def admin_get_order(
     Admins can view any order in their school.
     """
     service = OrderService(db)
-    return await service.get_order_by_id(
+    return await service.get_order_by_id_for_user(
         order_id=order_id,
         user_id=current_profile.user_id,
         is_admin=True,
@@ -320,15 +334,10 @@ async def admin_update_order(
     """
     service = OrderService(db)
 
-    # Fetch order (admin can access any order in school)
-    db_order = await service.get_order_by_id(
+    return await service.update_order(
         order_id=order_id,
         user_id=current_profile.user_id,
         is_admin=True,
-    )
-
-    return await service.update_order(
-        db_order=db_order,
         order_update=order_update,
     )
 
@@ -351,15 +360,10 @@ async def admin_cancel_order(
     """
     service = OrderService(db)
 
-    # Fetch order
-    db_order = await service.get_order_by_id(
+    return await service.cancel_order(
         order_id=order_id,
         user_id=current_profile.user_id,
         is_admin=True,
-    )
-
-    return await service.cancel_order(
-        db_order=db_order,
         cancel_data=cancel_data,
         cancelled_by_user_id=current_profile.user_id,
     )
