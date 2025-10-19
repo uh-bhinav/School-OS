@@ -20,6 +20,7 @@ Security Architecture:
 import logging
 from datetime import datetime
 from decimal import Decimal
+from typing import Optional
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -47,6 +48,46 @@ class OrderService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    def _transform_order_to_dict(self, order: Order) -> dict:
+        """
+        Transform Order model to dict with flattened item structure.
+
+        This solves the Pydantic validation issue by manually flattening
+        the nested OrderItem->Product relationship.
+        """
+        return {
+            "order_id": order.order_id,
+            "order_number": order.order_number,
+            "student_id": order.student_id,
+            "parent_user_id": order.parent_user_id,
+            "student_name": None,  # TODO: Add if needed via JOIN
+            "parent_name": None,  # TODO: Add if needed via JOIN
+            "total_amount": order.total_amount,
+            "status": order.status,
+            "delivery_notes": getattr(order, "delivery_notes", None),
+            "tracking_number": getattr(order, "tracking_number", None),
+            "created_at": order.created_at,
+            "updated_at": order.updated_at,
+            "payment_id": None,  # TODO: Add if needed via JOIN
+            "payment_status": None,  # TODO: Add if needed via JOIN
+            "payment_method": None,  # TODO: Add if needed via JOIN
+            "items": [
+                {
+                    "id": item.id,
+                    "order_id": item.order_id,
+                    "product_id": item.product_id,
+                    "package_id": getattr(item, "package_id", None),
+                    "item_name": item.product.name if item.product else "Unknown Product",
+                    "item_image_url": item.product.image_url if item.product else None,
+                    "item_sku": item.product.sku if item.product else None,
+                    "quantity": item.quantity,
+                    "price_at_time_of_order": item.price_at_time_of_order,
+                    "status": item.status,
+                }
+                for item in order.items
+            ],
+        }
 
     async def create_order_from_cart(self, checkout_data: OrderCreateFromCart, current_profile: Profile) -> Order:
         """
@@ -246,26 +287,25 @@ class OrderService:
                 detail=f"Order creation failed: {str(e)}",
             )
 
-    async def update_order(self, db_order: Order, order_update: OrderUpdate) -> Order:
+    async def update_order(self, order_id: int, user_id: UUID, is_admin: bool, order_update: OrderUpdate) -> dict:
         """
         Update order status and metadata (Admin only).
 
-        Business Rules - Valid Status Transitions:
-        - pending_payment → processing (after payment captured)
-        - processing → shipped (when dispatched)
-        - shipped → delivered (when received)
-        - Any non-shipped status → cancelled (before dispatch)
-
         Args:
-            db_order: Existing order instance
+            order_id: Order ID to update
+            user_id: Current user's ID (for authorization)
+            is_admin: Whether user is admin
             order_update: Update data
 
         Returns:
-            Updated Order instance
+            Updated Order as dict
 
         Raises:
             HTTPException 400: If invalid status transition
         """
+        # Fetch the ORM object internally
+        db_order = await self._get_order_by_id_internal(order_id, user_id, is_admin)
+
         # Validate status transition if status is being changed
         if order_update.status and order_update.status != db_order.status:
             valid_transitions = {
@@ -291,31 +331,39 @@ class OrderService:
         for field, value in update_data.items():
             setattr(db_order, field, value)
 
+        # Save order_id before commit
+        order_id = db_order.order_id
+
         await self.db.commit()
-        await self.db.refresh(db_order)
 
-        return db_order
+        # CRITICAL FIX: Reload with relationships
+        stmt = select(Order).options(selectinload(Order.items).selectinload(OrderItem.product)).where(Order.order_id == order_id)
+        result = await self.db.execute(stmt)
+        db_order = result.scalars().first()
 
-    async def cancel_order(self, db_order: Order, cancel_data: OrderCancel, cancelled_by_user_id: UUID) -> Order:
+        # Transform to dict for Pydantic validation
+        return self._transform_order_to_dict(db_order)
+
+    async def cancel_order(self, order_id: int, user_id: UUID, is_admin: bool, cancel_data: OrderCancel, cancelled_by_user_id: UUID) -> dict:
         """
         Cancel an order (Admin or Parent).
 
-        Business Rules:
-        - Can only cancel orders with status: pending_payment, processing
-        - Cannot cancel shipped/delivered orders
-        - Stock is restored if order was in processing state
-
         Args:
-            db_order: Order instance to cancel
+            order_id: Order ID to cancel
+            user_id: Current user's ID (for authorization)
+            is_admin: Whether user is admin
             cancel_data: Cancellation reason and refund flag
             cancelled_by_user_id: User ID for audit trail
 
         Returns:
-            Cancelled Order instance
+            Cancelled Order as dict
 
         Raises:
             HTTPException 400: If order cannot be cancelled
         """
+        # Fetch the ORM object internally
+        db_order = await self._get_order_by_id_internal(order_id, user_id, is_admin)
+
         # Validate order can be cancelled
         cancellable_statuses = [OrderStatus.PENDING_PAYMENT, OrderStatus.PROCESSING]
         if db_order.status not in cancellable_statuses:
@@ -341,18 +389,23 @@ class OrderService:
 
             # Update order status
             db_order.status = OrderStatus.CANCELLED
-            # db_order.admin_notes = (
-            #     f"Cancelled by user {cancelled_by_user_id}. Reason: {cancel_data.reason}"
-            # )
 
             # TODO: If refund_payment is True and payment exists, initiate refund
             if cancel_data.refund_payment:
                 pass
 
-            await self.db.commit()
-            await self.db.refresh(db_order)
+            # Save order_id before commit
+            order_id = db_order.order_id
 
-            return db_order
+            await self.db.commit()
+
+            # CRITICAL FIX: Reload order with proper relationships
+            stmt = select(Order).options(selectinload(Order.items).selectinload(OrderItem.product)).where(Order.order_id == order_id)
+            result = await self.db.execute(stmt)
+            db_order = result.scalars().first()
+
+            # Transform to dict for Pydantic validation
+            return self._transform_order_to_dict(db_order)
 
         except Exception as e:
             await self.db.rollback()
@@ -443,25 +496,12 @@ class OrderService:
 
     # ADD THESE METHODS TO OrderService CLASS IN order_service.py
 
-    async def get_order_by_id_for_user(self, order_id: int, user_id: UUID, is_admin: bool = False) -> Order:
+    async def _get_order_by_id_internal(self, order_id: int, user_id: UUID, is_admin: bool = False) -> Order:
         """
-        Get a specific order by ID with authorization checks.
+        Internal method to get Order ORM object (for service-layer use).
 
-        Security Architecture:
-        - Parents can ONLY see their own orders (parent_user_id match)
-        - Admins can see all orders for their school
-        - Returns 404 if order doesn't exist OR user lacks permission (security through obscurity)
-
-        Args:
-            order_id: Order ID to retrieve
-            user_id: Current user's ID
-            is_admin: Whether the requesting user is an admin
-
-        Returns:
-            Order instance with items loaded
-
-        Raises:
-            HTTPException 404: If order not found OR user not authorized
+        Returns the actual SQLAlchemy Order object for internal operations
+        like cancel_order, update_order, etc.
         """
         # Fetch order with items
         stmt = select(Order).options(selectinload(Order.items).selectinload(OrderItem.product)).where(Order.order_id == order_id)
@@ -479,6 +519,15 @@ class OrderService:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
         return order
+
+    async def get_order_by_id_for_user(self, order_id: int, user_id: UUID, is_admin: bool = False) -> dict:
+        """
+        Public method to get order details (returns transformed dict for API response).
+
+        This is used by endpoints that directly return order details to the user.
+        """
+        order = await self._get_order_by_id_internal(order_id, user_id, is_admin)
+        return self._transform_order_to_dict(order)
 
     async def create_manual_order(self, order_data: "OrderCreateManual", admin_profile: Profile) -> Order:
         """
@@ -643,3 +692,57 @@ class OrderService:
             raise
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Manual order creation failed: {str(e)}")
+
+    async def get_user_orders(self, user_id: UUID, student_id: Optional[int] = None, status: Optional[OrderStatus] = None) -> list[dict]:
+        """
+        Get all orders for a specific user (parent).
+
+        Args:
+            user_id: Parent's user ID
+            student_id: Optional filter by student
+            status: Optional filter by order status
+
+        Returns:
+            List of orders as dicts
+        """
+        stmt = select(Order).options(selectinload(Order.items).selectinload(OrderItem.product)).where(Order.parent_user_id == user_id)
+
+        if student_id:
+            stmt = stmt.where(Order.student_id == student_id)
+
+        if status:
+            stmt = stmt.where(Order.status == status)
+
+        stmt = stmt.order_by(Order.created_at.desc())
+
+        result = await self.db.execute(stmt)
+        orders = list(result.scalars().all())
+
+        return [self._transform_order_to_dict(order) for order in orders]
+
+    async def get_school_orders(self, school_id: int, student_id: Optional[int] = None, status: Optional[OrderStatus] = None) -> list[dict]:
+        """
+        Get all orders for a school (Admin only).
+
+        Args:
+            school_id: School ID
+            student_id: Optional filter by student
+            status: Optional filter by order status
+
+        Returns:
+            List of orders as dicts
+        """
+        stmt = select(Order).options(selectinload(Order.items).selectinload(OrderItem.product)).where(Order.school_id == school_id)
+
+        if student_id:
+            stmt = stmt.where(Order.student_id == student_id)
+
+        if status:
+            stmt = stmt.where(Order.status == status)
+
+        stmt = stmt.order_by(Order.created_at.desc())
+
+        result = await self.db.execute(stmt)
+        orders = list(result.scalars().all())
+
+        return [self._transform_order_to_dict(order) for order in orders]
