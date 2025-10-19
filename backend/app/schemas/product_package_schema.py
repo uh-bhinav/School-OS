@@ -47,30 +47,34 @@ class PackageItemIn(BaseModel):
 
 
 class PackageItemOut(BaseModel):
-    """
-    Schema for package item with full product details (output).
+    """Package item with full product details."""
 
-    Design Rationale:
-    - Hydrated response includes product details to avoid N+1 queries
-    - Shows current product price (for admin pricing decisions)
-    - Includes availability status (admin can see if package contains discontinued items)
-
-    This schema is the result of JOIN across:
-    - package_items (for quantity)
-    - products (for all product details)
-    """
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        """Custom validation to handle PackageItem model structure."""
+        if hasattr(obj, "product"):
+            # It's a PackageItem model with product relationship
+            return cls(
+                product_id=obj.product_id,
+                quantity=obj.quantity,
+                product_name=obj.product.name,
+                product_price=obj.product.price,
+                product_image_url=obj.product.image_url,
+                product_sku=obj.product.sku,
+                stock_quantity=obj.product.stock_quantity,
+                availability=obj.product.availability,
+            )
+        # Otherwise use default validation
+        return super().model_validate(obj, **kwargs)
 
     product_id: int
+    quantity: int
     product_name: str
-    product_price: Decimal = Field(..., description="Current price of individual product (not package price)")
+    product_price: Decimal
     product_image_url: Optional[str] = None
     product_sku: Optional[str] = None
-
-    quantity: int = Field(..., description="Quantity of this product included in the package")
-
-    availability: ProductAvailability = Field(..., description="Current availability status of this product")
-
-    stock_quantity: int = Field(..., description="Current stock of individual product")
+    stock_quantity: int
+    availability: ProductAvailability
 
     @computed_field
     @property
