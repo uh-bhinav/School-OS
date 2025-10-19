@@ -11,7 +11,7 @@ Security:
 """
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user_profile, get_db, require_role
 from app.models.profile import Profile
@@ -30,6 +30,11 @@ router = APIRouter(
 )
 
 
+# ============================================================================
+# PACKAGE CRUD OPERATIONS
+# ============================================================================
+
+
 @router.post(
     "/",
     response_model=ProductPackageOut,
@@ -38,7 +43,7 @@ router = APIRouter(
 )
 async def create_package(
     package_in: ProductPackageCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -58,9 +63,20 @@ async def create_package(
     - description: Package description
     - price: Package price (null = auto-calculate from items)
     - items: List of {product_id, quantity}
+
+    Example:
+    {
+      "name": "Grade 1 Starter Kit",
+      "description": "Complete starter kit for Grade 1 students",
+      "price": 2500.00,
+      "items": [
+        {"product_id": 103, "quantity": 2},
+        {"product_id": 104, "quantity": 1}
+      ]
+    }
     """
-    return await ProductPackageService.create_package(
-        db=db,
+    service = ProductPackageService(db)
+    return await service.create_package(
         package_in=package_in,
         current_profile=current_profile,
     )
@@ -73,7 +89,7 @@ async def create_package(
 )
 async def get_all_packages(
     include_inactive: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
@@ -81,9 +97,12 @@ async def get_all_packages(
 
     Query Parameters:
     - include_inactive: Show soft-deleted packages (default: false)
+
+    Returns:
+    - List of all product packages with their items
     """
-    return await ProductPackageService.get_all_packages(
-        db=db,
+    service = ProductPackageService(db)
+    return await service.get_all_packages(
         school_id=current_profile.school_id,
         include_inactive=include_inactive,
     )
@@ -96,12 +115,17 @@ async def get_all_packages(
 )
 async def get_package(
     package_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
-    """Get a single package by ID with items."""
-    return await ProductPackageService.get_package_by_id(
-        db=db,
+    """
+    Get a single package by ID with all items.
+
+    Returns:
+    - Complete package details including all items with product info
+    """
+    service = ProductPackageService(db)
+    return await service.get_package_by_id(
         package_id=package_id,
         school_id=current_profile.school_id,
     )
@@ -115,29 +139,17 @@ async def get_package(
 async def update_package(
     package_id: int,
     package_update: ProductPackageUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
     Update package header (metadata only, not items).
-
-    To modify package items, use:
-    - POST /{package_id}/items (add items)
-    - DELETE /{package_id}/items/{product_id} (remove item)
-    - PATCH /{package_id}/items/{product_id} (update quantity)
-
-    Partial update pattern: Only provided fields are updated.
     """
-    # Fetch existing package
-    db_package = await ProductPackageService.get_package_by_id(
-        db=db,
+    service = ProductPackageService(db)
+
+    return await service.update_package(
         package_id=package_id,
         school_id=current_profile.school_id,
-    )
-
-    return await ProductPackageService.update_package(
-        db=db,
-        db_package=db_package,
         package_update=package_update,
     )
 
@@ -149,24 +161,17 @@ async def update_package(
 )
 async def delete_package(
     package_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
     Soft-delete a package (sets is_active = False).
-
-    Business Rule: Packages are soft-deleted to preserve order history.
     """
-    # Fetch existing package
-    db_package = await ProductPackageService.get_package_by_id(
-        db=db,
+    service = ProductPackageService(db)
+
+    return await service.delete_package(
         package_id=package_id,
         school_id=current_profile.school_id,
-    )
-
-    return await ProductPackageService.delete_package(
-        db=db,
-        db_package=db_package,
     )
 
 
@@ -183,30 +188,17 @@ async def delete_package(
 async def add_items_to_package(
     package_id: int,
     items_in: ProductPackageAddItems,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
     Add new items to an existing package.
-
-    Business Rules:
-    - Cannot add products already in package
-    - All products must belong to same school
-    - Products must be active
-
-    Request Body:
-    - items: List of {product_id, quantity}
     """
-    # Fetch existing package
-    db_package = await ProductPackageService.get_package_by_id(
-        db=db,
+    service = ProductPackageService(db)
+
+    return await service.add_items_to_package(
         package_id=package_id,
         school_id=current_profile.school_id,
-    )
-
-    return await ProductPackageService.add_items_to_package(
-        db=db,
-        db_package=db_package,
         items_in=items_in,
     )
 
@@ -219,25 +211,17 @@ async def add_items_to_package(
 async def remove_item_from_package(
     package_id: int,
     product_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
     Remove an item from a package.
-
-    Business Rules:
-    - Cannot remove last item (package must have at least 1 item)
     """
-    # Fetch existing package
-    db_package = await ProductPackageService.get_package_by_id(
-        db=db,
+    service = ProductPackageService(db)
+
+    return await service.remove_item_from_package(
         package_id=package_id,
         school_id=current_profile.school_id,
-    )
-
-    return await ProductPackageService.remove_item_from_package(
-        db=db,
-        db_package=db_package,
         product_id=product_id,
     )
 
@@ -247,29 +231,26 @@ async def remove_item_from_package(
     response_model=ProductPackageOut,
     dependencies=[Depends(require_role("Admin"))],
 )
+@router.put(
+    "/{package_id}/items/{product_id}",
+    response_model=ProductPackageOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
 async def update_item_quantity(
     package_id: int,
     product_id: int,
     quantity_update: ProductPackageUpdateItemQuantity,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
     Update the quantity of a specific item in a package.
-
-    Request Body:
-    - quantity: New quantity (1-100)
     """
-    # Fetch existing package
-    db_package = await ProductPackageService.get_package_by_id(
-        db=db,
+    service = ProductPackageService(db)
+
+    return await service.update_item_quantity(
         package_id=package_id,
         school_id=current_profile.school_id,
-    )
-
-    return await ProductPackageService.update_item_quantity(
-        db=db,
-        db_package=db_package,
         product_id=product_id,
         new_quantity=quantity_update.quantity,
     )

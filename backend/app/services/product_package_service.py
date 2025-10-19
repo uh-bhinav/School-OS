@@ -1,13 +1,6 @@
-# backend/app/services/product_package_service.py
+# backend/app/services/product_package_service.py (FIXED)
 """
-Product Package Service Layer for SchoolOS E-commerce Module (ASYNC REFACTORED).
-
-This service handles all business logic for managing product packages (bundles/kits).
-Packages allow schools to sell multiple products together as a discounted unit.
-
-Security Architecture:
-- school_id is NEVER accepted from client input
-- All school_id values come exclusively from JWT-derived current_profile
+Product Package Service Layer - With Proper Response Transformation
 """
 
 from fastapi import HTTPException, status
@@ -32,30 +25,43 @@ class ProductPackageService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create_package(self, package_in: ProductPackageCreate, current_profile: Profile) -> ProductPackage:
+    def _transform_package_to_dict(self, package: ProductPackage) -> dict:
         """
-                Create a new product package with items (Admin only).
+        Transform ProductPackage model to dict with flattened item structure.
 
-                Security:
-                - school_id populated from current_profile, NOT from request
-                - All products must belong to same school
-
-                Business Rules:
-                - Package must contain at least 1 item
-                - All products must exist and be active
-        - No duplicate products in same package
-
-                Args:
-                    package_in: Package creation data (includes items list)
-                    current_profile: Authenticated user profile
-
-                Returns:
-                    Created ProductPackage instance with items relationship loaded
-
-                Raises:
-                    HTTPException 404: If any product doesn't exist
-                    HTTPException 400: If any product belongs to different school
+        This solves the Pydantic validation issue by manually flattening
+        the nested PackageItem->Product relationship.
         """
+        return {
+            "id": package.id,
+            "school_id": package.school_id,
+            "name": package.name,
+            "description": package.description,
+            "price": package.price,
+            "image_url": package.image_url,
+            "category": package.category,
+            "academic_year": package.academic_year,
+            "is_active": package.is_active,
+            "created_at": package.created_at,
+            "updated_at": package.updated_at,
+            "items": [
+                {
+                    "product_id": item.product_id,
+                    "quantity": item.quantity,
+                    "product_name": item.product.name,
+                    "product_price": item.product.price,
+                    "product_image_url": item.product.image_url,
+                    "product_sku": item.product.sku,
+                    "stock_quantity": item.product.stock_quantity,
+                    "availability": item.product.availability,
+                }
+                for item in package.items
+            ],
+        }
+
+    async def create_package(self, package_in: ProductPackageCreate, current_profile: Profile) -> dict:
+        """Create a new product package with items."""
+
         # Validate all products exist and belong to school
         product_ids = [item.product_id for item in package_in.items]
         stmt = select(Product).where(
@@ -87,7 +93,7 @@ class ProductPackageService:
 
         # Create package header
         db_package = ProductPackage(
-            school_id=current_profile.school_id,  # CRITICAL: From JWT
+            school_id=current_profile.school_id,
             name=package_in.name,
             description=package_in.description,
             price=package_in.price,
@@ -98,9 +104,9 @@ class ProductPackageService:
         )
 
         self.db.add(db_package)
-        await self.db.flush()  # Get package ID without committing
+        await self.db.flush()
 
-        # Create package items with quantities
+        # Create package items
         for item_in in package_in.items:
             package_item = PackageItem(
                 package_id=db_package.id,
@@ -110,29 +116,17 @@ class ProductPackageService:
             self.db.add(package_item)
 
         await self.db.commit()
-        await self.db.refresh(db_package)
 
-        # Eager load items for response
+        # Reload with relationships
         stmt = select(ProductPackage).options(selectinload(ProductPackage.items).selectinload(PackageItem.product)).where(ProductPackage.id == db_package.id)
         result = await self.db.execute(stmt)
         db_package = result.scalars().first()
 
-        return db_package
+        return self._transform_package_to_dict(db_package)
 
-    async def get_package_by_id(self, package_id: int, school_id: int) -> ProductPackage:
-        """
-        Get a single package by ID with items.
+    async def get_package_by_id(self, package_id: int, school_id: int) -> dict:
+        """Get a single package by ID with items."""
 
-        Args:
-            package_id: Package ID
-            school_id: School ID (for multi-tenant security)
-
-        Returns:
-            ProductPackage instance with items and product details loaded
-
-        Raises:
-            HTTPException 404: If package not found
-        """
         stmt = (
             select(ProductPackage)
             .options(selectinload(ProductPackage.items).selectinload(PackageItem.product))
@@ -152,19 +146,11 @@ class ProductPackageService:
                 detail=f"Package with ID {package_id} not found",
             )
 
-        return db_package
+        return self._transform_package_to_dict(db_package)
 
-    async def get_all_packages(self, school_id: int, include_inactive: bool = False) -> list[ProductPackage]:
-        """
-        Get all packages for a school.
+    async def get_all_packages(self, school_id: int, include_inactive: bool = False) -> list[dict]:
+        """Get all packages for a school."""
 
-        Args:
-            school_id: School ID
-            include_inactive: Whether to include inactive packages (admin only)
-
-        Returns:
-            List of ProductPackage instances with items loaded
-        """
         stmt = select(ProductPackage).options(selectinload(ProductPackage.items).selectinload(PackageItem.product)).where(ProductPackage.school_id == school_id)
 
         if not include_inactive:
@@ -173,73 +159,93 @@ class ProductPackageService:
         stmt = stmt.order_by(ProductPackage.name.asc())
 
         result = await self.db.execute(stmt)
-        return list(result.scalars().all())
+        packages = list(result.scalars().all())
 
-    async def update_package(self, db_package: ProductPackage, package_update: ProductPackageUpdate) -> ProductPackage:
-        """
-        Update package header (metadata only, not items).
+        return [self._transform_package_to_dict(pkg) for pkg in packages]
 
-        Design Pattern: Partial update.
+    async def update_package(self, package_id: int, school_id: int, package_update: ProductPackageUpdate) -> dict:
+        """Update package header (metadata only)."""
 
-        Note: To modify package items, use add_items or remove_item endpoints.
+        # Fetch the actual ORM object (not transformed dict)
+        stmt = select(ProductPackage).where(
+            and_(
+                ProductPackage.id == package_id,
+                ProductPackage.school_id == school_id,
+            )
+        )
+        result = await self.db.execute(stmt)
+        db_package = result.scalars().first()
 
-        Args:
-            db_package: Existing package instance
-            package_update: Update data
+        if not db_package:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Package with ID {package_id} not found",
+            )
 
-        Returns:
-            Updated ProductPackage instance
-        """
         # Apply updates
         update_data = package_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_package, field, value)
 
         await self.db.commit()
-        await self.db.refresh(db_package)
 
-        return db_package
+        # Reload with relationships and transform
+        stmt = select(ProductPackage).options(selectinload(ProductPackage.items).selectinload(PackageItem.product)).where(ProductPackage.id == db_package.id)
+        result = await self.db.execute(stmt)
+        db_package = result.scalars().first()
 
-    async def delete_package(self, db_package: ProductPackage) -> ProductPackage:
-        """
-        Soft-delete a package (sets is_active = False).
+        return self._transform_package_to_dict(db_package)
 
-        Business Rule: Packages are soft-deleted to preserve order history.
+    async def delete_package(self, package_id: int, school_id: int) -> dict:
+        """Soft-delete a package."""
 
-        Args:
-            db_package: Package instance to delete
+        # Fetch the actual ORM object (not transformed dict)
+        stmt = select(ProductPackage).where(
+            and_(
+                ProductPackage.id == package_id,
+                ProductPackage.school_id == school_id,
+            )
+        )
+        result = await self.db.execute(stmt)
+        db_package = result.scalars().first()
 
-        Returns:
-            Soft-deleted ProductPackage instance
-        """
+        if not db_package:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Package with ID {package_id} not found",
+            )
+
         db_package.is_active = False
         await self.db.commit()
-        await self.db.refresh(db_package)
 
-        return db_package
+        # Reload with relationships and transform
+        stmt = select(ProductPackage).options(selectinload(ProductPackage.items).selectinload(PackageItem.product)).where(ProductPackage.id == db_package.id)
+        result = await self.db.execute(stmt)
+        db_package = result.scalars().first()
 
-    async def add_items_to_package(self, db_package: ProductPackage, items_in: ProductPackageAddItems) -> ProductPackage:
-        """
-        Add new items to an existing package.
+        return self._transform_package_to_dict(db_package)
 
-        Business Rules:
-        - Cannot add products already in package
-        - All products must belong to same school
-        - Products must be active
+    async def add_items_to_package(self, package_id: int, school_id: int, items_in: ProductPackageAddItems) -> dict:
+        """Add new items to an existing package."""
 
-        Args:
-            db_package: Existing package instance
-            items_in: List of items to add
+        # Fetch the package first to validate it exists
+        stmt = select(ProductPackage).where(
+            and_(
+                ProductPackage.id == package_id,
+                ProductPackage.school_id == school_id,
+            )
+        )
+        result = await self.db.execute(stmt)
+        db_package = result.scalars().first()
 
-        Returns:
-            Updated ProductPackage instance with items loaded
+        if not db_package:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Package with ID {package_id} not found",
+            )
 
-        Raises:
-            HTTPException 409: If product already in package
-            HTTPException 404: If product doesn't exist
-        """
-        # Get existing product IDs in package
-        stmt = select(PackageItem).where(PackageItem.package_id == db_package.id)
+        # Get existing product IDs
+        stmt = select(PackageItem).where(PackageItem.package_id == package_id)
         result = await self.db.execute(stmt)
         existing_items = list(result.scalars().all())
         existing_product_ids = {item.product_id for item in existing_items}
@@ -254,11 +260,11 @@ class ProductPackageService:
                 detail=f"Products already in package: {duplicates}",
             )
 
-        # Validate all products exist and belong to school
+        # Validate products
         stmt = select(Product).where(
             and_(
                 Product.product_id.in_(new_product_ids),
-                Product.school_id == db_package.school_id,
+                Product.school_id == school_id,
             )
         )
         result = await self.db.execute(stmt)
@@ -272,10 +278,10 @@ class ProductPackageService:
                 detail=f"Products not found: {missing_ids}",
             )
 
-        # Add new items
+        # Add items
         for item_in in items_in.items:
             package_item = PackageItem(
-                package_id=db_package.id,
+                package_id=package_id,
                 product_id=item_in.product_id,
                 quantity=item_in.quantity,
             )
@@ -283,35 +289,36 @@ class ProductPackageService:
 
         await self.db.commit()
 
-        # Reload package with items
-        stmt = select(ProductPackage).options(selectinload(ProductPackage.items).selectinload(PackageItem.product)).where(ProductPackage.id == db_package.id)
+        # Reload with relationships and transform
+        stmt = select(ProductPackage).options(selectinload(ProductPackage.items).selectinload(PackageItem.product)).where(ProductPackage.id == package_id)
         result = await self.db.execute(stmt)
         db_package = result.scalars().first()
 
-        return db_package
+        return self._transform_package_to_dict(db_package)
 
-    async def remove_item_from_package(self, db_package: ProductPackage, product_id: int) -> ProductPackage:
-        """
-        Remove an item from a package.
+    async def remove_item_from_package(self, package_id: int, school_id: int, product_id: int) -> dict:
+        """Remove an item from a package."""
 
-        Business Rules:
-        - Cannot remove last item (package must have at least 1 item)
+        # Validate package exists
+        stmt = select(ProductPackage).where(
+            and_(
+                ProductPackage.id == package_id,
+                ProductPackage.school_id == school_id,
+            )
+        )
+        result = await self.db.execute(stmt)
+        db_package = result.scalars().first()
 
-        Args:
-            db_package: Existing package instance
-            product_id: Product ID to remove
+        if not db_package:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Package with ID {package_id} not found",
+            )
 
-        Returns:
-            Updated ProductPackage instance
-
-        Raises:
-            HTTPException 404: If product not in package
-            HTTPException 400: If trying to remove last item
-        """
-        # Check item exists in package
+        # Find item
         stmt = select(PackageItem).where(
             and_(
-                PackageItem.package_id == db_package.id,
+                PackageItem.package_id == package_id,
                 PackageItem.product_id == product_id,
             )
         )
@@ -324,45 +331,51 @@ class ProductPackageService:
                 detail=f"Product {product_id} not found in this package",
             )
 
-        # Check if this is the last item
-        stmt = select(func.count(PackageItem.product_id)).where(PackageItem.package_id == db_package.id)
+        # Check if last item
+        stmt = select(func.count(PackageItem.product_id)).where(PackageItem.package_id == package_id)
         result = await self.db.execute(stmt)
         item_count = result.scalar()
 
         if item_count <= 1:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot remove last item from package. Package must contain at least 1 item.",
+                detail="Cannot remove last item from package",
             )
 
         # Delete item
         await self.db.delete(item)
         await self.db.commit()
 
-        # Reload package
-        await self.db.refresh(db_package)
+        # Reload with relationships and transform
+        stmt = select(ProductPackage).options(selectinload(ProductPackage.items).selectinload(PackageItem.product)).where(ProductPackage.id == package_id)
+        result = await self.db.execute(stmt)
+        db_package = result.scalars().first()
 
-        return db_package
+        return self._transform_package_to_dict(db_package)
 
-    async def update_item_quantity(self, db_package: ProductPackage, product_id: int, new_quantity: int) -> ProductPackage:
-        """
-        Update the quantity of a specific item in a package.
+    async def update_item_quantity(self, package_id: int, school_id: int, product_id: int, new_quantity: int) -> dict:
+        """Update quantity of an item in package."""
 
-        Args:
-            db_package: Existing package instance
-            product_id: Product ID to update
-            new_quantity: New quantity (1-100)
+        # Validate package exists
+        stmt = select(ProductPackage).where(
+            and_(
+                ProductPackage.id == package_id,
+                ProductPackage.school_id == school_id,
+            )
+        )
+        result = await self.db.execute(stmt)
+        db_package = result.scalars().first()
 
-        Returns:
-            Updated ProductPackage instance
+        if not db_package:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Package with ID {package_id} not found",
+            )
 
-        Raises:
-            HTTPException 404: If product not in package
-        """
         # Find item
         stmt = select(PackageItem).where(
             and_(
-                PackageItem.package_id == db_package.id,
+                PackageItem.package_id == package_id,
                 PackageItem.product_id == product_id,
             )
         )
@@ -377,8 +390,11 @@ class ProductPackageService:
 
         # Update quantity
         item.quantity = new_quantity
-
         await self.db.commit()
-        await self.db.refresh(db_package)
 
-        return db_package
+        # Reload with relationships and transform
+        stmt = select(ProductPackage).options(selectinload(ProductPackage.items).selectinload(PackageItem.product)).where(ProductPackage.id == package_id)
+        result = await self.db.execute(stmt)
+        db_package = result.scalars().first()
+
+        return self._transform_package_to_dict(db_package)

@@ -36,6 +36,11 @@ router = APIRouter(
 )
 
 
+# ============================================================================
+# PARENT/USER ENDPOINTS
+# ============================================================================
+
+
 @router.post(
     "/checkout",
     status_code=status.HTTP_201_CREATED,
@@ -205,8 +210,35 @@ async def cancel_order(
 
 
 # ============================================================================
-# ADMIN ENDPOINTS
+# ADMIN ENDPOINTS (Specific paths MUST come before path parameters!)
 # ============================================================================
+
+
+@router.get(
+    "/admin/statistics",
+    response_model=OrderStatistics,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def get_order_statistics(
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get aggregated order statistics for admin dashboard.
+
+    Returns:
+    - Total orders
+    - Count by status
+    - Total revenue
+    - Pending revenue
+    - Average order value
+    """
+    service = OrderService(db)
+    stats = await service.get_order_statistics(
+        school_id=current_profile.school_id,
+    )
+
+    return OrderStatistics(**stats)
 
 
 @router.get(
@@ -331,30 +363,3 @@ async def admin_cancel_order(
         cancel_data=cancel_data,
         cancelled_by_user_id=current_profile.user_id,
     )
-
-
-@router.get(
-    "/admin/statistics",
-    response_model=OrderStatistics,
-    dependencies=[Depends(require_role("Admin"))],
-)
-async def get_order_statistics(
-    db: AsyncSession = Depends(get_db),
-    current_profile: Profile = Depends(get_current_user_profile),
-):
-    """
-    Get aggregated order statistics for admin dashboard.
-
-    Returns:
-    - Total orders
-    - Count by status
-    - Total revenue
-    - Pending revenue
-    - Average order value
-    """
-    service = OrderService(db)
-    stats = await service.get_order_statistics(
-        school_id=current_profile.school_id,
-    )
-
-    return OrderStatistics(**stats)
