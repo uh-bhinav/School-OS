@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.db.session import get_db
 from app.models.album import Album
 from app.models.profile import Profile
 from app.schemas.album_schema import AlbumCreate, AlbumResponse
@@ -19,7 +20,7 @@ router = APIRouter()
 @router.post("/", response_model=AlbumResponse, status_code=status.HTTP_201_CREATED)
 async def create_album_with_targets(
     *,
-    db: AsyncSession = Depends(deps.get_db),
+    db: AsyncSession = Depends(get_db),
     album_in: AlbumCreate,
     current_user: Profile = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -42,7 +43,7 @@ async def create_album_with_targets(
 
 @router.get("/", response_model=list[AlbumResponse])
 async def list_accessible_albums(
-    db: AsyncSession = Depends(deps.get_db),
+    db: AsyncSession = Depends(get_db),
     album_type: str | None = None,
     current_user: Profile = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -59,7 +60,7 @@ async def list_accessible_albums(
 @router.get("/{album_id}", response_model=AlbumResponse)
 async def get_album_details(
     album_id: int,
-    db: AsyncSession = Depends(deps.get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: Profile = Depends(deps.get_current_active_user),
 ) -> Any:
     """Fetch a single album after verifying the requesting user's access."""
@@ -87,7 +88,7 @@ async def get_album_details(
 async def update_album_targets(
     album_id: int,
     targets_in: list[AlbumTargetCreate],
-    db: AsyncSession = Depends(deps.get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: Profile = Depends(deps.get_current_active_user),
 ) -> Any:
     """Replace all targets for the requested album."""
