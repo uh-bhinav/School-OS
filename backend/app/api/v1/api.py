@@ -3,6 +3,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     academic_years,
+    albums,
     announcements,
     attendance_records,
     classes,
@@ -11,6 +12,7 @@ from app.api.v1.endpoints import (
     exam_types,
     exams,
     marks,
+    media,
     periods,
     profiles,  # Added this import
     schools,
@@ -67,3 +69,5 @@ api_router.include_router(profiles.router, prefix="/profiles", tags=["Profiles"]
 
 api_router.include_router(users.router, prefix="/users", tags=["Users"])
 api_router.include_router(students.router, prefix="/students", tags=["students"])  # ✅ This line must exist
+api_router.include_router(albums.router, prefix="/albums", tags=["albums"])  # <--- ADD THIS LINE
+api_router.include_router(media.router, prefix="/media", tags=["media"])
