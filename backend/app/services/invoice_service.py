@@ -15,6 +15,7 @@ from app.models.fee_component import FeeComponent
 from app.models.fee_term import FeeTerm
 from app.models.invoice import Invoice
 from app.models.invoice_item import InvoiceItem
+from app.models.profile import Profile
 
 # ADDED: Import necessary models and schemas for calculations
 from app.models.payment import Payment
@@ -482,3 +483,24 @@ async def _generate_invoice_for_student_core(db: AsyncSession, *, obj_in: Invoic
 
     logger.info(f"DEBUG: _generate_invoice_for_student_core completed for student_id={obj_in.student_id}")
     return db_obj
+
+async def get_all_invoices_for_school(db: AsyncSession, school_id: int) -> list[Invoice]:
+    """
+    Retrieves all active invoices associated with a given school ID.
+    
+    NOTE: This service function itself does *not* enforce RLS directly. 
+    RLS is applied at the database level based on the connection role 
+    or additional filtering should be done in the endpoint based on the user's role/school.
+    """
+    stmt = (
+        select(Invoice)
+        .join(Student, Invoice.student_id == Student.student_id)
+        .join(Profile, Student.user_id == Profile.user_id) # Join through Student to Profile
+        .where(Profile.school_id == school_id) # Filter by the school_id on the Profile
+        .where(Invoice.is_active.is_(True))
+        .options(selectinload(Invoice.items)) # Optionally load items
+        .order_by(Invoice.created_at.desc()) # Optional ordering
+    )
+    result = await db.execute(stmt)
+    invoices = result.scalars().all()
+    return invoices

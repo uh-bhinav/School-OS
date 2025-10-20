@@ -234,7 +234,7 @@ class TempClass(Base):
     __tablename__ = "classes"
     __table_args__ = {"extend_existing": True}
     class_id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, default="Test Class")
+    section = Column(String)
     school_id = Column(Integer, ForeignKey("schools.school_id"))
 
 
