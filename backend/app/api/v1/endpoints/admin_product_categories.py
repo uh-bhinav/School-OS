@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_user_profile, get_db
+from app.core.security import get_current_user_profile, get_db, require_role
 from app.schemas.product_category_schema import (
     ProductCategoryCreate,
     ProductCategoryOut,  # <-- Pydantic schema for output
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/admin/product-categories", tags=["Admin - Product Ca
 
 
 # CREATE
-@router.post("/", response_model=ProductCategoryOut, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ProductCategoryOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role("Admin"))])
 async def create_category(
     category_in: ProductCategoryCreate,
     db: AsyncSession = Depends(get_db),
@@ -38,7 +38,7 @@ async def get_category(
 
 
 # GET ALL CATEGORIES
-@router.get("/", response_model=List[ProductCategoryOut])
+@router.get("/", response_model=List[ProductCategoryOut], dependencies=[Depends(require_role("Admin"))])
 async def get_all_categories(
     include_inactive: bool = False,
     db: AsyncSession = Depends(get_db),
@@ -49,7 +49,7 @@ async def get_all_categories(
 
 
 # GET CATEGORIES WITH PRODUCT COUNTS
-@router.get("/with-product-counts", response_model=List[ProductCategoryWithCount])
+@router.get("/with-product-counts", response_model=List[ProductCategoryWithCount], dependencies=[Depends(require_role("Admin"))])
 async def get_categories_with_counts(
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),
@@ -59,8 +59,8 @@ async def get_categories_with_counts(
 
 
 # UPDATE CATEGORY
-@router.patch("/{category_id}", response_model=ProductCategoryOut)
-@router.put("/{category_id}", response_model=ProductCategoryOut)
+@router.patch("/{category_id}", response_model=ProductCategoryOut, dependencies=[Depends(require_role("Admin"))])
+@router.put("/{category_id}", response_model=ProductCategoryOut, dependencies=[Depends(require_role("Admin"))])
 async def update_category(
     category_id: int,
     category_update: ProductCategoryUpdate,
@@ -73,7 +73,7 @@ async def update_category(
 
 
 # DELETE CATEGORY
-@router.delete("/{category_id}", response_model=ProductCategoryOut)
+@router.delete("/{category_id}", response_model=ProductCategoryOut, dependencies=[Depends(require_role("Admin"))])
 async def delete_category(
     category_id: int,
     db: AsyncSession = Depends(get_db),
@@ -96,7 +96,7 @@ async def bulk_reorder(
 
 
 # BULK ACTIVATE/DEACTIVATE
-@router.put("/bulk-activate", response_model=List[ProductCategoryOut])
+@router.put("/bulk-activate", response_model=List[ProductCategoryOut], dependencies=[Depends(require_role("Admin"))])
 async def bulk_activate(
     category_ids: List[int],
     is_active: bool,

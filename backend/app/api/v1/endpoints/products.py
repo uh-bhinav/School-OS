@@ -13,10 +13,10 @@ Security:
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_db
+from app.core.security import get_current_user_profile, get_db
 from app.schemas.product_schema import ProductOut
 from app.services.product_service import ProductService
 
@@ -34,6 +34,7 @@ async def browse_products(
     school_id: int,
     category_id: Optional[int] = Query(None, description="Filter by category ID"),
     db: AsyncSession = Depends(get_db),
+    current_profile=Depends(get_current_user_profile),
 ):
     """
     Browse school store catalog (Parent-facing).
@@ -47,6 +48,11 @@ async def browse_products(
     Returns:
     - List of active products with category information
     """
+    if current_profile.school_id != school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to browse products for this school.",
+        )
     service = ProductService(db)
     return await service.get_all_products(
         school_id=school_id,
@@ -59,11 +65,7 @@ async def browse_products(
     "/{product_id}",
     response_model=ProductOut,
 )
-async def get_product_details(
-    product_id: int,
-    school_id: int = Query(..., description="School ID for validation"),
-    db: AsyncSession = Depends(get_db),
-):
+async def get_product_details(product_id: int, school_id: int = Query(..., description="School ID for validation"), db: AsyncSession = Depends(get_db), current_profile=Depends(get_current_user_profile)):
     """
     Get detailed product information (Parent-facing).
 
@@ -73,6 +75,11 @@ async def get_product_details(
     Returns:
     - Complete product details with category information
     """
+    if current_profile.school_id != school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to browse products for this school.",
+        )
     service = ProductService(db)
     return await service.get_product_by_id(
         product_id=product_id,
