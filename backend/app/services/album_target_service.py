@@ -100,6 +100,8 @@ class AlbumTargetService:
                 return True
             if target.target_type == "class" and target.target_id == user_context.get("current_class_id"):
                 return True
+            if target.target_type == "individual_student" and target.target_id == user_context.get("student_id"):
+                return True
             # Add other target_type checks as needed (e.g., 'stream', 'individual_student')
 
         return False

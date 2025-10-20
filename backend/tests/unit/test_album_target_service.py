@@ -200,6 +200,35 @@ async def test_validate_user_access_success_class_match():
 
 
 @pytest.mark.asyncio
+async def test_validate_user_access_success_individual_student_match():
+    """Unit Test: validate_user_access returns True for individual student targeting."""
+
+    mock_db = AsyncMock(spec=AsyncSession)
+    service = AlbumTargetService()
+    album_id_to_check = 41
+    user_context = {
+        "school_id": 1,
+        "student_id": 1234,
+        "user_id": uuid.uuid4(),
+    }
+    mock_targets = [
+        AlbumTarget(id=7, album_id=album_id_to_check, target_type="individual_student", target_id=1234),
+        AlbumTarget(id=8, album_id=album_id_to_check, target_type="class", target_id=999),
+    ]
+
+    mock_get_targets = AsyncMock(return_value=mock_targets)
+    with patch.object(service, "get_targets_for_album", mock_get_targets):
+        has_access = await service.validate_user_access(
+            db=mock_db,
+            album_id=album_id_to_check,
+            user_context=user_context,
+        )
+
+        mock_get_targets.assert_awaited_once_with(mock_db, album_id=album_id_to_check)
+        assert has_access is True
+
+
+@pytest.mark.asyncio
 async def test_validate_user_access_failure_no_match():
     """
     Unit Test: validate_user_access returns False when user context matches no targets.
