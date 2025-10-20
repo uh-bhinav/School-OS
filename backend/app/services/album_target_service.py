@@ -1,18 +1,19 @@
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.album_target import AlbumTarget
 from app.schemas.album_target_schema import AlbumTargetCreate
 
 
 class InvalidTargetError(HTTPException):
-    def __init__(self, detail: str):
-        super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+    def _init_(self, detail: str):
+        super()._init_(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
 class UnauthorizedAccessError(HTTPException):
-    def __init__(self, detail: str = "User does not have access to this resource"):
-        super().__init__(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+    def _init_(self, detail: str = "User does not have access to this resource"):
+        super()._init_(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
 
 class AlbumTargetService:
@@ -20,7 +21,7 @@ class AlbumTargetService:
     Service layer for handling business logic related to album targets.
     """
 
-    def create_targets(self, db: Session, *, album_id: int, targets: list[AlbumTargetCreate]) -> list[AlbumTarget]:  # Fixed: F821 - Changed List to list
+    async def create_targets(self, db: AsyncSession, *, album_id: int, targets: list[AlbumTargetCreate]) -> list[AlbumTarget]:
         """
         Creates new targeting rules for an album.
 
@@ -34,14 +35,17 @@ class AlbumTargetService:
         """
         # TODO: Add validation to check if target_id is valid (e.g., class_id exists)
 
-        db_targets = [AlbumTarget(**target.dict(), album_id=album_id) for target in targets]
+        db_targets = []
+        for target in targets:
+            target_payload = target.model_dump() if hasattr(target, "model_dump") else target.dict()
+            db_targets.append(AlbumTarget(**target_payload, album_id=album_id))
         db.add_all(db_targets)
-        db.commit()
+        await db.flush()
         for db_target in db_targets:
-            db.refresh(db_target)
+            await db.refresh(db_target)
         return db_targets
 
-    def get_targets_for_album(self, db: Session, *, album_id: int) -> list[AlbumTarget]:
+    async def get_targets_for_album(self, db: AsyncSession, *, album_id: int) -> list[AlbumTarget]:
         """
         Fetches all targeting rules for a specific album.
 
@@ -52,9 +56,11 @@ class AlbumTargetService:
         Returns:
             list[AlbumTarget]: A list of album target records.
         """
-        return db.query(AlbumTarget).filter(AlbumTarget.album_id == album_id).all()
+        stmt = select(AlbumTarget).where(AlbumTarget.album_id == album_id)
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
 
-    def delete_targets(self, db: Session, *, album_id: int) -> None:
+    async def delete_targets(self, db: AsyncSession, *, album_id: int) -> None:
         """
         Deletes all targeting rules associated with an album.
         This is useful when updating an album's entire set of access rules.
@@ -63,10 +69,11 @@ class AlbumTargetService:
             db (Session): The database session.
             album_id (int): The ID of the album whose targets will be deleted.
         """
-        db.query(AlbumTarget).filter(AlbumTarget.album_id == album_id).delete()
-        db.commit()
+        stmt = delete(AlbumTarget).where(AlbumTarget.album_id == album_id)
+        await db.execute(stmt)
+        await db.flush()
 
-    def validate_user_access(self, db: Session, *, album_id: int, user_context: dict) -> bool:
+    async def validate_user_access(self, db: AsyncSession, *, album_id: int, user_context: dict) -> bool:
         """
         Checks if a user, based on their context, has access to a targeted album.
 
@@ -82,7 +89,7 @@ class AlbumTargetService:
         Returns:
             bool: True if the user has access, False otherwise.
         """
-        targets = self.get_targets_for_album(db, album_id=album_id)
+        targets = await self.get_targets_for_album(db, album_id=album_id)
         if not targets:
             # If an album has no targets, access is denied by default unless it's public.
             # Public album logic is handled separately in the album_service.

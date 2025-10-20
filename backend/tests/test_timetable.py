@@ -246,6 +246,43 @@ async def test_get_teacher_timetable_as_student_fails(test_client: AsyncClient, 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.asyncio
+async def test_get_teacher_schedule_alias(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
+    """HAPPY PATH: `/teacher/{id}/schedule` returns data and supports optional date filtering."""
+    target_teacher_id = 11
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+
+    payload = {
+        "school_id": SCHOOL_ID,
+        "class_id": 11,
+        "subject_id": 1,
+        "teacher_id": target_teacher_id,
+        "period_id": 1,
+        "day_of_week": 1,
+        "academic_year_id": 1,
+    }
+    await test_client.post("/v1/timetable/", json=payload)
+
+    mock_teacher_profile = Profile(
+        user_id="teacher-schedule-alias",
+        school_id=SCHOOL_ID,
+        is_active=True,
+        roles=[UserRole(role_definition=RoleDefinition(role_id=2, role_name="Teacher"))],
+    )
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_teacher_profile
+
+    response = await test_client.get(f"/v1/timetable/teacher/{target_teacher_id}/schedule")
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert isinstance(data, list) and len(data) >= 1
+
+    filtered_response = await test_client.get(f"/v1/timetable/teacher/{target_teacher_id}/schedule?schedule_date=2025-10-06")
+    assert filtered_response.status_code == status.HTTP_200_OK
+    filtered = filtered_response.json()
+    assert len(filtered) >= 1
+    assert all(entry["day_of_week"] == 1 for entry in filtered)
+
+
 # --- NEW TESTS FOR get_schedule_for_day and NOT FOUND ---
 
 

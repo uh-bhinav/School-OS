@@ -2,6 +2,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -55,7 +56,7 @@ class AlbumResponse(AlbumBase):
 
     id: int
     school_id: int
-    published_by_id: str  # UUID
+    published_by_id: UUID
     created_at: datetime
     updated_at: Optional[datetime] = None
     targets: list[AlbumTargetResponse] = []

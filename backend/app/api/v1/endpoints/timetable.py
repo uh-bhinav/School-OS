@@ -100,12 +100,12 @@ async def get_timetable_for_class(
     Get the timetable for a specific class.
     """
     target_class = await db.get(Class, class_id)
-    if not target_class or target_class.school_id != current_profile.school_id:
-        raise HTTPException(status_code=404, detail="Class not found.")
+    if target_class and target_class.school_id != current_profile.school_id:
+        return []
+    if target_class is None:
+        return []
 
     timetable = await timetable_service.get_class_timetable(db=db, class_id=class_id)
-    if not timetable:
-        raise HTTPException(status_code=404, detail="Timetable not found for this class.")
     return timetable
 
 
@@ -131,6 +131,39 @@ async def get_timetable_for_teacher(
     if not timetable:
         raise HTTPException(status_code=404, detail="Timetable not found for this teacher.")
     return timetable
+
+
+@router.get(
+    "/teacher/{teacher_id}/schedule",
+    response_model=list[TimetableOut],
+    dependencies=[Depends(require_role("Teacher"))],
+)
+async def get_teacher_schedule(
+    teacher_id: int,
+    schedule_date: date
+    | None = Query(
+        None,
+        description="Optional date filter (YYYY-MM-DD) to retrieve a specific day's schedule.",
+    ),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """Return either the full timetable or a specific day's schedule for a teacher."""
+
+    target_teacher = await db.get(Teacher, teacher_id)
+    if not target_teacher or target_teacher.school_id != current_profile.school_id:
+        raise HTTPException(status_code=404, detail="Teacher not found.")
+
+    if schedule_date:
+        return await timetable_service.get_schedule_for_day(
+            db=db,
+            school_id=current_profile.school_id,
+            target_type="teacher",
+            target_id=teacher_id,
+            schedule_date=schedule_date,
+        )
+
+    return await timetable_service.get_teacher_timetable(db=db, teacher_id=teacher_id)
 
 
 # Admin only: Update an existing timetable entry

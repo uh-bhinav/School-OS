@@ -1,15 +1,15 @@
 import inspect
-from typing import (
-    Any,
-    Optional,
-)
+from typing import Any, Optional
 
 # FIX 1: Import Dict, Any, List from typing
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from app.models.exams import Exam
-from app.models.mark import Mark  # Assuming you have a Mark model
+from app.models.mark import Mark
+from app.models.profile import Profile
+from app.models.student import Student
 from app.models.subject import Subject
 
 # Assuming you have a Subject model
@@ -92,55 +92,72 @@ async def get_exam_mark_summary(db: AsyncSession, exam_id: int, student_id: int)
       consolidated results for all subjects
     in a specific, active exam.
     """
+    exam = await db.get(Exam, exam_id)
+    if not exam or getattr(exam, "is_active", True) is not True:
+        return {
+            "status": "not_found",
+            "message": f"Exam {exam_id} is inactive or does not exist.",
+        }
 
-    # 1. Select the necessary data by joining Marks, Subjects, and Exams.
-    stmt = (
+    student_stmt = select(Student).where(Student.student_id == student_id).options(selectinload(Student.profile)).limit(1)
+    student_result = await db.execute(student_stmt)
+    student = student_result.scalars().first()
+    student_profile: Profile | None = getattr(student, "profile", None)
+
+    marks_stmt = (
         select(
-            Mark.marks_obtained,
-            Mark.total_marks,
-            Mark.grade_letter,
             Subject.name.label("subject_name"),
-            Exam.exam_name,
+            Mark.marks_obtained,
+            Mark.max_marks,
         )
-        .join(Subject, Mark.subject_id == Subject.subject_id)
-        .join(Exam, Mark.exam_id == Exam.id)
+        .join(Subject, Subject.subject_id == Mark.subject_id)
         .where(
-            Mark.student_id == student_id,
             Mark.exam_id == exam_id,
-            # FIX 2: Ensure filter is on a separate
-            #  line if needed, but keeping it clean
-            Exam.is_active.is_(True),
+            Mark.student_id == student_id,
         )
     )
 
-    result = await db.execute(stmt)
-    mark_records = result.all()
+    marks_result = await db.execute(marks_stmt)
+    mark_rows = marks_result.all()
 
-    if not mark_records:
+    if not mark_rows:
         return {
             "status": "not_found",
-            "message": f"No active results- {student_id} in Exam {exam_id}.",
+            "message": f"No marks recorded for student {student_id} in exam {exam_id}.",
         }
-    # 2. Format the results into a clean,
-    #  structured dictionary for the Agent.
-    summary = {
-        "student_id": student_id,
-        # FIX 3: E501 line break applied here
-        "exam_name": mark_records[0].exam_name,
-        "total_marks_obtained": sum(r.marks_obtained for r in mark_records),
-        "performance_by_subject": [
-            {
-                "subject": r.subject_name,
-                "obtained": float(r.marks_obtained),
-                "total": float(r.total_marks),
-                "grade": r.grade_letter,
-            }
-            for r in mark_records
-        ],
-        "status": "complete",
-    }
 
-    return summary
+    total_obtained = float(sum(row.marks_obtained for row in mark_rows))
+    max_total = float(sum(row.max_marks for row in mark_rows))
+    percentage = round((total_obtained / max_total) * 100, 2) if max_total else 0.0
+    result_label = "Pass" if percentage >= 40 else "Fail"
+
+    marks_by_subject = [
+        {
+            "subject_name": row.subject_name,
+            "score": float(row.marks_obtained),
+            "max_marks": float(row.max_marks),
+        }
+        for row in mark_rows
+    ]
+
+    student_name = "Unknown Student"
+    if student_profile:
+        first = student_profile.first_name or ""
+        last = student_profile.last_name or ""
+        student_name = (f"{first} {last}").strip() or student_name
+
+    return {
+        "status": "complete",
+        "student_id": student_id,
+        "student_name": student_name,
+        "exam_id": exam_id,
+        "exam_name": exam.exam_name,
+        "total_marks_obtained": total_obtained,
+        "max_total_marks": max_total,
+        "percentage": percentage,
+        "result": result_label,
+        "marks_by_subject": marks_by_subject,
+    }
 
 
 # --- Agentic Function ---

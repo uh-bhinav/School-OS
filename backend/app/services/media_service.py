@@ -1,7 +1,10 @@
 import uuid
+from typing import Any
 
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.storage import storage_client
 from app.models.album import Album
@@ -17,114 +20,155 @@ BUCKET_MAP = {
 
 
 class MediaService:
-    """
-    Service layer for handling media file operations and business logic.
-    """
+    """Service layer for handling media file operations and business logic."""
 
-    def get_bucket_for_album(self, db: Session, *, album_id: int) -> str:
-        """Determines the correct storage bucket for a given album."""
-        album = db.query(Album).filter(Album.id == album_id).first()
-        if not album:
+    async def _get_album(self, db: AsyncSession, *, album_id: int) -> Album:
+        stmt = select(Album).where(Album.id == album_id)
+        result = await db.execute(stmt)
+        album = result.scalar_one_or_none()
+        if album is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found")
+        return album
 
-        bucket_name = BUCKET_MAP.get(album.album_type)
+    def _resolve_bucket(self, *, album_type: str) -> str:
+        bucket_name = BUCKET_MAP.get(album_type)
         if not bucket_name:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"No bucket configured for album type: {album.album_type}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"No bucket configured for album type: {album_type}",
+            )
         return bucket_name
 
-    async def upload_media_item(self, db: Session, *, album_id: int, file: UploadFile, uploaded_by_id: uuid.UUID) -> MediaItem:
-        """
-        Uploads a media file to the appropriate storage bucket and creates a
-        corresponding database record.
+    async def get_bucket_for_album(self, db: AsyncSession, *, album_id: int) -> str:
+        album = await self._get_album(db, album_id=album_id)
+        return self._resolve_bucket(album_type=album.album_type)
 
-        Args:
-            db (Session): The database session.
-            album_id (int): The ID of the album to upload the media to.
-            file (UploadFile): The file to be uploaded.
-            uploaded_by_id (uuid.UUID): The ID of the user uploading the file.
+    async def upload_media_item(
+        self,
+        db: AsyncSession,
+        *,
+        album_id: int,
+        file: UploadFile,
+        uploaded_by_id: uuid.UUID | str,
+    ) -> MediaItem:
+        """Upload a media file to storage and persist its metadata."""
 
-        Returns:
-            MediaItem: The newly created media item record.
-        """
-        # TODO: Add permission check to ensure the user is allowed to upload to this album.
-        # For example: check if the user is a teacher for a 'cultural' album.
+        album = await self._get_album(db, album_id=album_id)
+        bucket_name = self._resolve_bucket(album_type=album.album_type)
 
-        bucket_name = self.get_bucket_for_album(db, album_id=album_id)
+        filename = file.filename or "upload"
+        extension = filename.split(".")[-1] if "." in filename else None
+        unique_name = f"{uuid.uuid4()}"
+        storage_path = f"{album_id}/{unique_name}{'.' + extension if extension else ''}"
 
-        # Generate a unique path for the file to prevent collisions
-        file_extension = file.filename.split(".")[-1]
-        storage_path = f"{album_id}/{uuid.uuid4()}.{file_extension}"
-
-        # Read file content
         contents = await file.read()
+        if not contents:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty")
+
         file_size = len(contents)
+        mime_type = file.content_type or "application/octet-stream"
 
-        # Use the centralized storage client to upload
-        storage_client.upload_file(bucket=bucket_name, path=storage_path, file=contents, mime_type=file.content_type)
+        storage_client.upload_file(
+            bucket=bucket_name,
+            path=storage_path,
+            file=contents,
+            mime_type=mime_type,
+        )
 
-        # Create the database record
-        db_media_item = MediaItem(album_id=album_id, storage_path=storage_path, mime_type=file.content_type, file_size_bytes=file_size, uploaded_by_id=uploaded_by_id)
+        uploader_uuid = uploaded_by_id if isinstance(uploaded_by_id, uuid.UUID) else uuid.UUID(str(uploaded_by_id))
+
+        db_media_item = MediaItem(
+            album_id=album_id,
+            storage_path=storage_path,
+            mime_type=mime_type,
+            file_size_bytes=file_size,
+            uploaded_by_id=str(uploader_uuid),
+        )
         db.add(db_media_item)
-        db.commit()
-        db.refresh(db_media_item)
+
+        try:
+            await db.commit()
+            await db.refresh(db_media_item)
+        except Exception:
+            await db.rollback()
+            raise
 
         return db_media_item
 
-    def generate_signed_url(self, db: Session, *, media_item_id: int, user_context: dict, expiry_seconds: int = 3600) -> str:
-        """
-        Generates a time-limited signed URL for a media item after verifying user access.
+    async def generate_signed_url(
+        self,
+        db: AsyncSession,
+        *,
+        media_item_id: int,
+        user_context: dict[str, Any],
+        expiry_seconds: int = 3600,
+    ) -> str:
+        """Return a signed URL for the requested media item when access is permitted."""
 
-        Args:
-            db (Session): The database session.
-            media_item_id (int): The ID of the media item.
-            user_context (dict): The user's context for permission checking.
-            expiry_seconds (int): The duration for which the URL is valid.
-
-        Returns:
-            str: The signed URL.
-        """
-        media_item = db.query(MediaItem).filter(MediaItem.id == media_item_id).first()
-        if not media_item:
+        stmt = select(MediaItem).options(selectinload(MediaItem.album)).where(MediaItem.id == media_item_id)
+        result = await db.execute(stmt)
+        media_item = result.scalars().first()
+        if media_item is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media item not found")
 
         album = media_item.album
+        if album is None:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Media item has no album association")
 
-        # Application-level access check
         is_public = album.access_scope == "public"
-        has_targeted_access = album_target_service.validate_user_access(db, album_id=album.id, user_context=user_context)
+        has_targeted_access = await album_target_service.validate_user_access(
+            db,
+            album_id=album.id,
+            user_context=user_context,
+        )
+        roles = {role.lower() for role in user_context.get("roles", [])}
+        elevated_access = "teacher" in roles or "admin" in roles
 
-        if not (is_public or has_targeted_access):
+        if not (is_public or has_targeted_access or elevated_access):
             raise UnauthorizedAccessError()
 
-        bucket_name = self.get_bucket_for_album(db, album_id=album.id)
+        bucket_name = self._resolve_bucket(album_type=album.album_type)
+        return storage_client.generate_signed_url(
+            bucket=bucket_name,
+            path=media_item.storage_path,
+            expires_in=expiry_seconds,
+        )
 
-        return storage_client.generate_signed_url(bucket=bucket_name, path=media_item.storage_path, expires_in=expiry_seconds)
+    async def delete_media_item(
+        self,
+        db: AsyncSession,
+        *,
+        media_item_id: int,
+        user_id: uuid.UUID | str,
+    ) -> None:
+        """Delete a media item from storage and the database after validation."""
 
-    def delete_media_item(self, db: Session, *, media_item_id: int, user_id: uuid.UUID):
-        """
-        Deletes a media item from storage and its corresponding database record.
-
-        Args:
-            db (Session): The database session.
-            media_item_id (int): The ID of the media item to delete.
-            user_id (uuid.UUID): The ID of the user attempting the deletion.
-        """
-        media_item = db.query(MediaItem).filter(MediaItem.id == media_item_id).first()
-        if not media_item:
+        stmt = select(MediaItem).options(selectinload(MediaItem.album)).where(MediaItem.id == media_item_id)
+        result = await db.execute(stmt)
+        media_item = result.scalar_one_or_none()
+        if media_item is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media item not found")
 
-        # TODO: Implement more robust permission checks (e.g., allow admins to delete)
-        if media_item.uploaded_by_id != user_id:
+        try:
+            requester_uuid = user_id if isinstance(user_id, uuid.UUID) else uuid.UUID(str(user_id))
+            uploader_uuid = uuid.UUID(str(media_item.uploaded_by_id))
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user identifier") from exc
+
+        if requester_uuid != uploader_uuid:
             raise UnauthorizedAccessError("You can only delete your own media.")
 
-        bucket_name = self.get_bucket_for_album(db, album_id=media_item.album_id)
+        album = media_item.album or await self._get_album(db, album_id=media_item.album_id)
+        bucket_name = self._resolve_bucket(album_type=album.album_type)
 
-        # Delete from storage first
         storage_client.delete_file(bucket=bucket_name, path=media_item.storage_path)
 
-        # Delete from database
-        db.delete(media_item)
-        db.commit()
+        try:
+            await db.delete(media_item)
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
 
 
 media_service = MediaService()

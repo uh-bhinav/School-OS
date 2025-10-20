@@ -1,120 +1,107 @@
 import uuid
-from typing import Any
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.models.user_roles import User
-from app.schemas.profile_schema import Profile, ProfileCreate, ProfileUpdate
-from app.services.profile_service import profile_service
+from app.core.security import get_current_user_profile, require_role
+from app.db.session import get_db
+from app.models.profile import Profile
+from app.schemas.profile_schema import ProfileOut
+from app.services import profile_service
 
 router = APIRouter()
 
 
-@router.get("/", response_model=list[Profile])
-def read_profiles(
-    db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Retrieve profiles.
-    """
-    if not deps.is_school_admin(current_user):
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    profiles = profile_service.get_profiles_by_school(db, school_id=current_user.school_id, skip=skip, limit=limit)
-    return profiles
+@router.get("/me", response_model=ProfileOut)
+async def get_my_profile(current_profile: Profile = Depends(get_current_user_profile)) -> Profile:
+    """Return the authenticated user's profile."""
+
+    return current_profile
 
 
-@router.post("/", response_model=Profile)
-def create_profile(
-    *,
-    db: Session = Depends(deps.get_db),
-    profile_in: ProfileCreate,
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Create new profile.
-    """
-    # This endpoint might need more specific logic depending on who can create profiles
-    profile = profile_service.create_profile(db=db, profile=profile_in, user_id=current_user.user_id, school_id=current_user.school_id)
-    return profile
+@router.get(
+    "/school/{school_id}",
+    response_model=list[ProfileOut],
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def get_all_profiles(
+    school_id: int,
+    role: Optional[str] = None,
+    name: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+) -> list[Profile]:
+    """List profiles for the admin's school with optional filters."""
+
+    if current_profile.school_id != school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this school")
+
+    return await profile_service.get_all_profiles_for_school(db=db, school_id=school_id, role=role, name=name)
 
 
-@router.put("/me", response_model=Profile)
-def update_profile_me(
-    *,
-    db: Session = Depends(deps.get_db),
-    profile_in: ProfileUpdate,
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Update own profile.
-    """
-    profile = profile_service.update_profile(db=db, user_id=current_user.user_id, profile=profile_in)
-    return profile
-
-
-@router.get("/me", response_model=Profile)
-def read_profile_me(
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Get current profile.
-    """
-    return current_user.profile
-
-
-@router.get("/{user_id}", response_model=Profile)
-def read_profile_by_id(
+@router.get(
+    "/{user_id}",
+    response_model=ProfileOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def get_profile_by_id(
     user_id: uuid.UUID,
-    current_user: User = Depends(deps.get_current_active_user),
-    db: Session = Depends(deps.get_db),
-) -> Any:
-    """
-    Get a specific profile by id.
-    """
-    profile = profile_service.get_profile(db, user_id=user_id)
-    if not profile or profile.school_id != current_user.school_id:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    return profile
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+) -> Profile:
+    """Retrieve a specific profile by identifier."""
+
+    db_profile = await profile_service.get_profile(db=db, user_id=user_id)
+    if not db_profile or db_profile.school_id != current_profile.school_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+    return db_profile
 
 
-# --- NEW ENDPOINTS FROM ROADMAP ---
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def delete_profile(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+) -> None:
+    """Soft delete a profile from the admin's school."""
+
+    deleted_profile = await profile_service.soft_delete_profile(db=db, user_id=user_id, school_id=current_profile.school_id)
+    if not deleted_profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Active profile for user_id {user_id} not found in this school")
+    return None
 
 
-@router.post("/me/picture", response_model=Profile)
+@router.post("/me/picture", response_model=ProfileOut)
 async def upload_own_profile_picture(
     *,
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(get_db),
     file: UploadFile = File(...),
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Upload a profile picture for the currently authenticated user.
-    """
-    profile = await profile_service.upload_profile_picture(db=db, user_id=current_user.user_id, file=file)
-    return profile
+    current_user: Profile = Depends(get_current_user_profile),
+) -> Profile:
+    """Upload a profile picture for the current user."""
+
+    return await profile_service.upload_profile_picture(db=db, user_id=current_user.user_id, file=file)
 
 
 @router.get("/{user_id}/picture", response_model=dict)
-def get_profile_picture_url(
+async def get_profile_picture_url(
     user_id: uuid.UUID,
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Get a secure, time-limited signed URL for a user's profile picture.
-    Access is restricted to the owner or a school admin.
-    """
-    requesting_user_context = deps.get_user_context_from_user(db, user=current_user)
+    db: AsyncSession = Depends(get_db),
+    current_user: Profile = Depends(get_current_user_profile),
+) -> dict:
+    """Generate a signed URL for a profile picture when permitted."""
+
+    requesting_user_context = await deps.get_user_context_from_user(db, user=current_user)
     try:
-        signed_url = profile_service.get_profile_picture_url(db=db, user_id=user_id, requesting_user_context=requesting_user_context)
+        signed_url = await profile_service.get_profile_picture_url(db=db, user_id=user_id, requesting_user_context=requesting_user_context)
         return {"signed_url": signed_url, "expires_at": "1 hour from generation"}
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except HTTPException as exc:
+        raise exc
+    except Exception as exc:  # pragma: no cover - unexpected failures surfaced as 500s
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))

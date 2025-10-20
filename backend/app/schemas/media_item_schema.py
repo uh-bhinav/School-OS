@@ -37,3 +37,10 @@ class MediaItemResponse(BaseModel):
     signed_url: Optional[HttpUrl] = Field(None, description="A time-limited, secure URL to access the media item.")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SignedUrlResponse(BaseModel):
+    """Schema for returning a generated signed URL for a media asset."""
+
+    signed_url: HttpUrl
+    expires_in: int
