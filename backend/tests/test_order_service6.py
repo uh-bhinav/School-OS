@@ -39,7 +39,6 @@ async def test_cancel_order_success_and_restores_stock(db_session: AsyncSession,
     """
     print("\n--- Test 4.1: Cancel Order & Restore Stock ---")
 
-    # Step 1: Setup product
     # Step 1: Setup product and extract IDs BEFORE commit
     product = await db_session.get(Product, 16)
     initial_stock = 100
@@ -74,14 +73,13 @@ async def test_cancel_order_success_and_restores_stock(db_session: AsyncSession,
     cancel_data = OrderCancel(reason="Test cancellation - restoring stock", refund_payment=False)
 
     # Step 7: Cancel the order
-    # Note: cancel_order expects (db_order, cancel_data, cancelled_by_user_id)
-    db_order = await db_session.get(Order, order.order_id)
-    cancelled_order = await order_service.cancel_order(db_order=db_order, cancel_data=cancel_data, cancelled_by_user_id=parent_user_id)
+    # FIXED: Use order_id, user_id, is_admin instead of db_order
+    cancelled_order_dict = await order_service.cancel_order(order_id=order.order_id, user_id=parent_user_id, is_admin=False, cancel_data=cancel_data, cancelled_by_user_id=parent_user_id)
 
-    # Step 8: Verify cancellation
+    # Step 8: Verify cancellation - result is now a dict
     await db_session.refresh(product)
-    assert cancelled_order.status == OrderStatus.CANCELLED
-    print(f"✓ Order status successfully updated to '{cancelled_order.status}'")
+    assert cancelled_order_dict["status"] == OrderStatus.CANCELLED
+    print(f"✓ Order status successfully updated to '{cancelled_order_dict['status']}'")
 
     assert product.stock_quantity == initial_stock
     print(f"✓ Stock successfully restored to {product.stock_quantity}")
@@ -97,14 +95,13 @@ async def test_cancel_order_fails_if_shipped(db_session: AsyncSession, parent_pr
     """
     print("\n--- Test 4.2: Fail to Cancel a Shipped Order ---")
 
-    # Step 1: Create a shipped order directly
     # Step 1: Extract parent_user_id BEFORE any commits
     await db_session.refresh(parent_profile)
     parent_user_id = parent_profile.user_id  # ✅ Extract early
     student_id = student_22.student_id  # ✅ Extract early
 
     # Step 2: Create a shipped order directly
-    order = Order(student_id=student_id, parent_user_id=parent_user_id, school_id=parent_profile.school_id, order_number="ORD-TEST-SHIPPED", total_amount=Decimal("100.00"), status=OrderStatus.SHIPPED)  # Use extracted value  # Use extracted value
+    order = Order(student_id=student_id, parent_user_id=parent_user_id, school_id=parent_profile.school_id, order_number="ORD-TEST-SHIPPED", total_amount=Decimal("100.00"), status=OrderStatus.SHIPPED)
     db_session.add(order)
     await db_session.commit()
     await db_session.refresh(order)
@@ -115,8 +112,9 @@ async def test_cancel_order_fails_if_shipped(db_session: AsyncSession, parent_pr
     cancel_data = OrderCancel(reason="Test cancellation attempt", refund_payment=False)
 
     # Step 4: Should fail
+    # FIXED: Use order_id, user_id, is_admin instead of db_order
     with pytest.raises(HTTPException) as exc_info:
-        await order_service.cancel_order(db_order=order, cancel_data=cancel_data, cancelled_by_user_id=parent_user_id)  # ✅ Use extracted value
+        await order_service.cancel_order(order_id=order.order_id, user_id=parent_user_id, is_admin=False, cancel_data=cancel_data, cancelled_by_user_id=parent_user_id)
 
     assert exc_info.value.status_code == 400
     assert "cannot cancel" in exc_info.value.detail.lower()
@@ -134,7 +132,7 @@ async def test_update_order_status_fails_invalid_transition(db_session: AsyncSes
     print("\n--- Test 4.3: Fail on Invalid Status Transition ---")
 
     # Step 1: Create a delivered order
-    order = Order(student_id=22, parent_user_id=parent_profile.user_id, school_id=mock_admin_profile.school_id, order_number="ORD-TEST-DELIVERED", total_amount=Decimal("100.00"), status=OrderStatus.DELIVERED)  # Use enum
+    order = Order(student_id=22, parent_user_id=parent_profile.user_id, school_id=mock_admin_profile.school_id, order_number="ORD-TEST-DELIVERED", total_amount=Decimal("100.00"), status=OrderStatus.DELIVERED)
     db_session.add(order)
     await db_session.commit()
     await db_session.refresh(order)
@@ -145,9 +143,9 @@ async def test_update_order_status_fails_invalid_transition(db_session: AsyncSes
     update_data = OrderUpdate(status=OrderStatus.PROCESSING)
 
     # Step 3: Should fail
+    # FIXED: Use order_id, user_id, is_admin instead of db_order
     with pytest.raises(HTTPException) as exc_info:
-        # Note: update_order expects (db_order, order_update)
-        await order_service.update_order(db_order=order, order_update=update_data)
+        await order_service.update_order(order_id=order.order_id, user_id=mock_admin_profile.user_id, is_admin=True, order_update=update_data)
 
     assert exc_info.value.status_code == 400
     assert "invalid status transition" in exc_info.value.detail.lower()

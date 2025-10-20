@@ -54,11 +54,14 @@ async def test_update_order_status_fails_invalid_transition(db_session: AsyncSes
     school_id = parent_profile.school_id
 
     # Step 2: Create a delivered order directly
-    order = Order(student_id=student_id, parent_user_id=parent_user_id, school_id=school_id, order_number="ORD-TEST-DELIVERED-001", total_amount=Decimal("1500.00"), status=OrderStatus.DELIVERED)  # Terminal state
+    order = Order(student_id=student_id, parent_user_id=parent_user_id, school_id=school_id, order_number="ORD-TEST-DELIVERED-001", total_amount=Decimal("1500.00"), status=OrderStatus.DELIVERED)
     db_session.add(order)
     await db_session.commit()
     await db_session.refresh(order)
     print(f"✓ Test order created with status '{order.status}'")
+
+    # Extract order_id before attempting update
+    order_id = order.order_id
 
     # Step 3: Attempt invalid transition (delivered -> processing)
     order_service = OrderService(db_session)
@@ -66,7 +69,8 @@ async def test_update_order_status_fails_invalid_transition(db_session: AsyncSes
 
     # Step 4: Should fail with 400
     with pytest.raises(HTTPException) as exc_info:
-        await order_service.update_order(db_order=order, order_update=update_data)
+        # FIX: Use new signature with order_id, user_id, is_admin
+        await order_service.update_order(order_id=order_id, user_id=parent_user_id, is_admin=True, order_update=update_data)  # Use admin to bypass authorization check
 
     # Verify error details
     assert exc_info.value.status_code == 400
@@ -85,7 +89,7 @@ async def test_update_order_status_fails_invalid_transition(db_session: AsyncSes
 
 
 @pytest.mark.asyncio
-async def test_parent_cannot_get_another_parents_order(db_session: AsyncSession, parent_profile_1: Profile, parent_profile_2: Profile, student_22: Student, student_23: Student):  # Parent A  # Parent B
+async def test_parent_cannot_get_another_parents_order(db_session: AsyncSession, parent_profile_1: Profile, parent_profile_2: Profile, student_22: Student, student_23: Student):
     """
     Test 5.2: Parent cannot access another parent's order.
 
@@ -131,8 +135,9 @@ async def test_parent_cannot_get_another_parents_order(db_session: AsyncSession,
     print(f"✓ Correctly returned 404: {exc_info.value.detail}")
 
     # Step 5: Verify Parent A CAN still access their own order
+    # FIX: get_order_by_id_for_user returns dict, not Order object
     retrieved_order = await order_service.get_order_by_id_for_user(order_id=order_a.order_id, user_id=parent_a_user_id, is_admin=False)
-    assert retrieved_order.order_id == order_a.order_id
+    assert retrieved_order["order_id"] == order_a.order_id  # Access as dict
     print("✓ Parent A can still access their own order")
 
 
@@ -142,7 +147,7 @@ async def test_parent_cannot_get_another_parents_order(db_session: AsyncSession,
 
 
 @pytest.mark.asyncio
-async def test_parent_cannot_order_for_unlinked_student(db_session: AsyncSession, parent_profile: Profile, student_23: Student):  # Student NOT linked to parent_profile
+async def test_parent_cannot_order_for_unlinked_student(db_session: AsyncSession, parent_profile: Profile, student_23: Student):
     """
     Test 5.3: Parent cannot order for student they're not linked to.
 
@@ -183,10 +188,7 @@ async def test_parent_cannot_order_for_unlinked_student(db_session: AsyncSession
 
     # Step 3: Attempt checkout for unlinked student
     order_service = OrderService(db_session)
-    checkout_data = OrderCreateFromCart(
-        student_id=student_23_id,
-        # delivery_notes="Attempting order for unlinked student"
-    )
+    checkout_data = OrderCreateFromCart(student_id=student_23_id)
 
     with pytest.raises(HTTPException) as exc_info:
         await order_service.create_order_from_cart(checkout_data=checkout_data, current_profile=parent_profile)
@@ -226,46 +228,55 @@ async def test_admin_can_create_manual_order(db_session: AsyncSession, mock_admi
     """
     print("\n--- Test 5.4: Admin Manual Order Creation ---")
 
-    # Step 1: Setup product and extract IDs BEFORE any operations
+    # CRITICAL FIX: Extract ALL IDs immediately while objects are in session
+    parent_user_id = parent_profile.user_id
+    parent_school_id = parent_profile.school_id
+    student_id = student_22.student_id
+    admin_user_id = mock_admin_profile.user_id
+    admin_first_name = mock_admin_profile.first_name
+    admin_last_name = mock_admin_profile.last_name
+
+    # Step 1: Setup product
     product = await db_session.get(Product, 16)
     initial_stock = 100
     order_quantity = 3
     product.is_active = True
     product.stock_quantity = initial_stock
 
-    # Extract ALL IDs before commit
-    parent_user_id = parent_profile.user_id
-    student_id = student_22.student_id
-    # admin_school_id = mock_admin_profile.school_id  # Extract from mock fixture
-
     await db_session.commit()
     await db_session.refresh(product)
     print(f"✓ Product setup: stock={initial_stock}")
 
-    # Step 2: Re-fetch admin profile in current session
-    # Mock fixture is session-scoped, need to get it in current session
-    stmt = select(Profile).where(Profile.user_id == mock_admin_profile.user_id)
+    # Step 2: Re-fetch or create admin profile in current session
+    stmt = select(Profile).where(Profile.user_id == admin_user_id)
     result = await db_session.execute(stmt)
     admin_in_session = result.scalars().first()
 
-    # If admin doesn't exist in DB, create a temporary one for this test
     if not admin_in_session:
-        admin_in_session = Profile(user_id=mock_admin_profile.user_id, school_id=mock_admin_profile.school_id, first_name=mock_admin_profile.first_name, last_name=mock_admin_profile.last_name, is_active=True)
+        # FIX: Create admin with SAME school_id as parent
+        admin_in_session = Profile(user_id=admin_user_id, school_id=parent_school_id, first_name=admin_first_name, last_name=admin_last_name, is_active=True)  # Use extracted parent_school_id
         db_session.add(admin_in_session)
         await db_session.commit()
         await db_session.refresh(admin_in_session)
+    else:
+        # Ensure existing admin has same school as parent
+        if admin_in_session.school_id != parent_school_id:
+            admin_in_session.school_id = parent_school_id
+            await db_session.commit()
+            await db_session.refresh(admin_in_session)
+
+    print(f"✓ Admin school_id: {admin_in_session.school_id}, Parent school_id: {parent_school_id}")
 
     # Step 3: Prepare manual order data
     order_data = OrderCreateManual(
         student_id=student_id,
         parent_user_id=parent_user_id,
         items=[OrderItemCreate(product_id=16, quantity=order_quantity)],
-        # delivery_notes="Manual order - phone request"
     )
 
     # Step 4: Admin creates order
     order_service = OrderService(db_session)
-    order = await order_service.create_manual_order(order_data=order_data, admin_profile=admin_in_session)  # Use session-attached admin
+    order = await order_service.create_manual_order(order_data=order_data, admin_profile=admin_in_session)
 
     # Step 5: Verify order created
     assert order is not None
@@ -282,13 +293,9 @@ async def test_admin_can_create_manual_order(db_session: AsyncSession, mock_admi
     assert product.stock_quantity == expected_stock
     print(f"✓ Stock decremented: {initial_stock} -> {expected_stock}")
 
-    # Step 7: admin notes do not exist
-    # assert "manual order" in order.admin_notes.lower()
-    # print("✓ Admin notes recorded")
-
 
 # ===========================================================================
-# Test 5: Order Statistics Aggregation (Happy Path)
+# Test 5: Order Statistics Aggregation (Happy Path) - FIXED
 # ===========================================================================
 
 
@@ -314,6 +321,26 @@ async def test_get_order_statistics_for_school(db_session: AsyncSession, parent_
     student_id = student_22.student_id
     school_id = parent_profile.school_id
 
+    # CRITICAL FIX: The statistics query joins Order → Student → Profile
+    # We need to ensure student.user_id points to a profile with correct school_id
+
+    # Refresh student to avoid lazy loading issues
+    await db_session.refresh(student_22)
+
+    # Check if student has a user_id
+    stmt = select(Student).where(Student.student_id == student_id)
+    result = await db_session.execute(stmt)
+    student = result.scalars().first()
+
+    original_user_id = student.user_id
+
+    # Temporarily set student.user_id to parent's user_id for the join to work
+    if student.user_id != parent_user_id:
+        student.user_id = parent_user_id
+        await db_session.commit()
+        await db_session.refresh(student)
+        print("✓ Temporarily linked student.user_id to parent for statistics test")
+
     # Step 2: Create orders with various statuses
     orders_data = [
         {"amount": Decimal("1000.00"), "status": OrderStatus.PENDING_PAYMENT},
@@ -325,7 +352,7 @@ async def test_get_order_statistics_for_school(db_session: AsyncSession, parent_
 
     created_orders = []
     for idx, data in enumerate(orders_data):
-        order = Order(student_id=student_id, parent_user_id=parent_user_id, school_id=school_id, order_number=f"ORD-STATS-{idx+1}", total_amount=data["amount"], status=data["status"])
+        order = Order(student_id=student_id, parent_user_id=parent_user_id, school_id=school_id, order_number=f"ORD-STATS-TEST55-{idx+1}", total_amount=data["amount"], status=data["status"])
         db_session.add(order)
         created_orders.append(order)
 
@@ -337,7 +364,8 @@ async def test_get_order_statistics_for_school(db_session: AsyncSession, parent_
     stats = await order_service.get_order_statistics(school_id=school_id)
 
     # Step 4: Verify counts
-    assert stats["total_orders"] >= 5  # At least our test orders
+    print(f"Debug - Stats returned: {stats}")
+    assert stats["total_orders"] >= 5, f"Expected at least 5 orders, got {stats['total_orders']}"
     assert stats["pending_payment_count"] >= 1
     assert stats["processing_count"] >= 1
     assert stats["delivered_count"] >= 2
@@ -345,18 +373,19 @@ async def test_get_order_statistics_for_school(db_session: AsyncSession, parent_
     print("✓ Status counts are accurate")
 
     # Step 5: Verify revenue calculation
-    # Only delivered orders count towards revenue
-    # expected_revenue = Decimal("2000.00") + Decimal("2500.00")  # Only delivered
-    # Stats might include other orders from previous tests, so check our contribution
     print(f"✓ Total revenue includes delivered orders: ₹{stats['total_revenue']}")
 
     # Step 6: Verify pending revenue
-    # expected_pending = Decimal("1000.00")  # Only pending_payment
     print(f"✓ Pending revenue calculated: ₹{stats['pending_revenue']}")
 
     # Step 7: Verify average is calculated (non-zero)
     assert stats["average_order_value"] > Decimal("0.00")
     print(f"✓ Average order value: ₹{stats['average_order_value']}")
+
+    # Cleanup: Restore original user_id if it was changed
+    if original_user_id != parent_user_id:
+        student.user_id = original_user_id
+        await db_session.commit()
 
     print("\n🎉 All order statistics tests passed!")
 
@@ -367,14 +396,14 @@ async def test_get_order_statistics_for_school(db_session: AsyncSession, parent_
 
 
 @pytest.mark.asyncio
-async def test_admin_cannot_create_order_cross_school(db_session: AsyncSession, mock_admin_profile: Profile, parent_profile_2: Profile, student_23: Student):  # Use different parent
+async def test_admin_cannot_create_order_cross_school(db_session: AsyncSession, mock_admin_profile: Profile, parent_profile_2: Profile, student_23: Student):
     """
     Test 5.6: Admin cannot create orders for parents in other schools.
 
     Setup:
-    - Mock admin in school_id=1
-    - parent_profile_2 in school_id=1
-    - Temporarily modify parent to claim different school
+    - Mock admin in school_id=X
+    - parent_profile_2 temporarily set to different school
+    - Attempt cross-school order creation
 
     Expected Result:
     ❌ Fails with HTTP 403 Forbidden
@@ -382,52 +411,83 @@ async def test_admin_cannot_create_order_cross_school(db_session: AsyncSession, 
     """
     print("\n--- Test 5.6: Cross-School Admin Security ---")
 
-    # Step 1: Extract IDs
-    # parent_user_id = parent_profile_2.user_id
+    # CRITICAL FIX: Extract ALL IDs immediately while objects are in session
     student_id = student_23.student_id
+    parent2_user_id = parent_profile_2.user_id
+    admin_user_id = mock_admin_profile.user_id
+    admin_first_name = mock_admin_profile.first_name
+    admin_last_name = mock_admin_profile.last_name
 
-    # Step 2: Setup product
+    # Step 1: Setup product
     product = await db_session.get(Product, 16)
     product.is_active = True
     product.stock_quantity = 100
     await db_session.commit()
 
-    # Step 3: Get admin in current session
-    stmt = select(Profile).where(Profile.user_id == mock_admin_profile.user_id)
+    # Step 2: Get or create admin in current session
+    stmt = select(Profile).where(Profile.user_id == admin_user_id)
     result = await db_session.execute(stmt)
     admin_in_session = result.scalars().first()
 
     if not admin_in_session:
-        admin_in_session = Profile(user_id=mock_admin_profile.user_id, school_id=mock_admin_profile.school_id, first_name=mock_admin_profile.first_name, last_name=mock_admin_profile.last_name, is_active=True)
+        admin_in_session = Profile(user_id=admin_user_id, school_id=1, first_name=admin_first_name, last_name=admin_last_name, is_active=True)  # Admin in school 1
         db_session.add(admin_in_session)
         await db_session.commit()
         await db_session.refresh(admin_in_session)
 
-    # admin_school_id = admin_in_session.school_id
+    admin_school_id = admin_in_session.school_id
 
-    # Step 4: Create order data with DIFFERENT school claim
-    # We'll create order data claiming parent is from different school
-    # The service will fetch parent's ACTUAL school and reject
+    # Step 3: Get parent in session and temporarily change their school
+    stmt = select(Profile).where(Profile.user_id == parent2_user_id)
+    result = await db_session.execute(stmt)
+    parent_in_session = result.scalars().first()
 
-    # Create a fake UUID for a parent in "different school"
-    fake_parent_uuid = UUID("00000000-0000-0000-0000-000000000999")
+    if parent_in_session:
+        original_school_id = parent_in_session.school_id
+        # Change to different school
+        parent_in_session.school_id = admin_school_id + 1
+        await db_session.commit()
+        await db_session.refresh(parent_in_session)
 
-    order_data = OrderCreateManual(
-        student_id=student_id,
-        parent_user_id=fake_parent_uuid,  # Non-existent parent
-        items=[OrderItemCreate(product_id=16, quantity=1)],
-        # delivery_notes="Cross-school attempt"
-    )
+        print(f"✓ Admin school: {admin_school_id}, Parent school: {parent_in_session.school_id}")
 
-    order_service = OrderService(db_session)
+        order_data = OrderCreateManual(
+            student_id=student_id,
+            parent_user_id=parent2_user_id,
+            items=[OrderItemCreate(product_id=16, quantity=1)],
+        )
 
-    # Should fail because parent doesn't exist
-    with pytest.raises(HTTPException) as exc_info:
-        await order_service.create_manual_order(order_data=order_data, admin_profile=admin_in_session)
+        order_service = OrderService(db_session)
 
-    # Verify it fails with 404 (parent not found) or 403 (cross-school)
-    assert exc_info.value.status_code in [403, 404]
-    print(f"✓ Correctly rejected: {exc_info.value.detail}")
+        # Should fail with 403 (cross-school)
+        with pytest.raises(HTTPException) as exc_info:
+            await order_service.create_manual_order(order_data=order_data, admin_profile=admin_in_session)
+
+        # Verify it fails with 403
+        assert exc_info.value.status_code == 403
+        assert "other schools" in exc_info.value.detail.lower()
+        print(f"✓ Correctly rejected: {exc_info.value.detail}")
+
+        # Restore original school_id
+        parent_in_session.school_id = original_school_id
+        await db_session.commit()
+    else:
+        # If parent doesn't exist, test with fake UUID
+        fake_parent_uuid = UUID("00000000-0000-0000-0000-000000000999")
+
+        order_data = OrderCreateManual(
+            student_id=student_id,
+            parent_user_id=fake_parent_uuid,
+            items=[OrderItemCreate(product_id=16, quantity=1)],
+        )
+
+        order_service = OrderService(db_session)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await order_service.create_manual_order(order_data=order_data, admin_profile=admin_in_session)
+
+        assert exc_info.value.status_code in [403, 404]
+        print(f"✓ Correctly rejected: {exc_info.value.detail}")
 
 
 print("\n" + "=" * 70)
@@ -468,36 +528,37 @@ async def test_update_order_status_success_valid_transition(db_session: AsyncSes
     await db_session.refresh(order)
     print(f"✓ Order created with status '{order.status}'")
 
+    # Extract order_id
+    order_id = order.order_id
+
     order_service = OrderService(db_session)
 
     # Step 3: Transition 1 - pending_payment → processing
+    # FIX: Use new signature with order_id, user_id, is_admin
     update_data = OrderUpdate(status=OrderStatus.PROCESSING)
-    order = await order_service.update_order(db_order=order, order_update=update_data)
+    updated_order = await order_service.update_order(order_id=order_id, user_id=parent_user_id, is_admin=True, order_update=update_data)  # Use admin to bypass authorization
 
-    await db_session.refresh(order)
-    assert order.status == OrderStatus.PROCESSING
+    # FIX: Returns dict, not Order object
+    assert updated_order["status"] == OrderStatus.PROCESSING
     print("✓ Transition 1: pending_payment → processing")
 
     # Step 4: Transition 2 - processing → shipped (with tracking number)
     update_data = OrderUpdate(status=OrderStatus.SHIPPED, tracking_number="TRK-123456789")
-    order = await order_service.update_order(db_order=order, order_update=update_data)
+    updated_order = await order_service.update_order(order_id=order_id, user_id=parent_user_id, is_admin=True, order_update=update_data)
 
-    await db_session.refresh(order)
-    assert order.status == OrderStatus.SHIPPED
-    assert order.tracking_number == "TRK-123456789"
+    assert updated_order["status"] == OrderStatus.SHIPPED
+    assert updated_order["tracking_number"] == "TRK-123456789"
     print("✓ Transition 2: processing → shipped (tracking added)")
 
     # Step 5: Transition 3 - shipped → delivered
     update_data = OrderUpdate(status=OrderStatus.DELIVERED)
-    order = await order_service.update_order(db_order=order, order_update=update_data)
+    updated_order = await order_service.update_order(order_id=order_id, user_id=parent_user_id, is_admin=True, order_update=update_data)
 
-    await db_session.refresh(order)
-    assert order.status == OrderStatus.DELIVERED
+    assert updated_order["status"] == OrderStatus.DELIVERED
     print("✓ Transition 3: shipped → delivered (final state)")
 
     # Step 6: Verify order persisted correctly
-    # Re-fetch from database to ensure ALL changes are persisted
-    stmt = select(Order).where(Order.order_id == order.order_id)
+    stmt = select(Order).where(Order.order_id == order_id)
     result = await db_session.execute(stmt)
     persisted_order = result.scalars().first()
 
@@ -507,8 +568,7 @@ async def test_update_order_status_success_valid_transition(db_session: AsyncSes
     assert persisted_order.total_amount == Decimal("1500.00")
     print("✓ All transitions persisted correctly in database")
 
-    # Step 7: Verify final state is terminal (cannot go back)
-    # This is implicitly tested by Test 5.1, but let's confirm here
+    # Step 7: Verify final state is terminal
     assert persisted_order.status == OrderStatus.DELIVERED
     print("✓ Order reached terminal 'delivered' state")
 
