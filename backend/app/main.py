@@ -9,8 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.agents.api import router as agents_router
@@ -20,8 +19,8 @@ from app.api.v1.api import api_router
 from app.api.v1.api import api_router as v1_api_router
 from app.core.config import settings
 from app.db.session import init_engine
-from app.middleware import RawBodyMiddleware
 from app.dependencies import limiter
+from app.middleware import RawBodyMiddleware
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")

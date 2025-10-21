@@ -8,7 +8,6 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.gateway_webhook_event import GatewayWebhookEvent
 from app.models.invoice import Invoice
 from app.models.order import Order
 from app.models.payment import Payment

@@ -1,15 +1,14 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, status
 
 from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
+from app.models.class_model import Class
+from app.models.profile import Profile
 from app.schemas.class_fee_structure_schema import AssignTemplateToClassSchema
 from app.schemas.fee_component_schema import FeeComponentCreate, FeeComponentOut, FeeComponentUpdate
 from app.schemas.fee_template_schema import FeeTemplateCreate, FeeTemplateOut
 from app.services.fee_structure_service import FeeStructureService
-from app.models.profile import Profile
-from app.models.class_model import Class
 
 router = APIRouter()
 

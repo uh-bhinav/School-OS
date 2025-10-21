@@ -10,7 +10,7 @@ import asyncio
 import os
 import sys
 import uuid
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from unittest.mock import MagicMock
 from uuid import UUID
 

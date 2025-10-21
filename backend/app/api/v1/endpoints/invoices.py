@@ -1,18 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
+import app.models.profile as Profile
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
+from app.models.class_model import Class
 from app.models.invoice import Invoice
+from app.models.student import Student
+from app.models.student_contact import StudentContact
 from app.schemas.invoice_schema import BulkInvoiceCreate, InvoiceCreate, InvoiceOut
 from app.schemas.payment_schema import PaymentCreate, PaymentOut
-from app.models.student import Student
 from app.services import invoice_service  # Import the service module
-from app.core.security import get_current_user_profile, require_role
-from app.models.student_contact import StudentContact
-import app.models.profile as Profile
-from app.models.class_model import Class
 
 router = APIRouter()
 
@@ -104,7 +104,6 @@ async def get_invoice(
     if not invoice.student or not invoice.student.profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student or profile associated with invoice not found")
 
-    target_student_profile = invoice.student.profile
     target_student_user_id = invoice.student.user_id
 
     is_self = current_user.user_id == target_student_user_id

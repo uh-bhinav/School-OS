@@ -5,10 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload  # Added selectinload
 
+from app.models.class_fee_structure import ClassFeeStructure
+
 # --- Import necessary models and schemas ---
 from app.models.fee_template import FeeTemplate
-from app.schemas.fee_template_schema import FeeTemplateCreate, FeeTemplateUpdate
-from app.models.class_fee_structure import ClassFeeStructure
+from app.schemas.fee_template_schema import FeeTemplateUpdate
 
 
 class FeeTemplateService:

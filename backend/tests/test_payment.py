@@ -8,14 +8,11 @@ import sqlalchemy.exc
 from fastapi import HTTPException
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-import json
 
 # Import the real DB session fixture
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 
 from app.db.base_class import Base  # Needed to define a temporary User model
-from app.models.gateway_webhook_event import GatewayWebhookEvent
 from app.models.order import Order
 from app.models.payment import Payment
 from app.models.profile import Profile
@@ -322,7 +319,8 @@ class TempFeeTerm(Base):
 
 #     test_gateway_order_id = "order_GATEWAY_ID_WEBHOOK"
 
-#     webhook_payload = {"id": "evt_unique_webhook_id_123", "event": "payment.captured", "created_at": 1678886400, "payload": {"payment": {"entity": {"id": "pay_WEBHOOK_CAPTURE", "order_id": test_gateway_order_id, "notes": {"internal_payment_id": payment_id_to_verify}}}}}
+#     webhook_payload = {"id": "evt_unique_webhook_id_123", "event": "payment.captured", "created_at": 1678886400,
+#                           "payload": {"payment": {"entity": {"id": "pay_WEBHOOK_CAPTURE", "order_id": test_gateway_order_id, "notes": {"internal_payment_id": payment_id_to_verify}}}}}
 #     raw_body = json.dumps(webhook_payload).encode("utf-8")
 
 #     # 2. --- ACT ---
@@ -422,7 +420,8 @@ class TempFeeTerm(Base):
 
 #     test_gateway_order_id = "order_GATEWAY_ID_WEBHOOK"
 
-#     webhook_payload = {"id": "evt_unique_webhook_id_123", "event": "payment.captured", "created_at": 1678886400, "payload": {"payment": {"entity": {"id": "pay_WEBHOOK_CAPTURE", "order_id": test_gateway_order_id, "notes": {"internal_payment_id": payment_id}}}}}
+#     webhook_payload = {"id": "evt_unique_webhook_id_123", "event": "payment.captured", "created_at": 1678886400,
+#                            "payload": {"payment": {"entity": {"id": "pay_WEBHOOK_CAPTURE", "order_id": test_gateway_order_id, "notes": {"internal_payment_id": payment_id}}}}}
 #     raw_body = json.dumps(webhook_payload).encode("utf-8")
 #     # 2. --- ACT ---
 #     await service.handle_webhook_event(payload=webhook_payload, raw_body=raw_body,signature="some_signature")
@@ -516,7 +515,8 @@ class TempFeeTerm(Base):
 #     # --- Service and Payload ---
 #     service = PaymentService(db_session)
 #     test_gateway_order_id = "order_GATEWAY_ID_WEBHOOK"
-#     invalid_webhook_payload = {"id": "evt_unique_webhook_id_999_INVALID", "event": "payment.captured", "created_at": 1678886400, "payload": {"payment": {"entity": {"id": "pay_WEBHOOK_INVALID", "order_id": test_gateway_order_id, "notes": {"internal_payment_id": payment_id_to_verify}}}}}
+#     invalid_webhook_payload = {"id": "evt_unique_webhook_id_999_INVALID", "event": "payment.captured", "created_at": 1678886400,
+#                                   "payload": {"payment": {"entity": {"id": "pay_WEBHOOK_INVALID", "order_id": test_gateway_order_id, "notes": {"internal_payment_id": payment_id_to_verify}}}}}
 #     raw_body = json.dumps(invalid_webhook_payload).encode("utf-8")
 #     # 2. --- ACT ---
 #     await service.handle_webhook_event(payload=invalid_webhook_payload, raw_body=raw_body, signature="invalid_webhook_sig")

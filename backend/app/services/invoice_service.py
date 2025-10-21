@@ -15,11 +15,11 @@ from app.models.fee_component import FeeComponent
 from app.models.fee_term import FeeTerm
 from app.models.invoice import Invoice
 from app.models.invoice_item import InvoiceItem
-from app.models.profile import Profile
 
 # ADDED: Import necessary models and schemas for calculations
 from app.models.payment import Payment
 from app.models.payment_allocation import PaymentAllocation
+from app.models.profile import Profile
 from app.models.student import Student
 from app.models.student_fee_discount import StudentFeeDiscount
 from app.schemas.invoice_schema import BulkInvoiceCreate, InvoiceCreate, InvoiceUpdate

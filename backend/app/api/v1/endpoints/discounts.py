@@ -1,17 +1,15 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, status
+from sqlalchemy.orm import joinedload
 
 from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
+from app.models.profile import Profile
 from app.models.profile import Profile as User
+from app.models.student import Student
 from app.schemas.discount_schema import DiscountCreate, DiscountOut
 from app.schemas.student_fee_discount_schema import StudentFeeDiscountCreate, StudentFeeDiscountOut
 from app.services.discount_service import DiscountService
-from app.models.profile import Profile
-from app.models.student import Student
-from sqlalchemy.orm import joinedload
-
 
 router = APIRouter()
 

@@ -11,7 +11,7 @@ Security:
 - Multi-tenant isolation enforced at service layer
 """
 
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,7 +58,7 @@ async def create_product(
 # ============================================================================
 
 
-@router.put("/bulk-update-category", response_model=List[ProductOut], dependencies=[Depends(require_role("Admin"))])
+@router.put("/bulk-update-category", response_model=list[ProductOut], dependencies=[Depends(require_role("Admin"))])
 async def bulk_update_category(
     request_body: BulkUpdateCategoryRequest,  # ✅ CHANGE THIS
     db: AsyncSession = Depends(get_db),
@@ -102,7 +102,7 @@ async def get_product(
     return await service.get_product_by_id(product_id, current_profile.school_id)
 
 
-@router.get("/", response_model=List[ProductOut], dependencies=[Depends(require_role("Admin"))])
+@router.get("/", response_model=list[ProductOut], dependencies=[Depends(require_role("Admin"))])
 async def get_all_products(
     category_id: Optional[int] = Query(None, description="Filter by category"),
     include_inactive: bool = Query(False, description="Include inactive/discontinued products"),
@@ -117,7 +117,7 @@ async def get_all_products(
     - include_inactive: Include soft-deleted products (default: false)
 
     Returns:
-    - List of all products with category information
+    - list of all products with category information
     """
     service = ProductService(db)  # ✅ INSTANTIATE HERE
     return await service.get_all_products(
