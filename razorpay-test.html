@@ -198,41 +198,60 @@
         <h1>🎓 School OS - Payment Test</h1>
         <p class="subtitle">Simulate Razorpay payment for testing</p>
 
-        <div class="info-box">
-            <strong>Test Mode Instructions:</strong><br>
-            1. Enter backend URL and invoice ID<br>
-            2. Click "Step 1: Initiate Payment" to get Razorpay Order ID<br>
-            3. Click "Step 2: Pay Now" to open Razorpay checkout<br>
-            4. Use test card: <strong>4111 1111 1111 1111</strong>, any expiry, any CVV<br>
-            5. Payment details will appear below
+                <div class="info-box">
+            <strong>📋 Instructions:</strong><br>
+            1. Select whether you want to pay for an Invoice or an Order<br>
+            2. Enter your backend URL, authentication token, and the corresponding ID<br>
+            3. Click "Initiate Payment" to create a Razorpay order<br>
+            4. Click "Open Razorpay" to simulate the payment<br>
+            5. Use test card: 4111 1111 1111 1111, any future expiry, any CVV
         </div>
 
         <div class="form-group">
-            <label for="backendUrl">Backend URL:</label>
-            <input type="text" id="backendUrl" value="http://127.0.0.1:8000" placeholder="http://127.0.0.1:8000">
+            <label for="backendUrl">Backend URL</label>
+            <input type="text" id="backendUrl" value="http://localhost:8000" placeholder="http://localhost:8000">
         </div>
 
         <div class="form-group">
-            <label for="invoiceId">Invoice ID:</label>
-            <input type="number" id="invoiceId" value="105" placeholder="105">
+            <label>Payment Type</label>
+            <div style="display: flex; gap: 20px; margin-top: 8px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="paymentType" value="invoice" checked style="width: auto; cursor: pointer;">
+                    <span>Invoice</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="paymentType" value="order" style="width: auto; cursor: pointer;">
+                    <span>Order</span>
+                </label>
+            </div>
         </div>
 
         <div class="form-group">
-            <label for="token">Auth Token (if needed):</label>
-            <input type="text" id="token" placeholder="Leave empty if no auth" style="font-size: 12px;">
+            <label for="invoiceId">Invoice ID</label>
+            <input type="number" id="invoiceId" placeholder="e.g., 105">
+        </div>
+
+        <div class="form-group">
+            <label for="orderId">Order ID</label>
+            <input type="number" id="orderId" placeholder="e.g., 187">
+        </div>
+
+        <div class="form-group">
+            <label for="token">Auth Token (Bearer)</label>
+            <input type="text" id="token" placeholder="Paste your JWT token here">
         </div>
 
         <div class="button-group">
-            <button class="btn-initiate" onclick="initiatePayment()">Step 1: Initiate Payment</button>
-            <button class="btn-pay" id="payBtn" disabled onclick="openCheckout()">Step 2: Pay Now</button>
+            <button class="btn-initiate" onclick="initiatePayment()">🚀 Initiate Payment</button>
+            <button class="btn-pay" id="openCheckoutBtn" onclick="openCheckout()" disabled>💳 Open Razorpay</button>
         </div>
 
         <div id="status" class="hidden"></div>
 
         <div id="responseBox" class="hidden">
-            <div class="response-label">Payment Response:</div>
-            <div class="response-box" id="response"></div>
-            <button class="copy-btn" onclick="copyResponse()">Copy Response</button>
+            <div class="response-label">📄 API Response:</div>
+            <pre id="responseContent"></pre>
+            <button class="copy-btn" onclick="copyResponse()">📋 Copy Response</button>
         </div>
     </div>
 
@@ -240,109 +259,131 @@
         let paymentData = null;
         const backendUrl = () => document.getElementById('backendUrl').value;
         const invoiceId = () => document.getElementById('invoiceId').value;
+        const orderId = () => document.getElementById('orderId').value;
         const token = () => document.getElementById('token').value;
+        const getPaymentType = () => document.querySelector('input[name="paymentType"]:checked').value;
 
         function showStatus(message, type) {
             const statusEl = document.getElementById('status');
-            statusEl.textContent = message;
             statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
             statusEl.classList.remove('hidden');
         }
 
         function showResponse(data) {
-            const responseEl = document.getElementById('responseBox');
-            const responseContent = document.getElementById('response');
+            const responseBox = document.getElementById('responseBox');
+            const responseContent = document.getElementById('responseContent');
             responseContent.textContent = JSON.stringify(data, null, 2);
-            responseEl.classList.remove('hidden');
+            responseBox.classList.remove('hidden');
         }
 
         async function initiatePayment() {
-            showStatus('Initiating payment...', 'loading');
+            const url = backendUrl();
+            const authToken = token();
+            const paymentType = getPaymentType();
+
+            if (!url || !authToken) {
+                showStatus('❌ Please fill in Backend URL and Auth Token', 'error');
+                return;
+            }
+
+            // Dynamically construct payload based on selected payment type
+            let payload;
+            if (paymentType === 'invoice') {
+                const invoice = invoiceId();
+                if (!invoice) {
+                    showStatus('❌ Please enter an Invoice ID', 'error');
+                    return;
+                }
+                payload = { invoice_id: parseInt(invoice) };
+            } else if (paymentType === 'order') {
+                const order = orderId();
+                if (!order) {
+                    showStatus('❌ Please enter an Order ID', 'error');
+                    return;
+                }
+                payload = { order_id: parseInt(order) };
+            }
+
+            showStatus('⏳ Initiating payment...', 'loading');
 
             try {
-                const headers = {
-                    'Content-Type': 'application/json'
-                };
+                const response = await fetch(`${url}/api/v1/finance/payments/initiate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-                if (token()) {
-                    headers['Authorization'] = `Bearer ${token()}`;
-                }
-
-                const response = await fetch(
-                    `${backendUrl()}/api/v1/finance/payments/initiate`,
-                    {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify({
-                            invoice_id: parseInt(invoiceId())
-                        })
-                    }
-                );
+                const data = await response.json();
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || 'Failed to initiate payment');
+                    throw new Error(data.detail || 'Payment initiation failed');
                 }
 
-                paymentData = await response.json();
-
-                showStatus('✅ Payment initiated successfully! Click "Step 2: Pay Now"', 'success');
-                document.getElementById('payBtn').disabled = false;
-                showResponse(paymentData);
-
+                paymentData = data;
+                showResponse(data);
+                showStatus('✅ Payment initiated successfully! Click "Open Razorpay" to proceed.', 'success');
+                document.getElementById('openCheckoutBtn').disabled = false;
             } catch (error) {
                 showStatus(`❌ Error: ${error.message}`, 'error');
-                console.error(error);
+                console.error('Payment initiation error:', error);
             }
         }
 
         function openCheckout() {
             if (!paymentData) {
-                showStatus('Please initiate payment first', 'error');
+                showStatus('❌ Please initiate payment first', 'error');
                 return;
             }
 
             const options = {
                 key: paymentData.razorpay_key_id,
-                order_id: paymentData.razorpay_order_id,
                 amount: paymentData.amount,
                 currency: 'INR',
                 name: paymentData.school_name || 'School OS',
-                description: paymentData.description || 'Fee Payment',
+                description: paymentData.description || 'Payment for school services',
+                order_id: paymentData.razorpay_order_id,
+                handler: async function (response) {
+                    showStatus('⏳ Verifying payment...', 'loading');
 
-                handler: function(response) {
-                    showStatus('💳 Payment successful! Processing...', 'loading');
+                    try {
+                        const verifyResponse = await fetch(`${backendUrl()}/api/v1/finance/payments/verify`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token()}`
+                            },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                internal_payment_id: paymentData.internal_payment_id
+                            })
+                        });
 
-                    // Show the payment response
-                    const fullResponse = {
-                        step: 'Payment Completed',
-                        razorpay_payment_id: response.razorpay_payment_id,
-                        razorpay_order_id: response.razorpay_order_id,
-                        razorpay_signature: response.razorpay_signature,
-                        internal_payment_id: paymentData.internal_payment_id,
-                        next_step: 'Send these values to /payments/verify endpoint'
-                    };
+                        const verifyData = await verifyResponse.json();
 
-                    showResponse(fullResponse);
-                    showStatus('✅ Payment received! Use the data above to verify payment on backend', 'success');
+                        if (!verifyResponse.ok) {
+                            throw new Error(verifyData.detail || 'Payment verification failed');
+                        }
 
-                    console.log('Razorpay Payment Response:', response);
+                        showStatus('✅ Payment verified successfully!', 'success');
+                        showResponse(verifyData);
+                    } catch (error) {
+                        showStatus(`❌ Verification Error: ${error.message}`, 'error');
+                        console.error('Verification error:', error);
+                    }
                 },
-
                 prefill: {
-                    name: 'Test Student',
-                    email: 'test@school.os',
-                    contact: '9876543210'
+                    name: '',
+                    email: '',
+                    contact: ''
                 },
-
                 theme: {
                     color: '#667eea'
-                },
-
-                modal: {
-                    ondismiss: function() {
-                        showStatus('Payment cancelled by user', 'error');
-                    }
                 }
             };
 
@@ -351,10 +392,9 @@
         }
 
         function copyResponse() {
-            const responseContent = document.getElementById('response').textContent;
-            navigator.clipboard.writeText(responseContent).then(() => {
-                alert('Response copied to clipboard!');
-            });
+            const responseContent = document.getElementById('responseContent').textContent;
+            navigator.clipboard.writeText(responseContent);
+            alert('Response copied to clipboard!');
         }
     </script>
 </body>
