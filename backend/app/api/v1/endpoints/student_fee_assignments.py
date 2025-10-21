@@ -20,11 +20,7 @@ def get_assignment_service(db: Session = Depends(get_db)) -> StudentFeeAssignmen
 
 @router.post("/overrides", response_model=StudentFeeAssignmentOut, status_code=200, dependencies=[Depends(require_role("Admin"))])
 async def set_student_fee_override(
-    override_in: StudentFeeAssignmentCreate,
-    request: Request,
-    service: StudentFeeAssignmentService = Depends(get_assignment_service),
-    current_user: Profile = Depends(get_current_user_profile),
-    db: AsyncSession = Depends(get_db)
+    override_in: StudentFeeAssignmentCreate, request: Request, service: StudentFeeAssignmentService = Depends(get_assignment_service), current_user: Profile = Depends(get_current_user_profile), db: AsyncSession = Depends(get_db)
 ):
     """
     Create or update a fee override for a student.
@@ -33,11 +29,8 @@ async def set_student_fee_override(
     target_student = await db.get(Student, override_in.student_id, options=[joinedload(Student.profile)])
     if not target_student or not target_student.profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student or student profile not found")
-        
+
     if target_student.profile.school_id != current_user.school_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin cannot set overrides for students in other schools."
-        )
-    
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin cannot set overrides for students in other schools.")
+
     return service.create_or_update_override(override_data=override_in, user_id=current_user.id, ip_address=request.client.host)

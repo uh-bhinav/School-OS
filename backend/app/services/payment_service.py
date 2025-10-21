@@ -3,7 +3,7 @@ import logging
 import os
 import time
 from decimal import Decimal
-import requests # Add import
+import requests  # Add import
 from razorpay.errors import BadRequestError, ServerError, GatewayError
 
 import razorpay
@@ -127,12 +127,12 @@ class PaymentService:
         )
         self.db.add(new_payment)
         try:
-            await self.db.flush() # Or commit if service manages transaction
+            await self.db.flush()  # Or commit if service manages transaction
         except Exception as db_err:
-             logger.exception(f"Database error after creating Razorpay order {razorpay_order['id']}: {db_err}")
-             # IMPORTANT: Need to potentially refund/cancel the Razorpay order here if possible,
-             # or flag for manual admin review. For now, just raise.
-             raise HTTPException(status_code=500, detail="Database error processing payment initiation.")
+            logger.exception(f"Database error after creating Razorpay order {razorpay_order['id']}: {db_err}")
+            # IMPORTANT: Need to potentially refund/cancel the Razorpay order here if possible,
+            # or flag for manual admin review. For now, just raise.
+            raise HTTPException(status_code=500, detail="Database error processing payment initiation.")
 
         # 5. Return data required by the frontend
         # The caller's get_db() dependency will commit this transaction
@@ -151,7 +151,7 @@ class PaymentService:
         if payment.status == "captured":
             logger.info(f"Payment {payment.id} already captured. Returning.")
             return payment  # Payment is already verified, do nothing.
-        
+
         if payment.status != "pending":
             logger.warning(f"Payment {payment.id} is in non-verifiable state: {payment.status}")
             raise HTTPException(status_code=400, detail=f"Payment not in a verifiable state (status: {payment.status}).")
@@ -175,11 +175,11 @@ class PaymentService:
             await self.db.commit()
             logger.warning(f"Invalid Razorpay signature for internal_payment_id: {payment_id_log}")
             raise HTTPException(status_code=400, detail="Invalid payment signature.")
-        except Exception as sig_err: # Catch other potential errors during verification
-             payment_id_log = payment.id 
-             logger.exception(f"Error during Razorpay signature verification for internal_payment_id {payment_id_log}: {sig_err}")
-             # Don't change payment status yet, maybe temporary issue
-             raise HTTPException(status_code=502, detail="Error verifying payment signature with gateway.")
+        except Exception as sig_err:  # Catch other potential errors during verification
+            payment_id_log = payment.id
+            logger.exception(f"Error during Razorpay signature verification for internal_payment_id {payment_id_log}: {sig_err}")
+            # Don't change payment status yet, maybe temporary issue
+            raise HTTPException(status_code=502, detail="Error verifying payment signature with gateway.")
         # --- END ERROR HANDLING ---
 
         # 4. If verification succeeds, update our records atomically
@@ -193,14 +193,14 @@ class PaymentService:
             payment.method = payment_details.get("method")  # e.g., 'card', 'upi'
             payment.metadata = payment_details.get("notes")  # Razorpay uses 'notes' for metadata
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as net_err:
-             # Log the error but continue - verification succeeded, details are secondary
-             logger.warning(f"Network error fetching Razorpay payment details for {payment.gateway_payment_id}: {net_err}")
+            # Log the error but continue - verification succeeded, details are secondary
+            logger.warning(f"Network error fetching Razorpay payment details for {payment.gateway_payment_id}: {net_err}")
         except (BadRequestError, ServerError, GatewayError) as rzp_err:
-             # Log the error but continue
-             logger.warning(f"Razorpay API error fetching payment details for {payment.gateway_payment_id}: {rzp_err}")
+            # Log the error but continue
+            logger.warning(f"Razorpay API error fetching payment details for {payment.gateway_payment_id}: {rzp_err}")
         except Exception as e:
-             # Log unexpected errors but continue
-             logger.exception(f"Unexpected error fetching Razorpay payment details for {payment.gateway_payment_id}: {e}")
+            # Log unexpected errors but continue
+            logger.exception(f"Unexpected error fetching Razorpay payment details for {payment.gateway_payment_id}: {e}")
         # --- END ERROR HANDLING ---
 
         await self.db.flush()
@@ -234,20 +234,20 @@ class PaymentService:
                 order = order_result.scalar_one_or_none()
 
                 if order:
-                    if order.status not in ["pending_payment"]: # Only update if pending
+                    if order.status not in ["pending_payment"]:  # Only update if pending
                         logger.warning(f"Payment verification for payment {payment.id}: Associated order {order.order_id} has non-pending status '{order.status}'. Cannot update order status.")
                         # Option 1: Just log and continue (payment captured, order untouched)
                         # Option 2: Raise an error (might be better for consistency)
                         # raise HTTPException(status_code=400, detail=f"Cannot verify payment for order with status '{order.status}'.")
-                        pass # Let's just pass for now, payment is verified, order is left alone.
+                        pass  # Let's just pass for now, payment is verified, order is left alone.
                     else:
                         order.status = "processing"
-                        await self.db.flush() # Update order status only if it was pending
+                        await self.db.flush()  # Update order status only if it was pending
                 else:
                     # Order not found after successful signature verification - this is an issue!
                     logger.error(f"Payment verification for payment {payment.id}: Associated order {payment.order_id} not found!")
                     # Should we fail the payment here? Or just log? Let's raise for clarity.
-                    payment.status = "failed" # Mark payment as failed if order is missing
+                    payment.status = "failed"  # Mark payment as failed if order is missing
                     payment.error_description = f"Associated order {payment.order_id} not found during verification."
                     # Don't raise HTTPException here, let the commit happen below to save 'failed' status
                     # raise HTTPException(status_code=404, detail="Associated order not found")
@@ -256,7 +256,6 @@ class PaymentService:
             payment_status_final = payment.status
             await self.db.commit()
             logger.info(f"✅ Payment verification completed. Payment ID: {payment_id_final}, Status: {payment_status_final}")
-
 
         except Exception as e:
             # --- 🚨 ALLOCATION FAILURE CATCH-ALL 🚨 ---
@@ -269,29 +268,22 @@ class PaymentService:
 
             # NOW, we start a NEW transaction to mark the payment for review
             try:
-                payment_id_alert = payment.id 
+                payment_id_alert = payment.id
                 payment.status = PaymentStatus.CAPTURED_ALLOCATION_FAILED
                 payment.error_description = f"Allocation failed: {str(e)[:255]}"
-                self.db.add(payment) # Re-add the object to the new session
+                self.db.add(payment)  # Re-add the object to the new session
                 await self.db.commit()
-                
+
                 # This is your log marker for alerting
-                logger.info(
-                    f"ALERT_PAYMENT_ALLOCATION_FAILURE: payment_id={payment_id_alert} "
-                    f"marked as 'captured_allocation_failed'."
-                )
-                
+                logger.info(f"ALERT_PAYMENT_ALLOCATION_FAILURE: payment_id={payment_id_alert} " f"marked as 'captured_allocation_failed'.")
+
             except Exception as inner_e:
                 # Absolute worst-case scenario: we can't even update the DB.
-                logger.critical(
-                    f"FATAL: Could not mark payment {payment.id} as 'captured_allocation_failed'. "
-                    f"DB error: {inner_e}",
-                    exc_info=True
-                )
+                logger.critical(f"FATAL: Could not mark payment {payment.id} as 'captured_allocation_failed'. " f"DB error: {inner_e}", exc_info=True)
                 await self.db.rollback()
                 # Re-raise the original error so the client doesn't get a 200 OK
                 raise HTTPException(status_code=500, detail="Payment captured but allocation failed.")
-            
+
         try:
             await self.db.refresh(payment)
         except Exception as refresh_error:
@@ -338,13 +330,9 @@ class PaymentService:
             # We've seen this before, do nothing.
             logger.info(f"Duplicate webhook event received: {event_id}")
             return
-        
+
         # 2. Create the event log entry (but don't commit yet!)
-        new_event = GatewayWebhookEvent(
-            event_id=event_id,
-            payload=payload,
-            status="received"
-        )
+        new_event = GatewayWebhookEvent(event_id=event_id, payload=payload, status="received")
         self.db.add(new_event)
 
         # We are only interested in successful payment events for now
@@ -409,14 +397,14 @@ class PaymentService:
                             order.status = OrderStatus.PROCESSING
 
                 new_event.status = "processed"
-            
+
             except Exception as e:
                 # Any processing error - log it and mark as failed
                 logger.error(f"Webhook processing failed for event {event_id}: {e}", exc_info=True)
                 new_event.status = "failed"
                 new_event.processing_error = str(e)
                 # Don't raise - we want to commit the failure log
-        
+
         # 10. SINGLE COMMIT - All or nothing transaction
         try:
             await self.db.commit()
@@ -432,17 +420,11 @@ class PaymentService:
         true status with Razorpay.
         """
         logger.info("Starting pending payment reconciliation task...")
-        
+
         # 1. Find payments pending for more than 1 hour (configurable)
         reconciliation_threshold = datetime.utcnow() - timedelta(hours=1)
-        
-        stmt = (
-            select(Payment)
-            .where(Payment.status == PaymentStatus.PENDING)
-            .where(Payment.created_at < reconciliation_threshold)
-            .where(Payment.gateway_order_id != None)
-            .limit(100) # Process in batches
-        )
+
+        stmt = select(Payment).where(Payment.status == PaymentStatus.PENDING).where(Payment.created_at < reconciliation_threshold).where(Payment.gateway_order_id != None).limit(100)  # Process in batches
         result = await db.execute(stmt)
         pending_payments = result.scalars().all()
 
@@ -455,26 +437,23 @@ class PaymentService:
             try:
                 # 2. Get Razorpay client for the payment's school
                 razorpay_client = await _get_razorpay_client(db=db, school_id=payment.school_id)
-                
+
                 # 3. Fetch all payments for the gateway_order_id
                 order_payments = razorpay_client.order.payments(payment.gateway_order_id)
-                
+
                 captured_payment_entity = None
                 for p in order_payments.get("items", []):
                     if p.get("status") == "captured":
                         captured_payment_entity = p
-                        break # Found it
+                        break  # Found it
 
                 if captured_payment_entity:
                     # 4. PAYMENT WAS CAPTURED! Reconcile it.
-                    logger.warning(
-                        f"Reconciliation: Found CAPTURED gateway payment for "
-                        f"PENDING internal Payment ID {payment.id}."
-                    )
-                    
+                    logger.warning(f"Reconciliation: Found CAPTURED gateway payment for " f"PENDING internal Payment ID {payment.id}.")
+
                     payment.status = PaymentStatus.CAPTURED
                     payment.gateway_payment_id = captured_payment_entity.get("id")
-                    
+
                     # 5. --- ATTEMPT ALLOCATION ---
                     # We re-use the *same* logic block
                     try:
@@ -482,24 +461,16 @@ class PaymentService:
                             await invoice_service.allocate_payment_to_invoice_items(
                                 db=db,
                                 payment_id=payment.id,
-                                user_id=payment.user_id, # Or a system user ID
+                                user_id=payment.user_id,  # Or a system user ID
                             )
                         elif payment.order_id:
-                            await db.execute(
-                                update(Order)
-                                .where(Order.order_id == payment.order_id)
-                                .where(Order.status == OrderStatus.PENDING_PAYMENT)
-                                .values(status=OrderStatus.PROCESSING)
-                            )
-                        
-                        await db.commit() # Commit this one payment's success
+                            await db.execute(update(Order).where(Order.order_id == payment.order_id).where(Order.status == OrderStatus.PENDING_PAYMENT).values(status=OrderStatus.PROCESSING))
+
+                        await db.commit()  # Commit this one payment's success
                         reconciled += 1
 
                     except Exception as e:
-                        logger.critical(
-                            f"RECONCILIATION_ALLOCATION_FAILURE: Payment {payment.id} reconciled but FAILED allocation. Error: {e}",
-                            exc_info=True
-                        )
+                        logger.critical(f"RECONCILIATION_ALLOCATION_FAILURE: Payment {payment.id} reconciled but FAILED allocation. Error: {e}", exc_info=True)
                         await db.rollback()
                         # Mark as failed in a new session
                         payment.status = PaymentStatus.CAPTURED_ALLOCATION_FAILED
@@ -507,7 +478,7 @@ class PaymentService:
                         db.add(payment)
                         await db.commit()
                         logger.info(f"ALERT_PAYMENT_ALLOCATION_FAILURE: payment_id={payment.id}")
-                
+
                 else:
                     # 6. Payment is not captured at gateway. Mark as failed.
                     payment.status = PaymentStatus.FAILED
@@ -520,8 +491,5 @@ class PaymentService:
                 await db.rollback()
                 # Don't change status, just log. Will retry next time.
 
-        logger.info(
-            f"Reconciliation complete. Processed: {processed}, "
-            f"Reconciled: {reconciled}, Marked Failed: {failed}."
-        )
+        logger.info(f"Reconciliation complete. Processed: {processed}, " f"Reconciled: {reconciled}, Marked Failed: {failed}.")
         return {"processed": processed, "reconciled": reconciled, "failed": failed}

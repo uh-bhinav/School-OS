@@ -219,9 +219,7 @@ async def allocate_payment_to_invoice_items(db: AsyncSession, *, payment_id: int
     payment_result = await db.execute(payment_stmt)
     payment = payment_result.scalars().first()
     if not payment or not payment.invoice_id:
-        logger.error(
-            f"Allocation failed: Payment {payment_id} or its invoice not found."
-        )
+        logger.error(f"Allocation failed: Payment {payment_id} or its invoice not found.")
         raise ValueError("Payment or associated invoice not found.")
 
     invoice = payment.invoice
@@ -268,7 +266,7 @@ async def allocate_payment_to_invoice_items(db: AsyncSession, *, payment_id: int
     total_paid_result = await db.execute(total_paid_stmt)
     # Get the sum of *previous* payments...
     total_previously_paid = total_paid_result.scalar_one_or_none() or Decimal("0.0")
-    
+
     # ...and add what we just allocated in this pass.
     total_paid_so_far = total_previously_paid + (Decimal(payment.amount_paid) - amount_to_allocate)
 
@@ -492,22 +490,23 @@ async def _generate_invoice_for_student_core(db: AsyncSession, *, obj_in: Invoic
     logger.info(f"DEBUG: _generate_invoice_for_student_core completed for student_id={obj_in.student_id}")
     return db_obj
 
+
 async def get_all_invoices_for_school(db: AsyncSession, school_id: int) -> list[Invoice]:
     """
     Retrieves all active invoices associated with a given school ID.
-    
-    NOTE: This service function itself does *not* enforce RLS directly. 
-    RLS is applied at the database level based on the connection role 
+
+    NOTE: This service function itself does *not* enforce RLS directly.
+    RLS is applied at the database level based on the connection role
     or additional filtering should be done in the endpoint based on the user's role/school.
     """
     stmt = (
         select(Invoice)
         .join(Student, Invoice.student_id == Student.student_id)
-        .join(Profile, Student.user_id == Profile.user_id) # Join through Student to Profile
-        .where(Profile.school_id == school_id) # Filter by the school_id on the Profile
+        .join(Profile, Student.user_id == Profile.user_id)  # Join through Student to Profile
+        .where(Profile.school_id == school_id)  # Filter by the school_id on the Profile
         .where(Invoice.is_active.is_(True))
-        .options(selectinload(Invoice.items)) # Optionally load items
-        .order_by(Invoice.created_at.desc()) # Optional ordering
+        .options(selectinload(Invoice.items))  # Optionally load items
+        .order_by(Invoice.created_at.desc())  # Optional ordering
     )
     result = await db.execute(stmt)
     invoices = result.scalars().all()

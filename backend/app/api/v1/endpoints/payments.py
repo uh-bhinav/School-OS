@@ -71,11 +71,12 @@ async def verify_payment_signature(
     await service.verify_payment(verification_data=verification_in)
     return {"status": "success", "message": "Payment verified successfully."}
 
+
 @router.post(
     "/admin/reconcile-pending",
     include_in_schema=False,  # Hides this from public OpenAPI docs
-    dependencies=[Depends(require_role("Admin"))]
-    # dependencies=[Depends(get_admin_user)] 
+    dependencies=[Depends(require_role("Admin"))],
+    # dependencies=[Depends(get_admin_user)]
 )
 async def trigger_reconciliation(
     background_tasks: BackgroundTasks,
@@ -88,5 +89,5 @@ async def trigger_reconciliation(
     """
     service = PaymentService(db)
     background_tasks.add_task(service.reconcile_pending_payments, db=db)
-    
+
     return {"message": "Pending payment reconciliation task started in the background."}

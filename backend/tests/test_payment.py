@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 import json
+
 # Import the real DB session fixture
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
