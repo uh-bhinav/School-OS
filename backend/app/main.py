@@ -17,6 +17,7 @@ from app.api.v1.api import api_router
 from app.api.v1.api import api_router as v1_api_router
 from app.core.config import settings
 from app.db.session import init_engine
+from app.middleware import RawBodyMiddleware
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -42,6 +43,15 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json", description="SchoolOS - Comprehensive School Management ERP System with AI Agents", version="1.0.0", docs_url="/docs", redoc_url="/redoc", lifespan=lifespan
 )
+
+# ============================================================================
+# MIDDLEWARE REGISTRATION (Order Matters!)
+# ============================================================================
+
+# Register Raw Body Middleware FIRST (must run before any body-consuming middleware)
+# This captures the raw request body for webhook signature verification
+app.add_middleware(RawBodyMiddleware)
+logger.info("Raw Body Middleware registered (for webhook signature verification)")
 
 # Set up CORS middleware for development
 app.add_middleware(

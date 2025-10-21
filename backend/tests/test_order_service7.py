@@ -342,6 +342,7 @@ async def test_get_order_statistics_for_school(db_session: AsyncSession, parent_
         print("✓ Temporarily linked student.user_id to parent for statistics test")
 
     # Step 2: Create orders with various statuses
+    # CRITICAL FIX: Create orders ONE AT A TIME to avoid batch insert enum type issues
     orders_data = [
         {"amount": Decimal("1000.00"), "status": OrderStatus.PENDING_PAYMENT},
         {"amount": Decimal("1500.00"), "status": OrderStatus.PROCESSING},
@@ -354,9 +355,11 @@ async def test_get_order_statistics_for_school(db_session: AsyncSession, parent_
     for idx, data in enumerate(orders_data):
         order = Order(student_id=student_id, parent_user_id=parent_user_id, school_id=school_id, order_number=f"ORD-STATS-TEST55-{idx+1}", total_amount=data["amount"], status=data["status"])
         db_session.add(order)
+        # Commit each order individually to avoid batch insert enum issues
+        await db_session.commit()
+        await db_session.refresh(order)
         created_orders.append(order)
 
-    await db_session.commit()
     print(f"✓ Created {len(created_orders)} test orders")
 
     # Step 3: Get statistics

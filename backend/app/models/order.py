@@ -1,10 +1,12 @@
 # backend/app/models/order.py
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, Numeric, String
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
+from app.schemas.enums import OrderStatus
 
 
 class Order(Base):
@@ -26,7 +28,17 @@ class Order(Base):
     # NOTE: Generated in service layer as f"ORD-{school_id}-{timestamp}-{order_id}"
 
     total_amount = Column(Numeric(10, 2), nullable=False)
-    status = Column(String, nullable=False, default="pending_payment")
+    status = Column(
+        SQLEnum(
+            OrderStatus,
+            name="order_status_enum",
+            create_type=False,  # Don't create the enum (already exists in DB)
+            native_enum=True,  # ✅ This tells SQLAlchemy to use PostgreSQL ENUM type
+            values_callable=lambda x: [e.value for e in x],  # ✅ Map enum values explicitly
+        ),
+        nullable=False,
+        default=OrderStatus.PENDING_PAYMENT,
+    )
     # Valid: 'pending_payment', 'processing', 'shipped', 'delivered', 'cancelled'
 
     created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
