@@ -123,13 +123,25 @@ class PaymentService:
         """
         Verifies a payment's signature and updates the status of the payment
         and its target (Invoice or Order).
+
+        CONCURRENCY PROTECTION:
+        - Uses SELECT ... FOR UPDATE to acquire an exclusive row lock
+        - Prevents race conditions between client verification and webhook
+        - Ensures atomic, idempotent payment processing
         """
-        # 1. Fetch our internal payment record
-        payment = await self.db.get(Payment, verification_data.internal_payment_id)
+        # IDEMPOTENCY FIX: Use SELECT ... FOR UPDATE to acquire an exclusive lock on the payment row
+        # This prevents concurrent access from both client verification and webhook handler
+        stmt = select(Payment).where(Payment.id == verification_data.internal_payment_id).with_for_update()  # IDEMPOTENCY FIX: Pessimistic lock - blocks other transactions
+        result = await self.db.execute(stmt)
+        payment = result.scalar_one_or_none()
+
         if not payment:
             raise HTTPException(status_code=404, detail="Payment record not found.")
 
+        # IDEMPOTENCY FIX: Check if payment is already captured AFTER acquiring the lock
+        # This ensures we see the most up-to-date status and prevent duplicate processing
         if payment.status == "captured":
+            logger.info(f"Payment {payment.id} already captured. Idempotent return.")
             return payment  # Payment is already verified, do nothing.
 
         # 2. Retrieve and decrypt the school's Razorpay secret
@@ -153,7 +165,7 @@ class PaymentService:
         # 4. If verification succeeds, update our records atomically
         payment.status = "captured"
         payment.gateway_payment_id = verification_data.razorpay_payment_id
-        payment.gateway_signature = verification_data.razorpay_signature  # THIS WAS MISSING
+        payment.gateway_signature = verification_data.razorpay_signature
 
         try:
             razorpay_client = await _get_razorpay_client(db=self.db, school_id=payment.school_id)
@@ -177,7 +189,7 @@ class PaymentService:
                 # --- THIS IS THE CRITICAL ADDITION ---
                 # Now that the payment is captured, call the allocation service
                 # to distribute the funds and update the invoice status.
-                await invoice_service.allocate_payment_to_invoice_items(db=self.db, payment_id=payment.id, user_id=payment.user_id)  # Get the user ID from the payment record
+                await invoice_service.allocate_payment_to_invoice_items(db=self.db, payment_id=payment.id, user_id=payment.user_id)
             else:
                 logger.info(f"DEBUG: Invoice FOUND - id={invoice.id}, current payment_status={invoice.payment_status}")
                 logger.info("DEBUG: Setting payment_status to 'paid'")
@@ -185,7 +197,7 @@ class PaymentService:
                 logger.info(f"DEBUG: After assignment - invoice.payment_status={invoice.payment_status}")
                 logger.info("DEBUG: About to flush invoice")
                 await self.db.flush()
-                logger.info(f"DEBUG: Flush complete - invoice.payment_status={invoice.payment_status}")  # ✅ FLUSH invoice changes
+                logger.info(f"DEBUG: Flush complete - invoice.payment_status={invoice.payment_status}")
 
         elif payment.order_id:
             order_stmt = select(Order).where(Order.order_id == payment.order_id)
@@ -194,8 +206,10 @@ class PaymentService:
 
             if order:
                 order.status = OrderStatus.PROCESSING
-                await self.db.flush()  # Update order status after payment
+                await self.db.flush()
 
+        # IDEMPOTENCY FIX: Commit the transaction to release the lock
+        # This ensures all changes are persisted atomically
         await self.db.commit()
         await self.db.refresh(payment)
 
@@ -255,7 +269,8 @@ class PaymentService:
                     raise ValueError("Gateway order ID not found in webhook payload.")
 
                 # 2. Find our internal payment record using gateway_order_id
-                payment_stmt = select(Payment).where(Payment.gateway_order_id == gateway_order_id)
+                # IDEMPOTENCY FIX: Use SELECT ... FOR UPDATE to prevent race condition with client verification
+                payment_stmt = select(Payment).where(Payment.gateway_order_id == gateway_order_id).with_for_update()  # IDEMPOTENCY FIX: Acquire exclusive lock
                 payment_result = await self.db.execute(payment_stmt)
                 payment = payment_result.scalar_one_or_none()
 
@@ -290,6 +305,7 @@ class PaymentService:
                     raise
 
                 # 4. Process the event if signature is valid (backup logic)
+                # IDEMPOTENCY FIX: Check status AFTER acquiring lock to prevent duplicate processing
                 if payment.status != "captured":
                     payment.status = "captured"
                     payment.gateway_payment_id = payment_entity.get("id")
@@ -304,6 +320,9 @@ class PaymentService:
 
                         if order:
                             order.status = OrderStatus.PROCESSING
+                else:
+                    # IDEMPOTENCY FIX: Payment already captured, log and continue
+                    logger.info(f"Webhook received for already captured payment {payment.id}. Idempotent skip.")
 
                 new_event.status = "processed"
                 logger.info(f"Webhook event processed successfully: {event_id}")
