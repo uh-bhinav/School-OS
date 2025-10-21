@@ -1,5 +1,6 @@
 # backend/app/services/payment_service.py
 import logging
+import os
 from decimal import Decimal
 
 import razorpay
@@ -15,6 +16,7 @@ from app.models.order import Order
 from app.models.payment import Payment
 from app.models.school import School
 from app.models.student import Student
+from app.schemas.enums import OrderStatus
 from app.schemas.payment_schema import PaymentInitiateRequest, PaymentVerificationRequest
 from app.services import invoice_service
 
@@ -191,7 +193,7 @@ class PaymentService:
             order = order_result.scalar_one_or_none()
 
             if order:
-                order.status = "processing"
+                order.status = OrderStatus.PROCESSING
                 await self.db.flush()  # Update order status after payment
 
         await self.db.commit()
@@ -199,20 +201,43 @@ class PaymentService:
 
         return payment
 
-    async def handle_webhook_event(self, *, payload: dict, signature: str) -> None:
+    async def handle_webhook_event(self, *, payload: dict, raw_body: bytes, signature: str) -> None:
         """
         Handles incoming Razorpay webhooks, verifying signature and idempotency.
+
+        SECURITY CRITICAL:
+        - Uses raw_body (exact bytes sent by Razorpay) for signature verification
+        - Never use the parsed JSON payload for signature verification
+        - This prevents tampering attacks via JSON manipulation
+
+        Args:
+            payload: Parsed JSON payload (for processing after verification)
+            raw_body: Raw request body bytes (for signature verification)
+            signature: X-Razorpay-Signature header value
         """
-        event_id = payload.get("id")
         event_type = payload.get("event")
 
-        if not event_id or not event_type:
-            raise HTTPException(status_code=400, detail="Invalid webhook payload.")
+        # Razorpay webhooks don't have a unique event ID at root level
+        # We need to construct one from the payment ID and timestamp for idempotency
+        if event_type == "payment.captured":
+            payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
+            payment_id = payment_entity.get("id")
+            created_at = payload.get("created_at")
+
+            if not payment_id or not created_at:
+                raise HTTPException(status_code=400, detail="Invalid webhook payload.")
+
+            # Create composite event ID for idempotency
+            event_id = f"{event_type}_{payment_id}_{created_at}"
+        else:
+            # For other event types, construct event ID differently
+            raise HTTPException(status_code=400, detail=f"Unsupported event type: {event_type}")
 
         # 1. Idempotency Check: Has this event already been processed?
         existing_event = await self.db.execute(select(GatewayWebhookEvent).where(GatewayWebhookEvent.event_id == event_id))
         if existing_event.scalars().first():
             # We've seen this before, do nothing.
+            logger.info(f"Duplicate webhook event received: {event_id}")
             return
 
         # Log the event with 'received' status before processing
@@ -223,47 +248,70 @@ class PaymentService:
         # We are only interested in successful payment events for now
         if event_type == "payment.captured":
             try:
-                payment_entity = payload["payload"]["payment"]["entity"]
-                notes = payment_entity.get("notes", {})
-                internal_payment_id = notes.get("internal_payment_id")
+                # Find the payment record by matching gateway_order_id
+                gateway_order_id = payment_entity.get("order_id")
 
-                if not internal_payment_id:
-                    raise ValueError("Internal payment ID not found in webhook notes.")
+                if not gateway_order_id:
+                    raise ValueError("Gateway order ID not found in webhook payload.")
 
-                # 2. Signature Verification
-                payment = await self.db.get(Payment, internal_payment_id)
+                # 2. Find our internal payment record using gateway_order_id
+                payment_stmt = select(Payment).where(Payment.gateway_order_id == gateway_order_id)
+                payment_result = await self.db.execute(payment_stmt)
+                payment = payment_result.scalar_one_or_none()
+
                 if not payment:
-                    raise ValueError(f"Payment record with ID {internal_payment_id} not found.")
+                    raise ValueError(f"Payment record with gateway_order_id {gateway_order_id} not found.")
 
+                # 3. Signature Verification - Decrypt webhook secret from database
                 school = await self.db.get(School, payment.school_id)
-                webhook_secret = crypto_service.decrypt_value(school.razorpay_webhook_secret_encrypted)
 
-                client = razorpay.Client(auth=("", ""))  # No auth needed for this utility
-                client.utility.verify_webhook_signature(str(payload), signature, webhook_secret)
+                # Try to get webhook secret from encrypted database field
+                if school.razorpay_webhook_secret_encrypted:
+                    # Production: Decrypt from database
+                    webhook_secret = crypto_service.decrypt_value(school.razorpay_webhook_secret_encrypted)
+                    logger.info(f"Using encrypted webhook secret from database for school_id={payment.school_id}")
+                else:
+                    # Development fallback: Use environment variable
+                    webhook_secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
+                    if not webhook_secret:
+                        raise ValueError(
+                            f"Webhook secret not configured for school_id={payment.school_id}. " "Please either:\n" "1. Set RAZORPAY_WEBHOOK_SECRET in .env (development)\n" "2. Configure via API: PUT /api/v1/finance/gateway/credentials (production)"
+                        )
+                    logger.warning(f"⚠️ Using webhook secret from .env (DEVELOPMENT MODE) for school_id={payment.school_id}. " f"Configure via /api/v1/finance/gateway/credentials for production.")
 
-                # 3. Process the event if signature is valid (backup logic)
+                # SECURITY CRITICAL: Use raw_body for signature verification
+                # Convert bytes to string as required by Razorpay SDK
+                try:
+                    client = razorpay.Client(auth=("", ""))  # No auth needed for this utility
+                    client.utility.verify_webhook_signature(raw_body.decode("utf-8"), signature, webhook_secret)  # Use raw body instead of str(payload)
+                    logger.info(f"✅ Webhook signature verified successfully for payment {gateway_order_id}")
+                except razorpay.errors.SignatureVerificationError:
+                    logger.error(f"❌ Webhook signature verification failed for payment {gateway_order_id}. " f"This likely means the webhook secret in the database doesn't match the one in Razorpay dashboard.")
+                    raise
+
+                # 4. Process the event if signature is valid (backup logic)
                 if payment.status != "captured":
                     payment.status = "captured"
                     payment.gateway_payment_id = payment_entity.get("id")
 
                     # ✅ Update Invoice/Order status atomically
                     if payment.invoice_id:
-                        invoice = await self.db.get(Invoice, payment.invoice_id)
-                        if invoice:
-                            invoice.payment_status = "paid"
+                        await invoice_service.allocate_payment_to_invoice_items(db=self.db, payment_id=payment.id, user_id=payment.user_id)
                     elif payment.order_id:
                         order_stmt = select(Order).where(Order.order_id == payment.order_id)
                         order_result = await self.db.execute(order_stmt)
                         order = order_result.scalar_one_or_none()
 
                         if order:
-                            order.status = "processing"
+                            order.status = OrderStatus.PROCESSING
 
                 new_event.status = "processed"
+                logger.info(f"Webhook event processed successfully: {event_id}")
 
             except Exception as e:
                 new_event.status = "failed"
                 new_event.processing_error = str(e)
+                logger.error(f"Webhook processing failed: {str(e)}", exc_info=True)
                 # In a real system, you would also send an alert here.
 
             await self.db.commit()

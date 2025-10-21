@@ -13,6 +13,7 @@ from app.models.product import Product
 from app.models.profile import Profile
 from app.models.student import Student
 from app.schemas.cart_schema import CartItemIn
+from app.schemas.enums import OrderStatus
 from app.schemas.order_schema import OrderCreateFromCart
 from app.services.cart_service import CartService
 from app.services.order_service import OrderService
@@ -67,7 +68,7 @@ async def test_normal_checkout_with_active_product(db_session: AsyncSession, par
 
     # Assertions
     assert order is not None
-    assert order.status == "pending_payment"
+    assert order.status == OrderStatus.PENDING_PAYMENT
     assert order.total_amount == Decimal("1500.00")  # 2 x 750
     assert len(order.items) == 1
     assert order.items[0].quantity == 2
