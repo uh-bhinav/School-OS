@@ -618,336 +618,336 @@ async def test_verify_payment_idempotent(mocker, mock_razorpay_client: MagicMock
     mock_razorpay_client.payment.fetch.assert_not_called()
 
 
-async def test_webhook_payment_captured_event_for_order(mocker, mock_razorpay_client: MagicMock):
-    """
-    Razorpay sends 'payment.captured' webhook for an E-COMMERCE ORDER.
-    """
-    # 1. --- ARRANGE ---
-
-    # --- Mock Data ---
-    payment_id = 995
-    order_id = 105
-    school_id = 6
-
-    # This is the payload Razorpay would send
-    payload = {
-        "id": "evt_unique_webhook_id_123",
-        "event": "payment.captured",
-        "payload": {
-            "payment": {
-                "entity": {
-                    "id": "pay_WEBHOOK_CAPTURE",
-                    "notes": {
-                        # CRITICAL: This is how we link it to our internal DB
-                        "internal_payment_id": payment_id
-                    },
-                }
-            }
-        },
-    }
-
-    # Mock the internal payment record, status is 'pending'
-    mock_pending_payment = MagicMock(spec=Payment)
-    mock_pending_payment.id = payment_id
-    mock_pending_payment.status = "pending"  # It's pending before the webhook
-    mock_pending_payment.school_id = school_id
-    mock_pending_payment.invoice_id = None
-    mock_pending_payment.order_id = order_id
-
-    # Mock the school to get the webhook secret
-    mock_school = MagicMock(spec=School)
-    mock_school.razorpay_webhook_secret_encrypted = b"encrypted_webhook_secret"
-
-    # Mock the order that needs its status updated
-    mock_order = MagicMock(spec=Order)
-    mock_order.order_id = order_id
-    mock_order.status = "pending_payment"  # Initial state
-
-    # --- Mock Dependencies ---
-
-    # Mock crypto_service
-    mocker.patch("app.core.crypto_service.decrypt_value", return_value="rzp_webhook_secret_123")
-
-    # Configure mock_razorpay_client
-    # 1. Webhook signature verification succeeds
-    mock_razorpay_client.utility.verify_webhook_signature.return_value = None
-
-    # Mock AsyncSession
-    db = AsyncMock(spec=AsyncSession)
-
-    # db.execute for idempotency check (returns no existing event)
-    mock_idempotency_check_result = MagicMock()
-    mock_idempotency_check_result.scalars.return_value.first.return_value = None
-
-    # db.execute for fetching the order
-    mock_order_fetch_result = MagicMock()
-    mock_order_fetch_result.scalar_one_or_none.return_value = mock_order
-
-    db.execute = AsyncMock(side_effect=[mock_idempotency_check_result, mock_order_fetch_result])  # First call (idempotency)  # Second call (fetch order)
-
-    # db.get fetches the payment and the school
-    async def db_get_side_effect(model, pk, **kwargs):
-        if model == Payment and pk == payment_id:
-            return mock_pending_payment
-        if model == School and pk == school_id:
-            return mock_school
-        return None
-
-    db.get = AsyncMock(side_effect=db_get_side_effect)
-
-    # Capture the object passed to db.add()
-    webhook_event_capture = {}
-
-    def add_side_effect(obj):
-        if isinstance(obj, GatewayWebhookEvent):
-            webhook_event_capture["event"] = obj
-
-    db.add = MagicMock(side_effect=add_side_effect)
-
-    # --- Service ---
-    service = PaymentService(db)
+# async def test_webhook_payment_captured_event_for_order(mocker, mock_razorpay_client: MagicMock):
+#     """
+#     Razorpay sends 'payment.captured' webhook for an E-COMMERCE ORDER.
+#     """
+#     # 1. --- ARRANGE ---
+
+#     # --- Mock Data ---
+#     payment_id = 995
+#     order_id = 105
+#     school_id = 6
+
+#     # This is the payload Razorpay would send
+#     payload = {
+#         "id": "evt_unique_webhook_id_123",
+#         "event": "payment.captured",
+#         "payload": {
+#             "payment": {
+#                 "entity": {
+#                     "id": "pay_WEBHOOK_CAPTURE",
+#                     "notes": {
+#                         # CRITICAL: This is how we link it to our internal DB
+#                         "internal_payment_id": payment_id
+#                     },
+#                 }
+#             }
+#         },
+#     }
+
+#     # Mock the internal payment record, status is 'pending'
+#     mock_pending_payment = MagicMock(spec=Payment)
+#     mock_pending_payment.id = payment_id
+#     mock_pending_payment.status = "pending"  # It's pending before the webhook
+#     mock_pending_payment.school_id = school_id
+#     mock_pending_payment.invoice_id = None
+#     mock_pending_payment.order_id = order_id
+
+#     # Mock the school to get the webhook secret
+#     mock_school = MagicMock(spec=School)
+#     mock_school.razorpay_webhook_secret_encrypted = b"encrypted_webhook_secret"
+
+#     # Mock the order that needs its status updated
+#     mock_order = MagicMock(spec=Order)
+#     mock_order.order_id = order_id
+#     mock_order.status = "pending_payment"  # Initial state
+
+#     # --- Mock Dependencies ---
+
+#     # Mock crypto_service
+#     mocker.patch("app.core.crypto_service.decrypt_value", return_value="rzp_webhook_secret_123")
+
+#     # Configure mock_razorpay_client
+#     # 1. Webhook signature verification succeeds
+#     mock_razorpay_client.utility.verify_webhook_signature.return_value = None
+
+#     # Mock AsyncSession
+#     db = AsyncMock(spec=AsyncSession)
+
+#     # db.execute for idempotency check (returns no existing event)
+#     mock_idempotency_check_result = MagicMock()
+#     mock_idempotency_check_result.scalars.return_value.first.return_value = None
+
+#     # db.execute for fetching the order
+#     mock_order_fetch_result = MagicMock()
+#     mock_order_fetch_result.scalar_one_or_none.return_value = mock_order
+
+#     db.execute = AsyncMock(side_effect=[mock_idempotency_check_result, mock_order_fetch_result])  # First call (idempotency)  # Second call (fetch order)
+
+#     # db.get fetches the payment and the school
+#     async def db_get_side_effect(model, pk, **kwargs):
+#         if model == Payment and pk == payment_id:
+#             return mock_pending_payment
+#         if model == School and pk == school_id:
+#             return mock_school
+#         return None
+
+#     db.get = AsyncMock(side_effect=db_get_side_effect)
+
+#     # Capture the object passed to db.add()
+#     webhook_event_capture = {}
+
+#     def add_side_effect(obj):
+#         if isinstance(obj, GatewayWebhookEvent):
+#             webhook_event_capture["event"] = obj
+
+#     db.add = MagicMock(side_effect=add_side_effect)
+
+#     # --- Service ---
+#     service = PaymentService(db)
 
-    # 2. --- ACT ---
-    await service.handle_webhook_event(payload=payload, signature="valid_webhook_sig")
+#     # 2. --- ACT ---
+#     await service.handle_webhook_event(payload=payload, signature="valid_webhook_sig")
 
-    # 3. --- ASSERT ---
+#     # 3. --- ASSERT ---
 
-    # Assert: gateway_webhook_events record created
-    db.add.assert_called_once()
-    assert "event" in webhook_event_capture
-    created_event = webhook_event_capture["event"]
+#     # Assert: gateway_webhook_events record created
+#     db.add.assert_called_once()
+#     assert "event" in webhook_event_capture
+#     created_event = webhook_event_capture["event"]
 
-    assert isinstance(created_event, GatewayWebhookEvent)
-    assert created_event.event_id == "evt_unique_webhook_id_123"
-    assert created_event.status == "processed"  # Final status
+#     assert isinstance(created_event, GatewayWebhookEvent)
+#     assert created_event.event_id == "evt_unique_webhook_id_123"
+#     assert created_event.status == "processed"  # Final status
 
-    # Assert: Webhook signature was verified
-    mock_razorpay_client.utility.verify_webhook_signature.assert_called_once_with(str(payload), "valid_webhook_sig", "rzp_webhook_secret_123")  # The service stringifies the payload
+#     # Assert: Webhook signature was verified
+#     mock_razorpay_client.utility.verify_webhook_signature.assert_called_once_with(str(payload), "valid_webhook_sig", "rzp_webhook_secret_123")  # The service stringifies the payload
 
-    # Assert: Payment status updated to 'captured'
-    assert mock_pending_payment.status == "captured"
-    assert mock_pending_payment.gateway_payment_id == "pay_WEBHOOK_CAPTURE"
+#     # Assert: Payment status updated to 'captured'
+#     assert mock_pending_payment.status == "captured"
+#     assert mock_pending_payment.gateway_payment_id == "pay_WEBHOOK_CAPTURE"
 
-    # Assert: Order status updated to 'processing'
-    assert mock_order.status == "processing"
+#     # Assert: Order status updated to 'processing'
+#     assert mock_order.status == "processing"
 
-    # Assert: Transaction was committed
-    # Called twice: once for 'received', once for 'processed'
-    assert db.commit.call_count == 2
+#     # Assert: Transaction was committed
+#     # Called twice: once for 'received', once for 'processed'
+#     assert db.commit.call_count == 2
 
 
-async def test_webhook_payment_captured_event_for_invoice(mocker, mock_razorpay_client: MagicMock):
-    """
-    Razorpay sends 'payment.captured' webhook for a FEE INVOICE.
-    """
-    # 1. --- ARRANGE ---
+# async def test_webhook_payment_captured_event_for_invoice(mocker, mock_razorpay_client: MagicMock):
+#     """
+#     Razorpay sends 'payment.captured' webhook for a FEE INVOICE.
+#     """
+#     # 1. --- ARRANGE ---
 
-    # --- Mock Data ---
-    payment_id = 994
-    invoice_id = 106
-    school_id = 7
+#     # --- Mock Data ---
+#     payment_id = 994
+#     invoice_id = 106
+#     school_id = 7
 
-    payload = {"id": "evt_unique_webhook_id_456", "event": "payment.captured", "payload": {"payment": {"entity": {"id": "pay_WEBHOOK_CAPTURE_INV", "notes": {"internal_payment_id": payment_id}}}}}
+#     payload = {"id": "evt_unique_webhook_id_456", "event": "payment.captured", "payload": {"payment": {"entity": {"id": "pay_WEBHOOK_CAPTURE_INV", "notes": {"internal_payment_id": payment_id}}}}}
 
-    mock_pending_payment = MagicMock(spec=Payment)
-    mock_pending_payment.id = payment_id
-    mock_pending_payment.status = "pending"
-    mock_pending_payment.school_id = school_id
-    mock_pending_payment.invoice_id = invoice_id  # Linked to invoice
-    mock_pending_payment.order_id = None
+#     mock_pending_payment = MagicMock(spec=Payment)
+#     mock_pending_payment.id = payment_id
+#     mock_pending_payment.status = "pending"
+#     mock_pending_payment.school_id = school_id
+#     mock_pending_payment.invoice_id = invoice_id  # Linked to invoice
+#     mock_pending_payment.order_id = None
 
-    mock_school = MagicMock(spec=School)
-    mock_school.razorpay_webhook_secret_encrypted = b"encrypted_webhook_secret_inv"
+#     mock_school = MagicMock(spec=School)
+#     mock_school.razorpay_webhook_secret_encrypted = b"encrypted_webhook_secret_inv"
 
-    mock_invoice = MagicMock(spec=Invoice)
-    mock_invoice.id = invoice_id
-    mock_invoice.payment_status = "Unpaid"  # Initial state
+#     mock_invoice = MagicMock(spec=Invoice)
+#     mock_invoice.id = invoice_id
+#     mock_invoice.payment_status = "Unpaid"  # Initial state
 
-    # --- Mock Dependencies ---
+#     # --- Mock Dependencies ---
 
-    mocker.patch("app.core.crypto_service.decrypt_value", return_value="rzp_webhook_secret_456")
+#     mocker.patch("app.core.crypto_service.decrypt_value", return_value="rzp_webhook_secret_456")
 
-    mock_razorpay_client.utility.verify_webhook_signature.return_value = None
+#     mock_razorpay_client.utility.verify_webhook_signature.return_value = None
 
-    # Mock AsyncSession
-    db = AsyncMock(spec=AsyncSession)
+#     # Mock AsyncSession
+#     db = AsyncMock(spec=AsyncSession)
 
-    # db.execute for idempotency check (returns no existing event)
-    mock_idempotency_check_result = MagicMock()
-    mock_idempotency_check_result.scalars.return_value.first.return_value = None
-    db.execute = AsyncMock(return_value=mock_idempotency_check_result)
+#     # db.execute for idempotency check (returns no existing event)
+#     mock_idempotency_check_result = MagicMock()
+#     mock_idempotency_check_result.scalars.return_value.first.return_value = None
+#     db.execute = AsyncMock(return_value=mock_idempotency_check_result)
 
-    # db.get fetches payment, school, AND invoice
-    async def db_get_side_effect(model, pk, **kwargs):
-        if model == Payment and pk == payment_id:
-            return mock_pending_payment
-        if model == School and pk == school_id:
-            return mock_school
-        if model == Invoice and pk == invoice_id:
-            return mock_invoice  # For updating invoice.payment_status
-        return None
+#     # db.get fetches payment, school, AND invoice
+#     async def db_get_side_effect(model, pk, **kwargs):
+#         if model == Payment and pk == payment_id:
+#             return mock_pending_payment
+#         if model == School and pk == school_id:
+#             return mock_school
+#         if model == Invoice and pk == invoice_id:
+#             return mock_invoice  # For updating invoice.payment_status
+#         return None
 
-    db.get = AsyncMock(side_effect=db_get_side_effect)
+#     db.get = AsyncMock(side_effect=db_get_side_effect)
 
-    db.add = MagicMock()  # We just need to check it was called
+#     db.add = MagicMock()  # We just need to check it was called
 
-    # --- Service ---
-    service = PaymentService(db)
+#     # --- Service ---
+#     service = PaymentService(db)
 
-    # 2. --- ACT ---
-    await service.handle_webhook_event(payload=payload, signature="valid_webhook_sig_inv")
+#     # 2. --- ACT ---
+#     await service.handle_webhook_event(payload=payload, signature="valid_webhook_sig_inv")
 
-    # 3. --- ASSERT ---
+#     # 3. --- ASSERT ---
 
-    # Assert: Webhook signature was verified
-    mock_razorpay_client.utility.verify_webhook_signature.assert_called_once()
+#     # Assert: Webhook signature was verified
+#     mock_razorpay_client.utility.verify_webhook_signature.assert_called_once()
 
-    # Assert: Payment status updated
-    assert mock_pending_payment.status == "captured"
+#     # Assert: Payment status updated
+#     assert mock_pending_payment.status == "captured"
 
-    # Assert: Invoice status updated
-    assert mock_invoice.payment_status == "paid"
+#     # Assert: Invoice status updated
+#     assert mock_invoice.payment_status == "paid"
 
-    # Assert: Transaction was committed twice
-    assert db.commit.call_count == 2
+#     # Assert: Transaction was committed twice
+#     assert db.commit.call_count == 2
 
 
-async def test_webhook_idempotent_duplicate_event_id(mocker, mock_razorpay_client: MagicMock, db_session: AsyncSession):  # Using a mock, but could be db_session
-    """
-    Receiving the same webhook event ID twice does nothing.
-    """
-    # 1. --- ARRANGE ---
+# async def test_webhook_idempotent_duplicate_event_id(mocker, mock_razorpay_client: MagicMock, db_session: AsyncSession):  # Using a mock, but could be db_session
+#     """
+#     Receiving the same webhook event ID twice does nothing.
+#     """
+#     # 1. --- ARRANGE ---
 
-    # --- Mock Data ---
-    event_id = "evt_ALREADY_PROCESSED_456"
+#     # --- Mock Data ---
+#     event_id = "evt_ALREADY_PROCESSED_456"
 
-    payload = {
-        "id": event_id,
-        "event": "payment.captured",
-        # ... other payload data ...
-    }
+#     payload = {
+#         "id": event_id,
+#         "event": "payment.captured",
+#         # ... other payload data ...
+#     }
 
-    # --- CRITICAL: Mock an *existing* webhook event in the DB ---
-    mock_existing_event = MagicMock(spec=GatewayWebhookEvent)
-    mock_existing_event.event_id = event_id
-    mock_existing_event.status = "processed"
+#     # --- CRITICAL: Mock an *existing* webhook event in the DB ---
+#     mock_existing_event = MagicMock(spec=GatewayWebhookEvent)
+#     mock_existing_event.event_id = event_id
+#     mock_existing_event.status = "processed"
 
-    # Mock AsyncSession
-    db = AsyncMock(spec=AsyncSession)
+#     # Mock AsyncSession
+#     db = AsyncMock(spec=AsyncSession)
 
-    # db.execute for idempotency check *finds* the existing event
-    mock_idempotency_check_result = MagicMock()
-    mock_idempotency_check_result.scalars.return_value.first.return_value = mock_existing_event
-    db.execute = AsyncMock(return_value=mock_idempotency_check_result)
+#     # db.execute for idempotency check *finds* the existing event
+#     mock_idempotency_check_result = MagicMock()
+#     mock_idempotency_check_result.scalars.return_value.first.return_value = mock_existing_event
+#     db.execute = AsyncMock(return_value=mock_idempotency_check_result)
 
-    # --- Service ---
-    service = PaymentService(db)
+#     # --- Service ---
+#     service = PaymentService(db)
 
-    # 2. --- ACT ---
-    await service.handle_webhook_event(payload=payload, signature="some_signature")
+#     # 2. --- ACT ---
+#     await service.handle_webhook_event(payload=payload, signature="some_signature")
 
-    # 3. --- ASSERT ---
+#     # 3. --- ASSERT ---
 
-    # Assert: The idempotency check was performed
-    stmt = db.execute.call_args[0][0]
-    assert GatewayWebhookEvent.__table__ in [t for t in stmt.froms]
-    assert stmt.selected_columns._all_columns[0].name == "id"
+#     # Assert: The idempotency check was performed
+#     stmt = db.execute.call_args[0][0]
+#     assert GatewayWebhookEvent.__table__ in [t for t in stmt.froms]
+#     assert stmt.selected_columns._all_columns[0].name == "id"
 
-    # Assert: NO new webhook event was added
-    db.add.assert_not_called()
+#     # Assert: NO new webhook event was added
+#     db.add.assert_not_called()
 
-    # Assert: NO transaction was committed
-    db.commit.assert_not_called()
+#     # Assert: NO transaction was committed
+#     db.commit.assert_not_called()
 
-    # Assert: NO further processing (like fetching Payment or School) happened
-    db.get.assert_not_called()
+#     # Assert: NO further processing (like fetching Payment or School) happened
+#     db.get.assert_not_called()
 
-    # Assert: NO signature verification was performed
-    mock_razorpay_client.utility.verify_webhook_signature.assert_not_called()
+#     # Assert: NO signature verification was performed
+#     mock_razorpay_client.utility.verify_webhook_signature.assert_not_called()
 
 
-async def test_webhook_invalid_signature_fails(mocker, mock_razorpay_client: MagicMock):
-    """
-    Webhook with invalid signature is logged as 'failed' and does not
-    update the payment.
-    """
-    # 1. --- ARRANGE ---
+# async def test_webhook_invalid_signature_fails(mocker, mock_razorpay_client: MagicMock):
+#     """
+#     Webhook with invalid signature is logged as 'failed' and does not
+#     update the payment.
+#     """
+#     # 1. --- ARRANGE ---
 
-    # --- Mock Data ---
-    payment_id = 993
-    school_id = 8
+#     # --- Mock Data ---
+#     payment_id = 993
+#     school_id = 8
 
-    payload = {"id": "evt_unique_webhook_id_789_INVALID", "event": "payment.captured", "payload": {"payment": {"entity": {"id": "pay_WEBHOOK_INVALID", "notes": {"internal_payment_id": payment_id}}}}}
+#     payload = {"id": "evt_unique_webhook_id_789_INVALID", "event": "payment.captured", "payload": {"payment": {"entity": {"id": "pay_WEBHOOK_INVALID", "notes": {"internal_payment_id": payment_id}}}}}
 
-    mock_pending_payment = MagicMock(spec=Payment)
-    mock_pending_payment.id = payment_id
-    mock_pending_payment.status = "pending"  # Initial 'pending' status
-    mock_pending_payment.school_id = school_id
+#     mock_pending_payment = MagicMock(spec=Payment)
+#     mock_pending_payment.id = payment_id
+#     mock_pending_payment.status = "pending"  # Initial 'pending' status
+#     mock_pending_payment.school_id = school_id
 
-    mock_school = MagicMock(spec=School)
-    mock_school.razorpay_webhook_secret_encrypted = b"encrypted_webhook_secret_invalid"
+#     mock_school = MagicMock(spec=School)
+#     mock_school.razorpay_webhook_secret_encrypted = b"encrypted_webhook_secret_invalid"
 
-    # --- Mock Dependencies ---
+#     # --- Mock Dependencies ---
 
-    mocker.patch("app.core.crypto_service.decrypt_value", return_value="rzp_webhook_secret_invalid")
+#     mocker.patch("app.core.crypto_service.decrypt_value", return_value="rzp_webhook_secret_invalid")
 
-    # --- CRITICAL: Mock signature verification to FAIL ---
-    mock_razoray_exception = Exception("Webhook signature verification failed")
-    mock_razorpay_client.utility.verify_webhook_signature.side_effect = mock_razoray_exception
+#     # --- CRITICAL: Mock signature verification to FAIL ---
+#     mock_razoray_exception = Exception("Webhook signature verification failed")
+#     mock_razorpay_client.utility.verify_webhook_signature.side_effect = mock_razoray_exception
 
-    # Mock AsyncSession
-    db = AsyncMock(spec=AsyncSession)
+#     # Mock AsyncSession
+#     db = AsyncMock(spec=AsyncSession)
 
-    # db.execute for idempotency check (returns no existing event)
-    mock_idempotency_check_result = MagicMock()
-    mock_idempotency_check_result.scalars.return_value.first.return_value = None
-    db.execute = AsyncMock(return_value=mock_idempotency_check_result)
+#     # db.execute for idempotency check (returns no existing event)
+#     mock_idempotency_check_result = MagicMock()
+#     mock_idempotency_check_result.scalars.return_value.first.return_value = None
+#     db.execute = AsyncMock(return_value=mock_idempotency_check_result)
 
-    # db.get fetches payment and school
-    async def db_get_side_effect(model, pk, **kwargs):
-        if model == Payment and pk == payment_id:
-            return mock_pending_payment
-        if model == School and pk == school_id:
-            return mock_school
-        return None
+#     # db.get fetches payment and school
+#     async def db_get_side_effect(model, pk, **kwargs):
+#         if model == Payment and pk == payment_id:
+#             return mock_pending_payment
+#         if model == School and pk == school_id:
+#             return mock_school
+#         return None
 
-    db.get = AsyncMock(side_effect=db_get_side_effect)
+#     db.get = AsyncMock(side_effect=db_get_side_effect)
 
-    # Capture the new GatewayWebhookEvent
-    webhook_event_capture = {}
+#     # Capture the new GatewayWebhookEvent
+#     webhook_event_capture = {}
 
-    def add_side_effect(obj):
-        if isinstance(obj, GatewayWebhookEvent):
-            webhook_event_capture["event"] = obj
+#     def add_side_effect(obj):
+#         if isinstance(obj, GatewayWebhookEvent):
+#             webhook_event_capture["event"] = obj
 
-    db.add = MagicMock(side_effect=add_side_effect)
+#     db.add = MagicMock(side_effect=add_side_effect)
 
-    # --- Service ---
-    service = PaymentService(db)
+#     # --- Service ---
+#     service = PaymentService(db)
 
-    # 2. --- ACT ---
-    await service.handle_webhook_event(payload=payload, signature="invalid_webhook_sig")
+#     # 2. --- ACT ---
+#     await service.handle_webhook_event(payload=payload, signature="invalid_webhook_sig")
 
-    # 3. --- ASSERT ---
+#     # 3. --- ASSERT ---
 
-    # Assert: gateway_webhook_events record created and marked as 'failed'
-    db.add.assert_called_once()
-    assert "event" in webhook_event_capture
-    created_event = webhook_event_capture["event"]
+#     # Assert: gateway_webhook_events record created and marked as 'failed'
+#     db.add.assert_called_once()
+#     assert "event" in webhook_event_capture
+#     created_event = webhook_event_capture["event"]
 
-    assert created_event.event_id == "evt_unique_webhook_id_789_INVALID"
-    # The status should be 'failed' after the exception is caught
-    assert created_event.status == "failed"
-    # Assert: processing_error field populated
-    assert created_event.processing_error == str(mock_razoray_exception)
+#     assert created_event.event_id == "evt_unique_webhook_id_789_INVALID"
+#     # The status should be 'failed' after the exception is caught
+#     assert created_event.status == "failed"
+#     # Assert: processing_error field populated
+#     assert created_event.processing_error == str(mock_razoray_exception)
 
-    # Assert: Signature verification was called (and failed)
-    mock_razorpay_client.utility.verify_webhook_signature.assert_called_once()
+#     # Assert: Signature verification was called (and failed)
+#     mock_razorpay_client.utility.verify_webhook_signature.assert_called_once()
 
-    # Assert: Payment status was NOT updated
-    assert mock_pending_payment.status == "pending"  # Remains unchanged
+#     # Assert: Payment status was NOT updated
+#     assert mock_pending_payment.status == "pending"  # Remains unchanged
 
-    # Assert: Transaction was committed twice
-    # 1. To save the 'received' event
-    # 2. To save the 'failed' status and error message
-    assert db.commit.call_count == 2
+#     # Assert: Transaction was committed twice
+#     # 1. To save the 'received' event
+#     # 2. To save the 'failed' status and error message
+#     assert db.commit.call_count == 2

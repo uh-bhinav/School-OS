@@ -28,7 +28,7 @@ class Payment(Base):
     gateway_signature = Column(Text)
 
     # --- Status and Metadata Fields ---
-    status = Column(ENUM("pending", "authorized", "captured", "failed", "refunded", "partially_refunded", name="payment_status", create_type=False), default="pending")
+    status = Column(ENUM("pending", "authorized", "captured", "failed", "refunded", "partially_refunded", "captured_allocation_failed", name="payment_status", create_type=False), default="pending")
     reconciliation_status = Column(ENUM("pending", "reconciled", "discrepancy", "under_review", "settled", name="reconciliation_status", create_type=False), default="pending")
     method = Column(String(50))
     error_code = Column(String(255))

@@ -38,6 +38,7 @@ class PaymentStatus(str, enum.Enum):
     PARTIALLY_REFUNDED = "partially_refunded"
     DISPUTED = "disputed"
     EXPIRED = "expired"
+    CAPTURED_ALLOCATION_FAILED = "captured_allocation_failed"
 
 
 class ReconciliationStatus(str, enum.Enum):
