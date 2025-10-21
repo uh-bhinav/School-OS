@@ -23,7 +23,7 @@ def encrypt_value(plain_text_value: str) -> bytes:
 
 
 def decrypt_value(encrypted_value: bytes) -> str:
-    """Decrypts binary data back into a string."""
+    """Decrypts binary data back into aaaa string."""
     if not encrypted_value:
         return None
     try:
