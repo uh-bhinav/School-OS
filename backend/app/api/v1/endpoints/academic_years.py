@@ -129,7 +129,7 @@ async def get_the_active_year(
     return active_year
 
 
-# REST PUT for setting the active year
+# REST PUT for setting the  year
 @router.put(
     "/{school_id}/set-active/{academic_year_id}",
     response_model=AcademicYearOut,
