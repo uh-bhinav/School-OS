@@ -37,8 +37,15 @@ class BaseAgent:
         self.tools = tools
         self.llm_tier = llm_tier
         self.tool_executor = ToolExecutor(tools) if tools else None
-        self.model = get_llm(llm_tier).bind_tools(tools) if tools else get_llm(llm_tier)
+        self._model = None  # Lazy initialization
         self.graph = self._build_graph()
+
+    @property
+    def model(self):
+        """Lazy initialization of the LLM model."""
+        if self._model is None:
+            self._model = get_llm(self.llm_tier).bind_tools(self.tools) if self.tools else get_llm(self.llm_tier)
+        return self._model
 
     def _should_continue(self, state: AgentState) -> str:
         """Determines if the agent should continue with tool calls or end."""
