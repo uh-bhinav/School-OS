@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Any
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -57,7 +57,7 @@ class ProductService:
         db.refresh(db_link)
         return db_link
 
-    def get_product_images(self, db: Session, *, product_id: int, user_context: dict) -> list[Dict[str, any]]:
+    def get_product_images(self, db: Session, *, product_id: int, user_context: dict) -> list[dict[str, Any]]:
         """Return signed URLs for images associated with a product."""
         links = db.query(ProductAlbumLink).filter(ProductAlbumLink.product_id == product_id).order_by(ProductAlbumLink.display_order).all()
 
