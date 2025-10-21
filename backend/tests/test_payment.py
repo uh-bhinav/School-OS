@@ -20,6 +20,7 @@ from app.models.role_definition import RoleDefinition
 from app.models.school import School
 from app.models.student import Student
 from app.models.user_roles import UserRole
+from app.schemas.enums import OrderStatus, PaymentStatus
 from app.schemas.payment_schema import PaymentInitiateRequest, PaymentVerificationRequest
 
 # --- Imports from your app ---
@@ -711,3 +712,75 @@ async def test_initiate_payment_partial_failure_db_flush_fails(mocker, mock_razo
 
     # Assert: The service *tried* to flush (and failed)
     db.flush.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_order_deleted_after_payment_initiated_integration(db_session: AsyncSession, mocker, mock_razorpay_client: MagicMock):
+    """
+    [Integration Test] Verify payment is CAPTURED even if the target
+    Order has been 'cancelled' after initiation.
+    """
+    # 1. --- ARRANGE ---
+
+    # --- Mock Dependencies (External) ---
+    mocker.patch("app.core.crypto_service.decrypt_value", return_value="rzp_secret_deleted")
+    # Mock signature verification to SUCCEED
+    mock_razorpay_client.utility.verify_payment_signature.return_value = None
+    # Mock payment fetch (in case it's called)
+    mock_razorpay_client.payment.fetch.return_value = {"method": "netbanking", "notes": {}}
+
+    # --- Create Real Data in the DB (Simplified) ---
+    db_school = School(name="Cancelled Order School", razorpay_key_id_encrypted=b"k", razorpay_key_secret_encrypted=b"s")
+    db_session.add(db_school)
+
+    parent_user = TempAuthUser(id=uuid.uuid4(), email="parent-cancel@test.com")
+    db_session.add(parent_user)
+
+    student_user = TempAuthUser(id=uuid.uuid4(), email="student-cancel@test.com")
+    db_session.add(student_user)
+
+    await db_session.flush()  # Flush to get user IDs
+
+    db_student = Student(user_id=student_user.id)
+    db_session.add(db_student)
+
+    await db_session.flush()  # Flush to get student_id
+
+    # Create the Order
+    db_order = Order(student_id=db_student.student_id, parent_user_id=parent_user.id, school_id=db_school.school_id, total_amount=Decimal("75.00"), status=OrderStatus.PENDING_PAYMENT)
+    db_session.add(db_order)
+    await db_session.flush()  # Flush to get order_id
+
+    # Create the 'pending' Payment record
+    db_payment = Payment(order_id=db_order.order_id, amount_paid=Decimal("75.00"), status=PaymentStatus.PENDING, school_id=db_school.school_id, student_id=db_student.student_id, user_id=parent_user.id, gateway_order_id="order_GATEWAY_CANCELLED")
+    db_session.add(db_payment)
+    await db_session.flush()
+    # Commit all initial data
+
+    payment_id = db_payment.id
+    order_id = db_order.order_id
+
+    await db_session.commit()
+    # --- CRITICAL: Simulate Order Cancellation AFTER payment initiated ---
+    db_order = await db_session.get(Order, order_id)
+    db_order.status = OrderStatus.CANCELLED
+    await db_session.commit()
+    # --- END SIMULATION ---
+
+    # --- Service and Request ---
+    service = PaymentService(db_session)
+    verify_request = PaymentVerificationRequest(razorpay_payment_id="pay_VALID_SIG_CANCELLED_ORDER", razorpay_order_id="order_GATEWAY_CANCELLED", razorpay_signature="valid_sig_cancelled", internal_payment_id=payment_id)
+
+    # 2. --- ACT ---
+    # This should NOT raise an error
+    await service.verify_payment(verification_data=verify_request)
+
+    # 3. --- ASSERT ---
+    db_payment = await db_session.get(Payment, payment_id)
+    db_order = await db_session.get(Order, order_id)
+
+    # Assert: Payment status SHOULD be 'captured'
+    assert db_payment.status == PaymentStatus.CAPTURED, "Payment status should be 'captured' even if order was cancelled"
+
+    # Assert: Order status should remain 'cancelled'
+    assert db_order.status == OrderStatus.CANCELLED, "Order status should remain 'cancelled' and not be changed"

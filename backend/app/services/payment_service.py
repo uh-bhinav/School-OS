@@ -258,8 +258,9 @@ class PaymentService:
 
         except Exception as e:
             # --- 🚨 ALLOCATION FAILURE CATCH-ALL 🚨 ---
+            payment_id_error = payment.id
             logger.critical(
-                f"CRITICAL: Payment {payment.id} CAPTURED but FAILED allocation/update. Error: {e}",
+                f"CRITICAL: Payment {payment_id_error} CAPTURED but FAILED allocation/update. Error: {e}",
                 exc_info=True,
             )
             # We must roll back the failed allocation changes
@@ -267,18 +268,17 @@ class PaymentService:
 
             # NOW, we start a NEW transaction to mark the payment for review
             try:
-                payment_id_alert = payment.id
                 payment.status = PaymentStatus.CAPTURED_ALLOCATION_FAILED
                 payment.error_description = f"Allocation failed: {str(e)[:255]}"
                 self.db.add(payment)  # Re-add the object to the new session
                 await self.db.commit()
 
                 # This is your log marker for alerting
-                logger.info(f"ALERT_PAYMENT_ALLOCATION_FAILURE: payment_id={payment_id_alert} " f"marked as 'captured_allocation_failed'.")
+                logger.info(f"ALERT_PAYMENT_ALLOCATION_FAILURE: payment_id={payment_id_error} " f"marked as 'captured_allocation_failed'.")
 
             except Exception as inner_e:
                 # Absolute worst-case scenario: we can't even update the DB.
-                logger.critical(f"FATAL: Could not mark payment {payment.id} as 'captured_allocation_failed'. " f"DB error: {inner_e}", exc_info=True)
+                logger.critical(f"FATAL: Could not mark payment {payment_id_error} as 'captured_allocation_failed'. " f"DB error: {inner_e}", exc_info=True)
                 await self.db.rollback()
                 # Re-raise the original error so the client doesn't get a 200 OK
                 raise HTTPException(status_code=500, detail="Payment captured but allocation failed.")
