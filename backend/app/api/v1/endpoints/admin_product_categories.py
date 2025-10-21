@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,7 +36,7 @@ async def get_category(
 
 
 # GET ALL CATEGORIES
-@router.get("/", response_model=List[ProductCategoryOut], dependencies=[Depends(require_role("Admin"))])
+@router.get("/", response_model=list[ProductCategoryOut], dependencies=[Depends(require_role("Admin"))])
 async def get_all_categories(
     include_inactive: bool = False,
     db: AsyncSession = Depends(get_db),
@@ -49,7 +47,7 @@ async def get_all_categories(
 
 
 # GET CATEGORIES WITH PRODUCT COUNTS
-@router.get("/with-product-counts", response_model=List[ProductCategoryWithCount], dependencies=[Depends(require_role("Admin"))])
+@router.get("/with-product-counts", response_model=list[ProductCategoryWithCount], dependencies=[Depends(require_role("Admin"))])
 async def get_categories_with_counts(
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),
@@ -85,9 +83,9 @@ async def delete_category(
 
 
 # BULK REORDER
-@router.put("/bulk-reorder", response_model=List[ProductCategoryOut])
+@router.put("/bulk-reorder", response_model=list[ProductCategoryOut])
 async def bulk_reorder(
-    category_orders: List[dict],  # {"category_id": int, "display_order": int}
+    category_orders: list[dict],  # {"category_id": int, "display_order": int}
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),
 ):
@@ -96,9 +94,9 @@ async def bulk_reorder(
 
 
 # BULK ACTIVATE/DEACTIVATE
-@router.put("/bulk-activate", response_model=List[ProductCategoryOut], dependencies=[Depends(require_role("Admin"))])
+@router.put("/bulk-activate", response_model=list[ProductCategoryOut], dependencies=[Depends(require_role("Admin"))])
 async def bulk_activate(
-    category_ids: List[int],
+    category_ids: list[int],
     is_active: bool,
     db: AsyncSession = Depends(get_db),
     current_profile=Depends(get_current_user_profile),

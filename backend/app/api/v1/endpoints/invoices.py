@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,7 +27,7 @@ async def generate_new_invoice(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.get("/invoices/student/{student_id}", response_model=List[InvoiceOut])
+@router.get("/invoices/student/{student_id}", response_model=list[InvoiceOut])
 async def get_student_invoices(
     student_id: int,
     db: AsyncSession = Depends(get_db),
