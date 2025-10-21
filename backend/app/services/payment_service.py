@@ -424,7 +424,7 @@ class PaymentService:
         # 1. Find payments pending for more than 1 hour (configurable)
         reconciliation_threshold = datetime.utcnow() - timedelta(hours=1)
 
-        stmt = select(Payment).where(Payment.status == PaymentStatus.PENDING).where(Payment.created_at < reconciliation_threshold).where(Payment.gateway_order_id != None).limit(100)  # Process in batches
+        stmt = select(Payment).where(Payment.status == PaymentStatus.PENDING).where(Payment.created_at < reconciliation_threshold).where(Payment.gateway_order_id.isnot(None)).limit(100)  # Process in batches
         result = await db.execute(stmt)
         pending_payments = result.scalars().all()
 
