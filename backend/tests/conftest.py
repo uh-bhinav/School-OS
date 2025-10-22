@@ -10,11 +10,13 @@ import asyncio
 import os
 import sys
 import uuid
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+from unittest.mock import MagicMock
 from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from dotenv import load_dotenv
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -359,3 +361,37 @@ def mock_admin_profile() -> Profile:
         is_active=True,
         roles=[UserRole(role_definition=RoleDefinition(role_id=1, role_name="Admin"))],
     )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def load_env():
+    load_dotenv(".env.test")
+
+
+@pytest.fixture
+def mock_razorpay_client(mocker) -> MagicMock:  # Use 'mocker' fixture
+    """
+    Mocks the razorpay.Client to avoid hitting the real API in tests.
+    Returns predefined data for order creation.
+    """
+    # Create a mock object for the Razorpay client instance
+    mock_instance = MagicMock()
+
+    # Configure the mock 'order.create' method to return specific data
+    mock_instance.order.create.return_value = {"id": "order_MOCK123456789", "amount": 1500000, "currency": "INR", "status": "created"}  # A predictable mock order ID  # Example amount in paise
+
+    # Configure the mock 'payment.fetch' method (needed for verify_payment)
+    mock_instance.payment.fetch.return_value = {"id": "pay_MOCK_SUCCESS", "method": "card", "notes": {"internal_payment_id": 1}}  # Example notes
+
+    # Configure the mock 'utility.verify_payment_signature'
+    # By default, it will do nothing (simulate success)
+    mock_instance.utility.verify_payment_signature.return_value = None
+
+    # Configure the mock 'utility.verify_webhook_signature'
+    mock_instance.utility.verify_webhook_signature.return_value = None
+
+    # Patch the razorpay.Client class to return our mock instance when called
+    mocker.patch("razorpay.Client", return_value=mock_instance)
+
+    # Return the mock instance itself so tests can make assertions on it
+    return mock_instance

@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_user_profile
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
+from app.dependencies import limiter
 from app.models.profile import Profile
 from app.schemas.payment_schema import PaymentInitiateRequest, PaymentInitiateResponse, PaymentVerificationRequest
 from app.services.payment_service import PaymentService
@@ -52,14 +53,41 @@ async def initiate_payment_flow(
 #     return {"status": "success", "message": "Payment verified successfully."}
 
 
-@router.post("/verify")
+@router.post(
+    "/verify",
+)
+@limiter.limit("5/minute")  # Apply as decorator
 async def verify_payment_signature(
+    request: Request,  # Required for limiter to work
     verification_in: PaymentVerificationRequest,
-    db: AsyncSession = Depends(get_db),  # ← Add this
-    current_user: Profile = Depends(get_current_user_profile),  # ← Add this
+    db: AsyncSession = Depends(get_db),
+    current_user: Profile = Depends(get_current_user_profile),
 ):
-    """Verify the signature of a successful Razorpay payment."""
-    print("=== ROUTE CALLED ===")
-    service = PaymentService(db)  # ← Create service directly
+    """
+    Verify the signature of a successful Razorpay payment.
+    This endpoint is now rate-limited.
+    """
+    service = PaymentService(db)
     await service.verify_payment(verification_data=verification_in)
     return {"status": "success", "message": "Payment verified successfully."}
+
+
+@router.post(
+    "/admin/reconcile-pending",
+    include_in_schema=False,  # Hides this from public OpenAPI docs
+    dependencies=[Depends(require_role("Admin"))],
+    # dependencies=[Depends(get_admin_user)]
+)
+async def trigger_reconciliation(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: Profile = Depends(get_current_user_profile),
+):
+    """
+    Triggers a background task to find and reconcile old 'pending' payments.
+    This is an admin-only endpoint.
+    """
+    service = PaymentService(db)
+    background_tasks.add_task(service.reconcile_pending_payments, db=db)
+
+    return {"message": "Pending payment reconciliation task started in the background."}

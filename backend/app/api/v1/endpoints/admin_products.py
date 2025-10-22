@@ -117,7 +117,7 @@ async def get_all_products(
     - include_inactive: Include soft-deleted products (default: false)
 
     Returns:
-    - List of all products with category information
+    - list of all products with category information
     """
     service = ProductService(db)  # ✅ INSTANTIATE HERE
     return await service.get_all_products(

@@ -2,28 +2,22 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import require_role
+from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
+from app.models.profile import Profile
 from app.schemas.fee_template_schema import (
-    FeeTemplateCreate,
     FeeTemplateOut,
     FeeTemplateUpdate,
 )
-from app.services import fee_template_service
+from app.services.fee_structure_service import FeeStructureService
+from app.services.fee_template_service import FeeTemplateService
 
 router = APIRouter()
 
 
-@router.post(
-    "/",
-    response_model=FeeTemplateOut,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role("Admin"))],
-    tags=["Fee Management"],
-)
-async def create_new_fee_template(year_in: FeeTemplateCreate, db: AsyncSession = Depends(get_db)):
-    """Create a new fee structure template. Admin only."""
-    return await fee_template_service.create_template(db=db, obj_in=year_in)
+async def get_fee_template_service(db: AsyncSession = Depends(get_db)):
+    # If using functions directly:
+    return FeeTemplateService(db)
 
 
 @router.get(
@@ -34,64 +28,53 @@ async def create_new_fee_template(year_in: FeeTemplateCreate, db: AsyncSession =
 )
 async def get_all_fee_templates(school_id: int, db: AsyncSession = Depends(get_db)):
     """Get all fee templates for a specific school. Admin only."""
-    return await fee_template_service.get_all_templates(db=db, school_id=school_id)
+    return await get_fee_template_service.get_all_templates(db=db, school_id=school_id)
 
 
-# NOTE: You must also create endpoints for GET /{id},
-#  PUT /{id}, and DELETE /{id}
-# following the pattern established in the classes module.
-# backend/app/api/v1/endpoints/fee_templates.py
-#  (Add the following to your existing file)
-
-
-@router.get(
-    "/{template_id}",
-    response_model=FeeTemplateOut,
-    dependencies=[Depends(require_role("Admin"))],
-    tags=["Fee Management"],
-)
-async def get_fee_template_by_id(template_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    Get a specific fee template by its ID. Admin only.
-    """
-    template = await fee_template_service.get_template(db=db, template_id=template_id)
+@router.get("/fee-templates/{template_id}", response_model=FeeTemplateOut, dependencies=[Depends(require_role("Admin"))])
+async def get_fee_template_by_id(template_id: int, service: FeeStructureService = Depends(get_fee_template_service), current_user: Profile = Depends(get_current_user_profile)):
+    """[Admin Only] Get a specific fee template by ID."""
+    template = await service.get_fee_template_by_id(template_id=template_id)  # Assumes service has this method
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fee Template not found")
+    # School isolation check
+    if template.school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
     return template
 
 
-@router.put(
-    "/{template_id}",
-    response_model=FeeTemplateOut,
-    dependencies=[Depends(require_role("Admin"))],
-    tags=["Fee Management"],
-)
-async def update_fee_template_by_id(template_id: int, template_in: FeeTemplateUpdate, db: AsyncSession = Depends(get_db)):
-    """
-    Update a fee template (e.g., change name or status). Admin only.
-    """
-    template = await fee_template_service.get_template(db=db, template_id=template_id)
+@router.put("/{template_id}", response_model=FeeTemplateOut, dependencies=[Depends(require_role("Admin"))])
+async def update_fee_template_by_id(
+    template_id: int, template_in: FeeTemplateUpdate, service: FeeStructureService = Depends(get_fee_template_service), current_user: Profile = Depends(get_current_user_profile)  # Assumes FeeTemplateUpdate schema exists
+):
+    """[Admin Only] Update a fee template."""
+    template = await service.get_fee_template_by_id(template_id=template_id)
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fee Template not found")
+    # School isolation check
+    if template.school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin cannot update templates for other schools.")
+    # Prevent changing school_id if present in update schema
+    if hasattr(template_in, "school_id") and template_in.school_id is not None and template_in.school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot change template's school.")
 
-    return await fee_template_service.update_template(db=db, db_obj=template, obj_in=template_in)
+    return await service.update_fee_template(db_obj=template, template_data=template_in)  # Assumes service has this method
 
 
-@router.delete(
-    "/{template_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_role("Admin"))],
-    tags=["Fee Management"],
-)
-async def delete_fee_template_by_id(template_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    Delete a fee template. Admin only (Use with caution in production).
-    """
-    template = await fee_template_service.get_template(db=db, template_id=template_id)
+@router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_role("Admin"))])
+async def delete_fee_template_by_id(template_id: int, service: FeeStructureService = Depends(get_fee_template_service), current_user: Profile = Depends(get_current_user_profile)):
+    """[Admin Only] Delete a fee template."""
+    template = await service.get_fee_template_by_id(template_id=template_id)
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fee Template not found")
+    # School isolation check
+    if template.school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin cannot delete templates for other schools.")
 
-    await fee_template_service.delete_template(db=db, db_obj=template)
-    # Note: In a real system, you would check if this
-    # template is linked to any active invoices before deleting.
-    return None  # FastAPI sends 204 No Content for successful DELETE with no body.
+    # Add check for dependencies (e.g., if assigned to classes/invoices)
+    # is_used = await service.is_template_in_use(template_id=template_id)
+    # if is_used:
+    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete fee template as it is currently in use.")
+
+    await service.delete_fee_template(db_obj=template)  # Assumes service has this method
+    return None

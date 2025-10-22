@@ -19,6 +19,7 @@ from app.models.invoice_item import InvoiceItem
 # ADDED: Import necessary models and schemas for calculations
 from app.models.payment import Payment
 from app.models.payment_allocation import PaymentAllocation
+from app.models.profile import Profile
 from app.models.student import Student
 from app.models.student_fee_discount import StudentFeeDiscount
 from app.schemas.invoice_schema import BulkInvoiceCreate, InvoiceCreate, InvoiceUpdate
@@ -218,8 +219,10 @@ async def allocate_payment_to_invoice_items(db: AsyncSession, *, payment_id: int
     payment_result = await db.execute(payment_stmt)
     payment = payment_result.scalars().first()
     if not payment or not payment.invoice_id:
+        logger.error(f"Allocation failed: Payment {payment_id} or its invoice not found.")
         raise ValueError("Payment or associated invoice not found.")
 
+    invoice = payment.invoice
     # Fetch the invoice items that need payment
     stmt = select(InvoiceItem).where(InvoiceItem.invoice_id == payment.invoice_id).order_by(InvoiceItem.id)  # Pay in a predictable order
 
@@ -261,10 +264,12 @@ async def allocate_payment_to_invoice_items(db: AsyncSession, *, payment_id: int
     # 2. After allocations are saved, calculate the new total paid on the invoice
     total_paid_stmt = select(func.sum(PaymentAllocation.amount_allocated)).join(PaymentAllocation.invoice_item).where(InvoiceItem.invoice_id == payment.invoice_id)
     total_paid_result = await db.execute(total_paid_stmt)
-    total_paid_so_far = total_paid_result.scalar_one_or_none() or Decimal("0.0")
+    # Get the sum of *previous* payments...
+    total_previously_paid = total_paid_result.scalar_one_or_none() or Decimal("0.0")
 
-    # 3. Update the parent invoice's status and amount_paid
-    invoice = payment.invoice
+    # ...and add what we just allocated in this pass.
+    total_paid_so_far = total_previously_paid + (Decimal(payment.amount_paid) - amount_to_allocate)
+
     invoice.amount_paid = total_paid_so_far
 
     if total_paid_so_far >= Decimal(invoice.amount_due):
@@ -274,7 +279,9 @@ async def allocate_payment_to_invoice_items(db: AsyncSession, *, payment_id: int
     else:
         invoice.payment_status = "unpaid"
 
-    await db.commit()
+    # await db.commit()
+    if allocations_to_create:
+        await db.flush()
 
     return allocations_to_create
 
@@ -482,3 +489,25 @@ async def _generate_invoice_for_student_core(db: AsyncSession, *, obj_in: Invoic
 
     logger.info(f"DEBUG: _generate_invoice_for_student_core completed for student_id={obj_in.student_id}")
     return db_obj
+
+
+async def get_all_invoices_for_school(db: AsyncSession, school_id: int) -> list[Invoice]:
+    """
+    Retrieves all active invoices associated with a given school ID.
+
+    NOTE: This service function itself does *not* enforce RLS directly.
+    RLS is applied at the database level based on the connection role
+    or additional filtering should be done in the endpoint based on the user's role/school.
+    """
+    stmt = (
+        select(Invoice)
+        .join(Student, Invoice.student_id == Student.student_id)
+        .join(Profile, Student.user_id == Profile.user_id)  # Join through Student to Profile
+        .where(Profile.school_id == school_id)  # Filter by the school_id on the Profile
+        .where(Invoice.is_active.is_(True))
+        .options(selectinload(Invoice.items))  # Optionally load items
+        .order_by(Invoice.created_at.desc())  # Optional ordering
+    )
+    result = await db.execute(stmt)
+    invoices = result.scalars().all()
+    return invoices
