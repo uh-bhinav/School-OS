@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, model_validator
 
 class PaymentBase(BaseModel):
     amount_paid: Optional[Decimal]
-    payment_method: Optional[str]
+    payment_method: Optional[str] = None
     status: Optional[str]
     transaction_id: Optional[str] = None
     payment_date: Optional[datetime] = None
@@ -55,3 +55,16 @@ class PaymentVerificationRequest(BaseModel):
     razorpay_order_id: str
     razorpay_signature: str
     internal_payment_id: int  # Our internal ID to quickly find the payment record
+
+
+class PaymentHealthStats(BaseModel):
+    total_payments_24h: int
+    successful_payments_24h: int
+    success_rate_24h: float
+    failed_allocations_24h: int
+
+
+class ReconciliationReportStats(BaseModel):
+    webhooks_processed_24h: int
+    webhooks_failed_24h: int
+    reconciled_via_task_24h: int

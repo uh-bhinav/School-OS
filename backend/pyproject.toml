@@ -29,6 +29,8 @@ razorpay = "^2.0.0"
 python-jose = {extras = ["cryptography"], version = "^3.5.0"}
 uuid7 = "^0.1.0"
 slowapi = "^0.1.9"
+sentry-sdk = {extras = ["fastapi", "sqlalchemy"], version = "^2.42.1"}
+prometheus-fastapi-instrumentator = "^7.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.4.2,<9.0.0"

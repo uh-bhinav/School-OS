@@ -1,14 +1,19 @@
 # backend/backend/app/main.py
 import asyncio
 import logging
+import os
 import sys
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -30,6 +35,24 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 logger.info("Environment variables loaded")
 
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+APP_ENV = os.getenv("APP_ENV", "development")
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=APP_ENV,
+        integrations=[
+            FastApiIntegration(),
+            SqlalchemyIntegration(),  # ✅ replaces SqlAlchemyIntegration
+        ],
+        traces_sample_rate=1.0,  # capture 100% of performance traces (tune in prod)
+        profiles_sample_rate=1.0,  # capture 100% of profiling data
+    )
+    print("✅ Sentry integration initialized.")
+else:
+    print("⚠️ SENTRY_DSN not found. Sentry integration is disabled.")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,6 +71,8 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+Instrumentator().instrument(app).expose(app)
 
 # ============================================================================
 # MIDDLEWARE REGISTRATION (Order Matters!)

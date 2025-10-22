@@ -7,13 +7,15 @@ from decimal import Decimal
 
 import razorpay
 import requests  # Add import
+import sentry_sdk
 from fastapi import HTTPException
 from razorpay.errors import BadRequestError, GatewayError, ServerError
-from sqlalchemy import select, update
+from sqlalchemy import case, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core import crypto_service
+from app.core.metrics import ALLOCATION_FAILURES_COUNTER, PAYMENTS_COUNTER
 from app.models.gateway_webhook_event import GatewayWebhookEvent
 from app.models.invoice import Invoice
 from app.models.order import Order
@@ -21,7 +23,7 @@ from app.models.payment import Payment
 from app.models.school import School
 from app.models.student import Student
 from app.schemas.enums import OrderStatus, PaymentStatus
-from app.schemas.payment_schema import PaymentInitiateRequest, PaymentVerificationRequest
+from app.schemas.payment_schema import PaymentHealthStats, PaymentInitiateRequest, PaymentVerificationRequest, ReconciliationReportStats
 from app.services import invoice_service
 
 logger = logging.getLogger(__name__)
@@ -176,6 +178,7 @@ class PaymentService:
             client.utility.verify_payment_signature({"razorpay_order_id": verification_data.razorpay_order_id, "razorpay_payment_id": verification_data.razorpay_payment_id, "razorpay_signature": verification_data.razorpay_signature})
         except razorpay.errors.SignatureVerificationError:
             # This is a critical security event. The signature is invalid.
+            PAYMENTS_COUNTER.labels(status="failed_signature", gateway="razorpay").inc()
             payment_id_log = payment.id
             payment.status = "failed"
             payment.error_description = "Signature verification failed."
@@ -193,6 +196,7 @@ class PaymentService:
         payment.status = "captured"
         payment.gateway_payment_id = verification_data.razorpay_payment_id
         payment.gateway_signature = verification_data.razorpay_signature  # THIS WAS MISSING
+        PAYMENTS_COUNTER.labels(status="captured", gateway="razorpay").inc()
 
         try:
             razorpay_client = await _get_razorpay_client(db=self.db, school_id=payment.school_id)
@@ -267,6 +271,8 @@ class PaymentService:
         except Exception as e:
             # --- 🚨 ALLOCATION FAILURE CATCH-ALL 🚨 ---
             payment_id_error = payment.id
+            if payment.status == PaymentStatus.CAPTURED:  # Check if it was captured before failing
+                ALLOCATION_FAILURES_COUNTER.labels(source="verify_payment").inc()
             logger.critical(
                 f"CRITICAL: Payment {payment_id_error} CAPTURED but FAILED allocation/update. Error: {e}",
                 exc_info=True,
@@ -279,14 +285,33 @@ class PaymentService:
                 payment.status = PaymentStatus.CAPTURED_ALLOCATION_FAILED
                 payment.error_description = f"Allocation failed: {str(e)[:255]}"
                 self.db.add(payment)  # Re-add the object to the new session
+                payment.gateway_payment_id = verification_data.razorpay_payment_id
+                payment.gateway_signature = verification_data.razorpay_signature
                 await self.db.commit()
 
                 # This is your log marker for alerting
                 logger.info(f"ALERT_PAYMENT_ALLOCATION_FAILURE: payment_id={payment_id_error} " f"marked as 'captured_allocation_failed'.")
 
+                # --- 2. ADD THIS SENTRY ALERT ---
+                with sentry_sdk.push_scope() as scope:
+                    scope.set_level("error")
+                    scope.set_tag("payment_id", payment_id_error)
+                    scope.set_tag("invoice_id", payment.invoice_id)
+                    scope.set_extra("gateway_payment_id", payment.gateway_payment_id)
+                    sentry_sdk.capture_message(f"Payment Allocation Failed: {payment_id_error}", level="error")
+                # --- END SENTRY ALERT ---
+
             except Exception as inner_e:
                 # Absolute worst-case scenario: we can't even update the DB.
                 logger.critical(f"FATAL: Could not mark payment {payment_id_error} as 'captured_allocation_failed'. " f"DB error: {inner_e}", exc_info=True)
+
+                # --- 3. ADD SENTRY ALERT FOR THE FATAL ERROR ---
+                with sentry_sdk.push_scope() as scope:
+                    scope.set_level("fatal")
+                    scope.set_tag("payment_id", payment_id_error)
+                    sentry_sdk.capture_exception(inner_e)
+                # --- END SENTRY ALERT ---
+
                 await self.db.rollback()
                 # Re-raise the original error so the client doesn't get a 200 OK
                 raise HTTPException(status_code=500, detail="Payment captured but allocation failed.")
@@ -392,6 +417,7 @@ class PaymentService:
                     logger.info(f"✅ Webhook signature verified successfully for payment {gateway_order_id} from IP: {client_ip}")
                 except razorpay.errors.SignatureVerificationError:
                     # 🚨 CRITICAL SECURITY EVENT: Invalid signature
+                    PAYMENTS_COUNTER.labels(status="failed_signature", gateway="razorpay_webhook").inc()
                     logger.warning(
                         f"🚨 SECURITY ALERT: Invalid webhook signature for payment {gateway_order_id}. "
                         f"Source IP: {client_ip}. "
@@ -422,21 +448,72 @@ class PaymentService:
 
                 new_event.status = "processed"
 
+                PAYMENTS_COUNTER.labels(status="captured", gateway="razorpay_webhook").inc()
+
             except Exception as e:
                 # Any processing error - log it and mark as failed
+                ALLOCATION_FAILURES_COUNTER.labels(source="webhook").inc()
                 logger.error(f"Webhook processing failed for event {event_id}: {e}", exc_info=True)
-                new_event.status = "failed"
-                new_event.processing_error = str(e)
-                # Don't raise - we want to commit the failure log
+                await self.db.rollback()
+                try:
+                    # STEP 2: Start a new transaction to log the failure
+                    new_event.status = "failed"
+                    new_event.processing_error = str(e)[:255]  # Truncate error
+                    self.db.add(new_event)  # STEP 3: Re-add the event object
+                    await self.db.commit()  # STEP 4: Commit *only* the failure log
+
+                    #
+                    # <<<====== BLOCK 1: ADD SENTRY ALERT HERE ======>>>
+                    # (This alert is for a allocation/signature failure)
+                    #
+                    with sentry_sdk.push_scope() as scope:
+                        scope.set_level("error")
+                        scope.set_tag("event_id", event_id)
+                        # Try to get payment_id for better tagging
+                        try:
+                            internal_payment_id = payload.get("payload", {}).get("payment", {}).get("entity", {}).get("notes", {}).get("internal_payment_id")
+                            if internal_payment_id:
+                                scope.set_tag("payment_id", internal_payment_id)
+                        except Exception:
+                            pass  # Don't fail the logger if payload is weird
+
+                        sentry_sdk.capture_message(f"Webhook Processing Failed: {event_id}", level="error")
+                    # <<<====== END BLOCK 1 ======>>>
+                except Exception as inner_e:
+                    logger.critical(f"FATAL: Could not log failed webhook {event_id}: {inner_e}", exc_info=True)
+
+                    #
+                    # <<<====== BLOCK 2: ADD SENTRY ALERT HERE ======>>>
+                    # (This alert is for the absolute worst-case scenario)
+                    #
+                    with sentry_sdk.push_scope() as scope:
+                        scope.set_level("fatal")
+                        scope.set_tag("event_id", event_id)
+                        sentry_sdk.capture_exception(inner_e)
+                    # <<<====== END BLOCK 2 ======>>>
+                    #
+
+                    await self.db.rollback()
 
         # 10. SINGLE COMMIT - All or nothing transaction
-        try:
-            await self.db.commit()
-            logger.info(f"Webhook event {event_id} committed with status '{new_event.status}'")
-        except Exception as commit_error:
-            logger.error(f"Failed to commit webhook event {event_id}: {commit_error}", exc_info=True)
-            await self.db.rollback()
-            raise
+        else:
+            try:
+                await self.db.commit()  # This commits the event AND all payment changes
+                logger.info(f"Webhook event {event_id} committed with status '{new_event.status}'")
+            except Exception as commit_error:
+                logger.error(f"Failed to commit *successful* webhook event {event_id}: {commit_error}", exc_info=True)
+                #
+                # <<<====== BLOCK 3: ADD SENTRY ALERT HERE ======>>>
+                # (This is an edge case: processing was OK, but the final commit failed!)
+                #
+                with sentry_sdk.push_scope() as scope:
+                    scope.set_level("fatal")
+                    scope.set_tag("event_id", event_id)
+                    sentry_sdk.capture_exception(commit_error)
+                # <<<====== END BLOCK 3 ======>>>
+                #
+                await self.db.rollback()
+                raise
 
     async def reconcile_pending_payments(self, db: AsyncSession):
         """
@@ -717,3 +794,143 @@ class PaymentService:
 
         logger.info(f"Authorized payment reconciliation complete. " f"Processed: {processed}, Captured: {captured}, " f"Expired: {expired}, Failed: {failed}")
         return {"processed": processed, "captured": captured, "expired": expired, "failed": failed}
+
+    async def get_failed_allocations(self, *, db: AsyncSession) -> list[Payment]:
+        """
+        Fetches all payments stuck in the 'captured_allocation_failed' state.
+        """
+        stmt = select(Payment).where(Payment.status == PaymentStatus.CAPTURED_ALLOCATION_FAILED).order_by(Payment.updated_at.desc())  # Show newest failures first
+        result = await db.execute(stmt)
+        payments = result.scalars().all()
+        return payments
+
+    async def retry_allocation(self, *, db: AsyncSession, payment: Payment) -> Payment:
+        """
+        Attempts to re-run the allocation logic for a payment that is
+        stuck in the 'captured_allocation_failed' state.
+        """
+
+        # We only retry allocation for invoices. Orders are simpler.
+        if not payment.invoice_id:
+            logger.warning(f"Retry allocation called on payment {payment.id} " "which has no invoice_id. Marking as captured.")
+            payment.status = PaymentStatus.CAPTURED
+            payment.error_description = "Manually retried (no invoice)."
+            await db.commit()
+            await db.refresh(payment)
+            return payment
+
+        try:
+            # --- START TRANSACTION ---
+
+            # 1. Re-run the allocation logic
+            logger.info(f"ADMIN: Retrying allocation for payment_id={payment.id}...")
+            await invoice_service.allocate_payment_to_invoice_items(
+                db=db,
+                payment_id=payment.id,
+                user_id=payment.user_id,  # Use the original user ID
+            )
+
+            # 2. If it succeeds, update the payment status
+            payment.status = PaymentStatus.CAPTURED
+            payment.error_description = f"Allocation retried and succeeded at {datetime.utcnow()}"
+
+            await db.commit()
+            logger.info(f"ADMIN: Retry SUCCESS for payment_id={payment.id}.")
+
+        except Exception as e:
+            # --- 🚨 FAILURE HANDLER 🚨 ---
+            logger.error(f"ADMIN: Retry allocation FAILED AGAIN for payment_id={payment.id}: {e}", exc_info=True)
+            await db.rollback()
+
+            # Send an alert so the admin knows their retry failed
+            with sentry_sdk.push_scope() as scope:
+                scope.set_level("error")
+                scope.set_tag("payment_id", payment.id)
+                scope.set_tag("admin_retry", True)
+                sentry_sdk.capture_exception(e)
+
+            # Re-raise the exception so the admin's API call gets a 500 error
+            raise HTTPException(status_code=500, detail=f"Allocation retry failed: {e}") from e
+
+        await db.refresh(payment)
+        return payment
+
+    async def get_payment_health_stats(self, *, db: AsyncSession) -> PaymentHealthStats:
+        """
+        Calculates and returns key health statistics for the payment system
+        over the last 24 hours.
+        """
+        # Define the 24-hour window
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+
+        # 1. We'll use a single query with conditional aggregation
+        stmt = select(
+            # Count all payments
+            func.count(Payment.id).label("total_payments_24h"),
+            # Count successful payments
+            func.count(
+                case(
+                    (Payment.status == PaymentStatus.CAPTURED, 1),
+                )
+            ).label("successful_payments_24h"),
+            # Count failed allocations
+            func.count(
+                case(
+                    (Payment.status == PaymentStatus.CAPTURED_ALLOCATION_FAILED, 1),
+                )
+            ).label("failed_allocations_24h"),
+        ).where(Payment.created_at >= twenty_four_hours_ago)
+
+        result = await db.execute(stmt)
+        stats = result.one_or_none()
+
+        if not stats or stats.total_payments_24h == 0:
+            # No payments, return zeroed-out stats
+            return PaymentHealthStats(total_payments_24h=0, successful_payments_24h=0, success_rate_24h=0.0, failed_allocations_24h=0)
+
+        # Calculate success rate
+        success_rate = 0.0
+        if stats.total_payments_24h > 0:
+            success_rate = round((stats.successful_payments_24h / stats.total_payments_24h) * 100, 2)
+
+        return PaymentHealthStats(total_payments_24h=stats.total_payments_24h, successful_payments_24h=stats.successful_payments_24h, success_rate_24h=success_rate, failed_allocations_24h=stats.failed_allocations_24h)
+
+    async def get_reconciliation_report(self, *, db: AsyncSession) -> ReconciliationReportStats:
+        """
+        Calculates and returns a report on webhook processing and
+        reconciliation tasks over the last 24 hours.
+        """
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        twenty_four_hours_ago_unix = int((datetime.utcnow() - timedelta(hours=24)).timestamp())
+
+        # 1. Query the GatewayWebhookEvent table
+        webhook_stmt = select(
+            # Count processed webhooks
+            func.count(
+                case(
+                    (GatewayWebhookEvent.status == "processed", 1),
+                )
+            ).label("webhooks_processed_24h"),
+            # Count failed webhooks
+            func.count(
+                case(
+                    (GatewayWebhookEvent.status == "failed", 1),
+                )
+            ).label("webhooks_failed_24h"),
+        ).where(GatewayWebhookEvent.payload["created_at"].as_integer() >= twenty_four_hours_ago_unix)
+
+        webhook_result = await db.execute(webhook_stmt)
+        webhook_stats = webhook_result.one_or_none()
+
+        # 2. Query the Payment table for reconciliation task updates
+        # We check for payments that were updated by the task
+        recon_stmt = select(func.count(Payment.id)).where(
+            Payment.status.in_([PaymentStatus.CAPTURED, PaymentStatus.FAILED]), Payment.error_description.like("Reconciled:%"), Payment.updated_at >= twenty_four_hours_ago  # Check for our "Reconciled:" marker
+        )
+
+        recon_result = await db.execute(recon_stmt)
+        reconciled_via_task_24h = recon_result.scalar_one_or_none() or 0
+
+        return ReconciliationReportStats(
+            webhooks_processed_24h=webhook_stats.webhooks_processed_24h if webhook_stats else 0, webhooks_failed_24h=webhook_stats.webhooks_failed_24h if webhook_stats else 0, reconciled_via_task_24h=reconciled_via_task_24h
+        )
