@@ -291,7 +291,7 @@ class PaymentService:
 
         return payment
 
-    async def handle_webhook_event(self, *, payload: dict, raw_body: bytes, signature: str) -> None:
+    async def handle_webhook_event(self, *, payload: dict, raw_body: bytes, signature: str, client_ip: str = "unknown") -> None:
         """
         Handles incoming Razorpay webhooks, verifying signature and idempotency.
 
@@ -299,13 +299,18 @@ class PaymentService:
         - Uses raw_body (exact bytes sent by Razorpay) for signature verification
         - Never use the parsed JSON payload for signature verification
         - This prevents tampering attacks via JSON manipulation
+        - Logs security events with client IP for attack detection
 
         Args:
             payload: Parsed JSON payload (for processing after verification)
             raw_body: Raw request body bytes (for signature verification)
             signature: X-Razorpay-Signature header value
+            client_ip: Client IP address for security logging
         """
         event_type = payload.get("event")
+
+        # Log incoming webhook for security audit trail
+        logger.info(f"📥 Received webhook event: {event_type} from IP: {client_ip}")
 
         # Razorpay webhooks don't have a unique event ID at root level
         # We need to construct one from the payment ID and timestamp for idempotency
@@ -327,7 +332,7 @@ class PaymentService:
         existing_event = await self.db.execute(select(GatewayWebhookEvent).where(GatewayWebhookEvent.event_id == event_id))
         if existing_event.scalars().first():
             # We've seen this before, do nothing.
-            logger.info(f"Duplicate webhook event received: {event_id}")
+            logger.info(f"Duplicate webhook event received: {event_id} from IP: {client_ip} (idempotency check passed)")
             return
 
         # 2. Create the event log entry (but don't commit yet!)
@@ -373,9 +378,18 @@ class PaymentService:
                 try:
                     client = razorpay.Client(auth=("", ""))  # No auth needed for this utility
                     client.utility.verify_webhook_signature(raw_body.decode("utf-8"), signature, webhook_secret)  # Use raw body instead of str(payload)
-                    logger.info(f"✅ Webhook signature verified successfully for payment {gateway_order_id}")
+                    logger.info(f"✅ Webhook signature verified successfully for payment {gateway_order_id} from IP: {client_ip}")
                 except razorpay.errors.SignatureVerificationError:
-                    logger.error(f"❌ Webhook signature verification failed for payment {gateway_order_id}. " f"This likely means the webhook secret in the database doesn't match the one in Razorpay dashboard.")
+                    # 🚨 CRITICAL SECURITY EVENT: Invalid signature
+                    logger.warning(
+                        f"🚨 SECURITY ALERT: Invalid webhook signature for payment {gateway_order_id}. "
+                        f"Source IP: {client_ip}. "
+                        f"This could indicate:\n"
+                        f"  1. Attack attempt (someone trying to forge webhooks)\n"
+                        f"  2. Webhook secret mismatch between Razorpay dashboard and database\n"
+                        f"  3. Request tampering during transmission\n"
+                        f"Action Required: Review logs for repeated failures from this IP."
+                    )
                     await self.db.commit()
                     raise HTTPException(status_code=400, detail="Invalid webhook signature.")
 
@@ -417,6 +431,10 @@ class PaymentService:
         """
         Finds 'pending' payments older than a threshold and checks their
         true status with Razorpay.
+        This method performs both forward and reverse reconciliation:
+        - Forward: Captures payments that succeeded but weren't verified
+        - Reverse: Marks abandoned/failed payments as FAILED or EXPIRED
+        This ensures database consistency with payment gateway reality.
         """
         logger.info("Starting pending payment reconciliation task...")
 
@@ -430,6 +448,7 @@ class PaymentService:
         processed = 0
         reconciled = 0
         failed = 0
+        expired = 0
 
         for payment in pending_payments:
             processed += 1
@@ -437,51 +456,104 @@ class PaymentService:
                 # 2. Get Razorpay client for the payment's school
                 razorpay_client = await _get_razorpay_client(db=db, school_id=payment.school_id)
 
-                # 3. Fetch all payments for the gateway_order_id
-                order_payments = razorpay_client.order.payments(payment.gateway_order_id)
+                # 3. Fetch the Razorpay order details first to check order status
+                try:
+                    razorpay_order = razorpay_client.order.fetch(payment.gateway_order_id)
+                except Exception as order_fetch_err:
+                    logger.error(f"Failed to fetch Razorpay order {payment.gateway_order_id}: {order_fetch_err}")
+                    # Skip this payment, will retry next time
+                    continue
 
-                captured_payment_entity = None
-                for p in order_payments.get("items", []):
-                    if p.get("status") == "captured":
-                        captured_payment_entity = p
-                        break  # Found it
+                # 4. Check if the order itself has expired or been paid
+                order_status = razorpay_order.get("status")
+                # If order is paid at gateway level, look for captured payment
+                if order_status == "paid":
+                    # Fetch payment attempts for this order
+                    order_payments = razorpay_client.order.payments(payment.gateway_order_id)
+                    captured_payment_entity = None
+                    for p in order_payments.get("items", []):
+                        if p.get("status") == "captured":
+                            captured_payment_entity = p
+                            break  # Found it
 
-                if captured_payment_entity:
-                    # 4. PAYMENT WAS CAPTURED! Reconcile it.
-                    logger.warning(f"Reconciliation: Found CAPTURED gateway payment for " f"PENDING internal Payment ID {payment.id}.")
+                    if captured_payment_entity:
+                        # 5. PAYMENT WAS CAPTURED! Reconcile it (Forward Reconciliation).
+                        logger.warning(f"✅ Forward Reconciliation: Found CAPTURED gateway payment for " f"PENDING internal Payment ID {payment.id}.")
 
-                    payment.status = PaymentStatus.CAPTURED
-                    payment.gateway_payment_id = captured_payment_entity.get("id")
+                        payment.status = PaymentStatus.CAPTURED
+                        payment.gateway_payment_id = captured_payment_entity.get("id")
 
-                    # 5. --- ATTEMPT ALLOCATION ---
-                    # We re-use the *same* logic block
-                    try:
-                        if payment.invoice_id:
-                            await invoice_service.allocate_payment_to_invoice_items(
-                                db=db,
-                                payment_id=payment.id,
-                                user_id=payment.user_id,  # Or a system user ID
-                            )
-                        elif payment.order_id:
-                            await db.execute(update(Order).where(Order.order_id == payment.order_id).where(Order.status == OrderStatus.PENDING_PAYMENT).values(status=OrderStatus.PROCESSING))
+                        # 6. --- ATTEMPT ALLOCATION ---
+                        # We re-use the *same* logic block
+                        try:
+                            if payment.invoice_id:
+                                await invoice_service.allocate_payment_to_invoice_items(
+                                    db=db,
+                                    payment_id=payment.id,
+                                    user_id=payment.user_id,  # Or a system user ID
+                                )
+                            elif payment.order_id:
+                                await db.execute(update(Order).where(Order.order_id == payment.order_id).where(Order.status == OrderStatus.PENDING_PAYMENT).values(status=OrderStatus.PROCESSING))
 
-                        await db.commit()  # Commit this one payment's success
-                        reconciled += 1
+                            await db.commit()  # Commit this one payment's success
+                            reconciled += 1
 
-                    except Exception as e:
-                        logger.critical(f"RECONCILIATION_ALLOCATION_FAILURE: Payment {payment.id} reconciled but FAILED allocation. Error: {e}", exc_info=True)
-                        await db.rollback()
-                        # Mark as failed in a new session
-                        payment.status = PaymentStatus.CAPTURED_ALLOCATION_FAILED
-                        payment.error_description = f"Recon allocation fail: {str(e)[:255]}"
-                        db.add(payment)
+                        except Exception as e:
+                            logger.critical(f"RECONCILIATION_ALLOCATION_FAILURE: Payment {payment.id} reconciled but FAILED allocation. Error: {e}", exc_info=True)
+                            await db.rollback()
+                            # Mark as failed in a new session
+                            payment.status = PaymentStatus.CAPTURED_ALLOCATION_FAILED
+                            payment.error_description = f"Recon allocation fail: {str(e)[:255]}"
+                            db.add(payment)
+                            await db.commit()
+                            logger.info(f"ALERT_PAYMENT_ALLOCATION_FAILURE: payment_id={payment.id}")
+                    else:
+                        # Order is marked paid but no captured payment found - data inconsistency
+                        logger.error(f"Data inconsistency: Order {payment.gateway_order_id} marked paid but no captured payment found")
+                        payment.status = PaymentStatus.FAILED
+                        payment.error_description = "Reconciled: Order marked paid but no captured payment found."
                         await db.commit()
-                        logger.info(f"ALERT_PAYMENT_ALLOCATION_FAILURE: payment_id={payment.id}")
+                        failed += 1
 
+                # 7. REVERSE RECONCILIATION: Handle abandoned/failed payments
+                elif order_status == "attempted":
+                    # Order has payment attempts but none succeeded
+                    # Fetch all payment attempts to verify they all failed
+                    order_payments = razorpay_client.order.payments(payment.gateway_order_id)
+                    payment_items = order_payments.get("items", [])
+
+                    # Check if ALL payment attempts failed
+                    all_failed = all(p.get("status") == "failed" for p in payment_items) if payment_items else True
+
+                    if all_failed:
+                        logger.warning(f"❌ Reverse Reconciliation: Payment {payment.id} has failed attempts. " f"Marking as FAILED.")
+                        payment.status = PaymentStatus.FAILED
+                        payment.error_description = f"Reconciled: All {len(payment_items)} payment attempt(s) failed at gateway."
+                        await db.commit()
+                        failed += 1
+                    else:
+                        # Some attempts are still pending/authorized - keep monitoring
+                        logger.info(f"Payment {payment.id} has mixed statuses. Keeping as PENDING for next cycle.")
+                elif order_status == "created":
+                    # Order created but no payment attempt made by user
+                    # This is the "abandoned cart" scenario
+
+                    # Check how old the payment is - if it's very old (e.g., > 24 hours), mark as failed
+                    age_hours = (datetime.utcnow() - payment.created_at).total_seconds() / 3600
+                    if age_hours > 24:  # Configurable threshold
+                        logger.warning(f"🧹 Reverse Reconciliation: Payment {payment.id} is {age_hours:.1f} hours old " f"with no payment attempt. Marking as FAILED (abandoned).")
+                        payment.status = PaymentStatus.FAILED
+                        payment.error_description = f"Reconciled: No payment attempt made within {int(age_hours)} hours. Likely abandoned."
+                        await db.commit()
+                        failed += 1
+                    else:
+                        # Still within grace period, keep as pending
+                        logger.info(f"Payment {payment.id} is {age_hours:.1f} hours old. Within grace period.")
                 else:
-                    # 6. Payment is not captured at gateway. Mark as failed.
+                    # Any other unexpected status from Razorpay
+                    logger.warning(f"⚠️ Payment {payment.id}: Unexpected Razorpay order status '{order_status}'. " f"Marking as FAILED for safety.")
                     payment.status = PaymentStatus.FAILED
-                    payment.error_description = "Reconciled: Gateway payment not found or not captured."
+                    payment.error_description = f"Reconciled: Unexpected gateway order status: {order_status}"
                     await db.commit()
                     failed += 1
 
@@ -490,5 +562,147 @@ class PaymentService:
                 await db.rollback()
                 # Don't change status, just log. Will retry next time.
 
-        logger.info(f"Reconciliation complete. Processed: {processed}, " f"Reconciled: {reconciled}, Marked Failed: {failed}.")
-        return {"processed": processed, "reconciled": reconciled, "failed": failed}
+        logger.info(f"Reconciliation complete. Processed: {processed}, " f"Reconciled (captured): {reconciled}, Marked Failed: {failed}, Marked Expired: {expired}.")
+        return {"processed": processed, "reconciled": reconciled, "failed": failed, "expired": expired}
+
+    async def reconcile_authorized_payments(self, db: AsyncSession):
+        """
+        Finds 'authorized' payments and attempts to capture them or mark them as expired.
+
+        This handles the two-step payment flow (Authorize → Capture) for certain payment methods:
+        - Authorizations within capture window (< 5 days): Attempts to capture funds
+        - Expired authorizations (>= 5 days): Marks as EXPIRED
+        - Failed capture attempts: Marks as FAILED with detailed error
+
+        Business Context:
+        When a payment is authorized, funds are placed on hold at the bank but not yet
+        transferred to the merchant. This job ensures funds are actually captured before
+        the authorization expires (typically 5 days for Razorpay).
+
+        Razorpay Authorization Window: 5 days (120 hours)
+        """
+        logger.info("Starting authorized payment reconciliation task...")
+
+        # Razorpay's authorization validity is typically 5 days (120 hours)
+        EXPIRY_THRESHOLD_HOURS = 120  # 5 days in hours
+
+        # Find all authorized payments
+        stmt = select(Payment).where(Payment.status == PaymentStatus.AUTHORIZED).where(Payment.gateway_payment_id.isnot(None)).limit(100)  # Must have a gateway payment ID to capture  # Process in batches
+        result = await db.execute(stmt)
+        authorized_payments = result.scalars().all()
+
+        processed = 0
+        captured = 0
+        expired = 0
+        failed = 0
+
+        for payment in authorized_payments:
+            processed += 1
+
+            # Calculate payment age
+            age_hours = (datetime.utcnow() - payment.created_at).total_seconds() / 3600
+
+            try:
+                # Get Razorpay client for the payment's school
+                razorpay_client = await _get_razorpay_client(db=db, school_id=payment.school_id)
+
+                # Check if authorization has expired
+                if age_hours >= EXPIRY_THRESHOLD_HOURS:
+                    logger.warning(f"⏰ Authorized Payment {payment.id} is {age_hours:.1f} hours old " f"(threshold: {EXPIRY_THRESHOLD_HOURS} hours). Marking as EXPIRED.")
+                    payment.status = PaymentStatus.EXPIRED
+                    payment.error_description = f"Authorization expired after {int(age_hours)} hours. " f"Funds were held but never captured."
+                    await db.commit()
+                    expired += 1
+                    continue
+
+                # Authorization is still valid - attempt to capture
+                logger.info(f"💰 Attempting to capture authorized payment {payment.id} " f"(gateway_payment_id: {payment.gateway_payment_id}, age: {age_hours:.1f} hours)")
+
+                try:
+                    # Call Razorpay's capture API
+                    # Amount must be in paise (smallest currency unit)
+                    amount_in_paise = int(payment.amount_paid * 100)
+
+                    captured_payment = razorpay_client.payment.capture(payment.gateway_payment_id, amount_in_paise)
+
+                    # Verify the capture was successful
+                    if captured_payment.get("status") == "captured":
+                        logger.info(f"✅ Successfully captured authorized payment {payment.id}. " f"Amount: ₹{payment.amount_paid}")
+
+                        # Update payment status to captured
+                        payment.status = PaymentStatus.CAPTURED
+                        payment.gateway_signature = captured_payment.get("id")  # Store captured payment ID
+
+                        # Perform allocation (same logic as verify_payment and reconcile_pending_payments)
+                        try:
+                            if payment.invoice_id:
+                                await invoice_service.allocate_payment_to_invoice_items(
+                                    db=db,
+                                    payment_id=payment.id,
+                                    user_id=payment.user_id,
+                                )
+                                logger.info(f"Allocated captured payment {payment.id} to invoice {payment.invoice_id}")
+                            elif payment.order_id:
+                                await db.execute(update(Order).where(Order.order_id == payment.order_id).where(Order.status == OrderStatus.PENDING_PAYMENT).values(status=OrderStatus.PROCESSING))
+                                logger.info(f"Updated order {payment.order_id} status to PROCESSING")
+
+                            await db.commit()
+                            captured += 1
+
+                        except Exception as allocation_error:
+                            logger.critical(f"CAPTURE_ALLOCATION_FAILURE: Payment {payment.id} captured but " f"FAILED allocation. Error: {allocation_error}", exc_info=True)
+                            await db.rollback()
+                            # Mark as captured but allocation failed
+                            payment.status = PaymentStatus.CAPTURED_ALLOCATION_FAILED
+                            payment.error_description = f"Capture allocation fail: {str(allocation_error)[:255]}"
+                            db.add(payment)
+                            await db.commit()
+                            logger.info(f"ALERT_CAPTURE_ALLOCATION_FAILURE: payment_id={payment.id}")
+
+                    else:
+                        # Capture API returned but status is not 'captured'
+                        logger.error(f"Capture API returned unexpected status '{captured_payment.get('status')}' " f"for payment {payment.id}")
+                        payment.status = PaymentStatus.FAILED
+                        payment.error_description = f"Capture returned unexpected status: {captured_payment.get('status')}"
+                        await db.commit()
+                        failed += 1
+
+                except BadRequestError as bad_req_err:
+                    # Common reasons: authorization already captured, authorization cancelled, invalid amount
+                    error_msg = str(bad_req_err)
+                    logger.warning(f"❌ Capture failed for payment {payment.id}: {error_msg}")
+
+                    # Check if it's an expiry-related error
+                    if "expired" in error_msg.lower() or "cannot be captured" in error_msg.lower():
+                        payment.status = PaymentStatus.EXPIRED
+                        payment.error_description = f"Authorization expired: {error_msg[:200]}"
+                        expired += 1
+                    else:
+                        payment.status = PaymentStatus.FAILED
+                        payment.error_description = f"Capture failed: {error_msg[:200]}"
+                        failed += 1
+
+                    await db.commit()
+
+                except (GatewayError, ServerError) as gateway_err:
+                    # Gateway/server errors - don't change status, will retry later
+                    logger.error(f"Gateway error while capturing payment {payment.id}: {gateway_err}. " f"Will retry in next cycle.")
+                    await db.rollback()
+                    # Don't increment counters - this payment will be retried
+
+                except Exception as capture_err:
+                    logger.error(f"Unexpected error capturing payment {payment.id}: {capture_err}", exc_info=True)
+                    await db.rollback()
+                    # Don't change status - will retry later
+
+            except HTTPException as http_err:
+                # School gateway not configured or decryption failed
+                logger.error(f"Cannot process payment {payment.id}: {http_err.detail}. " f"School ID: {payment.school_id}")
+                await db.rollback()
+
+            except Exception as e:
+                logger.error(f"Authorized payment reconciliation error for Payment {payment.id}: {e}", exc_info=True)
+                await db.rollback()
+
+        logger.info(f"Authorized payment reconciliation complete. " f"Processed: {processed}, Captured: {captured}, " f"Expired: {expired}, Failed: {failed}")
+        return {"processed": processed, "captured": captured, "expired": expired, "failed": failed}

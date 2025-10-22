@@ -91,3 +91,29 @@ async def trigger_reconciliation(
     background_tasks.add_task(service.reconcile_pending_payments, db=db)
 
     return {"message": "Pending payment reconciliation task started in the background."}
+
+
+@router.post(
+    "/admin/reconcile-authorized",
+    include_in_schema=False,  # Hides this from public OpenAPI docs
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def trigger_authorized_reconciliation(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: Profile = Depends(get_current_user_profile),
+):
+    """
+    Triggers a background task to capture 'authorized' payments or mark them as expired.
+
+    This endpoint handles the two-step payment flow (Authorize → Capture):
+    - Attempts to capture funds for authorized payments within the capture window
+    - Marks expired authorizations (> 5 days old) as EXPIRED
+    - Handles international cards and payment methods requiring explicit capture
+
+    Admin-only endpoint for manual triggering. Should also be scheduled as a cron job.
+    """
+    service = PaymentService(db)
+    background_tasks.add_task(service.reconcile_authorized_payments, db=db)
+
+    return {"message": "Authorized payment reconciliation task started in the background.", "info": "This will attempt to capture authorized payments or mark expired ones."}
