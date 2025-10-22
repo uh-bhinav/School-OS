@@ -1,10 +1,10 @@
-# backend/app/main.py
-
+# backend/backend/app/main.py
 import logging
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.agents.api import router as agents_router
 
@@ -102,22 +102,23 @@ logger.info("Agents router registered at /agents")
 @app.exception_handler(404)
 async def not_found_handler(request, exc):
     """Custom 404 handler"""
-    return {
-        "error": "Not Found",
-        "message": f"The endpoint {request.url.path} does not exist",
-        "status_code": 404,
-    }
+    detail = getattr(exc, "detail", f"The endpoint {request.url.path} does not exist")
+
+    return JSONResponse(status_code=404, content={"detail": detail})
 
 
 @app.exception_handler(500)
 async def internal_error_handler(request, exc):
     """Custom 500 handler"""
     logger.error(f"Internal server error: {exc}", exc_info=True)
-    return {
-        "error": "Internal Server Error",
-        "message": "An unexpected error occurred. Please try again later.",
-        "status_code": 500,
-    }
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred. Please try again later.",
+            "status_code": 500,
+        },
+    )
 
 
 if __name__ == "__main__":

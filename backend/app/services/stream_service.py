@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from app.models.stream import Stream
+from app.models.streams import Stream
 from app.models.subject import Subject
 from app.schemas.stream_schema import StreamCreate, StreamUpdate
 

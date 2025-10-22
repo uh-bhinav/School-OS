@@ -1,5 +1,5 @@
 # backend/app/models/invoice.py
-from sqlalchemy import (
+"""from sqlalchemy import (
     Boolean,
     Column,
     Date,
@@ -12,13 +12,14 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
+from app.db.base_class import Base
+from app.models.fee_term import FeeTerm
 
 
 class Invoice(Base):
-    """
+
     SQLAlchemy model for the invoices table.
-    """
+
 
     __tablename__ = "invoices"
 
@@ -43,3 +44,4 @@ class Invoice(Base):
     student = relationship("Student", back_populates="invoices")
     fee_template = relationship("FeeTemplate")
     fee_term = relationship("FeeTerm")
+"""

@@ -2,7 +2,7 @@
 from sqlalchemy import JSON, UUID, Boolean, Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class Message(Base):

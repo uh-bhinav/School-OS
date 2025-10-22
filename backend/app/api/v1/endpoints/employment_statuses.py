@@ -4,8 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_role
 from app.db.session import get_db
-
-# CHANGED: Import all necessary schemas
 from app.schemas.employment_status_schema import (
     EmploymentStatusCreate,
     EmploymentStatusOut,
@@ -37,7 +35,6 @@ async def get_all_statuses(school_id: int, db: AsyncSession = Depends(get_db)):
     return await employment_status_service.get_all_statuses_for_school(db=db, school_id=school_id)
 
 
-# ADDED: Endpoint to get a single status by its ID
 @router.get(
     "/{status_id}",
     response_model=EmploymentStatusOut,
@@ -45,16 +42,16 @@ async def get_all_statuses(school_id: int, db: AsyncSession = Depends(get_db)):
 )
 async def get_status_by_id(status_id: int, db: AsyncSession = Depends(get_db)):
     """Get a specific employment status by its ID. Admin only."""
-    status = await employment_status_service.get_status_by_id(db=db, status_id=status_id)
-    if not status:
+    # FIXED: Renamed 'status' to 'db_status' to avoid shadowing the imported 'status' module
+    db_status = await employment_status_service.get_status_by_id(db=db, status_id=status_id)
+    if not db_status:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Employment status not found",
         )
-    return status
+    return db_status
 
 
-# ADDED: Endpoint to update a status
 @router.put(
     "/{status_id}",
     response_model=EmploymentStatusOut,
@@ -76,7 +73,6 @@ async def update_existing_status(
     return await employment_status_service.update_status(db=db, db_obj=db_status, status_in=status_in)
 
 
-# ADDED: Endpoint to delete a status
 @router.delete(
     "/{status_id}",
     status_code=status.HTTP_204_NO_CONTENT,

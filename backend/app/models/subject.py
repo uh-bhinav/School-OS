@@ -1,9 +1,16 @@
-# REPLACE the import block at the top of the file with this:
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
+# backend/app/models/subject.py
+from sqlalchemy import (
+    Boolean,
+    Column,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
-from app.models.stream import stream_subjects_association
+from app.db.base_class import Base
+from app.models.streams import stream_subjects_association
 
 
 class Subject(Base):
@@ -23,9 +30,7 @@ class Subject(Base):
 
     school = relationship("School")
 
-    # RESOLVED CONFLICT: KEEP BOTH RELATIONSHIPS
-    # 1. Relationship for Marks (from financials branch)
     marks_records = relationship("Mark", back_populates="subject")
 
-    # 2. Relationship for Streams (from main/other branch)
     streams = relationship("Stream", secondary=stream_subjects_association, back_populates="subjects")
+    timetables = relationship("Timetable", back_populates="subject")

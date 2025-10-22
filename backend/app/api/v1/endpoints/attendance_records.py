@@ -1,8 +1,8 @@
 # REPLACE the entire import block at the top of the file with this:
 from datetime import date
-from typing import dict
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_role
@@ -24,7 +24,7 @@ router = APIRouter()
     "/",
     response_model=AttendanceRecordOut,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role("teacher"))],  # Example: Only teachers can submit
+    dependencies=[Depends(require_role("Teacher"))],  # Example: Only teachers can submit
 )
 async def create_attendance(attendance_in: AttendanceRecordCreate, db: AsyncSession = Depends(get_db)):
     """
@@ -33,11 +33,34 @@ async def create_attendance(attendance_in: AttendanceRecordCreate, db: AsyncSess
     return await attendance_record_service.create_attendance_record(db=db, attendance_in=attendance_in)
 
 
+@router.get(
+    "/",
+    response_model=list[AttendanceRecordOut],
+    dependencies=[Depends(require_role("Teacher"))],
+)
+async def list_attendance_records(
+    student_id: int,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Retrieve attendance records for a student, optionally filtered by a date range.
+    """
+    records = await attendance_record_service.get_attendance_by_student_in_range(
+        db=db,
+        student_id=student_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    return records
+
+
 # Student/Parent only: View a student's attendance history
 @router.get(
     "/students/{student_id}",
     response_model=list[AttendanceRecordOut],
-    dependencies=[Depends(require_role("parent"))],  # Example: Parents can view
+    dependencies=[Depends(require_role("Parent"))],  # Example: Parents can view
 )
 async def get_student_attendance_history(student_id: int, db: AsyncSession = Depends(get_db)):
     """
@@ -53,7 +76,7 @@ async def get_student_attendance_history(student_id: int, db: AsyncSession = Dep
 @router.put(
     "/{attendance_id}",
     response_model=AttendanceRecordOut,
-    dependencies=[Depends(require_role("teacher"))],
+    dependencies=[Depends(require_role("Teacher"))],
 )
 async def update_attendance(
     attendance_id: int,
@@ -70,7 +93,7 @@ async def update_attendance(
 @router.delete(
     "/{attendance_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("Admin"))],
 )
 async def delete_attendance(attendance_id: int, db: AsyncSession = Depends(get_db)):
     db_obj = await attendance_record_service.get_attendance_record_by_id(db, attendance_id)
@@ -82,7 +105,7 @@ async def delete_attendance(attendance_id: int, db: AsyncSession = Depends(get_d
 
 @router.post(
     "/bulk",
-    response_model=dict,
+    response_model=list[AttendanceRecordOut],
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_role("Teacher"))],  # Or "Admin"
 )
@@ -90,8 +113,16 @@ async def create_bulk_attendance(attendance_in: AttendanceRecordBulkCreate, db: 
     """
     Create multiple attendance records for a class in a single transaction.
     """
-    result = await attendance_record_service.bulk_create_attendance_records(db=db, attendance_data=attendance_in)
-    return result
+    try:
+        records = await attendance_record_service.bulk_create_attendance_records(db=db, attendance_data=attendance_in)
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=("Bulk attendance submission failed. " "Verify class_id, student_id, period_id," " and duplicates before retrying."),
+        ) from exc
+
+    return records
 
 
 @router.get(

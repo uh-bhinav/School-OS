@@ -3,9 +3,13 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - develop
 
 jobs:
   build-and-test:
@@ -15,35 +19,36 @@ jobs:
         working-directory: ./backend
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-    - name: Install dependencies
-      run: |
-        pip install poetry
-        poetry install
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
 
-    - name: Lint with Ruff
-      run: poetry run ruff check app
+      - name: Lint with Ruff
+        run: poetry run ruff check app
 
-    - name: Format with Black
-      run: poetry run black --check app
+      - name: Format with Black
+        run: poetry run black app
 
-    - name: Run tests
-      env:
-        SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
-        SUPABASE_KEY: ${{ secrets.TEST_SUPABASE_KEY }}
-        DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
-      run: |
-        poetry run pytest || EXIT_CODE=$?
-        if [ "${EXIT_CODE}" = "5" ]; then
-          echo "No tests found - skipping test step"
-          exit 0
-        elif [ -n "${EXIT_CODE}" ]; then
-          exit ${EXIT_CODE}
-        fi
+      - name: Run tests
+        env:
+            SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
+            SUPABASE_KEY: ${{ secrets.TEST_SUPABASE_KEY }}
+            DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+            SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          poetry run pytest || EXIT_CODE=$?
+          if [ "${EXIT_CODE}" = "5" ]; then
+            echo "No tests found - skipping test step"
+            exit 0
+          elif [ -n "${EXIT_CODE}" ]; then
+            exit ${EXIT_CODE}
+          fi

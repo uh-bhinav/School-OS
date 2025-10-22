@@ -1,18 +1,19 @@
 # backend/app/services/class_service.py
 from typing import Optional
 
-from backend.app.models.class_model import Class
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import raiseload, selectinload
 
+from app.models.class_model import Class
 from app.models.subject import Subject
 from app.models.teacher import Teacher
 from app.schemas.class_schema import ClassCreate, ClassUpdate
 
 
 async def create_class(db: AsyncSession, *, class_in: ClassCreate) -> Class:
+    # This part creates the object as before
     db_obj = Class(
         school_id=class_in.school_id,
         grade_level=class_in.grade_level,
@@ -23,20 +24,33 @@ async def create_class(db: AsyncSession, *, class_in: ClassCreate) -> Class:
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
-    return db_obj
+
+    # CRITICAL FIX: Re-fetch the object using get_class, which correctly
+    # loads the 'subjects' relationship, ensuring it matches the ClassOut schema.
+    return await get_class(db=db, class_id=db_obj.class_id, school_id=db_obj.school_id)
 
 
 async def get_class(db: AsyncSession, *, class_id: int, school_id: int) -> Class | None:
     """
-    Get a single class by ID, scoped to a school, preloading related data.
+    DIAGNOSTIC VERSION: This function will now raise a specific error
+    that tells us exactly which relationship is being lazy-loaded.
     """
     stmt = (
         select(Class)
         .where(Class.class_id == class_id, Class.school_id == school_id)
         .options(
+            # Eagerly load the relationships we know we need
             selectinload(Class.class_teacher).selectinload(Teacher.profile),
-            selectinload(Class.subjects),
             selectinload(Class.academic_year),
+            # THE CRITICAL DIAGNOSTIC STEP:
+            # For the subjects relationship, we will...
+            selectinload(Class.subjects).options(
+                # 1. Still eagerly load the 'streams' we know the schema wants.
+                selectinload(Subject.streams),
+                # 2. For EVERY OTHER relationship on the Subject model,
+                #    if any code tries to access it, raise an immediate error.
+                raiseload("*"),
+            ),
         )
     )
     result = await db.execute(stmt)
@@ -73,14 +87,20 @@ async def assign_subjects_to_class(db: AsyncSession, *, db_class: Class, subject
     """
     Assigns a list of subjects to a class, replacing any existing assignments.
     """
-    # Fetch the subject objects to assign
+    # CRITICAL FIX 1: Get the IDs BEFORE the commit, while the object is still "fresh".
+    the_class_id = db_class.class_id
+    the_school_id = db_class.school_id
+
+    # This part fetches the subject objects to be linked
     subjects = await db.execute(select(Subject).where(Subject.subject_id.in_(subject_ids)))
     db_class.subjects = list(subjects.scalars().all())
 
+    # This part saves the changes, which expires the 'db_class' object
     db.add(db_class)
     await db.commit()
-    await db.refresh(db_class)
-    return db_class
+
+    # FIX 2: Call get_class using the saved local variables,not the expired object.
+    return await get_class(db=db, class_id=the_class_id, school_id=the_school_id)
 
 
 async def soft_delete_class(db: AsyncSession, class_id: int) -> Optional[Class]:

@@ -1,4 +1,5 @@
 # backend/app/services/exam_type_service.py
+import inspect
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,10 +10,22 @@ from app.models.exam_type import ExamType
 from app.schemas.exam_type_schema import ExamTypeCreate
 
 
+async def _maybe_await(result):
+    if inspect.isawaitable(result):
+        return await result
+    return result
+
+
 async def create_exam_type(db: AsyncSession, *, exam_type_in: ExamTypeCreate) -> ExamType:
     db_obj = ExamType(**exam_type_in.model_dump())
-    db.add(db_obj)
-    await db.commit()
+    await _maybe_await(db.add(db_obj))
+
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
     await db.refresh(db_obj)
     return db_obj
 

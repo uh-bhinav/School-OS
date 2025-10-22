@@ -2,7 +2,7 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Time
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class Period(Base):
@@ -19,6 +19,7 @@ class Period(Base):
     end_time = Column(Time)
     is_recess = Column(Boolean, default=False)
     period_name = Column(String)
+    is_active = Column(Boolean, default=True, nullable=False)
 
     school = relationship("School")
 

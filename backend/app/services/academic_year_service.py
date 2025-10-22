@@ -33,6 +33,21 @@ async def get_all_academic_years(db: AsyncSession) -> list[AcademicYear]:
     return list(result.scalars().all())
 
 
+async def get_academic_years_for_school(
+    db: AsyncSession,
+    *,
+    school_id: int,
+    include_inactive: bool = False,
+) -> list[AcademicYear]:
+    """Fetch academic years scoped to a single school."""
+    stmt = select(AcademicYear).where(AcademicYear.school_id == school_id)
+    if not include_inactive:
+        stmt = stmt.where(AcademicYear.is_active.is_(True))
+    stmt = stmt.order_by(AcademicYear.start_date)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def update_academic_year(db: AsyncSession, *, db_obj: AcademicYear, year_in: AcademicYearUpdate) -> AcademicYear:
     """Updates academic year details."""
     update_data = year_in.model_dump(exclude_unset=True)
@@ -74,31 +89,31 @@ async def set_active_academic_year(db: AsyncSession, *, school_id: int, academic
     This action deactivates all other years for the school to ensure only one
     is active.
     """
-    # 1. Look up the year to get its school_id
-    #  (needed for filtering other years)
-    year_obj = await db.get(AcademicYear, academic_year_id)
-    if not year_obj:
-        return None
+    # 1. Get the full object for the year we want to activate.
+    target_year = await db.get(AcademicYear, academic_year_id)
+    if not target_year or target_year.school_id != school_id:
+        return None  # Return None if year doesn't exist or belongs to wrong school
 
-    school_id = year_obj.school_id
-
-    # 2. Deactivate all other years for
-    # the school (set is_active=False)
-    await db.execute(update(AcademicYear).where(AcademicYear.school_id == school_id).values(is_active=False))
-
-    # 3. Activate the target year (set is_active=True)
-    stmt = (
+    # 2. Deactivate all other years for that same school.
+    await db.execute(
         update(AcademicYear)
         .where(
-            AcademicYear.id == academic_year_id,
+            AcademicYear.school_id == school_id,
+            AcademicYear.id != academic_year_id,  # Don't deactivate the one we're activating
         )
-        .values(is_active=True)
-        .returning(AcademicYear)
+        .values(is_active=False)
     )
 
-    result = await db.execute(stmt)
+    # 3. Activate the target year and commit all changes.
+    target_year.is_active = True
+    db.add(target_year)
     await db.commit()
-    return result.scalar_one_or_none()
+
+    # 4. CRITICAL FIX: Refresh the object to load all its data from the DB.
+    # This ensures a complete object is returned, satisfying the Pydantic schema.
+    await db.refresh(target_year)
+
+    return target_year
 
 
 async def activate_academic_year(db: AsyncSession, academic_year_id: int) -> Optional[AcademicYear]:

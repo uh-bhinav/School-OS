@@ -2,7 +2,7 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 # Define the association table for the many-to-many relationship
 class_subjects_association = Table(
@@ -34,7 +34,7 @@ class Class(Base):
     academic_year = relationship("AcademicYear")
 
     # NEW: Many-to-many relationship to subjects
-    subjects = relationship("Subject", secondary=class_subjects_association)
+    subjects = relationship("Subject", secondary=class_subjects_association, lazy="selectin")
 
     timetables = relationship("Timetable", back_populates="class_record")
     attendance_records = relationship("AttendanceRecord", back_populates="class_record")

@@ -2,7 +2,7 @@
 from sqlalchemy import Boolean, Column, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class School(Base):

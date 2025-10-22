@@ -19,7 +19,7 @@ async def get_school(db: AsyncSession, school_id: int) -> Optional[School]:
 
 
 async def update_school(db: AsyncSession, *, db_obj: School, school_in: SchoolUpdate) -> School:
-    update_data = school_in.model_dump(exclude_unset=True)
+    update_data = school_in.model_dump(mode="json", exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_obj, field, value)
     db.add(db_obj)

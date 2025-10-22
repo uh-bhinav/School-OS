@@ -2,7 +2,7 @@
 from datetime import date
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 # Properties to receive on creation
@@ -11,6 +11,12 @@ class AcademicYearCreate(BaseModel):
     name: str
     start_date: date
     end_date: date
+
+    @model_validator(mode="after")
+    def check_dates(self) -> "AcademicYearCreate":
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError("End date cannot be before start date")
+        return self
 
 
 # Properties to receive on update

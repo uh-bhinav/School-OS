@@ -15,7 +15,7 @@ router = APIRouter()
 @router.post(
     "/",
     response_model=ExamTypeOut,
-    status_code=status.HTTP_2_CREATED,
+    status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_role("Admin"))],
 )
 async def create_new_exam_type(*, db: AsyncSession = Depends(get_db), exam_type_in: ExamTypeCreate):

@@ -1,4 +1,5 @@
 # backend/app/schemas/communication_schema.py
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -8,10 +9,9 @@ from pydantic import BaseModel, Field
 
 
 class MessageCreate(BaseModel):
-    """Input for sending a new message."""
+    """Input for sending a new message within an existing conversation."""
 
-    conversation_id: int = Field(..., description="The conversation ID to send the message to.")
-    payload: dict = Field(..., description="Message content (text, image URL, etc.).")
+    content: str = Field(..., description="Body of the message to send.")
 
 
 class MessageOut(BaseModel):
@@ -22,7 +22,7 @@ class MessageOut(BaseModel):
     sender_id: UUID
     payload: dict
     is_read: bool
-    sent_at: Optional[str] = None  # Using string for datetime output
+    sent_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -36,7 +36,7 @@ class ConversationCreate(BaseModel):
 
     school_id: int
     # User IDs to include in the chat (excluding the creator, who is implied)
-    recipient_user_ids: list[UUID] = Field(..., min_length=1)
+    participant_ids: list[UUID] = Field(..., min_length=1)
     title: Optional[str] = None
 
 

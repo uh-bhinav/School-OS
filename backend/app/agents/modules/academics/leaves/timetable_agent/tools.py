@@ -6,13 +6,7 @@ from typing import Any, Optional
 
 from langchain_core.tools import tool
 
-from app.agents.modules.academics.leaves.timetable_agent.schemas import (
-    FindCurrentPeriodForClassSchema,
-    FindFreeTeachersSchema,
-    GetClassTimetableSchema,
-    GetTeacherTimetableSchema,
-    UpdateTimetableEntrySchema,
-)
+from app.agents.modules.academics.leaves.timetable_agent.schemas import CreateOrUpdateTimetableEntrySchema, FindCurrentPeriodForClassSchema, FindFreeTeachersSchema, GetClassTimetableSchema, GetTeacherTimetableSchema
 
 # Set up logging for tool activity
 logger = logging.getLogger(__name__)
@@ -701,7 +695,7 @@ def find_free_teachers(day_of_week: str, period_number: int) -> dict[str, Any]:
     }
 
 
-@tool("update_timetable_entry", args_schema=UpdateTimetableEntrySchema)
+@tool("update_timetable_entry", args_schema=CreateOrUpdateTimetableEntrySchema)
 def update_timetable_entry(
     class_name: str,
     day_of_week: str,

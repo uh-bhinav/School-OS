@@ -1,16 +1,16 @@
-# backend/app/models/order_item.py
+"""# backend/app/models/order_item.py
 from sqlalchemy import Column, ForeignKey, Integer, Numeric
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 # Assuming the Product and Order models are available
 
 
 class OrderItem(Base):
-    """
+
     SQLAlchemy model for the order_items table.
-    """
+
 
     __tablename__ = "order_items"
 
@@ -24,3 +24,4 @@ class OrderItem(Base):
     # Relationships
     order = relationship("Order", back_populates="items")
     product = relationship("Product")
+"""
