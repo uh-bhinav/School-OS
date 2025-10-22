@@ -141,9 +141,17 @@ class PaymentService:
         """
         Verifies a payment's signature and updates the status of the payment
         and its target (Invoice or Order).
+
+        RACE CONDITION PROTECTION:
+        Uses SELECT ... FOR UPDATE to acquire an exclusive row lock, preventing
+        concurrent updates from webhook handlers or duplicate verification requests.
         """
-        # 1. Fetch our internal payment record
-        payment = await self.db.get(Payment, verification_data.internal_payment_id)
+        # 1. Fetch our internal payment record with exclusive lock
+        # RACE CONDITION FIX: Use SELECT ... FOR UPDATE to prevent concurrent webhook processing
+        payment_stmt = select(Payment).where(Payment.id == verification_data.internal_payment_id).with_for_update()  # Acquire exclusive lock - blocks webhook handler until we're done
+        payment_result = await self.db.execute(payment_stmt)
+        payment = payment_result.scalar_one_or_none()
+
         if not payment:
             raise HTTPException(status_code=404, detail="Payment record not found.")
 
@@ -349,7 +357,10 @@ class PaymentService:
                     raise ValueError("Gateway order ID not found in webhook payload.")
 
                 # 2. Find our internal payment record using gateway_order_id
-                payment_stmt = select(Payment).where(Payment.gateway_order_id == gateway_order_id)
+                # RACE CONDITION FIX: Use SELECT ... FOR UPDATE to acquire exclusive row lock
+                # This prevents concurrent updates from verify_payment endpoint and webhook handler
+                # ensuring atomic payment status transitions
+                payment_stmt = select(Payment).where(Payment.gateway_order_id == gateway_order_id).with_for_update()  # Acquire exclusive lock - blocks until verify_payment releases lock
                 payment_result = await self.db.execute(payment_stmt)
                 payment = payment_result.scalar_one_or_none()
 
