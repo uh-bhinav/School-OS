@@ -11,7 +11,7 @@ ENCRYPTION_KEY = os.getenv("APP_ENCRYPTION_KEY")
 if not ENCRYPTION_KEY:
     raise RuntimeError("APP_ENCRYPTION_KEY environment variable not set. Cannot start application.")
 
-# Initialize the Fernet cipher suite
+# Initialize  Fernet cipher suite
 fernet = Fernet(ENCRYPTION_KEY.encode())
 
 
