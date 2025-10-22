@@ -2,7 +2,7 @@
 import logging
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import razorpay
@@ -527,7 +527,7 @@ class PaymentService:
         logger.info("Starting pending payment reconciliation task...")
 
         # 1. Find payments pending for more than 1 hour (configurable)
-        reconciliation_threshold = datetime.utcnow() - timedelta(hours=1)
+        reconciliation_threshold = datetime.now(timezone.utc) - timedelta(hours=1)
 
         stmt = select(Payment).where(Payment.status == PaymentStatus.PENDING).where(Payment.created_at < reconciliation_threshold).where(Payment.gateway_order_id.isnot(None)).limit(100)  # Process in batches
         result = await db.execute(stmt)
@@ -540,6 +540,7 @@ class PaymentService:
 
         for payment in pending_payments:
             processed += 1
+            payment_id = payment.id  # Store ID before any transaction operations
             try:
                 # 2. Get Razorpay client for the payment's school
                 razorpay_client = await _get_razorpay_client(db=db, school_id=payment.school_id)
@@ -627,7 +628,12 @@ class PaymentService:
                     # This is the "abandoned cart" scenario
 
                     # Check how old the payment is - if it's very old (e.g., > 24 hours), mark as failed
-                    age_hours = (datetime.utcnow() - payment.created_at).total_seconds() / 3600
+                    # Handle both timezone-aware and timezone-naive created_at
+                    payment_created = payment.created_at
+                    if payment_created.tzinfo is None:
+                        payment_created = payment_created.replace(tzinfo=timezone.utc)
+
+                    age_hours = (datetime.now(timezone.utc) - payment_created).total_seconds() / 3600
                     if age_hours > 24:  # Configurable threshold
                         logger.warning(f"🧹 Reverse Reconciliation: Payment {payment.id} is {age_hours:.1f} hours old " f"with no payment attempt. Marking as FAILED (abandoned).")
                         payment.status = PaymentStatus.FAILED
@@ -646,7 +652,7 @@ class PaymentService:
                     failed += 1
 
             except Exception as e:
-                logger.error(f"Reconciliation error for Payment {payment.id}: {e}", exc_info=True)
+                logger.error(f"Reconciliation error for Payment {payment_id}: {e}", exc_info=True)
                 await db.rollback()
                 # Don't change status, just log. Will retry next time.
 
@@ -686,9 +692,14 @@ class PaymentService:
 
         for payment in authorized_payments:
             processed += 1
+            payment_id = payment.id  # Store ID before any transaction operations
 
-            # Calculate payment age
-            age_hours = (datetime.utcnow() - payment.created_at).total_seconds() / 3600
+            # Calculate payment age - handle both timezone-aware and naive datetimes
+            payment_created = payment.created_at
+            if payment_created.tzinfo is None:
+                payment_created = payment_created.replace(tzinfo=timezone.utc)
+
+            age_hours = (datetime.now(timezone.utc) - payment_created).total_seconds() / 3600
 
             try:
                 # Get Razorpay client for the payment's school
@@ -696,8 +707,8 @@ class PaymentService:
 
                 # Check if authorization has expired
                 if age_hours >= EXPIRY_THRESHOLD_HOURS:
-                    logger.warning(f"⏰ Authorized Payment {payment.id} is {age_hours:.1f} hours old " f"(threshold: {EXPIRY_THRESHOLD_HOURS} hours). Marking as EXPIRED.")
-                    payment.status = PaymentStatus.EXPIRED
+                    logger.warning(f"⏰ Authorized Payment {payment_id} is {age_hours:.1f} hours old " f"(threshold: {EXPIRY_THRESHOLD_HOURS} hours). Marking as FAILED (expired).")
+                    payment.status = PaymentStatus.FAILED  # Use FAILED instead of EXPIRED for DB compatibility
                     payment.error_description = f"Authorization expired after {int(age_hours)} hours. " f"Funds were held but never captured."
                     await db.commit()
                     expired += 1
@@ -758,11 +769,11 @@ class PaymentService:
                 except BadRequestError as bad_req_err:
                     # Common reasons: authorization already captured, authorization cancelled, invalid amount
                     error_msg = str(bad_req_err)
-                    logger.warning(f"❌ Capture failed for payment {payment.id}: {error_msg}")
+                    logger.warning(f"❌ Capture failed for payment {payment_id}: {error_msg}")
 
                     # Check if it's an expiry-related error
                     if "expired" in error_msg.lower() or "cannot be captured" in error_msg.lower():
-                        payment.status = PaymentStatus.EXPIRED
+                        payment.status = PaymentStatus.FAILED  # Use FAILED for DB compatibility
                         payment.error_description = f"Authorization expired: {error_msg[:200]}"
                         expired += 1
                     else:
@@ -789,7 +800,7 @@ class PaymentService:
                 await db.rollback()
 
             except Exception as e:
-                logger.error(f"Authorized payment reconciliation error for Payment {payment.id}: {e}", exc_info=True)
+                logger.error(f"Authorized payment reconciliation error for Payment {payment_id}: {e}", exc_info=True)
                 await db.rollback()
 
         logger.info(f"Authorized payment reconciliation complete. " f"Processed: {processed}, Captured: {captured}, " f"Expired: {expired}, Failed: {failed}")
