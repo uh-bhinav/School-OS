@@ -372,20 +372,25 @@ async def test_verify_payment_valid_signature_for_order(mocker, mock_razorpay_cl
     # Mock AsyncSession
     db = AsyncMock(spec=AsyncSession)
 
-    # db.get fetches the payment and the school
+    # RACE CONDITION FIX: verify_payment now uses SELECT ... FOR UPDATE
+    # db.execute is called TWICE:
+    # 1. First for SELECT Payment ... FOR UPDATE (get payment with lock)
+    # 2. Second for SELECT Order ... (fetch order for update)
+    mock_payment_result = MagicMock()
+    mock_payment_result.scalar_one_or_none.return_value = mock_pending_payment
+
+    mock_order_result = MagicMock()
+    mock_order_result.scalar_one_or_none.return_value = mock_order
+
+    db.execute = AsyncMock(side_effect=[mock_payment_result, mock_order_result])
+
+    # db.get fetches the school only
     async def db_get_side_effect(model, pk, **kwargs):
-        if model == Payment and pk == payment_id:
-            return mock_pending_payment
         if model == School and pk == school_id:
             return mock_school
         return None
 
     db.get = AsyncMock(side_effect=db_get_side_effect)
-
-    # db.execute fetches the order
-    mock_sql_result = MagicMock()
-    mock_sql_result.scalar_one_or_none.return_value = mock_order
-    db.execute = AsyncMock(return_value=mock_sql_result)
 
     # --- Service ---
     service = PaymentService(db)
@@ -409,7 +414,10 @@ async def test_verify_payment_valid_signature_for_order(mocker, mock_razorpay_cl
     mock_razorpay_client.payment.fetch.assert_called_once_with("pay_VALID_SIG")
 
     # Assert: If order: order.status = 'processing' (KEY TEST)
-    db.execute.assert_called_once()  # Check that the select(Order) query was run
+    # RACE CONDITION FIX: db.execute is called twice now:
+    # 1. SELECT Payment ... FOR UPDATE (fetch payment with lock)
+    # 2. SELECT Order ... (fetch order for update)
+    assert db.execute.call_count == 2
     # Check the *mock_order* object itself was modified
     assert mock_order.status == "processing"
 
@@ -464,10 +472,15 @@ async def test_verify_payment_valid_signature_for_invoice(mocker, mock_razorpay_
     # Mock AsyncSession
     db = AsyncMock(spec=AsyncSession)
 
-    # db.get fetches payment, school, AND invoice
+    # RACE CONDITION FIX: verify_payment now uses SELECT ... FOR UPDATE
+    # db.execute is called ONCE for SELECT Payment ... FOR UPDATE
+    mock_payment_result = MagicMock()
+    mock_payment_result.scalar_one_or_none.return_value = mock_pending_payment
+
+    db.execute = AsyncMock(return_value=mock_payment_result)
+
+    # db.get fetches school AND invoice
     async def db_get_side_effect(model, pk, **kwargs):
-        if model == Payment and pk == payment_id:
-            return mock_pending_payment
         if model == School and pk == school_id:
             return mock_school
         if model == Invoice and pk == invoice_id:
@@ -534,10 +547,14 @@ async def test_verify_payment_invalid_signature_fails(mocker, mock_razorpay_clie
     # Mock AsyncSession
     db = AsyncMock(spec=AsyncSession)
 
-    # db.get fetches the payment and the school
+    # RACE CONDITION FIX: verify_payment now uses SELECT ... FOR UPDATE
+    mock_payment_result = MagicMock()
+    mock_payment_result.scalar_one_or_none.return_value = mock_pending_payment
+
+    db.execute = AsyncMock(return_value=mock_payment_result)
+
+    # db.get fetches the school only
     async def db_get_side_effect(model, pk, **kwargs):
-        if model == Payment and pk == payment_id:
-            return mock_pending_payment
         if model == School and pk == school_id:
             return mock_school
         return None
@@ -566,8 +583,9 @@ async def test_verify_payment_invalid_signature_fails(mocker, mock_razorpay_clie
     db.commit.assert_called_once()
 
     # Assert: Order/Invoice status NOT updated
-    # We check that db.execute (to fetch Order) was NEVER called
-    db.execute.assert_not_called()
+    # RACE CONDITION FIX: db.execute IS called once (to fetch payment with lock)
+    # but the ORDER fetch never happens because signature verification fails first
+    assert db.execute.call_count == 1  # Only payment fetch with lock
     # We check that _get_razorpay_client (to fetch payment details) was NEVER called
     mock_razorpay_client.payment.fetch.assert_not_called()
 
@@ -592,8 +610,11 @@ async def test_verify_payment_idempotent(mocker, mock_razorpay_client: MagicMock
     # Mock AsyncSession
     db = AsyncMock(spec=AsyncSession)
 
-    # db.get fetches the already-captured payment
-    db.get = AsyncMock(return_value=mock_captured_payment)
+    # RACE CONDITION FIX: verify_payment now uses SELECT ... FOR UPDATE
+    mock_payment_result = MagicMock()
+    mock_payment_result.scalar_one_or_none.return_value = mock_captured_payment
+
+    db.execute = AsyncMock(return_value=mock_payment_result)
 
     # --- Service ---
     service = PaymentService(db)
