@@ -6,7 +6,13 @@ from typing import Any, Optional
 
 from langchain_core.tools import tool
 
-from app.agents.modules.academics.leaves.timetable_agent.schemas import CreateOrUpdateTimetableEntrySchema, FindCurrentPeriodForClassSchema, FindFreeTeachersSchema, GetClassTimetableSchema, GetTeacherTimetableSchema
+from app.agents.modules.academics.leaves.timetable_agent.schemas import (
+    CreateOrUpdateTimetableEntrySchema,
+    FindCurrentPeriodForClassSchema,
+    FindFreeTeachersSchema,
+    GetClassTimetableSchema,
+    GetTeacherTimetableSchema,
+)
 
 # Set up logging for tool activity
 logger = logging.getLogger(__name__)

@@ -60,7 +60,15 @@ async def fetch_periods_for_class(db: AsyncSession, class_id: int) -> list[Perio
     if not school_id:
         return []
 
-    stmt = select(Period).where(Period.school_id == school_id, Period.is_recess.is_(False), Period.is_active.is_(True)).options(selectinload(Period.school)).order_by(Period.period_number)
+    # 2. Retrieve all active periods using the school_id
+    stmt = (
+        select(Period)
+        # FIX 1: Corrected E712 comparison to
+        # use idiomatic SQLAlchemy syntax for boolean check
+        .where(Period.school_id == school_id, Period.is_recess.is_(False))
+        .options(selectinload(Period.school))
+        .order_by(Period.period_number)
+    )
     result = await db.execute(stmt)
     return list(result.scalars().all())
 

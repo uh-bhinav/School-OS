@@ -40,8 +40,9 @@ async def get_all_profiles_for_school(
     role: Optional[str] = None,
     name: Optional[str] = None,
 ) -> list[Profile]:
-    """Return all profiles scoped to a school with optional role and name filters."""
-
+    """
+    Get all profiles for a school, with optional filters for role and name.
+    """
     stmt = (
         select(Profile)
         .where(Profile.school_id == school_id)

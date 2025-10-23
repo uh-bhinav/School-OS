@@ -12,7 +12,7 @@ from app.models.role_definition import RoleDefinition
 from app.models.user_roles import UserRole
 
 SCHOOL_ID = 1
-EXISTING_CLASS_ID = 11
+EXISTING_CLASS_ID = 19
 EXISTING_STUDENT_ID = 21
 EXISTING_TEACHER_ID = 11
 EXISTING_CLASS_ID_WITH_STUDENT = 11

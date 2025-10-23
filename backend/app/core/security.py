@@ -2,10 +2,11 @@
 import base64
 import inspect
 import json
+import os
 import uuid
 from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
-from typing import Any, Union
+from typing import Any, Optional
 
 import requests
 from fastapi import Depends, HTTPException, status
@@ -137,15 +138,7 @@ async def _get_current_user_profile_from_db(
         if not auth_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-        stmt = (
-            select(Profile)
-            .where(Profile.user_id == auth_user.id)
-            .options(
-                selectinload(Profile.roles).selectinload(UserRole.role_definition),
-                selectinload(Profile.teacher),
-                selectinload(Profile.student),
-            )
-        )
+        stmt = select(Profile).where(Profile.user_id == auth_user.id).options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
         result = await db.execute(stmt)
         profile = result.scalars().first()
 
@@ -232,22 +225,26 @@ async def invite_user(
     return response.json()
 
 
-def create_access_token(subject: Union[str, Any], roles: list[str] = [], expires_delta: timedelta = None) -> str:
+# --- SECURITY CRITICAL ---
+# These values MUST be set in your .env file
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
+
+
+def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
     """
-    Generates a JWT access token for testing purposes.
+    Creates a new JWT access token.
+
+    :param subject: The subject of the token (e.g., user ID).
+    :param expires_delta: Optional timedelta for token expiry.
+    :return: The encoded JWT token string.
     """
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        # Default to a 15-minute expiration
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode = {
-        "exp": expire,
-        "sub": str(subject),
-        "roles": roles,  # Include roles in the token
-    }
-    # NOTE: In a real app, the SECRET_KEY should be much more complex and kept secret.
-    # For testing, we'll use a simple key defined in settings.
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    to_encode = {"exp": expire, "sub": str(subject)}
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

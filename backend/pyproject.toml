@@ -27,6 +27,12 @@ langchain-mistralai = "^0.1.5"
 langchain-google-genai = "^1.0.1"
 langchain-community = "^0.0.34"
 
+razorpay = "^2.0.0"
+uuid7 = "^0.1.0"
+slowapi = "^0.1.9"
+sentry-sdk = {extras = ["fastapi", "sqlalchemy"], version = "^2.42.1"}
+prometheus-fastapi-instrumentator = "^7.1.0"
+
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.4.2,<9.0.0"
 pytest-asyncio = ">=1.2.0,<2.0.0"
@@ -36,6 +42,7 @@ pre-commit = ">=4.3.0,<5.0.0"
 pytest-dotenv = "^0.5.2"
 httpx = {extras = ["http2"], version = "^0.28.1"}
 asgi-lifespan = "^2.1.0"
+pytest-mock = "^3.15.1"
 
 [tool.pytest.ini_options]
 dotenv_files = [

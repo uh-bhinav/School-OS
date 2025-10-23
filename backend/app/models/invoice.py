@@ -1,5 +1,5 @@
 # backend/app/models/invoice.py
-"""from sqlalchemy import (
+from sqlalchemy import (
     Boolean,
     Column,
     Date,
@@ -13,13 +13,10 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
-from app.models.fee_term import FeeTerm
 
 
 class Invoice(Base):
-
-    SQLAlchemy model for the invoices table.
-
+    """SQLAlchemy model for the invoices table."""
 
     __tablename__ = "invoices"
 
@@ -31,17 +28,20 @@ class Invoice(Base):
     fine_amount = Column(Numeric)
     scholarship_ref = Column(String)
     payment_method = Column(String)
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    status = Column(String, default="Unpaid")
+    status = Column(String, default="due")
     invoice_number = Column(String, nullable=False, unique=True)
     due_date = Column(Date, nullable=True)
     amount_due = Column(Numeric, nullable=False)
     late_fee_applied = Column(Numeric, default=0)
+    amount_paid = Column(Numeric, default=0)
+    payment_status = Column(String, default="Unpaid")
 
     # Relationships
     student = relationship("Student", back_populates="invoices")
     fee_template = relationship("FeeTemplate")
     fee_term = relationship("FeeTerm")
-"""
+    payments = relationship("Payment", back_populates="invoice")
+    items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")

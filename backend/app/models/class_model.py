@@ -38,3 +38,4 @@ class Class(Base):
 
     timetables = relationship("Timetable", back_populates="class_record")
     attendance_records = relationship("AttendanceRecord", back_populates="class_record")
+    class_fee_structures = relationship("ClassFeeStructure", back_populates="class_")

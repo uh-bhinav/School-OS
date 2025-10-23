@@ -42,3 +42,4 @@ class Profile(Base):
     student = relationship("Student", back_populates="profile", uselist=False)
     teacher = relationship("Teacher", back_populates="profile", uselist=False)
     contact_for_students = relationship("StudentContact", back_populates="parent_profile")
+    cart = relationship("Cart", back_populates="profile", uselist=False)

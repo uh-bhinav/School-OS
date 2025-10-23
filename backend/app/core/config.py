@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from urllib.parse import unquote
 
 from dotenv import load_dotenv
@@ -31,20 +32,23 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     SUPABASE_URL: str
     SUPABASE_KEY: str
-    DATABASE_URL: str
+    DATABASE_URL: str  # Your PostgreSQL connection string from Supabase
+    GROQ_API_KEY: Optional[str] = None
+    MISTRAL_API_KEY: Optional[str] = None
+    DEEPSEEK_API_KEY: Optional[str] = None
+    GOOGLE_API_KEY: Optional[str] = None
 
-    # Optional variables
-    SUPABASE_PROJECT_REF: str | None = None
-    DATABASE_URL: str
+    class Config:
+        env_file = ".env"
+        # In a team, you might place the .env file in the root directory.
+        # This line helps pydantic find it relative to this file's location.
+        env_file_encoding = "utf-8"
+        extra = "ignore"
 
     # Optional variables
     SUPABASE_PROJECT_REF: str | None = None
     TEST_ADMIN_TOKEN: str | None = None
     TEST_TEACHER_TOKEN: str | None = None
-
-    class Config:
-        env_file = ENV_FILE
-        extra = "ignore"
 
 
 # --- The rest of the file remains for database URL corrections ---
