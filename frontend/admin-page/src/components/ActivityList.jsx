@@ -1,13 +1,131 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-
-const activities = [
-  { icon: '🎓', color: 'bg-blue-500', title: 'New student enrolled', subtitle: 'Priya Sharma - Class 10A', time: '5 mins ago' },
-  { icon: '₹', color: 'bg-green-500', title: 'Fee payment received', subtitle: 'Rahul Kumar - ₹15,000', time: '12 mins ago' },
-  { icon: '👩‍🏫', color: 'bg-violet-500', title: 'Teacher assigned', subtitle: 'Ms. Anjali - Mathematics Class 9', time: '25 mins ago' },
-  { icon: '🏆', color: 'bg-orange-500', title: 'Exam results published', subtitle: 'Class 12 - Term 1 Finals', time: '1 hour ago' },
-];
+import { api } from '../utils/api.js';
 
 export function ActivityList() {
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        // Fetch recent students, payments, announcements, etc.
+        const [students, announcements] = await Promise.allSettled([
+          api.get('/students').catch(() => []),
+          api.get('/announcements').catch(() => []),
+        ]);
+
+        const activityList = [];
+        
+        // Add recent students
+        if (students.status === 'fulfilled' && Array.isArray(students.value)) {
+          const recentStudents = students.value
+            .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+            .slice(0, 2)
+            .map(s => ({
+              icon: '🎓',
+              color: 'bg-blue-500',
+              title: 'New student enrolled',
+              subtitle: `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.email,
+              time: formatTimeAgo(s.created_at),
+              type: 'student',
+              id: s.id,
+            }));
+          activityList.push(...recentStudents);
+        }
+
+        // Add recent announcements
+        if (announcements.status === 'fulfilled' && Array.isArray(announcements.value)) {
+          const recentAnnouncements = announcements.value
+            .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+            .slice(0, 2)
+            .map(a => ({
+              icon: '📣',
+              color: 'bg-orange-500',
+              title: 'New announcement',
+              subtitle: a.title || 'Untitled',
+              time: formatTimeAgo(a.created_at || a.published_at),
+              type: 'announcement',
+              id: a.id,
+            }));
+          activityList.push(...recentAnnouncements);
+        }
+
+        // Sort by time
+        activityList.sort((a, b) => {
+          const timeA = parseTimeAgo(a.time);
+          const timeB = parseTimeAgo(b.time);
+          return timeA - timeB;
+        });
+
+        if (mounted) {
+          setActivities(activityList.slice(0, 6));
+        }
+      } catch (e) {
+        console.error('Error loading activities:', e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return 'Recently';
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins} ${diffMins === 1 ? 'min' : 'mins'} ago`;
+      if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+      if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+      return date.toLocaleDateString();
+    } catch {
+      return 'Recently';
+    }
+  };
+
+  const parseTimeAgo = (timeStr) => {
+    if (!timeStr || timeStr === 'Just now') return 0;
+    const match = timeStr.match(/(\d+)\s*(min|hour|day)/);
+    if (!match) return Infinity;
+    const value = parseInt(match[1]);
+    const unit = match[2];
+    if (unit === 'min') return value;
+    if (unit === 'hour') return value * 60;
+    if (unit === 'day') return value * 1440;
+    return Infinity;
+  };
+
+  if (loading) {
+    return (
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">Recent Activities</h2>
+        </div>
+        <div className="px-4 pb-4 text-center py-8 text-slate-400 text-sm">Loading...</div>
+      </div>
+    );
+  }
+
+  if (activities.length === 0) {
+    return (
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">Recent Activities</h2>
+        </div>
+        <div className="px-4 pb-4 text-center py-8 text-slate-500 text-sm">No recent activities</div>
+      </div>
+    );
+  }
+
   return (
     <div className="card">
       <div className="card-header">
