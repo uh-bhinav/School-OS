@@ -96,7 +96,18 @@ export function StudentsPanel() {
           date_of_birth: form.date_of_birth || null,
         };
         const created = await api.post('/students', studentData);
-        setStudents((prev) => [created, ...prev]);
+        // Refresh the full list to ensure we have the latest data
+        try {
+          const refreshed = await api.get('/students').catch(() => []);
+          if (Array.isArray(refreshed)) {
+            setStudents(refreshed);
+          } else {
+            setStudents((prev) => [created, ...prev]);
+          }
+        } catch (e) {
+          // Fallback to adding the created student to the list
+          setStudents((prev) => [created, ...prev]);
+        }
       }
       resetForm();
     } catch (e) {

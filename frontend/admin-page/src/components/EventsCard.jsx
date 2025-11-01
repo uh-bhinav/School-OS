@@ -7,29 +7,44 @@ export function AnnouncementsCard({ onCreateNew }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const refreshAnnouncements = async () => {
+    try {
+      setError('');
+      const data = await api.get('/announcements').catch(() => []);
+      setAnnouncements(Array.isArray(data) ? data.slice(0, 5) : []);
+      if (!Array.isArray(data) || data.length === 0) {
+        // No error, just no data
+        setError('');
+      }
+    } catch (e) {
+      const errorMessage = e?.message || e?.toString() || 'Failed to load announcements';
+      setError(errorMessage);
+      setAnnouncements([]);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         setLoading(true);
-        setError('');
-        const data = await api.get('/announcements').catch(() => []);
-        if (mounted) {
-          setAnnouncements(Array.isArray(data) ? data.slice(0, 5) : []);
-          if (!Array.isArray(data) || data.length === 0) {
-            // No error, just no data
-            setError('');
-          }
-        }
-      } catch (e) {
-        const errorMessage = e?.message || e?.toString() || 'Failed to load announcements';
-        setError(errorMessage);
-        setAnnouncements([]);
+        await refreshAnnouncements();
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     })();
-    return () => { mounted = false; };
+    
+    // Refresh announcements every 30 seconds to show new ones
+    const interval = setInterval(() => {
+      refreshAnnouncements();
+    }, 30000);
+    
+    return () => { 
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const formatDate = (dateString) => {

@@ -5,6 +5,7 @@ from sqlalchemy.future import select
 from app.core.security import invite_user, require_role
 from app.db.session import get_db
 from app.models.role_definition import RoleDefinition
+from app.models.teacher import Teacher
 from app.models.user_roles import UserRole
 from app.schemas.user_schema import UserInviteRequest, UserInviteResponse
 
@@ -46,6 +47,22 @@ async def invite_new_user(request: UserInviteRequest, db: AsyncSession = Depends
     user_role = UserRole(user_id=user_id, role_id=role_def.role_id)
     db.add(user_role)
     await db.commit()
+
+    # 4. If the role is "Teacher", create a Teacher record in the teachers table
+    if request.role_name == "Teacher":
+        # Check if teacher record already exists
+        teacher_result = await db.execute(select(Teacher).where(Teacher.user_id == user_id))
+        existing_teacher = teacher_result.scalar_one_or_none()
+        
+        if not existing_teacher:
+            teacher = Teacher(
+                user_id=user_id,
+                school_id=request.school_id,
+                is_active=True
+            )
+            db.add(teacher)
+            await db.commit()
+            await db.refresh(teacher)
 
     return {
         "id": user_id,

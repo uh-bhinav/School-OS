@@ -76,8 +76,19 @@ export function TeachersPanel({ schoolId }) {
       };
       const invited = await api.post('/users/invite', inviteData);
       
-      // After user is created, refresh the teacher list
+      // After user is created, wait a moment for the teacher record to be created, then refresh
       if (schoolId) {
+        // Wait a bit for the backend to create the teacher record
+        setTimeout(async () => {
+          try {
+            const data = await api.get(`/teachers/school/${schoolId}`).catch(() => []);
+            setTeachers(Array.isArray(data) ? data : []);
+          } catch (e) {
+            console.error('Failed to refresh teachers:', e);
+          }
+        }, 500);
+        
+        // Also try immediate refresh in case it's fast
         const data = await api.get(`/teachers/school/${schoolId}`).catch(() => []);
         setTeachers(Array.isArray(data) ? data : []);
       }
