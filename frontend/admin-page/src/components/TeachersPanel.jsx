@@ -6,7 +6,15 @@ export function TeachersPanel({ schoolId }) {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone_number: '' });
+  const [form, setForm] = useState({ 
+    first_name: '', 
+    last_name: '', 
+    email: '', 
+    phone_number: '',
+    subject_specialization: '',
+    department: '',
+    role_name: 'Teacher'
+  });
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -36,12 +44,56 @@ export function TeachersPanel({ schoolId }) {
   }, [schoolId]);
 
   const resetForm = () => {
-    setForm({ first_name: '', last_name: '', email: '', phone_number: '' });
+    setForm({ 
+      first_name: '', 
+      last_name: '', 
+      email: '', 
+      phone_number: '',
+      subject_specialization: '',
+      department: '',
+      role_name: 'Teacher'
+    });
     setEditingId(null);
     setShowForm(false);
   };
 
-  const fullName = (t) => `${t.first_name || ''} ${t.last_name || ''}`.trim() || 'Unknown';
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!schoolId) {
+      setError('School ID is required');
+      return;
+    }
+    try {
+      // Use user invite endpoint for teachers
+      const inviteData = {
+        email: form.email,
+        school_id: schoolId,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        role_name: form.role_name || 'Teacher',
+        phone_number: form.phone_number || null,
+      };
+      const invited = await api.post('/users/invite', inviteData);
+      
+      // After user is created, refresh the teacher list
+      if (schoolId) {
+        const data = await api.get(`/teachers/school/${schoolId}`).catch(() => []);
+        setTeachers(Array.isArray(data) ? data : []);
+      }
+      resetForm();
+    } catch (e) {
+      const errorMessage = e?.message || e?.toString() || 'Failed to invite teacher';
+      setError(errorMessage);
+    }
+  };
+
+  const fullName = (t) => {
+    if (t.profile) {
+      return `${t.profile.first_name || ''} ${t.profile.last_name || ''}`.trim() || 'Unknown';
+    }
+    return `${t.first_name || ''} ${t.last_name || ''}`.trim() || 'Unknown';
+  };
 
   return (
     <div className="card p-6">
@@ -64,7 +116,8 @@ export function TeachersPanel({ schoolId }) {
       )}
 
       {showForm && (
-        <motion.div
+        <motion.form
+          onSubmit={onSubmit}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200"
@@ -73,33 +126,46 @@ export function TeachersPanel({ schoolId }) {
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
             <input
               className="border rounded-lg px-3 py-2 bg-white"
-              placeholder="First name"
+              placeholder="First name *"
               value={form.first_name}
               onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))}
               required
             />
             <input
               className="border rounded-lg px-3 py-2 bg-white"
-              placeholder="Last name"
+              placeholder="Last name *"
               value={form.last_name}
               onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))}
               required
             />
             <input
               className="border rounded-lg px-3 py-2 bg-white sm:col-span-2"
-              placeholder="Email"
+              placeholder="Email *"
               type="email"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               required
             />
             <input
-              className="border rounded-lg px-3 py-2 bg-white sm:col-span-2"
+              className="border rounded-lg px-3 py-2 bg-white"
               placeholder="Phone number"
               value={form.phone_number}
               onChange={(e) => setForm((f) => ({ ...f, phone_number: e.target.value }))}
             />
+            <input
+              className="border rounded-lg px-3 py-2 bg-white"
+              placeholder="Subject Specialization"
+              value={form.subject_specialization}
+              onChange={(e) => setForm((f) => ({ ...f, subject_specialization: e.target.value }))}
+            />
+            <input
+              className="border rounded-lg px-3 py-2 bg-white"
+              placeholder="Department"
+              value={form.department}
+              onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
+            />
             <motion.button
+              type="button"
               whileTap={{ scale: 0.98 }}
               onClick={resetForm}
               className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold text-sm"
@@ -107,13 +173,14 @@ export function TeachersPanel({ schoolId }) {
               Cancel
             </motion.button>
             <motion.button
+              type="submit"
               whileTap={{ scale: 0.98 }}
               className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-sm shadow-md"
             >
               {editingId ? 'Update' : 'Add'} Teacher
             </motion.button>
           </div>
-        </motion.div>
+        </motion.form>
       )}
 
       <div className="overflow-auto -mx-2 sm:mx-0">
@@ -125,18 +192,18 @@ export function TeachersPanel({ schoolId }) {
           <table className="min-w-full text-sm border-separate border-spacing-y-2">
             <thead>
               <tr className="text-left text-slate-600">
+                <th className="px-2">ID</th>
                 <th className="px-2">Name</th>
-                <th className="px-2">Email</th>
-                <th className="px-2">Phone</th>
+                <th className="px-2">Subject</th>
                 <th className="px-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {teachers.map((t) => (
                 <tr key={t.teacher_id} className="bg-white">
+                  <td className="px-2 py-2 font-medium">#{t.teacher_id}</td>
                   <td className="px-2 py-2 font-medium">{fullName(t)}</td>
-                  <td className="px-2 py-2">{t.email || '—'}</td>
-                  <td className="px-2 py-2">{t.phone_number || '—'}</td>
+                  <td className="px-2 py-2">{t.subject_specialization || '—'}</td>
                   <td className="px-2 py-2 space-x-2">
                     <button className="text-blue-600 font-semibold text-xs">View</button>
                     <button className="text-red-600 font-semibold text-xs">Deactivate</button>

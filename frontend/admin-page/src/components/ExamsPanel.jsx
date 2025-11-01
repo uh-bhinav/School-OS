@@ -6,6 +6,7 @@ export function ExamsPanel({ schoolId }) {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [marksMap, setMarksMap] = useState({}); // Map exam_id -> [{class_name, subject_name}]
 
   useEffect(() => {
     if (!schoolId) {
@@ -17,18 +18,56 @@ export function ExamsPanel({ schoolId }) {
     (async () => {
       try {
         setLoading(true);
-        const data = await api.get(`/exams/all/${schoolId}`).catch(() => []);
-        if (mounted) setExams(Array.isArray(data) ? data : []);
+        const [examsData, studentsData] = await Promise.all([
+          api.get(`/exams/all/${schoolId}`).catch(() => []),
+          api.get('/students').catch(() => [])
+        ]);
+        
+        if (mounted && Array.isArray(examsData)) {
+          setExams(examsData);
+          
+          // Fetch marks for each exam to get class/subject info
+          const marksPromises = examsData.map(exam => 
+            api.get(`/marks?exam_id=${exam.id || exam.exam_id}`).catch(() => [])
+          );
+          const marksResults = await Promise.allSettled(marksPromises);
+          
+          const map = {};
+          marksResults.forEach((result, idx) => {
+            if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+              const examId = examsData[idx]?.id || examsData[idx]?.exam_id;
+              const uniqueCombos = new Set();
+              result.value.forEach(mark => {
+                if (mark.class_name && mark.subject_name) {
+                  uniqueCombos.add(`${mark.class_name} - ${mark.subject_name}`);
+                }
+              });
+              if (examId) {
+                map[examId] = Array.from(uniqueCombos);
+              }
+            }
+          });
+          setMarksMap(map);
+        }
       } catch (e) {
         const errorMessage = e?.message || e?.toString() || 'Failed to load exams';
         setError(errorMessage);
         setExams([]);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
   }, [schoolId]);
+  
+  const getClassSubject = (exam) => {
+    const examId = exam.id || exam.exam_id;
+    const combos = marksMap[examId];
+    if (combos && combos.length > 0) {
+      return combos[0]; // Show first combination
+    }
+    return '—';
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'TBD';
@@ -73,12 +112,15 @@ export function ExamsPanel({ schoolId }) {
               </tr>
             </thead>
             <tbody>
-              {exams.map((exam) => (
-                <tr key={exam.id || exam.exam_id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="px-2 py-3 font-medium">{exam.name || exam.exam_name || 'Untitled Exam'}</td>
-                  <td className="px-2 py-3">{exam.class_name || '—'}</td>
-                  <td className="px-2 py-3">{exam.subject_name || '—'}</td>
-                  <td className="px-2 py-3">{formatDate(exam.exam_date || exam.date)}</td>
+              {exams.map((exam) => {
+                const classSubject = getClassSubject(exam);
+                const [className, subjectName] = classSubject !== '—' ? classSubject.split(' - ') : ['—', '—'];
+                return (
+                  <tr key={exam.id || exam.exam_id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="px-2 py-3 font-medium">{exam.exam_name || exam.name || 'Untitled Exam'}</td>
+                    <td className="px-2 py-3">{className}</td>
+                    <td className="px-2 py-3">{subjectName}</td>
+                    <td className="px-2 py-3">{formatDate(exam.start_date || exam.exam_date || exam.date)}</td>
                   <td className="px-2 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                       exam.status === 'Published' ? 'bg-green-100 text-green-700' :
@@ -88,12 +130,13 @@ export function ExamsPanel({ schoolId }) {
                       {exam.status || 'Scheduled'}
                     </span>
                   </td>
-                  <td className="px-2 py-3 space-x-2">
-                    <button className="text-blue-600 font-semibold text-xs">View</button>
-                    <button className="text-green-600 font-semibold text-xs">Results</button>
-                  </td>
-                </tr>
-              ))}
+                    <td className="px-2 py-3 space-x-2">
+                      <button className="text-blue-600 font-semibold text-xs">View</button>
+                      <button className="text-green-600 font-semibold text-xs">Results</button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

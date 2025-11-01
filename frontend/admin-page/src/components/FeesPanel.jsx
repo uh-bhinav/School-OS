@@ -7,6 +7,7 @@ export function FeesPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [stats, setStats] = useState({ total: 0, paid: 0, pending: 0 });
+  const [studentsMap, setStudentsMap] = useState({}); // Map student_id -> student info
 
   useEffect(() => {
     let mounted = true;
@@ -14,6 +15,21 @@ export function FeesPanel() {
       try {
         setLoading(true);
         setError('');
+        
+        // First, fetch all students to build a map
+        const students = await api.get('/students').catch(() => []);
+        if (Array.isArray(students) && mounted) {
+          const map = {};
+          students.forEach(s => {
+            const studentId = s.student_id || s.id;
+            const firstName = s.profile?.first_name || s.first_name || '';
+            const lastName = s.profile?.last_name || s.last_name || '';
+            const fullName = `${firstName} ${lastName}`.trim() || 'Unknown';
+            map[studentId] = { id: studentId, name: fullName };
+          });
+          setStudentsMap(map);
+        }
+        
         // Try admin endpoint first
         try {
           const allInvoices = await api.get('/finance/invoices/admin/all').catch(() => null);
@@ -34,8 +50,7 @@ export function FeesPanel() {
           console.warn('Admin invoices endpoint failed, trying alternative:', e);
         }
 
-        // Fallback: fetch students and their invoices
-        const students = await api.get('/students').catch(() => []);
+        // Fallback: fetch invoices for students
         if (Array.isArray(students) && students.length > 0 && mounted) {
           // Get invoices for first few students only
           const invoicePromises = students.slice(0, 5).map(s => 
@@ -70,6 +85,15 @@ export function FeesPanel() {
     })();
     return () => { mounted = false; };
   }, []);
+  
+  const getStudentName = (invoice) => {
+    const studentId = invoice.student_id;
+    if (studentsMap[studentId]) {
+      return studentsMap[studentId].name;
+    }
+    // Fallback to invoice.student_name if available
+    return invoice.student_name || 'Unknown';
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount || 0);
@@ -130,8 +154,8 @@ export function FeesPanel() {
                 {invoices.map((inv) => (
                   <tr key={inv.id} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="px-2 py-3 font-medium">#{inv.id}</td>
-                    <td className="px-2 py-3">{inv.student_name || 'Unknown'}</td>
-                    <td className="px-2 py-3 font-semibold">{formatCurrency(inv.total_amount)}</td>
+                    <td className="px-2 py-3">{getStudentName(inv)}</td>
+                    <td className="px-2 py-3 font-semibold">{formatCurrency(inv.total_amount || inv.amount_due)}</td>
                     <td className="px-2 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                         inv.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'

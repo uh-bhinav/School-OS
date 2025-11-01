@@ -6,6 +6,7 @@ import { api } from '../utils/api.js';
 export function Topbar({ currentUser, loading }) {
   const [open, setOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const ref = useRef(null);
   const notifRef = useRef(null);
   
@@ -17,6 +18,50 @@ export function Topbar({ currentUser, loading }) {
     window.addEventListener('click', onClick); 
     return () => window.removeEventListener('click', onClick);
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        // Fetch notifications - using announcements as notifications for now
+        const announcements = await api.get('/announcements').catch(() => []);
+        if (mounted && Array.isArray(announcements)) {
+          const notifs = announcements
+            .slice(0, 5)
+            .map(a => ({
+              id: a.id,
+              message: a.title || a.content || 'New announcement',
+              time: a.created_at || a.published_at,
+            }))
+            .sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0));
+          setNotifications(notifs);
+        }
+      } catch (e) {
+        console.warn('Failed to load notifications:', e);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+  
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return 'Just now';
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return date.toLocaleDateString();
+    } catch {
+      return 'Recently';
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
@@ -100,7 +145,9 @@ export function Topbar({ currentUser, loading }) {
               aria-label="Notifications"
             >
               <BellIcon className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 inline-block w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+              {notifications.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 inline-block w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+              )}
             </motion.button>
             <AnimatePresence>
               {notificationsOpen && (
@@ -112,9 +159,15 @@ export function Topbar({ currentUser, loading }) {
                 >
                   <div className="px-3 py-2.5 border-b border-slate-100 text-sm font-semibold bg-gradient-to-r from-orange-50 to-fuchsia-50">Notifications</div>
                   <ul className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
-                    <li className="px-3 py-2.5 text-sm hover:bg-slate-50 cursor-pointer transition-colors">New enrollment request • 2m ago</li>
-                    <li className="px-3 py-2.5 text-sm hover:bg-slate-50 cursor-pointer transition-colors">Fee payment reminder sent • 1h ago</li>
-                    <li className="px-3 py-2.5 text-sm hover:bg-slate-50 cursor-pointer transition-colors">Exam schedule published • 3h ago</li>
+                    {notifications.length === 0 ? (
+                      <li className="px-3 py-2.5 text-sm text-slate-500 text-center">No notifications</li>
+                    ) : (
+                      notifications.map((notif) => (
+                        <li key={notif.id} className="px-3 py-2.5 text-sm hover:bg-slate-50 cursor-pointer transition-colors">
+                          {notif.message} • {formatTimeAgo(notif.time)}
+                        </li>
+                      ))
+                    )}
                   </ul>
                   <button className="w-full text-sm font-semibold text-orange-600 hover:bg-orange-50 py-2.5 transition-colors">View all</button>
                 </motion.div>

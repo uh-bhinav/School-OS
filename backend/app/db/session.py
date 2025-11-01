@@ -17,6 +17,9 @@ def init_engine():
 
     engine = create_async_engine(
         settings.DATABASE_URL,
+        pool_size=5,
+        max_overflow=2,
+        pool_recycle=1800,
         pool_pre_ping=True,
     )
 
@@ -45,11 +48,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with SessionLocal() as session:
         try:
             yield session
-            # If the route completes successfully, commit
-            await session.commit()
+            if session.in_transaction():
+                await session.commit()
         except Exception:
             # If an error occurs, rollback
             await session.rollback()
             raise
-        finally:
-            await session.close()
+
