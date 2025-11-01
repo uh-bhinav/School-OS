@@ -12,12 +12,18 @@ export function AnnouncementsCard({ onCreateNew }) {
     (async () => {
       try {
         setLoading(true);
-        const data = await api.get('/announcements');
+        setError('');
+        const data = await api.get('/announcements').catch(() => []);
         if (mounted) {
           setAnnouncements(Array.isArray(data) ? data.slice(0, 5) : []);
+          if (!Array.isArray(data) || data.length === 0) {
+            // No error, just no data
+            setError('');
+          }
         }
       } catch (e) {
-        setError(e.message);
+        const errorMessage = e?.message || e?.toString() || 'Failed to load announcements';
+        setError(errorMessage);
         setAnnouncements([]);
       } finally {
         setLoading(false);
@@ -84,7 +90,10 @@ export function AnnouncementsCard({ onCreateNew }) {
                 </div>
                 {announcement.content && (
                   <div className="text-xs text-slate-500 line-clamp-2">
-                    {announcement.content}
+                    {typeof announcement.content === 'string' 
+                      ? announcement.content 
+                      : (announcement.content?.message || announcement.content?.text || JSON.stringify(announcement.content))
+                    }
                   </div>
                 )}
               </div>

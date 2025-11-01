@@ -15,10 +15,32 @@ router = APIRouter()
 
 
 @router.get("/me", response_model=ProfileOut)
-async def get_my_profile(current_profile: Profile = Depends(get_current_user_profile)) -> Profile:
+async def get_my_profile(
+    current_profile: Profile = Depends(get_current_user_profile),
+    db: AsyncSession = Depends(get_db),
+) -> ProfileOut:
     """Return the authenticated user's profile."""
-
-    return current_profile
+    # Refresh to ensure all relationships are loaded
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy.future import select
+    from app.models.user_roles import UserRole
+    
+    stmt = (
+        select(Profile)
+        .where(Profile.user_id == current_profile.user_id)
+        .options(
+            selectinload(Profile.roles).selectinload(UserRole.role_definition),
+            selectinload(Profile.teacher),
+            selectinload(Profile.student),
+        )
+    )
+    result = await db.execute(stmt)
+    profile = result.scalars().first()
+    
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+    
+    return ProfileOut.model_validate(profile)
 
 
 @router.get(

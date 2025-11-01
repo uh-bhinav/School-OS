@@ -16,10 +16,17 @@ export function TeachersPanel({ schoolId }) {
     (async () => {
       try {
         setLoading(true);
-        const data = await api.get(`/teachers/school/${schoolId}`);
-        if (mounted) setTeachers(Array.isArray(data) ? data : []);
+        setError('');
+        const data = await api.get(`/teachers/school/${schoolId}`).catch(() => []);
+        if (mounted) {
+          setTeachers(Array.isArray(data) ? data : []);
+          if (!Array.isArray(data)) {
+            console.warn('Teachers endpoint returned non-array:', data);
+          }
+        }
       } catch (e) {
-        setError(e.message);
+        const errorMessage = e?.message || e?.toString() || 'Failed to load teachers';
+        setError(errorMessage);
         setTeachers([]);
       } finally {
         setLoading(false);

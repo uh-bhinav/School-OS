@@ -2,27 +2,33 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { api } from '../utils/api.js';
 
-export function ExamsPanel() {
+export function ExamsPanel({ schoolId }) {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!schoolId) {
+      setLoading(false);
+      return;
+    }
+    
     let mounted = true;
     (async () => {
       try {
         setLoading(true);
-        const data = await api.get('/exams').catch(() => []);
+        const data = await api.get(`/exams/all/${schoolId}`).catch(() => []);
         if (mounted) setExams(Array.isArray(data) ? data : []);
       } catch (e) {
-        setError(e.message);
+        const errorMessage = e?.message || e?.toString() || 'Failed to load exams';
+        setError(errorMessage);
         setExams([]);
       } finally {
         setLoading(false);
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [schoolId]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'TBD';

@@ -138,7 +138,15 @@ async def _get_current_user_profile_from_db(
         if not auth_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-        stmt = select(Profile).where(Profile.user_id == auth_user.id).options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
+        stmt = (
+            select(Profile)
+            .where(Profile.user_id == auth_user.id)
+            .options(
+                selectinload(Profile.roles).selectinload(UserRole.role_definition),
+                selectinload(Profile.teacher),
+                selectinload(Profile.student),
+            )
+        )
         result = await db.execute(stmt)
         profile = result.scalars().first()
 

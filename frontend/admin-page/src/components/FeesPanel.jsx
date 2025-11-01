@@ -13,12 +13,32 @@ export function FeesPanel() {
     (async () => {
       try {
         setLoading(true);
-        // Fetch invoices - we'll need to get all students first, then their invoices
+        setError('');
+        // Try admin endpoint first
+        try {
+          const allInvoices = await api.get('/finance/invoices/admin/all').catch(() => null);
+          if (allInvoices && Array.isArray(allInvoices)) {
+            if (mounted) {
+              setInvoices(allInvoices.slice(0, 50));
+              const total = allInvoices.reduce((sum, inv) => sum + (Number(inv.total_amount) || Number(inv.amount_due) || 0), 0);
+              const paid = allInvoices.filter(inv => 
+                inv.status === 'Paid' || 
+                inv.status === 'paid' ||
+                (Number(inv.paid_amount) || 0) >= (Number(inv.total_amount) || Number(inv.amount_due) || 0)
+              ).length;
+              setStats({ total, paid, pending: allInvoices.length - paid });
+            }
+            return;
+          }
+        } catch (e) {
+          console.warn('Admin invoices endpoint failed, trying alternative:', e);
+        }
+
+        // Fallback: fetch students and their invoices
         const students = await api.get('/students').catch(() => []);
-        
-        if (Array.isArray(students) && students.length > 0) {
-          // Get invoices for first few students as sample
-          const invoicePromises = students.slice(0, 10).map(s => 
+        if (Array.isArray(students) && students.length > 0 && mounted) {
+          // Get invoices for first few students only
+          const invoicePromises = students.slice(0, 5).map(s => 
             api.get(`/finance/invoices/student/${s.student_id || s.id}`).catch(() => [])
           );
           const invoiceResults = await Promise.allSettled(invoicePromises);
@@ -28,16 +48,24 @@ export function FeesPanel() {
           
           if (mounted) {
             setInvoices(allInvoices.slice(0, 20));
-            // Calculate stats
-            const total = allInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
-            const paid = allInvoices.filter(inv => inv.status === 'Paid' || inv.paid_amount >= inv.total_amount).length;
+            const total = allInvoices.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0);
+            const paid = allInvoices.filter(inv => inv.status === 'Paid' || (Number(inv.paid_amount) || 0) >= (Number(inv.total_amount) || 0)).length;
             setStats({ total, paid, pending: allInvoices.length - paid });
           }
+        } else if (mounted) {
+          setInvoices([]);
+          setStats({ total: 0, paid: 0, pending: 0 });
         }
       } catch (e) {
-        setError(e.message);
+        const errorMessage = e?.message || e?.toString() || 'Failed to load invoices';
+        setError(errorMessage);
+        if (mounted) {
+          setInvoices([]);
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     })();
     return () => { mounted = false; };

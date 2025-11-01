@@ -12,29 +12,83 @@ import { AttendancePanel } from './components/AttendancePanel.jsx';
 import { ExamsPanel } from './components/ExamsPanel.jsx';
 import { FeesPanel } from './components/FeesPanel.jsx';
 import { CommunicationPanel } from './components/CommunicationPanel.jsx';
+import { AgentBar } from './components/AgentBar.jsx';
+import { 
+  AcademicCapIcon,
+  UserGroupIcon,
+  CheckCircleIcon,
+  CurrencyDollarIcon,
+} from '@heroicons/react/24/outline';
 import { api } from './utils/api.js';
+import { config } from './utils/config.js';
 
 export default function App() {
   const [module, setModule] = useState('dashboard');
   const [currentUser, setCurrentUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
   const [stats, setStats] = useState([
-    { icon: '🎓', color: 'from-orange-400 to-orange-600', label: 'Total Students', value: '—', trend: '' },
-    { icon: '👩‍🏫', color: 'from-blue-400 to-blue-600', label: 'Total Teachers', value: '—', trend: '' },
-    { icon: '✅', color: 'from-green-400 to-green-600', label: 'Attendance Rate', value: '—', trend: '' },
-    { icon: '₹', color: 'from-violet-400 to-violet-600', label: 'Revenue (Month)', value: '—', trend: '' },
+    { icon: null, color: 'from-orange-400 to-orange-600', label: 'Total Students', value: '—', trend: '' },
+    { icon: null, color: 'from-blue-400 to-blue-600', label: 'Total Teachers', value: '—', trend: '' },
+    { icon: null, color: 'from-green-400 to-green-600', label: 'Attendance Rate', value: '—', trend: '' },
+    { icon: null, color: 'from-violet-400 to-violet-600', label: 'Revenue (Month)', value: '—', trend: '' },
   ]);
 
   // Fetch current user profile
   useEffect(() => {
     let mounted = true;
+    setUserLoading(true);
     (async () => {
       try {
-        const profile = await api.get('/profiles/me');
+        // Check if token exists
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          console.warn('No auth token found');
+          if (mounted) {
+            setUserLoading(false);
+          }
+          return;
+        }
+
+        console.log('Fetching user profile...', { 
+          apiUrl: config.API_URL, 
+          hasToken: !!token,
+          tokenPreview: token.substring(0, 20) + '...' 
+        });
+
+        const profile = await api.get('/profiles/me').catch((e) => {
+          console.error('Failed to fetch profile:', e);
+          throw e;
+        });
+        
         if (mounted) {
-          setCurrentUser(profile);
+          if (profile && typeof profile === 'object') {
+            console.log('Profile fetched successfully:', profile);
+            setCurrentUser(profile);
+          } else {
+            console.warn('Invalid profile data received:', profile);
+            setCurrentUser(null);
+          }
+          setUserLoading(false);
         }
       } catch (e) {
         console.error('Error fetching user profile:', e);
+        if (mounted) {
+          setUserLoading(false);
+          // Only clear user if it's an auth error
+          if (e.message.includes('Authentication') || e.message.includes('401')) {
+            setCurrentUser(null);
+          }
+          // For network errors, don't set user to null - just keep trying
+          // The Topbar will show "Loading..." state
+          if (e.message.includes('Network error') || e.message.includes('Unable to connect')) {
+            console.warn('Backend connection failed. Will retry on next render or user action.');
+            // Keep currentUser as null but don't show error
+            // Don't throw - just log and continue
+          } else {
+            // For other errors, log but don't crash
+            console.error('Unexpected error fetching profile:', e);
+          }
+        }
       }
     })();
     return () => { mounted = false; };
@@ -42,50 +96,74 @@ export default function App() {
 
   // Fetch dashboard stats
   useEffect(() => {
+    if (!currentUser?.school_id) {
+      // Wait for user to load before fetching stats
+      return;
+    }
+
     let mounted = true;
     (async () => {
       try {
-        const [students, teachersData, invoicesData] = await Promise.allSettled([
+        // Simplified stats fetching - avoid too many parallel requests
+        const [studentsResult, teachersResult] = await Promise.allSettled([
           api.get('/students').catch(() => []),
-          currentUser?.school_id ? api.get(`/teachers/school/${currentUser.school_id}`).catch(() => []) : Promise.resolve([]),
-          api.get('/students').then(students => {
-            if (!Array.isArray(students) || students.length === 0) return [];
-            return Promise.allSettled(
-              students.slice(0, 20).map(s => 
-                api.get(`/finance/invoices/student/${s.student_id || s.id}`).catch(() => [])
-              )
-            );
-          }).then(results => {
-            return results
-              .filter(r => r.status === 'fulfilled')
-              .flatMap(r => Array.isArray(r.value) ? r.value : []);
-          }).catch(() => []),
+          api.get(`/teachers/school/${currentUser.school_id}`).catch(() => []),
         ]);
 
         if (!mounted) return;
 
-        const studentCount = students.status === 'fulfilled' && Array.isArray(students.value) ? students.value.length : 0;
-        const teacherCount = teachersData.status === 'fulfilled' && Array.isArray(teachersData.value) ? teachersData.value.length : 0;
-        
-        // Calculate revenue (this month)
-        const now = new Date();
-        const thisMonthInvoices = Array.isArray(invoicesData) ? invoicesData.filter(inv => {
-          const invDate = new Date(inv.created_at || inv.issue_date);
-          return invDate.getMonth() === now.getMonth() && invDate.getFullYear() === now.getFullYear();
-        }) : [];
-        const monthlyRevenue = thisMonthInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+        const studentCount = studentsResult.status === 'fulfilled' && Array.isArray(studentsResult.value) 
+          ? studentsResult.value.length 
+          : 0;
+        const teacherCount = teachersResult.status === 'fulfilled' && Array.isArray(teachersResult.value) 
+          ? teachersResult.value.length 
+          : 0;
         
         // Calculate attendance rate (mock for now - would need actual attendance data)
         const attendanceRate = studentCount > 0 ? '85%' : '—';
 
-        setStats([
-          { icon: '🎓', color: 'from-orange-400 to-orange-600', label: 'Total Students', value: String(studentCount), trend: '' },
-          { icon: '👩‍🏫', color: 'from-blue-400 to-blue-600', label: 'Total Teachers', value: String(teacherCount), trend: '' },
-          { icon: '✅', color: 'from-green-400 to-green-600', label: 'Attendance Rate', value: attendanceRate, trend: '' },
-          { icon: '₹', color: 'from-violet-400 to-violet-600', label: 'Revenue (Month)', value: `₹${(monthlyRevenue / 1000).toFixed(1)}K`, trend: '' },
-        ]);
+        // For revenue, try to get it but don't fail if it doesn't work
+        let monthlyRevenue = 0;
+        try {
+          // Use admin endpoint if available
+          const invoicesResult = await api.get('/finance/invoices/admin/all').catch(() => []);
+          if (Array.isArray(invoicesResult)) {
+            const now = new Date();
+            const thisMonthInvoices = invoicesResult.filter(inv => {
+              if (!inv.created_at && !inv.issue_date) return false;
+              try {
+                const invDate = new Date(inv.created_at || inv.issue_date);
+                return invDate.getMonth() === now.getMonth() && invDate.getFullYear() === now.getFullYear();
+              } catch {
+                return false;
+              }
+            });
+            monthlyRevenue = thisMonthInvoices.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0);
+          }
+        } catch (e) {
+          console.warn('Could not fetch revenue data:', e);
+          // Continue without revenue data
+        }
+
+        if (mounted) {
+          setStats([
+            { icon: AcademicCapIcon, color: 'from-orange-400 to-orange-600', label: 'Total Students', value: String(studentCount), trend: '' },
+            { icon: UserGroupIcon, color: 'from-blue-400 to-blue-600', label: 'Total Teachers', value: String(teacherCount), trend: '' },
+            { icon: CheckCircleIcon, color: 'from-green-400 to-green-600', label: 'Attendance Rate', value: attendanceRate, trend: '' },
+            { icon: CurrencyDollarIcon, color: 'from-violet-400 to-violet-600', label: 'Revenue (Month)', value: monthlyRevenue > 0 ? `₹${(monthlyRevenue / 1000).toFixed(1)}K` : '₹0', trend: '' },
+          ]);
+        }
       } catch (e) {
         console.error('Error fetching stats:', e);
+        // Set default stats on error
+        if (mounted) {
+          setStats([
+            { icon: AcademicCapIcon, color: 'from-orange-400 to-orange-600', label: 'Total Students', value: '—', trend: '' },
+            { icon: UserGroupIcon, color: 'from-blue-400 to-blue-600', label: 'Total Teachers', value: '—', trend: '' },
+            { icon: CheckCircleIcon, color: 'from-green-400 to-green-600', label: 'Attendance Rate', value: '—', trend: '' },
+            { icon: CurrencyDollarIcon, color: 'from-violet-400 to-violet-600', label: 'Revenue (Month)', value: '—', trend: '' },
+          ]);
+        }
       }
     })();
     return () => { mounted = false; };
@@ -112,8 +190,8 @@ export default function App() {
     <div className="h-full flex">
       <Sidebar active={module} onSelect={setModule} />
       <div className="flex-1 min-w-0">
-        <Topbar currentUser={currentUser} />
-        <main className="p-6 space-y-6 min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+        <Topbar currentUser={currentUser} loading={userLoading} />
+        <main className="p-6 space-y-6 min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 pb-24">
           <header className="space-y-1">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 via-fuchsia-600 to-violet-600 bg-clip-text text-transparent">
               {titleByModule(module)}
@@ -147,8 +225,8 @@ export default function App() {
               <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}>
                 {module === 'students' && <StudentsPanel />}
                 {module === 'teachers' && <TeachersPanel schoolId={currentUser?.school_id} />}
-                {module === 'attendance' && <AttendancePanel />}
-                {module === 'exams' && <ExamsPanel />}
+                {module === 'attendance' && <AttendancePanel schoolId={currentUser?.school_id} />}
+                {module === 'exams' && <ExamsPanel schoolId={currentUser?.school_id} />}
                 {module === 'fees' && <FeesPanel />}
                 {module === 'communication' && <CommunicationPanel />}
                 {!['students', 'teachers', 'attendance', 'exams', 'fees', 'communication'].includes(module) && (
@@ -161,6 +239,7 @@ export default function App() {
             )}
           </AnimatePresence>
         </main>
+        <AgentBar />
       </div>
     </div>
   );

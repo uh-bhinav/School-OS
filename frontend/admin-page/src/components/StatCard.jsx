@@ -1,14 +1,14 @@
 import { motion } from 'framer-motion';
 
-export function StatCard({ icon, color, value, label, trend }) {
+export function StatCard({ icon: IconComponent, color, value, label, trend }) {
   return (
     <motion.div 
       whileHover={{ y: -4, scale: 1.02 }}
       className="card p-5 cursor-pointer group"
     >
       <div className="flex items-start justify-between mb-4">
-        <div className={`w-14 h-14 rounded-xl text-white grid place-content-center text-2xl font-bold shadow-lg bg-gradient-to-br ${color} group-hover:shadow-xl transition-shadow`}>
-          {icon}
+        <div className={`w-14 h-14 rounded-xl text-white grid place-content-center shadow-lg bg-gradient-to-br ${color} group-hover:shadow-xl transition-shadow`}>
+          {IconComponent && <IconComponent className="w-7 h-7" />}
         </div>
         <div className="flex items-center gap-1 text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">

@@ -3,7 +3,7 @@ import { BellIcon, MagnifyingGlassIcon, ChevronDownIcon, ArrowRightOnRectangleIc
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../utils/api.js';
 
-export function Topbar({ currentUser }) {
+export function Topbar({ currentUser, loading }) {
   const [open, setOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const ref = useRef(null);
@@ -24,11 +24,58 @@ export function Topbar({ currentUser }) {
     window.location.href = loginUrl;
   };
 
-  const displayName = currentUser 
-    ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Admin User'
-    : 'Admin User';
-  const displayEmail = currentUser?.email || 'admin@school.com';
-  const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'AD';
+  // Get display name from profile
+  const getDisplayName = () => {
+    if (loading) return 'Loading...';
+    if (!currentUser) {
+      // Check if we have a token but profile failed to load
+      const token = localStorage.getItem('auth_token');
+      if (token) return 'Loading...';
+      return 'User';
+    }
+    
+    const fullName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
+    if (fullName) return fullName;
+    
+    // If no name, try to get role name
+    if (currentUser.roles && currentUser.roles.length > 0) {
+      const roleName = currentUser.roles[0]?.role_definition?.role_name || currentUser.roles[0]?.role_name;
+      if (roleName) return roleName;
+    }
+    
+    return 'User';
+  };
+
+  const displayName = getDisplayName();
+  
+  // Email is not in profile - it's in auth user, so we'll show role or user ID
+  const getDisplaySubtext = () => {
+    if (loading) return 'Loading profile...';
+    if (!currentUser) {
+      const token = localStorage.getItem('auth_token');
+      if (token) return 'Fetching...';
+      return 'Not logged in';
+    }
+    
+    // Try to get role name
+    if (currentUser.roles && currentUser.roles.length > 0) {
+      const roleName = currentUser.roles[0]?.role_definition?.role_name || currentUser.roles[0]?.role_name;
+      if (roleName) return roleName;
+    }
+    
+    // Fallback to user ID
+    if (currentUser.user_id) {
+      return `ID: ${String(currentUser.user_id).slice(0, 8)}...`;
+    }
+    
+    return 'Administrator';
+  };
+
+  const displaySubtext = getDisplaySubtext();
+  
+  // Generate initials from name or use first letter of role
+  const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 
+                   (displaySubtext !== 'Loading...' && displaySubtext !== 'Fetching...' ? displaySubtext.charAt(0).toUpperCase() : 'U') || 'U';
 
   return (
     <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-slate-200/60 shadow-sm">
@@ -85,7 +132,7 @@ export function Topbar({ currentUser }) {
               </div>
               <div className="hidden sm:block text-left mr-1">
                 <div className="text-xs font-semibold text-slate-800 leading-4">{displayName}</div>
-                <div className="text-[10px] text-slate-500 leading-3">{displayEmail}</div>
+                <div className="text-[10px] text-slate-500 leading-3">{displaySubtext}</div>
               </div>
               <ChevronDownIcon className="w-4 h-4 text-slate-400" />
             </motion.button>
@@ -97,13 +144,15 @@ export function Topbar({ currentUser }) {
                   exit={{ opacity: 0, y: -6 }}
                   className="absolute right-0 mt-2 w-56 card overflow-hidden shadow-xl z-50"
                 >
-                  <div className="px-3 py-2.5 border-b border-slate-100 text-sm font-semibold bg-gradient-to-r from-orange-50 to-fuchsia-50">
-                    {displayName}
+                  <div className="px-3 py-2.5 border-b border-slate-100 bg-gradient-to-r from-orange-50 to-fuchsia-50">
+                    <div className="text-sm font-semibold text-slate-800">{displayName}</div>
+                    {displaySubtext && (
+                      <div className="text-xs text-slate-600 mt-0.5">{displaySubtext}</div>
+                    )}
+                    {currentUser?.school_id && (
+                      <div className="text-xs text-slate-500 mt-1">School ID: {currentUser.school_id}</div>
+                    )}
                   </div>
-                  <ul className="divide-y divide-slate-100">
-                    <li className="px-3 py-2.5 text-sm hover:bg-slate-50 cursor-pointer transition-colors">My Profile</li>
-                    <li className="px-3 py-2.5 text-sm hover:bg-slate-50 cursor-pointer transition-colors">Settings</li>
-                  </ul>
                   <button 
                     onClick={handleLogout}
                     className="w-full text-left px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"

@@ -2,29 +2,37 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { api } from '../utils/api.js';
 
-export function AttendancePanel() {
+export function AttendancePanel({ schoolId }) {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
+    if (!schoolId) {
+      setLoading(false);
+      return;
+    }
+    
     let mounted = true;
     (async () => {
       try {
         setLoading(true);
-        // Fetch attendance records - adjust endpoint based on actual API
-        const data = await api.get(`/attendance?date=${date}`).catch(() => []);
-        if (mounted) setAttendance(Array.isArray(data) ? data : []);
+        setError('');
+        // Note: Attendance API requires student_id or class_id
+        // For now, show message that this requires selecting a class
+        // TODO: Add class selector or use bulk endpoint
+        if (mounted) setAttendance([]);
       } catch (e) {
-        setError(e.message);
+        const errorMessage = e?.message || e?.toString() || 'Failed to load attendance';
+        setError(errorMessage);
         setAttendance([]);
       } finally {
         setLoading(false);
       }
     })();
     return () => { mounted = false; };
-  }, [date]);
+  }, [date, schoolId]);
 
   const stats = {
     present: attendance.filter(a => a.status === 'Present').length,
@@ -76,9 +84,14 @@ export function AttendancePanel() {
         <h2 className="text-lg font-semibold mb-4">Attendance Records</h2>
         {loading ? (
           <div className="text-center py-8 text-slate-500 text-sm">Loading attendance...</div>
+        ) : !schoolId ? (
+          <div className="text-center py-8 text-slate-500 text-sm">
+            Please wait while loading school information...
+          </div>
         ) : attendance.length === 0 ? (
           <div className="text-center py-8 text-slate-500 text-sm">
-            No attendance records for {new Date(date).toLocaleDateString()}
+            <p className="mb-2">No attendance records for {new Date(date).toLocaleDateString()}</p>
+            <p className="text-xs text-slate-400">Attendance records require class selection. This feature will be available soon.</p>
           </div>
         ) : (
           <div className="overflow-auto">

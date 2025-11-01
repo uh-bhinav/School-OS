@@ -9,7 +9,23 @@ export const config = {
    * Must include the /v1 prefix
    */
   get API_URL() {
-    const url = import.meta.env?.VITE_API_URL || 'http://127.0.0.1:8000/v1';
+    // Check if full URL is provided, otherwise construct from base + path
+    let url = import.meta.env?.VITE_API_URL;
+    
+    if (!url) {
+      // In development, use relative path to leverage Vite proxy
+      // In production, use full URL
+      if (import.meta.env?.DEV) {
+        // Use relative path in dev mode - Vite proxy will handle it
+        url = '/v1';
+      } else {
+        // Production: use full URL
+        const baseUrl = import.meta.env?.VITE_BACKEND_URL || 'http://127.0.0.1:8000';
+        const apiPath = '/v1'; // Backend routes are accessible at /v1
+        url = `${baseUrl}${apiPath}`;
+      }
+    }
+    
     // Remove trailing slash if present
     return url.replace(/\/$/, '');
   },

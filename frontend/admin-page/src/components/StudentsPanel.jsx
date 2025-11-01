@@ -21,10 +21,17 @@ export function StudentsPanel() {
     (async () => {
       try {
         setLoading(true);
-        const data = await api.get('/students');
-        if (mounted) setStudents(Array.isArray(data) ? data : []);
+        setError('');
+        const data = await api.get('/students').catch(() => []);
+        if (mounted) {
+          setStudents(Array.isArray(data) ? data : []);
+          if (!Array.isArray(data)) {
+            console.warn('Students endpoint returned non-array:', data);
+          }
+        }
       } catch (e) {
-        setError(e.message);
+        const errorMessage = e?.message || e?.toString() || 'Failed to load students';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -50,7 +57,8 @@ export function StudentsPanel() {
       }
       resetForm();
     } catch (e) {
-      setError(e.message);
+      const errorMessage = e?.message || e?.toString() || 'Failed to save student';
+      setError(errorMessage);
     }
   };
 
@@ -65,7 +73,8 @@ export function StudentsPanel() {
       await api.delete(`/students/${id}`);
       setStudents((prev) => prev.filter((s) => s.id !== id));
     } catch (e) {
-      setError(e.message);
+      const errorMessage = e?.message || e?.toString() || 'Failed to delete student';
+      setError(errorMessage);
     }
   };
 

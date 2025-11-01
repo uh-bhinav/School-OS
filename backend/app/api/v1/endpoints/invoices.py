@@ -44,8 +44,10 @@ async def get_student_invoices(student_id: int, db: AsyncSession = Depends(get_d
     """
 
     # --- APPLICATION-LEVEL AUTHORIZATION CHECK ---
-    # 1. Get the target student's user_id
-    target_student = await db.get(Student, student_id)
+    # 1. Get the target student's user_id with profile eagerly loaded
+    stmt = select(Student).options(selectinload(Student.profile)).where(Student.student_id == student_id)
+    result = await db.execute(stmt)
+    target_student = result.scalars().first()
     if not target_student:
         # If the student doesn't exist, we can just return an empty list
         # or a 404, depending on desired behavior. Empty list is safer.
@@ -94,7 +96,11 @@ async def get_invoice(
     Get a specific invoice by ID.
     Applies application-level authorization check + relies on RLS (if applicable).
     """
-    stmt = select(Invoice).options(selectinload(Invoice.items), selectinload(Invoice.payments)).where(Invoice.id == invoice_id, Invoice.is_active.is_(True))
+    stmt = select(Invoice).options(
+        selectinload(Invoice.items),
+        selectinload(Invoice.payments),
+        selectinload(Invoice.student).selectinload(Student.profile)
+    ).where(Invoice.id == invoice_id, Invoice.is_active.is_(True))
     result = await db.execute(stmt)
     invoice = result.scalars().first()
 
