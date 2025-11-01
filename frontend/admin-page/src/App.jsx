@@ -13,6 +13,7 @@ import { ExamsPanel } from './components/ExamsPanel.jsx';
 import { FeesPanel } from './components/FeesPanel.jsx';
 import { CommunicationPanel } from './components/CommunicationPanel.jsx';
 import { SettingsPanel } from './components/SettingsPanel.jsx';
+import { TimetablePanel } from './components/TimetablePanel.jsx';
 import { AgentBar } from './components/AgentBar.jsx';
 import { 
   AcademicCapIcon,
@@ -230,8 +231,9 @@ export default function App() {
                 {module === 'exams' && <ExamsPanel schoolId={currentUser?.school_id} />}
                 {module === 'fees' && <FeesPanel />}
                 {module === 'communication' && <CommunicationPanel />}
-                {module === 'settings' && <SettingsPanel />}
-                {!['students', 'teachers', 'attendance', 'exams', 'fees', 'communication', 'settings'].includes(module) && (
+                {module === 'settings' && <SettingsPanel currentUser={currentUser} />}
+                {module === 'timetable' && <TimetablePanel schoolId={currentUser?.school_id} />}
+                {!['students', 'teachers', 'attendance', 'exams', 'fees', 'communication', 'settings', 'timetable'].includes(module) && (
                   <div className="card p-6">
                     <h2 className="text-lg font-semibold mb-2">{titleByModule(module)}</h2>
                     <p className="text-slate-600">This module is coming soon. Connect your backend APIs here.</p>
@@ -250,7 +252,7 @@ export default function App() {
 function titleByModule(m) {
   return {
     dashboard: 'Dashboard Overview',
-    school: 'School Management',
+    timetable: 'Timetable Management',
     teachers: 'Teachers Management',
     students: 'Students Management',
     attendance: 'Attendance Tracking',

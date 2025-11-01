@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import Logo from '../assets/school-logo.png';
 import {
   HomeIcon,
-  BuildingOfficeIcon,
+  ClockIcon,
   UserGroupIcon,
   AcademicCapIcon,
   CheckCircleIcon,
@@ -17,7 +17,7 @@ import {
 
 const items = [
   { key: 'dashboard', label: 'Dashboard', icon: HomeIcon },
-  { key: 'school', label: 'School', icon: BuildingOfficeIcon },
+  { key: 'timetable', label: 'Timetable', icon: ClockIcon },
   { key: 'teachers', label: 'Teachers', icon: UserGroupIcon },
   { key: 'students', label: 'Students', icon: AcademicCapIcon },
   { key: 'attendance', label: 'Attendance', icon: CheckCircleIcon },

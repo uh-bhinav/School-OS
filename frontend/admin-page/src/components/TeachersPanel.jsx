@@ -76,9 +76,32 @@ export function TeachersPanel({ schoolId }) {
       };
       const invited = await api.post('/users/invite', inviteData);
       
-      // After user is created, wait a moment for the teacher record to be created, then refresh
+      // After user is created, update teacher record with subject specialization if provided
+      if (invited.id && (form.subject_specialization || form.department)) {
+        try {
+          // Find the teacher record that was just created
+          const teachersList = await api.get(`/teachers/school/${schoolId}`).catch(() => []);
+          const newTeacher = Array.isArray(teachersList) ? teachersList.find(t => t.user_id === invited.id) : null;
+          
+          if (newTeacher && newTeacher.teacher_id) {
+            // Update teacher with subject specialization and department
+            const updateData = {};
+            if (form.subject_specialization) updateData.subject_specialization = form.subject_specialization;
+            if (form.department) updateData.department = form.department;
+            
+            if (Object.keys(updateData).length > 0) {
+              await api.put(`/teachers/${newTeacher.teacher_id}`, updateData).catch(() => {
+                console.warn('Failed to update teacher details');
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to update teacher details:', e);
+        }
+      }
+      
+      // Refresh the teacher list
       if (schoolId) {
-        // Wait a bit for the backend to create the teacher record
         setTimeout(async () => {
           try {
             const data = await api.get(`/teachers/school/${schoolId}`).catch(() => []);
@@ -86,9 +109,9 @@ export function TeachersPanel({ schoolId }) {
           } catch (e) {
             console.error('Failed to refresh teachers:', e);
           }
-        }, 500);
+        }, 800);
         
-        // Also try immediate refresh in case it's fast
+        // Also try immediate refresh
         const data = await api.get(`/teachers/school/${schoolId}`).catch(() => []);
         setTeachers(Array.isArray(data) ? data : []);
       }

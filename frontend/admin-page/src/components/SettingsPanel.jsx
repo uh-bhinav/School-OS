@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { api } from '../utils/api.js';
 import { 
   Cog6ToothIcon,
   UserCircleIcon,
@@ -9,8 +10,56 @@ import {
   KeyIcon,
 } from '@heroicons/react/24/outline';
 
-export function SettingsPanel() {
-  const [activeTab, setActiveTab] = useState('general');
+export function SettingsPanel({ currentUser: propCurrentUser }) {
+  const [activeTab, setActiveTab] = useState('profile');
+  const [currentUser, setCurrentUser] = useState(propCurrentUser);
+  const [form, setForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone_number: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const userData = await api.get('/profiles/me').catch(() => null);
+        if (mounted && userData) {
+          setCurrentUser(userData);
+          setForm({
+            first_name: userData.first_name || '',
+            last_name: userData.last_name || '',
+            email: userData.email || '',
+            phone_number: userData.phone_number || '',
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load profile:', e);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess(false);
+    setLoading(true);
+    try {
+      // TODO: Implement profile update API call
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulated API call
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (e) {
+      setError(e?.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const tabs = [
     { id: 'general', label: 'General', icon: Cog6ToothIcon },
@@ -102,54 +151,94 @@ export function SettingsPanel() {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-4"
             >
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border rounded-lg px-4 py-2 bg-white"
-                    placeholder="First name"
-                  />
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>
+              )}
+              {success && (
+                <div className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg p-3">
+                  Profile updated successfully!
+                </div>
+              )}
+              <form onSubmit={handleUpdateProfile} className="space-y-4">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={form.first_name}
+                      onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                      className="w-full border rounded-lg px-4 py-2 bg-white"
+                      placeholder="First name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={form.last_name}
+                      onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                      className="w-full border rounded-lg px-4 py-2 bg-white"
+                      placeholder="Last name"
+                      required
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Last Name
+                    Email
                   </label>
                   <input
-                    type="text"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
                     className="w-full border rounded-lg px-4 py-2 bg-white"
-                    placeholder="Last name"
+                    placeholder="email@example.com"
+                    required
+                    disabled
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Email cannot be changed</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={form.phone_number}
+                    onChange={(e) => setForm({ ...form, phone_number: e.target.value })}
+                    className="w-full border rounded-lg px-4 py-2 bg-white"
+                    placeholder="+91 1234567890"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  className="w-full border rounded-lg px-4 py-2 bg-white"
-                  placeholder="email@example.com"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  className="w-full border rounded-lg px-4 py-2 bg-white"
-                  placeholder="+91 1234567890"
-                />
-              </div>
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                className="px-6 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-shadow"
-              >
-                Update Profile
-              </motion.button>
+                {currentUser && (
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="text-xs text-slate-600 mb-2">Additional Information</div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-slate-600">School ID:</span>
+                        <span className="ml-2 font-medium">{currentUser.school_id || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-600">User ID:</span>
+                        <span className="ml-2 font-medium text-xs">{currentUser.user_id ? String(currentUser.user_id).substring(0, 8) + '...' : 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <motion.button
+                  type="submit"
+                  whileTap={{ scale: 0.98 }}
+                  disabled={loading}
+                  className="px-6 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Updating...' : 'Update Profile'}
+                </motion.button>
+              </form>
             </motion.div>
           )}
 

@@ -36,12 +36,19 @@ export function FeesPanel() {
           if (allInvoices && Array.isArray(allInvoices)) {
             if (mounted) {
               setInvoices(allInvoices.slice(0, 50));
-              const total = allInvoices.reduce((sum, inv) => sum + (Number(inv.total_amount) || Number(inv.amount_due) || 0), 0);
-              const paid = allInvoices.filter(inv => 
-                inv.status === 'Paid' || 
-                inv.status === 'paid' ||
-                (Number(inv.paid_amount) || 0) >= (Number(inv.total_amount) || Number(inv.amount_due) || 0)
-              ).length;
+              // Calculate revenue from PAID invoices only
+              const paidInvoices = allInvoices.filter(inv => {
+                const paymentStatus = inv.payment_status || '';
+                const status = inv.status || '';
+                const amountPaid = Number(inv.amount_paid) || 0;
+                const totalAmount = Number(inv.total_amount) || Number(inv.amount_due) || 0;
+                return paymentStatus.toLowerCase() === 'paid' || 
+                       status.toLowerCase() === 'paid' ||
+                       (totalAmount > 0 && amountPaid >= totalAmount);
+              });
+              
+              const total = paidInvoices.reduce((sum, inv) => sum + (Number(inv.amount_paid) || Number(inv.total_amount) || Number(inv.amount_due) || 0), 0);
+              const paid = paidInvoices.length;
               setStats({ total, paid, pending: allInvoices.length - paid });
             }
             return;
@@ -63,8 +70,19 @@ export function FeesPanel() {
           
           if (mounted) {
             setInvoices(allInvoices.slice(0, 20));
-            const total = allInvoices.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0);
-            const paid = allInvoices.filter(inv => inv.status === 'Paid' || (Number(inv.paid_amount) || 0) >= (Number(inv.total_amount) || 0)).length;
+            // Calculate revenue from PAID invoices only
+            const paidInvoices = allInvoices.filter(inv => {
+              const paymentStatus = inv.payment_status || '';
+              const status = inv.status || '';
+              const amountPaid = Number(inv.amount_paid) || 0;
+              const totalAmount = Number(inv.total_amount) || 0;
+              return paymentStatus.toLowerCase() === 'paid' || 
+                     status.toLowerCase() === 'paid' ||
+                     (totalAmount > 0 && amountPaid >= totalAmount);
+            });
+            
+            const total = paidInvoices.reduce((sum, inv) => sum + (Number(inv.amount_paid) || Number(inv.total_amount) || 0), 0);
+            const paid = paidInvoices.length;
             setStats({ total, paid, pending: allInvoices.length - paid });
           }
         } else if (mounted) {
@@ -157,11 +175,35 @@ export function FeesPanel() {
                     <td className="px-2 py-3">{getStudentName(inv)}</td>
                     <td className="px-2 py-3 font-semibold">{formatCurrency(inv.total_amount || inv.amount_due)}</td>
                     <td className="px-2 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        inv.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                      }`}>
-                        {inv.status || 'Pending'}
-                      </span>
+                      {(() => {
+                        // Check payment_status first, then status, then calculate from amounts
+                        const paymentStatus = inv.payment_status || '';
+                        const status = inv.status || '';
+                        const amountPaid = Number(inv.amount_paid) || 0;
+                        const totalAmount = Number(inv.total_amount) || Number(inv.amount_due) || 0;
+                        
+                        let displayStatus = paymentStatus || status || 'Pending';
+                        let isPaid = false;
+                        
+                        if (paymentStatus.toLowerCase() === 'paid' || status.toLowerCase() === 'paid') {
+                          isPaid = true;
+                          displayStatus = 'Paid';
+                        } else if (totalAmount > 0 && amountPaid >= totalAmount) {
+                          isPaid = true;
+                          displayStatus = 'Paid';
+                        } else if (paymentStatus.toLowerCase() === 'unpaid' || status.toLowerCase() === 'due') {
+                          isPaid = false;
+                          displayStatus = 'Due';
+                        }
+                        
+                        return (
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            isPaid ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                          }`}>
+                            {displayStatus}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-2 py-3 text-slate-600">
                       {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}
