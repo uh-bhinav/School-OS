@@ -1,0 +1,18 @@
+        <div style={{display:'flex', gap:8, marginTop:12}}>
+          <button onClick={handleMagicLink} disabled={loading || !email} className={styles.link}>Send magic link</button>
+          <button onClick={handleSignUp} disabled={loading || !email || !password} className={styles.link}>Sign up</button>
+        </div>
+
+@line 228!
+Below: 
+
+<button type="submit" className={styles.primaryBtn} disabled={loading}>
+            {loading ? 'Logging In...' : 'Log In'}
+          </button>
+        </form>
+
+Above:
+
+<p className={styles.terms}>
+          By continuing you agree to: <a href="#" className={styles.link}>Terms & Conditions</a>
+        </p>

@@ -1,8 +1,7 @@
-// index.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import styles from './Login.module.css';
+// Vite/ESM-compatible static asset import
 import logoUrl from './school-logo.png';
-import { supabase } from './src/supabaseClient';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -10,63 +9,39 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [sessionExists, setSessionExists] = useState(false);
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
-
-  const ADMIN_ORIGIN = (import.meta.env.VITE_ADMIN_URL || '').replace(/\/$/, '') || null;
-
-  useEffect(() => {
-    // Check whether a valid session exists but DO NOT auto-redirect.
-    // If session exists, show a "Continue to dashboard" button so user can choose to go.
-    let mounted = true;
-    (async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (!mounted) return;
-        setSessionExists(Boolean(data?.session));
-      } catch (err) {
-        console.warn('Session check failed', err);
-        setSessionExists(false);
-      } finally {
-        if (mounted) setIsCheckingSession(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const gotoDashboard = () => {
-    // safe redirect helper
-    if (ADMIN_ORIGIN && window.location.origin !== ADMIN_ORIGIN) {
-      window.location.href = `${ADMIN_ORIGIN}/dashboard`;
-    } else {
-      window.location.href = '/dashboard';
-    }
-  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setMessage('');
     setLoading(true);
-
     try {
-      const res = await supabase.auth.signInWithPassword({ email, password });
-      // supabase returns { data, error } or throws; handle both
-      if (res.error) throw res.error;
-      // success - redirect only now
-      setMessage('Signed in — redirecting...');
-      setTimeout(gotoDashboard, 400);
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, remember })
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || 'Login failed');
+      }
+      if (typeof window !== 'undefined') {
+        const { next = '/dashboard' } = Object.fromEntries(new URLSearchParams(window.location.search));
+        window.location.href = next;
+      }
     } catch (err) {
-      const msg = err?.message || (err?.error_description ?? 'Login failed');
-      setError(msg);
+      setError(err?.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLoginWithGoogle = () => {
+    if (typeof window !== 'undefined') window.location.href = '/api/auth/google';
+  };
+
+  const handleLoginWithFacebook = () => {
+    if (typeof window !== 'undefined') window.location.href = '/api/auth/facebook';
   };
 
   return (
@@ -87,31 +62,23 @@ export default function LoginPage() {
       </div>
 
       <main className={styles.cardWrap}>
+
         <h1 className={styles.title}>Login</h1>
+
         <p className={styles.subtext}>
-          Don’t have an account?{' '}
-          <a
-            href="#"
-            className={styles.link}
-            onClick={(e) => {
-              e.preventDefault();
-              setMessage('Contact admin to create account');
-            }}
-          >
-            Contact admin
-          </a>
+          Don’t have an account? <a href="#" className={styles.link}>Contact admin</a>
         </p>
 
-        {/* If session check running, show small spinner/message */}
-        {isCheckingSession ? (
-          <div style={{ marginBottom: 12 }}>Checking session…</div>
-        ) : sessionExists ? (
-          <div style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
-            
-            
-
-          </div>
-        ) : null}
+        <div className={styles.socialCol}>
+          <button type="button" onClick={handleLoginWithGoogle} className={styles.socialBtn}>
+            <span className={`${styles.socialIcon} ${styles.google}`} />
+            Login with Google
+          </button>
+          <button type="button" onClick={handleLoginWithFacebook} className={styles.socialBtn}>
+            <span className={`${styles.socialIcon} ${styles.facebook}`} />
+            Login with Facebook
+          </button>
+        </div>
 
         <div className={styles.orRow}>
           <span className={styles.hr} />
@@ -120,9 +87,7 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={onSubmit} className={styles.form}>
-          <label className={styles.label} htmlFor="email">
-            Email
-          </label>
+          <label className={styles.label} htmlFor="email">Email</label>
           <input
             id="email"
             type="email"
@@ -132,12 +97,9 @@ export default function LoginPage() {
             placeholder="you@example.com"
             required
             autoComplete="email"
-            disabled={isCheckingSession}
           />
 
-          <label className={styles.label} htmlFor="password">
-            Password
-          </label>
+          <label className={styles.label} htmlFor="password">Password</label>
           <div className={styles.passwordField}>
             <input
               id="password"
@@ -148,7 +110,6 @@ export default function LoginPage() {
               placeholder="••••••••"
               required
               autoComplete="current-password"
-              disabled={isCheckingSession}
             />
             <button
               type="button"
@@ -167,15 +128,12 @@ export default function LoginPage() {
               />
               <span>Remember me</span>
             </label>
-            <a href="#" className={styles.link}>
-              Forgot Password ?
-            </a>
+            <a href="#" className={styles.link}>Forgot Password ?</a>
           </div>
 
           {error && <div className={styles.error}>{error}</div>}
-          {message && <div className={styles.success}>{message}</div>}
 
-          <button type="submit" className={styles.primaryBtn} disabled={loading || isCheckingSession}>
+          <button type="submit" className={styles.primaryBtn} disabled={loading}>
             {loading ? 'Logging In...' : 'Log In'}
           </button>
         </form>
