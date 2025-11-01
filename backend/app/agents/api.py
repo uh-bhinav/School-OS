@@ -2,8 +2,9 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.modules.academics.leaves.attendance_agent.main import (
     attendance_agent_app,
@@ -15,6 +16,10 @@ from app.agents.modules.academics.leaves.exam_agent.main import exam_agent_app
 from app.agents.modules.academics.leaves.mark_agent.main import mark_agent_app
 from app.agents.modules.academics.leaves.subject_agent.main import subject_agent_app
 from app.agents.modules.academics.leaves.timetable_agent.main import timetable_agent_app
+from app.agents.tool_context import ToolRuntimeContext, use_tool_context
+from app.api.deps import get_current_active_user
+from app.db.session import get_db
+from app.models.profile import Profile
 
 # Set up logging for this module
 logger = logging.getLogger(__name__)
@@ -40,7 +45,11 @@ class AgentChatResponse(BaseModel):
 
 
 @router.post("/chat/marks", response_model=AgentChatResponse)
-async def marks_agent_chat(request: AgentChatRequest):
+async def marks_agent_chat(
+    request: AgentChatRequest,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_active_user),
+):
     """
     Development endpoint to directly interact with the MarkAgent.
     This allows for isolated testing of the agent's capabilities.
@@ -55,8 +64,10 @@ async def marks_agent_chat(request: AgentChatRequest):
     try:
         logger.info(f"Received query for MarkAgent (session: {request.session_id}): '{request.query}'")
 
-        # Invoke the agent with the user's query
-        result = mark_agent_app.invoke(request.query)
+        # Provide per-request context to the tools before invoking the agent
+        tool_context = ToolRuntimeContext(db=db, current_profile=current_profile)
+        with use_tool_context(tool_context):
+            result = mark_agent_app.invoke(request.query)
 
         # The final response from the agent is the last message in the state
         final_message = result["messages"][-1]

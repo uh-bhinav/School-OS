@@ -60,9 +60,11 @@ async def lifespan(app: FastAPI):
     Lifespan manager for the FastAPI application.
     This function will be called once when the application starts.
     """
-    init_engine()
+    engine = init_engine()
     yield
     # Any cleanup code would go here, after the yield.
+    if engine:
+        await engine.dispose()
 
 
 # Initialize FastAPI application

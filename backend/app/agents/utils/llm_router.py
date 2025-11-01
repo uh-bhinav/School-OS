@@ -37,6 +37,7 @@ def get_llm(tier: LLMTier = "power"):
         # mistral_api_key = os.getenv("MISTRAL_API_KEY", "").strip().strip('"')
         deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "").strip().strip('"')
         google_api_key = os.getenv("GOOGLE_API_KEY", "").strip().strip('"')
+        preferred_provider = os.getenv("LLM_PREFERRED_PROVIDER", "").strip().lower()
 
         if tier == "fast":
             # Use Groq with Gemma 7B for fast inference
@@ -71,56 +72,63 @@ def get_llm(tier: LLMTier = "power"):
             )
 
         elif tier == "power":
-            # Try different providers in order of preference
+            # Determine provider order based on preference
+            provider_order: list[str]
+            if preferred_provider in {"gemini", "google"}:
+                provider_order = ["gemini", "groq", "deepseek"]
+            elif preferred_provider == "deepseek":
+                provider_order = ["deepseek", "groq", "gemini"]
+            else:
+                provider_order = ["groq", "gemini", "deepseek"]
 
-            # First try: Groq with Llama 3.3 70B (UPDATED MODEL NAME)
-            if groq_api_key:
-                try:
-                    from langchain_groq import ChatGroq
+            for provider in provider_order:
+                if provider == "groq" and groq_api_key:
+                    try:
+                        from langchain_groq import ChatGroq
 
-                    logger.info("Initializing power tier LLM: Groq Llama 3.3 70B")
-                    return ChatGroq(
-                        model="llama-3.3-70b-versatile",  # CHANGED FROM llama-3.1-70b-versatile
-                        groq_api_key=groq_api_key,
-                        temperature=0.3,
-                        max_tokens=8000,
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to initialize Groq: {e}")
+                        logger.info("Initializing power tier LLM: Groq Llama 3.3 70B")
+                        return ChatGroq(
+                            model="llama-3.3-70b-versatile",
+                            groq_api_key=groq_api_key,
+                            temperature=0.3,
+                            max_tokens=8000,
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to initialize Groq: {e}")
 
-            # Second try: Google Gemini (for complex queries)
-            if google_api_key:
-                try:
-                    from langchain_google_genai import ChatGoogleGenerativeAI
+                if provider in {"gemini", "google"} and google_api_key:
+                    try:
+                        from langchain_google_genai import ChatGoogleGenerativeAI
 
-                    logger.info("Initializing power tier LLM: Google Gemini 1.5 Flash")
-                    return ChatGoogleGenerativeAI(
-                        model="gemini-1.5-flash",
-                        google_api_key=google_api_key,
-                        temperature=0.3,
-                        max_tokens=4096,
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to initialize Google Gemini: {e}")
+                        logger.info("Initializing power tier LLM: Google Gemini 1.5 Flash")
+                        return ChatGoogleGenerativeAI(
+                            model="gemini-1.5-flash",
+                            google_api_key=google_api_key,
+                            temperature=0.3,
+                            max_tokens=4096,
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to initialize Google Gemini: {e}")
 
-            # Third try: DeepSeek
-            if deepseek_api_key:
-                try:
-                    from langchain_openai import ChatOpenAI
+                if provider == "deepseek" and deepseek_api_key:
+                    try:
+                        from langchain_openai import ChatOpenAI
 
-                    logger.info("Initializing power tier LLM: DeepSeek")
-                    return ChatOpenAI(
-                        model="deepseek-chat",
-                        openai_api_key=deepseek_api_key,
-                        openai_api_base="https://api.deepseek.com",
-                        temperature=0.3,
-                        max_tokens=4096,
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to initialize DeepSeek: {e}")
+                        logger.info("Initializing power tier LLM: DeepSeek")
+                        return ChatOpenAI(
+                            model="deepseek-chat",
+                            openai_api_key=deepseek_api_key,
+                            openai_api_base="https://api.deepseek.com",
+                            temperature=0.3,
+                            max_tokens=4096,
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to initialize DeepSeek: {e}")
 
             # Fallback: Raise error if no provider is available
-            raise ValueError("No LLM provider configured for 'power' tier. " "Please set GROQ_API_KEY, GOOGLE_API_KEY, or DEEPSEEK_API_KEY in .env")
+            raise ValueError(
+                "No LLM provider configured for 'power' tier. " "Please set GROQ_API_KEY, GOOGLE_API_KEY, or DEEPSEEK_API_KEY in .env",
+            )
 
         else:
             raise ValueError(f"Invalid tier: {tier}. Must be 'fast', 'medium', or 'power'")

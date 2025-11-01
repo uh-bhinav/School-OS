@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -129,8 +129,32 @@ async def search_students(
     """
     stmt = select(Student).join(Student.profile).where(Profile.school_id == school_id, Student.is_active).options(selectinload(Student.profile))
     if name:
-        search_name = f"%{name}%"
-        stmt = stmt.where(Profile.first_name.ilike(search_name) | Profile.last_name.ilike(search_name))
+        normalized_name = " ".join(name.split())
+        search_name = f"%{normalized_name}%"
+        full_name_expr = func.concat(Profile.first_name, func.concat(" ", Profile.last_name))
+
+        conditions = [
+            Profile.first_name.ilike(search_name),
+            Profile.last_name.ilike(search_name),
+            full_name_expr.ilike(search_name),
+        ]
+
+        if " " in normalized_name:
+            first_part, last_part = normalized_name.split(" ", 1)
+            first_like = f"%{first_part}%" if first_part else search_name
+            last_like = f"%{last_part}%" if last_part else search_name
+            conditions.extend(
+                [
+                    Profile.first_name.ilike(first_like),
+                    Profile.last_name.ilike(last_like),
+                    and_(
+                        Profile.first_name.ilike(first_like),
+                        Profile.last_name.ilike(last_like),
+                    ),
+                ]
+            )
+
+        stmt = stmt.where(or_(*conditions))
     if class_id:
         stmt = stmt.where(Student.current_class_id == class_id)
     if roll_number:

@@ -55,8 +55,13 @@ async def _fetch_profile_for_role(
     profile = result.scalars().first()
 
     if not profile and user_uuid:
-        # Fallback: allow the test token to bind to any profile with the role
-        # so local testing doesn't depend on specific user ids being seeded.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(f"No {role_name.lower()} profile associated with supplied test token user '{user_uuid}'."),
+        )
+
+    if not profile:
+        # Fallback: allow tokens without embedded subject to bind to any profile with the role.
         fallback_stmt = (
             select(Profile)
             .join(UserRole, UserRole.user_id == Profile.user_id)
