@@ -1,24 +1,44 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import axios from 'axios';
+import { config } from './config.js';
 
-async function request(path, { method = 'GET', headers = {}, body } = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: { 'Content-Type': 'application/json', ...headers },
-    credentials: 'include',
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`API ${method} ${path} failed: ${res.status} ${text}`);
+export const apiClient = axios.create({
+  baseURL: config.API_URL,
+  withCredentials: false,
+  timeout: 30000, // 30 seconds
+});
+
+apiClient.interceptors.request.use((axiosConfig) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  if (token) {
+    axiosConfig.headers = axiosConfig.headers || {};
+    axiosConfig.headers.Authorization = `Bearer ${token}`;
   }
-  const contentType = res.headers.get('content-type') || '';
-  return contentType.includes('application/json') ? res.json() : res.text();
-}
+  return axiosConfig;
+});
+
+apiClient.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    // Handle 401 Unauthorized - token expired or invalid
+    if (error?.response?.status === 401) {
+      // Clear invalid token
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        // Reload page to trigger AuthGuard to show login page
+        window.location.reload();
+      }
+      return Promise.reject(new Error('Authentication required. Please login again.'));
+    }
+    
+    const message = error?.response?.data?.detail || error?.message || 'Request failed';
+    return Promise.reject(new Error(message));
+  }
+);
 
 export const api = {
-  get: (path) => request(path),
-  post: (path, data) => request(path, { method: 'POST', body: data }),
-  put: (path, data) => request(path, { method: 'PUT', body: data }),
-  patch: (path, data) => request(path, { method: 'PATCH', body: data }),
-  delete: (path) => request(path, { method: 'DELETE' }),
+  get: (path, config) => apiClient.get(path, config).then((r) => r.data),
+  post: (path, data, config) => apiClient.post(path, data, config).then((r) => r.data),
+  put: (path, data, config) => apiClient.put(path, data, config).then((r) => r.data),
+  patch: (path, data, config) => apiClient.patch(path, data, config).then((r) => r.data),
+  delete: (path, config) => apiClient.delete(path, config).then((r) => r.data),
 };

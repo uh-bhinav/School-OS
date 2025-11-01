@@ -2,6 +2,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    auth,
     academic_years,
     admin_product_categories,
     admin_product_packages,
@@ -42,6 +43,7 @@ from app.api.v1.endpoints import (
 api_router = APIRouter()
 
 # Include all the individual routers into the main v1 router
+api_router.include_router(auth.router, tags=["Auth"])
 api_router.include_router(schools.router, prefix="/schools", tags=["Schools"])
 api_router.include_router(academic_years.router, prefix="/academic-years", tags=["Academic Years"])
 api_router.include_router(classes.router, prefix="/classes", tags=["Classes"])

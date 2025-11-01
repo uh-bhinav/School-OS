@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import styles from './Login.module.css';
-// Vite/ESM-compatible static asset import
-import logoUrl from './school-logo.png';
+import logoUrl from '../assets/school-logo.png';
 
-export default function LoginPage() {
+export default function LoginPage({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -43,31 +42,20 @@ export default function LoginPage() {
         // Store token in localStorage
         localStorage.setItem('auth_token', data.access_token);
         
-        // Get redirect URL from query params or use admin page URL
-        const params = new URLSearchParams(window.location.search);
-        let redirectUrl = params.get('next');
-        
-        // If no next parameter, redirect to admin page
-        if (!redirectUrl) {
-          // Check if admin page URL is configured via env variable
-          const adminUrl = import.meta.env?.VITE_ADMIN_URL;
-          if (adminUrl) {
-            redirectUrl = adminUrl;
-          } else {
-            // Default: redirect to admin-page on same origin
-            // In development, if admin-page runs on different port, set VITE_ADMIN_URL in .env
-            redirectUrl = window.location.origin.replace(/\/login-page\/?$/, '') + '/admin-page/';
-          }
+        // Verify token was stored before proceeding
+        const storedToken = localStorage.getItem('auth_token');
+        if (storedToken !== data.access_token) {
+          throw new Error('Failed to store authentication token');
         }
         
-        // Ensure redirectUrl is a valid absolute URL
-        if (!redirectUrl.startsWith('http://') && !redirectUrl.startsWith('https://')) {
-          // If relative path, make it absolute using current origin
-          redirectUrl = new URL(redirectUrl, window.location.origin).toString();
+        // Call the onLoginSuccess callback if provided (for admin-page integrated login)
+        if (onLoginSuccess) {
+          // Call immediately - token is already stored and verified
+          onLoginSuccess();
+        } else {
+          // If no callback, reload the page to trigger auth check
+          window.location.reload();
         }
-        
-        // Redirect to admin page with token in localStorage
-        window.location.href = redirectUrl;
       } else {
         throw new Error('No access token received from server');
       }
@@ -108,7 +96,7 @@ export default function LoginPage() {
         <h1 className={styles.title}>Login</h1>
 
         <p className={styles.subtext}>
-          Don’t have an account? <a href="#" className={styles.link}>Contact admin</a>
+          Don't have an account? <a href="#" className={styles.link}>Contact admin</a>
         </p>
 
         <div className={styles.socialCol}>
@@ -187,3 +175,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
