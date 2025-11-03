@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SchoolOS - Multi-Role Signup Test</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .config-status {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #856404;
+        }
+
+        .config-status.configured {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .config-status.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+
+        .instructions h3 {
+            color: #667eea;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .instructions li {
+            margin-bottom: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-signup {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-signup:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-signup:active {
+            transform: translateY(0);
+        }
+
+        .btn-signup:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .token-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .token-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .token-display {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .token-display h4 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .token-text {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            max-height: 150px;
+            overflow-y: auto;
+            color: #333;
+        }
+
+        .btn-copy {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .btn-copy:hover {
+            background: #5568d3;
+        }
+
+        .user-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .user-info p {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .user-info strong {
+            color: #667eea;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .role-admin { background: #dc3545; color: white; }
+        .role-teacher { background: #28a745; color: white; }
+        .role-parent { background: #ffc107; color: #333; }
+        .role-student { background: #17a2b8; color: white; }
+
+        .next-steps {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+
+        .next-steps h4 {
+            color: #2196F3;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .next-steps ol {
+            margin-left: 20px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .next-steps li {
+            margin-bottom: 5px;
+        }
+
+        .debug-section {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .debug-section h4 {
+            color: #333;
+            margin-bottom: 10px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 SchoolOS Signup Test</h1>
+            <p>Multi-Role Authentication Testing Portal</p>
+        </div>
+
+        <!-- Configuration Status -->
+        <div class="config-status" id="configStatus">
+            ⚙️ Checking Supabase configuration...
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            <h3>📋 How to Use</h3>
+            <ol>
+                <li><strong>Configure Credentials:</strong> Open the HTML file in a text editor and replace <code>YOUR_SUPABASE_URL</code> and <code>YOUR_SUPABASE_ANON_KEY</code> with your actual values</li>
+                <li><strong>Find Credentials:</strong> Go to Supabase Dashboard → Project Settings → API</li>
+                <li><strong>Fill Form:</strong> Enter test user details below</li>
+                <li><strong>Select Role:</strong> Choose the role you want to test</li>
+                <li><strong>Get Token:</strong> Copy the JWT token for Postman testing</li>
+            </ol>
+        </div>
+
+        <!-- Signup Form -->
+        <form id="signupForm">
+            <div class="form-group">
+                <label for="firstName">First Name *</label>
+                <input
+                    type="text"
+                    id="firstName"
+                    placeholder="Enter first name"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="lastName">Last Name *</label>
+                <input
+                    type="text"
+                    id="lastName"
+                    placeholder="Enter last name"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input
+                    type="email"
+                    id="email"
+                    placeholder="user@schoolos.in"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password *</label>
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Minimum 8 characters"
+                    minlength="8"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="role">User Role *</label>
+                <select id="role" required>
+                    <option value="">-- Select Role --</option>
+                    <option value="admin">Admin - Full system access</option>
+                    <option value="teacher">Teacher - Class management & grading</option>
+                    <option value="parent">Parent - View children's progress</option>
+                    <option value="student">Student - View own data</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-signup" id="submitBtn">
+                Sign Up
+            </button>
+        </form>
+
+        <!-- Link to Login -->
+        <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e1e8ed;">
+            <p style="color: #666; font-size: 14px;">
+                Already have an account? <a href="login.html" style="color: #667eea; text-decoration: none; font-weight: 600;">Login here</a>
+            </p>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #666;">Creating account...</p>
+        </div>
+
+        <!-- Messages -->
+        <div class="message success" id="successMessage"></div>
+        <div class="message error" id="errorMessage"></div>
+
+        <!-- Debug Section -->
+        <div class="debug-section" id="debugSection" style="display: none;">
+            <h4>🐛 Debug Information</h4>
+            <pre id="debugContent"></pre>
+        </div>
+
+        <!-- Token Section -->
+        <div class="token-section" id="tokenSection">
+            <div class="user-info">
+                <h3 style="color: #667eea; margin-bottom: 15px;">✅ Signup Successful!</h3>
+                <p><strong>Email:</strong> <span id="userEmail"></span></p>
+                <p><strong>Name:</strong> <span id="userName"></span></p>
+                <p><strong>Role:</strong> <span id="userRole" class="role-badge"></span></p>
+                <p><strong>User ID:</strong> <span id="userId" style="font-family: monospace; font-size: 12px;"></span></p>
+            </div>
+
+            <div class="token-display">
+                <h4>🔑 JWT Access Token (Copy for Postman)</h4>
+                <div class="token-text" id="tokenText"></div>
+                <button class="btn-copy" onclick="copyToken()">📋 Copy Token</button>
+            </div>
+
+            <div class="token-display">
+                <h4>📦 Token Payload (Decoded)</h4>
+                <div class="token-text" id="tokenPayload"></div>
+            </div>
+
+            <div class="next-steps">
+                <h4>🚀 Using the Token in Postman</h4>
+                <ol>
+                    <li>Copy the JWT token using the button above</li>
+                    <li>Open Postman and create/select your environment</li>
+                    <li>Add a variable: <code>auth_token</code> = [paste token here]</li>
+                    <li>In your request, go to Authorization tab</li>
+                    <li>Select "Bearer Token" type</li>
+                    <li>Enter: <code>{{auth_token}}</code></li>
+                    <li>Test your role-specific endpoints!</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        // ============================================================================
+        // CONFIGURATION - REPLACE THESE VALUES
+        // ============================================================================
+
+        const SUPABASE_URL = 'https://nrowqnfyfjbsjbzqvkzr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yb3dxbmZ5Zmpic2pienF2a3pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzODU5NjcsImV4cCI6MjA3Mzk2MTk2N30.FOVosQgwb5aiUNyUcrRV51SwOwbBe99T7cpiWY-fv54'
+        // ============================================================================
+        // INITIALIZE SUPABASE CLIENT
+        // ============================================================================
+
+        let supabase = null;
+        let isConfigured = false;
+
+        function initializeSupabase() {
+            try {
+                if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+                    updateConfigStatus('error', '⚠️ Configuration Required: Please update SUPABASE_URL and SUPABASE_ANON_KEY in the code');
+                    return false;
+                }
+
+                if (!SUPABASE_URL.startsWith('https://') || !SUPABASE_URL.includes('.supabase.co')) {
+                    updateConfigStatus('error', '❌ Invalid Supabase URL format. Should be: https://your-project.supabase.co');
+                    return false;
+                }
+
+                if (SUPABASE_ANON_KEY.length < 100) {
+                    updateConfigStatus('error', '❌ Invalid Anon Key. It should be a long JWT string (200+ characters)');
+                    return false;
+                }
+
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                updateConfigStatus('configured', '✅ Supabase configured successfully! Ready to test signup.');
+                isConfigured = true;
+                return true;
+            } catch (error) {
+                updateConfigStatus('error', `❌ Initialization Error: ${error.message}`);
+                addDebugInfo('Initialization Error', error);
+                return false;
+            }
+        }
+
+        function updateConfigStatus(type, message) {
+            const statusDiv = document.getElementById('configStatus');
+            statusDiv.className = `config-status ${type}`;
+            statusDiv.textContent = message;
+        }
+
+        // ============================================================================
+        // DEBUG HELPER
+        // ============================================================================
+
+        function addDebugInfo(label, data) {
+            const debugSection = document.getElementById('debugSection');
+            const debugContent = document.getElementById('debugContent');
+            debugSection.style.display = 'block';
+
+            const timestamp = new Date().toLocaleTimeString();
+            debugContent.textContent += `\n[${timestamp}] ${label}:\n${JSON.stringify(data, null, 2)}\n`;
+        }
+
+        // ============================================================================
+        // FORM SUBMISSION
+        // ============================================================================
+
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!isConfigured) {
+                showError('Please configure Supabase credentials first');
+                return;
+            }
+
+            hideMessages();
+
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+
+            if (!firstName || !lastName || !email || !password || !role) {
+                showError('All fields are required');
+                return;
+            }
+
+            if (password.length < 8) {
+                showError('Password must be at least 8 characters');
+                return;
+            }
+
+            showLoading(true);
+
+            addDebugInfo('Signup Attempt', {
+                email,
+                firstName,
+                lastName,
+                role,
+                timestamp: new Date().toISOString()
+            });
+
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            first_name: firstName,
+                            last_name: lastName,
+                            full_name: `${firstName} ${lastName}`,
+                            role: role
+                        }
+                    }
+                });
+
+                showLoading(false);
+
+                addDebugInfo('Supabase Response', {
+                    hasData: !!data,
+                    hasError: !!error,
+                    hasUser: !!data?.user,
+                    hasSession: !!data?.session,
+                    error: error?.message
+                });
+
+                if (error) {
+                    showError(`Signup Failed: ${error.message}`);
+                    addDebugInfo('Error Details', error);
+                    return;
+                }
+
+                if (data.session) {
+                    displaySuccessWithToken(data.user, data.session);
+                } else if (data.user) {
+                    showSuccess(
+                        `✅ Account created! Please check ${email} for confirmation email. ` +
+                        `After confirming, login to get your JWT token.`
+                    );
+                    addDebugInfo('Email Confirmation Required', { userId: data.user.id });
+                } else {
+                    showError('Unexpected response from Supabase. Check debug info below.');
+                    addDebugInfo('Unexpected Response', data);
+                }
+
+            } catch (err) {
+                showLoading(false);
+                showError(`Network/System Error: ${err.message}`);
+                addDebugInfo('Caught Exception', {
+                    message: err.message,
+                    stack: err.stack
+                });
+                console.error('Signup error:', err);
+            }
+        });
+
+        // ============================================================================
+        // SUCCESS DISPLAY
+        // ============================================================================
+
+        function displaySuccessWithToken(user, session) {
+            const email = user.email;
+            const userId = user.id;
+            const firstName = user.user_metadata?.first_name || '';
+            const lastName = user.user_metadata?.last_name || '';
+            const fullName = `${firstName} ${lastName}`;
+            const role = user.user_metadata?.role || 'unknown';
+            const accessToken = session.access_token;
+
+            let decodedPayload = {};
+            try {
+                const payloadBase64 = accessToken.split('.')[1];
+                const payloadJson = atob(payloadBase64);
+                decodedPayload = JSON.parse(payloadJson);
+            } catch (e) {
+                console.error('Failed to decode JWT:', e);
+                decodedPayload = { error: 'Failed to decode token' };
+            }
+
+            document.getElementById('userEmail').textContent = email;
+            document.getElementById('userName').textContent = fullName;
+            document.getElementById('userId').textContent = userId;
+
+            const roleElement = document.getElementById('userRole');
+            roleElement.textContent = role;
+            roleElement.className = `role-badge role-${role}`;
+
+            document.getElementById('tokenText').textContent = accessToken;
+            document.getElementById('tokenPayload').textContent = JSON.stringify(decodedPayload, null, 2);
+
+            showSuccess(`✅ Account created successfully for ${fullName} (${role})`);
+
+            document.getElementById('tokenSection').style.display = 'block';
+
+            addDebugInfo('Success - Token Generated', {
+                userId,
+                role,
+                tokenLength: accessToken.length,
+                expiresAt: new Date(decodedPayload.exp * 1000).toLocaleString()
+            });
+
+            setTimeout(() => {
+                document.getElementById('tokenSection').scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest'
+                });
+            }, 300);
+        }
+
+        // ============================================================================
+        // UTILITY FUNCTIONS
+        // ============================================================================
+
+        function copyToken() {
+            const tokenText = document.getElementById('tokenText').textContent;
+
+            navigator.clipboard.writeText(tokenText).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.background = '#28a745';
+
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#667eea';
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy. Please select and copy manually.');
+                console.error('Copy failed:', err);
+            });
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+            document.getElementById('tokenSection').style.display = 'none';
+        }
+
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (show) {
+                loading.style.display = 'block';
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Creating Account...';
+            } else {
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign Up';
+            }
+        }
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('SchoolOS Signup Test initialized');
+            console.log('Supabase URL:', SUPABASE_URL);
+            console.log('Anon Key Length:', SUPABASE_ANON_KEY.length);
+
+            initializeSupabase();
+        });
+    </script>
+</body>
+</html>
