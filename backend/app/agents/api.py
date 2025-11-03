@@ -167,7 +167,11 @@ async def classes_agent_chat(request: AgentChatRequest):
 
 
 @router.post("/chat/attendance", response_model=AgentChatResponse)
-async def attendance_agent_chat(request: AgentChatRequest):
+async def attendance_agent_chat(
+    request: AgentChatRequest,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_active_user),
+):
     """
     Development endpoint to directly interact with the AttendanceAgent.
     This allows for isolated testing of the agent's capabilities.
@@ -175,31 +179,26 @@ async def attendance_agent_chat(request: AgentChatRequest):
     Endpoint: POST /agents/chat/attendance
 
     Example queries:
-    - "Mark Priya as present today"
-    - "What was Rohan's attendance in September?"
-    - "Show me class 10A's attendance for October 5th"
-    - "What is Anjali's overall attendance percentage?"
+    - "Mark student 123 as present today"
+    - "Show me attendance for class 10A on November 2nd"
+    - "What is the attendance percentage for student John Doe?"
+    - "Get attendance records for student 456 from September 1 to September 30"
     """
     try:
-        logger.info(f"Received query for AttendanceAgent (session: {request.session_id}): '{request.query}'")
+        logger.info(f"Attendance agent query: {request.query[:100]}...")
 
-        # Invoke the agent instance with the user's query
-        # The invoke method returns a dictionary with the response and status
-        result = attendance_agent_app.invoke(request.query)
+        # Set up tool context with database session and current profile
+        context = ToolRuntimeContext(db=db, current_profile=current_profile)
 
-        if not result.get("success"):
-            # If the agent's internal error handling caught an issue, raise an exception
-            raise Exception(result.get("error", "Unknown agent error"))
+        with use_tool_context(context):
+            # Invoke the attendance agent
+            result = attendance_agent_app.invoke(query=request.query, conversation_history=[])
 
-        response_content = result.get("response", "I'm sorry, I couldn't generate a response.")
-
-        logger.info(f"Final response from AttendanceAgent: '{response_content}'")
-
-        return AgentChatResponse(response=response_content, session_id=request.session_id)
+            return AgentChatResponse(response=result.get("response", "No response generated"), session_id=request.session_id)
 
     except Exception as e:
-        logger.error(f"Error during AttendanceAgent execution: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Attendance agent chat failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Attendance agent processing failed: {str(e)}")
 
 
 # ============================================================================

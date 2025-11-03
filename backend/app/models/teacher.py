@@ -58,3 +58,5 @@ class Teacher(Base):
     profile = relationship("Profile", back_populates="teacher")
     timetables = relationship("Timetable", back_populates="teacher")
     attendance_records = relationship("AttendanceRecord", back_populates="teacher")
+    teacher_subjects = relationship("TeacherSubject", back_populates="teacher", lazy="selectin")
+    clubs_in_charge = relationship("Club", foreign_keys="[Club.teacher_in_charge_id]", back_populates="teacher_in_charge", lazy="selectin")
