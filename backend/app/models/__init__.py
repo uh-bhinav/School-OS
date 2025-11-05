@@ -18,26 +18,55 @@ Import Order Strategy:
 # and re-exporting. The F401 "unused import" warnings are suppressed.
 
 # Import Base first (required for all models)
-
-# ===========================================================================
-# LEVEL 1: Core/Independent Models (no or minimal FK dependencies)
-# ===========================================================================
+from app.db.base_class import Base
 
 # ===========================================================================
 # LEVEL 2: Models depending on Level 1
 # ===========================================================================
-
-# ===========================================================================
-# LEVEL 3: Models depending on Level 1 & 2
-# ===========================================================================
+from app.models.academic_year import AcademicYear
+from app.models.achievementPointRules import AchievementPointRule
+from app.models.attendance_record import AttendanceRecord
+from app.models.class_model import Class
 
 # ===========================================================================
 # LEVEL 4: Models depending on Level 3
 # ===========================================================================
+from app.models.club import Club
+from app.models.club_activity import ClubActivity
+from app.models.club_membership import ClubMembership
+from app.models.employment_status import EmploymentStatus
+from app.models.exam_type import ExamType
+from app.models.exams import Exam
+
+# ===========================================================================
+# LEVEL 6: Models depending on Level 5
+# ===========================================================================
+from app.models.mark import Mark
+from app.models.period import Period
+from app.models.profile import Profile
+from app.models.role_definition import RoleDefinition
+
+# ===========================================================================
+# LEVEL 1: Core/Independent Models (no or minimal FK dependencies)
+# ===========================================================================
+from app.models.school import School
+from app.models.streams import Stream
+
+# ===========================================================================
+# LEVEL 3: Models depending on Level 1 & 2
+# ===========================================================================
+from app.models.student import Student
+from app.models.student_achievement import StudentAchievement
+from app.models.student_contact import StudentContact
+from app.models.subject import Subject
+from app.models.teacher import Teacher
 
 # ===========================================================================
 # LEVEL 5: Models depending on Level 4
 # ===========================================================================
+from app.models.teacher_subject import TeacherSubject
+from app.models.timetable import Timetable
+from app.models.user_roles import UserRole
 
 # ===========================================================================
 # E-COMMERCE & FINANCE MODELS (can have circular dependencies)
@@ -84,6 +113,17 @@ except ImportError:
     pass
 
 # ===========================================================================
+# ADDITIONAL MODELS
+# ===========================================================================
+try:
+    from app.models.album_target import AlbumTarget
+    from app.models.audit import Audit
+    from app.models.class_attendance_weekly import ClassAttendanceWeekly
+    from app.models.log import Log
+except ImportError:
+    pass
+
+# ===========================================================================
 # Export all models for easy importing
 # ===========================================================================
 __all__ = [
@@ -118,7 +158,7 @@ __all__ = [
     "StudentContact",
     "Timetable",
     "Period",
-    # Optional (if they exist)
+    # E-commerce & Finance
     "Product",
     "ProductCategory",
     "ProductPackage",
@@ -142,6 +182,7 @@ __all__ = [
     "GatewayWebhookEvent",
     "PaymentAllocation",
     "ProductAlbumLink",
+    # Communication & Media
     "Announcement",
     "AnnouncementTarget",
     "Conversation",
@@ -149,4 +190,9 @@ __all__ = [
     "Message",
     "Album",
     "MediaItem",
+    "AlbumTarget",
+    # Additional
+    "Audit",
+    "Log",
+    "ClassAttendanceWeekly",
 ]
