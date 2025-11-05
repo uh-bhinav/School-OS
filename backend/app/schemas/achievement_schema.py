@@ -60,7 +60,7 @@ class StudentAchievementBase(BaseModel):
     date_awarded: date
     certificate_url: str | None = Field(None, max_length=500)
     evidence_urls: list[str] | None = Field(default_factory=list)
-    visibility: AchievementVisibility = AchievementVisibility.SCHOOL_ONLY
+    visibility: AchievementVisibility = AchievementVisibility.school_only
     # Note: 'level' is not in the DB model, so we can't use level_multiplier.
     # If we add 'level' to the create schema, the service needs to handle it.
     # For now, we'll stick to the DB schema and use base_points.

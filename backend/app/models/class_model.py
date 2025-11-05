@@ -48,7 +48,17 @@ class Class(Base):
     timetables = relationship(
         "Timetable",
         back_populates="class_record",
-        foreign_keys="Timetable.class_id",
+        foreign_keys="[Timetable.class_id]",
+        viewonly=False,
     )
-    attendance_records = relationship("AttendanceRecord", back_populates="class_record")
-    class_fee_structures = relationship("ClassFeeStructure", back_populates="class_")
+    attendance_records = relationship(
+        "AttendanceRecord",
+        back_populates="class_record",
+        foreign_keys="[AttendanceRecord.class_id]",  # String reference
+    )
+
+    class_fee_structures = relationship(
+        "ClassFeeStructure",
+        back_populates="class_",
+        foreign_keys="[ClassFeeStructure.class_id]",  # String reference
+    )

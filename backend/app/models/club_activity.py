@@ -15,13 +15,6 @@ class ClubActivity(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     club_id = Column(Integer, ForeignKey("clubs.id", ondelete="CASCADE"), nullable=False, index=True)
-    organized_by_student_id = Column(
-        "student_id",
-        Integer,
-        ForeignKey("students.student_id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
-    )
 
     activity_name = Column(String(255), nullable=False)
     activity_type = Column(
@@ -54,7 +47,7 @@ class ClubActivity(Base):
             values_callable=lambda enum_cls: [member.value for member in enum_cls],
         ),
         nullable=False,
-        default=ClubActivityStatus.PLANNED,
+        default=ClubActivityStatus.planned,
         index=True,
     )
     outcome_notes = Column(Text)
@@ -72,9 +65,3 @@ class ClubActivity(Base):
     )
 
     club = relationship("Club", back_populates="activities", lazy="selectin")
-    organized_by_student = relationship(
-        "Student",
-        back_populates="organized_club_activities",
-        foreign_keys=[organized_by_student_id],
-        lazy="selectin",
-    )

@@ -25,7 +25,7 @@ class TeacherSubject(Base):
             values_callable=lambda enum_cls: [member.value for member in enum_cls],
         ),
         nullable=False,
-        default=ProficiencyLevel.INTERMEDIATE,
+        default=ProficiencyLevel.intermediate,
         index=True,
     )
     years_teaching_subject = Column(Integer, default=0)

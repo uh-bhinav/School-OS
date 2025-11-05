@@ -16,7 +16,7 @@ class ClubBase(BaseModel):
     club_type: ClubType
     logo_url: Optional[str] = Field(None, max_length=500)
     meeting_schedule: Optional[Any] = None  # JSONB field
-    meeting_frequency: MeetingFrequency = MeetingFrequency.WEEKLY
+    meeting_frequency: MeetingFrequency = MeetingFrequency.weekly
     max_members: Optional[int] = Field(None, gt=0)
     registration_open: bool = True
     registration_start_date: Optional[date] = None
@@ -70,8 +70,8 @@ class ClubRead(ClubBase):
 
 
 class ClubMembershipBase(BaseModel):
-    role: ClubMembershipRole = ClubMembershipRole.MEMBER
-    status: ClubMembershipStatus = ClubMembershipStatus.ACTIVE
+    role: ClubMembershipRole = ClubMembershipRole.member
+    status: ClubMembershipStatus = ClubMembershipStatus.active
     contribution_score: int = Field(0, ge=0)
     notes: Optional[str] = None
 
@@ -79,8 +79,8 @@ class ClubMembershipBase(BaseModel):
 class ClubMembershipCreate(BaseModel):
     student_id: int
     club_id: int
-    role: ClubMembershipRole = ClubMembershipRole.MEMBER
-    status: ClubMembershipStatus = ClubMembershipStatus.ACTIVE
+    role: ClubMembershipRole = ClubMembershipRole.member
+    status: ClubMembershipStatus = ClubMembershipStatus.active
 
 
 class ClubMembershipUpdate(BaseModel):
@@ -126,7 +126,7 @@ class ClubActivityBase(BaseModel):
     attendance_mandatory: bool = False
     max_participants: Optional[int] = Field(None, gt=0)
     budget_allocated: Optional[float] = Field(None, ge=0)  # Using float for NUMERIC
-    status: ClubActivityStatus = ClubActivityStatus.PLANNED
+    status: ClubActivityStatus = ClubActivityStatus.planned
     outcome_notes: Optional[str] = None
     media_urls: Optional[List[str]] = Field(default_factory=list)
 

@@ -18,5 +18,14 @@ class FeeTerm(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default="now()")
 
     # The relationship syntax itself does not change
-    fee_template = relationship("FeeTemplate", back_populates="fee_terms")
-    discounts = relationship("StudentFeeDiscount", back_populates="fee_term")
+    fee_template = relationship(
+        "FeeTemplate",
+        back_populates="fee_terms",
+        foreign_keys=[fee_template_id],
+    )
+
+    discounts = relationship(
+        "StudentFeeDiscount",
+        back_populates="fee_term",
+        foreign_keys="[StudentFeeDiscount.fee_term_id]",  # String reference for forward declaration
+    )

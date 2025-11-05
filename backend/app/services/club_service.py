@@ -89,7 +89,7 @@ class ClubService:
         stmt = select(ClubMembership).where(
             ClubMembership.club_id == membership_data.club_id,
             ClubMembership.student_id == membership_data.student_id,
-            ClubMembership.status == ClubMembershipStatus.ACTIVE,
+            ClubMembership.status == ClubMembershipStatus.active,  # ✅ Changed from ACTIVE
         )
         result = await self.db.execute(stmt)
         if result.scalars().first():
@@ -145,7 +145,7 @@ class ClubService:
             .where(
                 Club.id == club_id,
                 Club.school_id == school_id,
-                ClubMembership.status == ClubMembershipStatus.ACTIVE,
+                ClubMembership.status == ClubMembershipStatus.active,  # ✅ Changed from ACTIVE
             )
             .options(
                 selectinload(Profile.student),
@@ -164,7 +164,7 @@ class ClubService:
             .where(
                 ClubMembership.student_id == student_id,
                 Club.school_id == school_id,
-                ClubMembership.status == ClubMembershipStatus.ACTIVE,
+                ClubMembership.status == ClubMembershipStatus.active,  # ✅ Changed from ACTIVE
             )
             .options(joinedload(ClubMembership.club))
         )
@@ -180,7 +180,12 @@ class ClubService:
         if not club:
             return None  # Or raise HTTPException
 
-        db_activity = ClubActivity(**activity_data.model_dump(), club_id=club_id)
+        # ✅ Remove organized_by_student_id from the data before creating ClubActivity
+        activity_dict = activity_data.model_dump()
+        # Remove the field if it exists in the schema but not in the model
+        activity_dict.pop("organized_by_student_id", None)
+
+        db_activity = ClubActivity(**activity_dict, club_id=club_id)
         self.db.add(db_activity)
         await self.db.commit()
         await self.db.refresh(db_activity)
@@ -200,6 +205,9 @@ class ClubService:
             return None
 
         update_data = activity_data.model_dump(exclude_unset=True)
+        # ✅ Remove organized_by_student_id if present
+        update_data.pop("organized_by_student_id", None)
+
         for key, value in update_data.items():
             setattr(db_activity, key, value)
 
@@ -229,7 +237,7 @@ class ClubService:
         stmt = (
             select(ClubActivity)
             .join(Club)
-            .where(Club.school_id == school_id, ClubActivity.scheduled_date >= datetime.utcnow().date(), ClubActivity.status.in_([ClubActivityStatus.PLANNED, ClubActivityStatus.ONGOING]))
+            .where(Club.school_id == school_id, ClubActivity.scheduled_date >= datetime.utcnow().date(), ClubActivity.status.in_([ClubActivityStatus.planned, ClubActivityStatus.ongoing]))  # ✅ Changed from PLANNED, ONGOING
             .order_by(ClubActivity.scheduled_date.asc())
         )
 

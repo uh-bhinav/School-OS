@@ -53,7 +53,7 @@ class StudentAchievement(Base):
             values_callable=lambda enum_cls: [member.value for member in enum_cls],
         ),
         nullable=False,
-        default=AchievementVisibility.SCHOOL_ONLY,
+        default=AchievementVisibility.school_only,
         index=True,
     )
 

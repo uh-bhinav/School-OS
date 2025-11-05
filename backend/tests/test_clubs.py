@@ -105,11 +105,11 @@ async def test_club_crud_flow(
     create_payload = {
         "name": club_name,
         "description": "Robotics competitions and STEM outreach",
-        "club_type": ClubType.TECHNICAL.value,
+        "club_type": ClubType.technical.value,
         "teacher_in_charge_id": teacher.teacher_id,
         "academic_year_id": test_academic_year.id,
         "meeting_schedule": {"weekday": "Friday", "time": "15:30"},
-        "meeting_frequency": MeetingFrequency.WEEKLY.value,
+        "meeting_frequency": MeetingFrequency.weekly.value,
         "max_members": 30,
         "objectives": ["Compete in robotics challenges", "Mentor junior students"],
     }
@@ -128,7 +128,7 @@ async def test_club_crud_flow(
 
     detail_response = await test_client.get(f"/api/v1/clubs/{club_id}")
     assert detail_response.status_code == status.HTTP_200_OK
-    assert detail_response.json()["meeting_frequency"] == MeetingFrequency.WEEKLY.value
+    assert detail_response.json()["meeting_frequency"] == MeetingFrequency.weekly.value
 
     update_payload = {
         "description": "Updated robotics focus",
@@ -166,7 +166,7 @@ async def test_club_membership_workflow_and_student_views(
     club_payload = {
         "name": f"Arts-{uuid.uuid4().hex[:6]}",
         "description": "Creative arts and performances",
-        "club_type": ClubType.ARTS.value,
+        "club_type": ClubType.arts.value,
         "teacher_in_charge_id": teacher.teacher_id,
         "academic_year_id": test_academic_year.id,
     }
@@ -180,8 +180,8 @@ async def test_club_membership_workflow_and_student_views(
     membership_payload = {
         "club_id": club_id,
         "student_id": test_student.student_id,
-        "role": ClubMembershipRole.MEMBER.value,
-        "status": ClubMembershipStatus.ACTIVE.value,
+        "role": ClubMembershipRole.member.value,
+        "status": ClubMembershipStatus.active.value,
     }
     add_member_response = await test_client.post(
         f"/api/v1/clubs/{club_id}/members",
@@ -206,7 +206,7 @@ async def test_club_membership_workflow_and_student_views(
 
     _authenticate_as(teacher_profile)
     update_membership_payload = {
-        "role": ClubMembershipRole.PRESIDENT.value,
+        "role": ClubMembershipRole.president.value,
         "contribution_score": 12,
     }
     update_member_response = await test_client.put(
@@ -215,7 +215,7 @@ async def test_club_membership_workflow_and_student_views(
     )
     assert update_member_response.status_code == status.HTTP_200_OK
     updated_membership = update_member_response.json()
-    assert updated_membership["role"] == ClubMembershipRole.PRESIDENT.value
+    assert updated_membership["role"] == ClubMembershipRole.president.value
     assert updated_membership["contribution_score"] == 12
 
     student_profile_stmt = (
@@ -281,7 +281,7 @@ async def test_student_cannot_create_club(
     create_payload = {
         "name": "Unauthorized Club",
         "description": "Should not be created",
-        "club_type": ClubType.SOCIAL.value,
+        "club_type": ClubType.social.value,
         "teacher_in_charge_id": teacher.teacher_id,
         "academic_year_id": test_academic_year.id,
     }
@@ -306,7 +306,7 @@ async def test_membership_requires_matching_club_id(
 
     create_payload = {
         "name": f"Music-{uuid.uuid4().hex[:6]}",
-        "club_type": ClubType.ARTS.value,
+        "club_type": ClubType.arts.value,
         "teacher_in_charge_id": teacher.teacher_id,
         "academic_year_id": test_academic_year.id,
     }
@@ -317,8 +317,8 @@ async def test_membership_requires_matching_club_id(
     membership_payload = {
         "club_id": club_id + 1,
         "student_id": test_student.student_id,
-        "role": ClubMembershipRole.MEMBER.value,
-        "status": ClubMembershipStatus.ACTIVE.value,
+        "role": ClubMembershipRole.member.value,
+        "status": ClubMembershipStatus.active.value,
     }
 
     mismatch_response = await test_client.post(
@@ -345,7 +345,7 @@ async def test_club_activity_lifecycle(
     create_payload = {
         "name": f"Science-{uuid.uuid4().hex[:6]}",
         "description": "Hands-on science experiments",
-        "club_type": ClubType.ACADEMIC.value,
+        "club_type": ClubType.academic.value,
         "teacher_in_charge_id": teacher.teacher_id,
         "academic_year_id": test_academic_year.id,
     }
@@ -355,12 +355,12 @@ async def test_club_activity_lifecycle(
 
     activity_payload = {
         "activity_name": "Robotics Workshop",
-        "activity_type": ClubActivityType.WORKSHOP.value,
+        "activity_type": ClubActivityType.workshop.value,
         "description": "Intro to robotics fundamentals",
         "scheduled_date": (date.today() + timedelta(days=2)).isoformat(),
         "venue": "Lab 3",
         "attendance_mandatory": True,
-        "status": ClubActivityStatus.PLANNED.value,
+        "status": ClubActivityStatus.planned.value,
     }
 
     create_activity_response = await test_client.post(
@@ -370,7 +370,7 @@ async def test_club_activity_lifecycle(
     assert create_activity_response.status_code == status.HTTP_201_CREATED
     activity = create_activity_response.json()
     activity_id = activity["id"]
-    assert activity["activity_type"] == ClubActivityType.WORKSHOP.value
+    assert activity["activity_type"] == ClubActivityType.workshop.value
 
     list_response = await test_client.get(f"/api/v1/clubs/{club_id}/activities")
     assert list_response.status_code == status.HTTP_200_OK
@@ -381,7 +381,7 @@ async def test_club_activity_lifecycle(
     assert any(item["id"] == activity_id for item in upcoming_response.json())
 
     update_activity_payload = {
-        "status": ClubActivityStatus.ONGOING.value,
+        "status": ClubActivityStatus.ongoing.value,
         "venue": "Innovation Hub",
     }
     update_activity_response = await test_client.put(
@@ -390,7 +390,7 @@ async def test_club_activity_lifecycle(
     )
     assert update_activity_response.status_code == status.HTTP_200_OK
     updated_activity = update_activity_response.json()
-    assert updated_activity["status"] == ClubActivityStatus.ONGOING.value
+    assert updated_activity["status"] == ClubActivityStatus.ongoing.value
     assert updated_activity["venue"] == "Innovation Hub"
 
     delete_activity_response = await test_client.delete(f"/api/v1/clubs/activities/{activity_id}")
@@ -426,7 +426,7 @@ async def test_club_isolated_from_other_schools(
     _authenticate_as(admin_school_one)
     create_payload = {
         "name": f"Eco-{uuid.uuid4().hex[:6]}",
-        "club_type": ClubType.SOCIAL.value,
+        "club_type": ClubType.social.value,
         "teacher_in_charge_id": teacher_school_one.teacher_id,
         "academic_year_id": test_academic_year.id,
     }

@@ -27,7 +27,7 @@ class ClubMembership(Base):
             values_callable=lambda enum_cls: [member.value for member in enum_cls],
         ),
         nullable=False,
-        default=ClubMembershipRole.MEMBER,
+        default=ClubMembershipRole.member,
         index=True,
     )
     joined_date = Column(Date, nullable=False, server_default=func.current_date())
@@ -39,7 +39,7 @@ class ClubMembership(Base):
             values_callable=lambda enum_cls: [member.value for member in enum_cls],
         ),
         nullable=False,
-        default=ClubMembershipStatus.ACTIVE,
+        default=ClubMembershipStatus.active,
         index=True,
     )
 

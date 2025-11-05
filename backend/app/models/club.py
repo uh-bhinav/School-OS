@@ -42,7 +42,7 @@ class Club(Base):
             values_callable=lambda enum_cls: [member.value for member in enum_cls],
         ),
         nullable=False,
-        default=MeetingFrequency.WEEKLY,
+        default=MeetingFrequency.weekly,
     )
 
     max_members = Column(Integer)

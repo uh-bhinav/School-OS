@@ -43,7 +43,7 @@ def achievement_service(mock_db_session):
 
 @pytest.mark.asyncio
 async def test_create_rule(achievement_service: AchievementService, mock_db_session):
-    rule_data = AchievementPointRuleCreate(achievement_type=AchievementType.ACADEMIC, category_name="Olympiad", base_points=100)
+    rule_data = AchievementPointRuleCreate(achievement_type=AchievementType.academic, category_name="Olympiad", base_points=100)
 
     await achievement_service.create_rule(rule_data, SCHOOL_ID)
 
@@ -62,7 +62,7 @@ async def test_create_rule(achievement_service: AchievementService, mock_db_sess
 
 @pytest.mark.asyncio
 async def test_get_rule_found(achievement_service: AchievementService, mock_db_session):
-    mock_rule = AchievementPointRule(id=1, school_id=SCHOOL_ID, achievement_type=AchievementType.ACADEMIC, category_name="Olympiad", base_points=100)
+    mock_rule = AchievementPointRule(id=1, school_id=SCHOOL_ID, achievement_type=AchievementType.academic, category_name="Olympiad", base_points=100)
 
     mock_result = MagicMock()
     mock_result.scalars.return_value.first.return_value = mock_rule
@@ -88,7 +88,7 @@ async def test_get_rule_not_found(achievement_service: AchievementService, mock_
 
 @pytest.mark.asyncio
 async def test_update_rule(achievement_service: AchievementService, mock_db_session):
-    mock_rule = AchievementPointRule(id=1, school_id=SCHOOL_ID, achievement_type=AchievementType.ACADEMIC, category_name="Olympiad", base_points=100, is_active=True)
+    mock_rule = AchievementPointRule(id=1, school_id=SCHOOL_ID, achievement_type=AchievementType.academic, category_name="Olympiad", base_points=100, is_active=True)
 
     mock_result = MagicMock()
     mock_result.scalars.return_value.first.return_value = mock_rule
@@ -110,7 +110,7 @@ async def test_update_rule(achievement_service: AchievementService, mock_db_sess
 
 @pytest.mark.asyncio
 async def test_add_achievement(achievement_service: AchievementService, mock_db_session):
-    ach_data = StudentAchievementCreate(student_id=STUDENT_ID, academic_year_id=ACADEMIC_YEAR_ID, achievement_type=AchievementType.SPORTS, title="100m Dash Winner", achievement_category="Athletics", date_awarded=date(2023, 5, 1))
+    ach_data = StudentAchievementCreate(student_id=STUDENT_ID, academic_year_id=ACADEMIC_YEAR_ID, achievement_type=AchievementType.sports, title="100m Dash Winner", achievement_category="Athletics", date_awarded=date(2023, 5, 1))
 
     await achievement_service.add_achievement(ach_data, TEACHER_USER_ID, SCHOOL_ID)
 
@@ -134,7 +134,7 @@ async def test_verify_achievement_success_with_rule(achievement_service: Achieve
         student_id=STUDENT_ID,
         school_id=SCHOOL_ID,
         academic_year_id=ACADEMIC_YEAR_ID,
-        achievement_type=AchievementType.ACADEMIC,
+        achievement_type=AchievementType.academic,
         achievement_category="Math Olympiad",
         title="Rank 1",
         date_awarded=date(2023, 5, 1),
@@ -143,7 +143,7 @@ async def test_verify_achievement_success_with_rule(achievement_service: Achieve
         points_awarded=0,
     )
 
-    matching_rule = AchievementPointRule(id=1, school_id=SCHOOL_ID, achievement_type=AchievementType.ACADEMIC, category_name="Math Olympiad", base_points=50)
+    matching_rule = AchievementPointRule(id=1, school_id=SCHOOL_ID, achievement_type=AchievementType.academic, category_name="Math Olympiad", base_points=50)
 
     # Mock the internal calls
     # We use patch.object to mock methods on the *instance* of the service
@@ -167,7 +167,7 @@ async def test_verify_achievement_success_no_rule(achievement_service: Achieveme
         student_id=STUDENT_ID,
         school_id=SCHOOL_ID,
         academic_year_id=ACADEMIC_YEAR_ID,
-        achievement_type=AchievementType.CULTURAL,
+        achievement_type=AchievementType.cultural,
         achievement_category="Singing",
         title="Solo Performance",
         date_awarded=date(2023, 5, 1),
