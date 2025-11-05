@@ -42,6 +42,6 @@ class ClubMembership(Base):
         CheckConstraint("exit_date IS NULL OR status != 'active'", name="chk_membership_exit_status"),
     )
 
-    club = relationship("Club", back_populates="memberships", lazy="selectin")
-    student = relationship("Student", back_populates="club_memberships", lazy="selectin")
-    approved_by = relationship("Profile", foreign_keys=[approved_by_user_id], lazy="selectin")
+    club = relationship("Club", back_populates="memberships")
+    student = relationship("Student", back_populates="club_memberships")
+    approved_by = relationship("Profile", foreign_keys=[approved_by_user_id])

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SchoolOS - Multi-Role Signup Test</title>
+    <title>SchoolOS - Multi-Role Login Test</title>
 
     <style>
         * {
@@ -94,6 +94,47 @@
             margin-bottom: 5px;
         }
 
+        .quick-test-section {
+            background: #e7f3ff;
+            border: 2px solid #2196F3;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+
+        .quick-test-section h3 {
+            color: #2196F3;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .quick-test-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .quick-btn {
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            color: white;
+        }
+
+        .quick-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .quick-btn.admin { background: #dc3545; }
+        .quick-btn.teacher { background: #28a745; }
+        .quick-btn.parent { background: #ffc107; color: #333; }
+        .quick-btn.student { background: #17a2b8; }
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -106,10 +147,8 @@
             font-size: 14px;
         }
 
-        input[type="text"],
         input[type="email"],
-        input[type="password"],
-        select {
+        input[type="password"] {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid #e1e8ed;
@@ -118,13 +157,37 @@
             transition: border-color 0.3s;
         }
 
-        input:focus,
-        select:focus {
+        input:focus {
             outline: none;
             border-color: #667eea;
         }
 
-        .btn-signup {
+        .password-toggle {
+            position: relative;
+        }
+
+        .password-toggle input {
+            padding-right: 45px;
+        }
+
+        .toggle-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            font-size: 12px;
+            padding: 5px 10px;
+        }
+
+        .toggle-btn:hover {
+            color: #667eea;
+        }
+
+        .btn-login {
             width: 100%;
             padding: 14px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -137,16 +200,16 @@
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .btn-signup:hover {
+        .btn-login:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
         }
 
-        .btn-signup:active {
+        .btn-login:active {
             transform: translateY(0);
         }
 
-        .btn-signup:disabled {
+        .btn-login:disabled {
             background: #ccc;
             cursor: not-allowed;
             transform: none;
@@ -192,6 +255,12 @@
             color: #721c24;
         }
 
+        .message.warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+        }
+
         .token-section {
             margin-top: 30px;
             display: none;
@@ -201,6 +270,37 @@
             color: #667eea;
             margin-bottom: 15px;
         }
+
+        .session-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .session-info p {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .session-info strong {
+            color: #667eea;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .role-admin { background: #dc3545; color: white; }
+        .role-teacher { background: #28a745; color: white; }
+        .role-parent { background: #ffc107; color: #333; }
+        .role-student { background: #17a2b8; color: white; }
 
         .token-display {
             background: #f8f9fa;
@@ -246,36 +346,23 @@
             background: #5568d3;
         }
 
-        .user-info {
-            background: #f8f9fa;
-            padding: 15px;
+        .btn-logout {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 24px;
             border-radius: 6px;
-            margin-bottom: 15px;
-        }
-
-        .user-info p {
-            margin-bottom: 8px;
+            cursor: pointer;
             font-size: 14px;
-            color: #333;
-        }
-
-        .user-info strong {
-            color: #667eea;
-        }
-
-        .role-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
             font-weight: 600;
-            text-transform: uppercase;
+            margin-top: 15px;
+            width: 100%;
+            transition: background 0.3s;
         }
 
-        .role-admin { background: #dc3545; color: white; }
-        .role-teacher { background: #28a745; color: white; }
-        .role-parent { background: #ffc107; color: #333; }
-        .role-student { background: #17a2b8; color: white; }
+        .btn-logout:hover {
+            background: #c82333;
+        }
 
         .next-steps {
             background: #e7f3ff;
@@ -316,12 +403,34 @@
             margin-bottom: 10px;
             font-family: 'Segoe UI', sans-serif;
         }
+
+        .token-expiry {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #856404;
+        }
+
+        .token-expiry.expired {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .token-expiry.valid {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎓 SchoolOS Signup Test</h1>
+            <h1>🔐 SchoolOS Login Test</h1>
             <p>Multi-Role Authentication Testing Portal</p>
         </div>
 
@@ -334,36 +443,35 @@
         <div class="instructions">
             <h3>📋 How to Use</h3>
             <ol>
-                <li><strong>Configure Credentials:</strong> Open the HTML file in a text editor and replace <code>YOUR_SUPABASE_URL</code> and <code>YOUR_SUPABASE_ANON_KEY</code> with your actual values</li>
-                <li><strong>Find Credentials:</strong> Go to Supabase Dashboard → Project Settings → API</li>
-                <li><strong>Fill Form:</strong> Enter test user details below</li>
-                <li><strong>Select Role:</strong> Choose the role you want to test</li>
-                <li><strong>Get Token:</strong> Copy the JWT token for Postman testing</li>
+                <li><strong>Configure Credentials:</strong> Replace <code>YOUR_SUPABASE_URL</code> and <code>YOUR_SUPABASE_ANON_KEY</code> in the code</li>
+                <li><strong>Quick Test:</strong> Use the buttons below to auto-fill test credentials</li>
+                <li><strong>Manual Login:</strong> Or enter email/password manually</li>
+                <li><strong>Get Token:</strong> Copy the JWT token for Postman endpoint testing</li>
+                <li><strong>Test Expiry:</strong> Token validity is shown with countdown</li>
             </ol>
         </div>
 
-        <!-- Signup Form -->
-        <form id="signupForm">
-            <div class="form-group">
-                <label for="firstName">First Name *</label>
-                <input
-                    type="text"
-                    id="firstName"
-                    placeholder="Enter first name"
-                    required
-                >
+        <!-- Quick Test Section -->
+        <div class="quick-test-section">
+            <h3>⚡ Quick Test Login (Auto-fill credentials)</h3>
+            <div class="quick-test-buttons">
+                <button class="quick-btn admin" onclick="fillTestCredentials('admin@schoolos.in', 'password123')">
+                    👨‍💼 Admin
+                </button>
+                <button class="quick-btn teacher" onclick="fillTestCredentials('teacher1@schoolos.in', 'password123')">
+                    👩‍🏫 Teacher
+                </button>
+                <button class="quick-btn parent" onclick="fillTestCredentials('parent1@schoolos.in', 'password123')">
+                    👨‍👩‍👧 Parent
+                </button>
+                <button class="quick-btn student" onclick="fillTestCredentials('student1@schoolos.in', 'password123')">
+                    🎓 Student
+                </button>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="lastName">Last Name *</label>
-                <input
-                    type="text"
-                    id="lastName"
-                    placeholder="Enter last name"
-                    required
-                >
-            </div>
-
+        <!-- Login Form -->
+        <form id="loginForm">
             <div class="form-group">
                 <label for="email">Email Address *</label>
                 <input
@@ -376,47 +484,32 @@
 
             <div class="form-group">
                 <label for="password">Password *</label>
-                <input
-                    type="password"
-                    id="password"
-                    placeholder="Minimum 8 characters"
-                    minlength="8"
-                    required
-                >
+                <div class="password-toggle">
+                    <input
+                        type="password"
+                        id="password"
+                        placeholder="Enter password"
+                        required
+                    >
+                    <button type="button" class="toggle-btn" onclick="togglePassword()">Show</button>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="role">User Role *</label>
-                <select id="role" required>
-                    <option value="">-- Select Role --</option>
-                    <option value="admin">Admin - Full system access</option>
-                    <option value="teacher">Teacher - Class management & grading</option>
-                    <option value="parent">Parent - View children's progress</option>
-                    <option value="student">Student - View own data</option>
-                </select>
-            </div>
-
-            <button type="submit" class="btn-signup" id="submitBtn">
-                Sign Up
+            <button type="submit" class="btn-login" id="loginBtn">
+                Login
             </button>
         </form>
-
-        <!-- Link to Login -->
-        <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e1e8ed;">
-            <p style="color: #666; font-size: 14px;">
-                Already have an account? <a href="login.html" style="color: #667eea; text-decoration: none; font-weight: 600;">Login here</a>
-            </p>
-        </div>
 
         <!-- Loading Indicator -->
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p style="margin-top: 10px; color: #666;">Creating account...</p>
+            <p style="margin-top: 10px; color: #666;">Authenticating...</p>
         </div>
 
         <!-- Messages -->
         <div class="message success" id="successMessage"></div>
         <div class="message error" id="errorMessage"></div>
+        <div class="message warning" id="warningMessage"></div>
 
         <!-- Debug Section -->
         <div class="debug-section" id="debugSection" style="display: none;">
@@ -426,12 +519,17 @@
 
         <!-- Token Section -->
         <div class="token-section" id="tokenSection">
-            <div class="user-info">
-                <h3 style="color: #667eea; margin-bottom: 15px;">✅ Signup Successful!</h3>
+            <div class="session-info">
+                <h3 style="color: #667eea; margin-bottom: 15px;">✅ Login Successful!</h3>
                 <p><strong>Email:</strong> <span id="userEmail"></span></p>
                 <p><strong>Name:</strong> <span id="userName"></span></p>
                 <p><strong>Role:</strong> <span id="userRole" class="role-badge"></span></p>
                 <p><strong>User ID:</strong> <span id="userId" style="font-family: monospace; font-size: 12px;"></span></p>
+                <p><strong>Session Started:</strong> <span id="sessionTime"></span></p>
+            </div>
+
+            <div class="token-expiry" id="tokenExpiry">
+                ⏱️ Token valid for: <strong id="expiryCountdown"></strong>
             </div>
 
             <div class="token-display">
@@ -441,22 +539,57 @@
             </div>
 
             <div class="token-display">
+                <h4>🔄 Refresh Token (for token renewal)</h4>
+                <div class="token-text" id="refreshTokenText"></div>
+                <button class="btn-copy" onclick="copyRefreshToken()">📋 Copy Refresh Token</button>
+            </div>
+
+            <div class="token-display">
                 <h4>📦 Token Payload (Decoded)</h4>
                 <div class="token-text" id="tokenPayload"></div>
             </div>
 
             <div class="next-steps">
-                <h4>🚀 Using the Token in Postman</h4>
+                <h4>🚀 Using the Token</h4>
                 <ol>
-                    <li>Copy the JWT token using the button above</li>
-                    <li>Open Postman and create/select your environment</li>
-                    <li>Add a variable: <code>auth_token</code> = [paste token here]</li>
-                    <li>In your request, go to Authorization tab</li>
-                    <li>Select "Bearer Token" type</li>
-                    <li>Enter: <code>{{auth_token}}</code></li>
-                    <li>Test your role-specific endpoints!</li>
+                    <li><strong>Try the AI Agents:</strong>
+                        <button
+                            onclick="window.location.href='attendance-chat.html'"
+                            style="margin: 10px 0; padding: 12px 24px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; display: block; width: 100%;"
+                        >
+                            🎓 Open Attendance Agent Chat
+                        </button>
+                        <button
+                            onclick="window.location.href='class-chat.html'"
+                            style="margin: 10px 0; padding: 12px 24px; background: #00d2ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; display: block; width: 100%;"
+                        >
+                            🏫 Open Class Agent Chat
+                        </button>
+                        <button
+                            onclick="window.location.href='marks-chat.html'"
+                            style="margin: 10px 0; padding: 12px 24px; background: #f5576c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; display: block; width: 100%;"
+                        >
+                            📊 Open Marks Agent Chat
+                        </button>
+                        <button
+                            onclick="window.location.href='subjects-chat.html'"
+                            style="margin: 10px 0; padding: 12px 24px; background: #fa709a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; display: block; width: 100%;"
+                        >
+                            📚 Open Subjects Agent Chat
+                        </button>
+                    </li>
+                    <li><strong>Or use in Postman:</strong></li>
+                    <li>Copy the JWT access token using the button above</li>
+                    <li>Open Postman → Select your Environment</li>
+                    <li>Add variable: <code>{{role}}_token</code> (e.g., <code>teacher_token</code>)</li>
+                    <li>Paste the token as the value</li>
+                    <li>In requests: Authorization → Bearer Token → <code>{{role}}_token</code></li>
+                    <li>Start testing your role-specific endpoints!</li>
+                    <li><strong>Note:</strong> Token expires in 1 hour by default</li>
                 </ol>
             </div>
+
+            <button class="btn-logout" onclick="logout()">🚪 Logout</button>
         </div>
     </div>
 
@@ -468,13 +601,15 @@
         // ============================================================================
 
         const SUPABASE_URL = 'https://nrowqnfyfjbsjbzqvkzr.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yb3dxbmZ5Zmpic2pienF2a3pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzODU5NjcsImV4cCI6MjA3Mzk2MTk2N30.FOVosQgwb5aiUNyUcrRV51SwOwbBe99T7cpiWY-fv54'
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yb3dxbmZ5Zmpic2pienF2a3pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzODU5NjcsImV4cCI6MjA3Mzk2MTk2N30.FOVosQgwb5aiUNyUcrRV51SwOwbBe99T7cpiWY-fv54';
+
         // ============================================================================
         // INITIALIZE SUPABASE CLIENT
         // ============================================================================
 
         let supabase = null;
         let isConfigured = false;
+        let countdownInterval = null;
 
         function initializeSupabase() {
             try {
@@ -494,13 +629,30 @@
                 }
 
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                updateConfigStatus('configured', '✅ Supabase configured successfully! Ready to test signup.');
+                updateConfigStatus('configured', '✅ Supabase configured successfully! Ready to login.');
                 isConfigured = true;
+
+                // Check for existing session
+                checkExistingSession();
+
                 return true;
             } catch (error) {
                 updateConfigStatus('error', `❌ Initialization Error: ${error.message}`);
                 addDebugInfo('Initialization Error', error);
                 return false;
+            }
+        }
+
+        async function checkExistingSession() {
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+
+                if (session && !error) {
+                    addDebugInfo('Existing Session Found', { userId: session.user.id });
+                    displaySuccessWithToken(session.user, session);
+                }
+            } catch (err) {
+                console.log('No existing session');
             }
         }
 
@@ -524,10 +676,44 @@
         }
 
         // ============================================================================
+        // QUICK TEST CREDENTIALS
+        // ============================================================================
+
+        function fillTestCredentials(email, password) {
+            document.getElementById('email').value = email;
+            document.getElementById('password').value = password;
+
+            // Highlight the fields briefly
+            const emailField = document.getElementById('email');
+            const passwordField = document.getElementById('password');
+
+            emailField.style.borderColor = '#28a745';
+            passwordField.style.borderColor = '#28a745';
+
+            setTimeout(() => {
+                emailField.style.borderColor = '#e1e8ed';
+                passwordField.style.borderColor = '#e1e8ed';
+            }, 1000);
+        }
+
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleBtn = event.target;
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.textContent = 'Hide';
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.textContent = 'Show';
+            }
+        }
+
+        // ============================================================================
         // FORM SUBMISSION
         // ============================================================================
 
-        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             if (!isConfigured) {
@@ -537,44 +723,25 @@
 
             hideMessages();
 
-            const firstName = document.getElementById('firstName').value.trim();
-            const lastName = document.getElementById('lastName').value.trim();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const role = document.getElementById('role').value;
 
-            if (!firstName || !lastName || !email || !password || !role) {
-                showError('All fields are required');
-                return;
-            }
-
-            if (password.length < 8) {
-                showError('Password must be at least 8 characters');
+            if (!email || !password) {
+                showError('Email and password are required');
                 return;
             }
 
             showLoading(true);
 
-            addDebugInfo('Signup Attempt', {
+            addDebugInfo('Login Attempt', {
                 email,
-                firstName,
-                lastName,
-                role,
                 timestamp: new Date().toISOString()
             });
 
             try {
-                const { data, error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signInWithPassword({
                     email: email,
-                    password: password,
-                    options: {
-                        data: {
-                            first_name: firstName,
-                            last_name: lastName,
-                            full_name: `${firstName} ${lastName}`,
-                            role: role
-                        }
-                    }
+                    password: password
                 });
 
                 showLoading(false);
@@ -588,19 +755,19 @@
                 });
 
                 if (error) {
-                    showError(`Signup Failed: ${error.message}`);
+                    if (error.message.includes('Invalid login credentials')) {
+                        showError('❌ Invalid email or password. Please check your credentials.');
+                    } else if (error.message.includes('Email not confirmed')) {
+                        showWarning('⚠️ Please confirm your email address. Check your inbox for the confirmation link.');
+                    } else {
+                        showError(`Login Failed: ${error.message}`);
+                    }
                     addDebugInfo('Error Details', error);
                     return;
                 }
 
-                if (data.session) {
+                if (data.session && data.user) {
                     displaySuccessWithToken(data.user, data.session);
-                } else if (data.user) {
-                    showSuccess(
-                        `✅ Account created! Please check ${email} for confirmation email. ` +
-                        `After confirming, login to get your JWT token.`
-                    );
-                    addDebugInfo('Email Confirmation Required', { userId: data.user.id });
                 } else {
                     showError('Unexpected response from Supabase. Check debug info below.');
                     addDebugInfo('Unexpected Response', data);
@@ -613,12 +780,12 @@
                     message: err.message,
                     stack: err.stack
                 });
-                console.error('Signup error:', err);
+                console.error('Login error:', err);
             }
         });
 
         // ============================================================================
-        // SUCCESS DISPLAY
+        // SUCCESS DISPLAY WITH TOKEN
         // ============================================================================
 
         function displaySuccessWithToken(user, session) {
@@ -626,9 +793,11 @@
             const userId = user.id;
             const firstName = user.user_metadata?.first_name || '';
             const lastName = user.user_metadata?.last_name || '';
-            const fullName = `${firstName} ${lastName}`;
-            const role = user.user_metadata?.role || 'unknown';
+            const fullName = firstName && lastName ? `${firstName} ${lastName}` : email;
+            const role = user.user_metadata?.role || 'authenticated';
+
             const accessToken = session.access_token;
+            const refreshToken = session.refresh_token;
 
             let decodedPayload = {};
             try {
@@ -640,22 +809,29 @@
                 decodedPayload = { error: 'Failed to decode token' };
             }
 
+            // Display session info
             document.getElementById('userEmail').textContent = email;
             document.getElementById('userName').textContent = fullName;
             document.getElementById('userId').textContent = userId;
+            document.getElementById('sessionTime').textContent = new Date().toLocaleString();
 
             const roleElement = document.getElementById('userRole');
             roleElement.textContent = role;
             roleElement.className = `role-badge role-${role}`;
 
+            // Display tokens
             document.getElementById('tokenText').textContent = accessToken;
+            document.getElementById('refreshTokenText').textContent = refreshToken;
             document.getElementById('tokenPayload').textContent = JSON.stringify(decodedPayload, null, 2);
 
-            showSuccess(`✅ Account created successfully for ${fullName} (${role})`);
+            // Start expiry countdown
+            startExpiryCountdown(decodedPayload.exp);
+
+            showSuccess(`✅ Successfully logged in as ${fullName} (${role})`);
 
             document.getElementById('tokenSection').style.display = 'block';
 
-            addDebugInfo('Success - Token Generated', {
+            addDebugInfo('Login Success', {
                 userId,
                 role,
                 tokenLength: accessToken.length,
@@ -668,6 +844,78 @@
                     block: 'nearest'
                 });
             }, 300);
+        }
+
+        // ============================================================================
+        // TOKEN EXPIRY COUNTDOWN
+        // ============================================================================
+
+        function startExpiryCountdown(expiryTimestamp) {
+            const expiryDiv = document.getElementById('tokenExpiry');
+            const countdownSpan = document.getElementById('expiryCountdown');
+
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+
+            countdownInterval = setInterval(() => {
+                const now = Math.floor(Date.now() / 1000);
+                const remaining = expiryTimestamp - now;
+
+                if (remaining <= 0) {
+                    clearInterval(countdownInterval);
+                    expiryDiv.className = 'token-expiry expired';
+                    countdownSpan.textContent = 'EXPIRED';
+                    showWarning('⚠️ Your token has expired. Please login again to get a new token.');
+                } else {
+                    const minutes = Math.floor(remaining / 60);
+                    const seconds = remaining % 60;
+
+                    if (remaining < 300) { // Less than 5 minutes
+                        expiryDiv.className = 'token-expiry';
+                    } else {
+                        expiryDiv.className = 'token-expiry valid';
+                    }
+
+                    countdownSpan.textContent = `${minutes}m ${seconds}s`;
+                }
+            }, 1000);
+        }
+
+        // ============================================================================
+        // LOGOUT FUNCTION
+        // ============================================================================
+
+        async function logout() {
+            try {
+                const { error } = await supabase.auth.signOut();
+
+                if (error) {
+                    showError(`Logout failed: ${error.message}`);
+                    return;
+                }
+
+                // Clear countdown
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                }
+
+                // Reset form and UI
+                document.getElementById('loginForm').reset();
+                hideMessages();
+                document.getElementById('tokenSection').style.display = 'none';
+
+                showSuccess('✅ Successfully logged out');
+                addDebugInfo('Logout', { timestamp: new Date().toISOString() });
+
+                setTimeout(() => {
+                    hideMessages();
+                }, 3000);
+
+            } catch (err) {
+                showError(`Logout error: ${err.message}`);
+                console.error('Logout error:', err);
+            }
         }
 
         // ============================================================================
@@ -693,11 +941,31 @@
             });
         }
 
+        function copyRefreshToken() {
+            const tokenText = document.getElementById('refreshTokenText').textContent;
+
+            navigator.clipboard.writeText(tokenText).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.background = '#28a745';
+
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#667eea';
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy. Please select and copy manually.');
+                console.error('Copy failed:', err);
+            });
+        }
+
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
             document.getElementById('successMessage').style.display = 'none';
+            document.getElementById('warningMessage').style.display = 'none';
         }
 
         function showSuccess(message) {
@@ -705,26 +973,36 @@
             successDiv.textContent = message;
             successDiv.style.display = 'block';
             document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('warningMessage').style.display = 'none';
+        }
+
+        function showWarning(message) {
+            const warningDiv = document.getElementById('warningMessage');
+            warningDiv.textContent = message;
+            warningDiv.style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
         }
 
         function hideMessages() {
             document.getElementById('errorMessage').style.display = 'none';
             document.getElementById('successMessage').style.display = 'none';
+            document.getElementById('warningMessage').style.display = 'none';
             document.getElementById('tokenSection').style.display = 'none';
         }
 
         function showLoading(show) {
             const loading = document.getElementById('loading');
-            const submitBtn = document.getElementById('submitBtn');
+            const loginBtn = document.getElementById('loginBtn');
 
             if (show) {
                 loading.style.display = 'block';
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Creating Account...';
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Authenticating...';
             } else {
                 loading.style.display = 'none';
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Sign Up';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
             }
         }
 
@@ -733,7 +1011,7 @@
         // ============================================================================
 
         window.addEventListener('DOMContentLoaded', () => {
-            console.log('SchoolOS Signup Test initialized');
+            console.log('SchoolOS Login Test initialized');
             console.log('Supabase URL:', SUPABASE_URL);
             console.log('Anon Key Length:', SUPABASE_ANON_KEY.length);
 

@@ -26,4 +26,4 @@ class Period(Base):
     is_active = Column(Boolean, default=True, nullable=False)
 
     school = relationship("School")
-    timetables = relationship("Timetable", back_populates="period", lazy="selectin")
+    timetables = relationship("Timetable", back_populates="period")

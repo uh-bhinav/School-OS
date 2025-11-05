@@ -49,9 +49,9 @@ class Club(Base):
         CheckConstraint("registration_end_date IS NULL OR registration_end_date > registration_start_date", name="chk_club_registration_dates"),
     )
 
-    school = relationship("School", back_populates="clubs", lazy="selectin")
-    teacher_in_charge = relationship("Teacher", foreign_keys=[teacher_in_charge_id], back_populates="clubs_in_charge", lazy="selectin")
-    assistant_teacher = relationship("Teacher", foreign_keys=[assistant_teacher_id], lazy="selectin")
-    academic_year = relationship("AcademicYear", back_populates="clubs", lazy="selectin")
-    memberships = relationship("ClubMembership", back_populates="club", cascade="all, delete-orphan", lazy="selectin")
-    activities = relationship("ClubActivity", back_populates="club", cascade="all, delete-orphan", lazy="selectin")
+    school = relationship("School", back_populates="clubs")
+    teacher_in_charge = relationship("Teacher", foreign_keys=[teacher_in_charge_id], back_populates="clubs_in_charge")
+    assistant_teacher = relationship("Teacher", foreign_keys=[assistant_teacher_id])
+    academic_year = relationship("AcademicYear", back_populates="clubs")
+    memberships = relationship("ClubMembership", back_populates="club", cascade="all, delete-orphan")
+    activities = relationship("ClubActivity", back_populates="club", cascade="all, delete-orphan")

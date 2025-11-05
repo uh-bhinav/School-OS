@@ -48,5 +48,6 @@ class Student(Base):
     fee_discounts = relationship("StudentFeeDiscount", back_populates="student")
     fee_assignments = relationship("StudentFeeAssignment", back_populates="student")
     orders = relationship("Order", back_populates="student")
-    achievements = relationship("StudentAchievement", back_populates="student", lazy="selectin")
-    club_memberships = relationship("ClubMembership", back_populates="student", lazy="selectin")
+    achievements = relationship("StudentAchievement", back_populates="student")
+    club_memberships = relationship("ClubMembership", back_populates="student")
+    # organized_club_activities = relationship("ClubActivity", back_populates="organized_by_student", lazy="selectin")

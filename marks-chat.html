@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SchoolOS - Marks Agent Chat</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #f5576c;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+            margin-top: 10px;
+        }
+
+        .user-info .user-details {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .role-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .role-admin { background: #dc3545; color: white; }
+        .role-teacher { background: #28a745; color: white; }
+        .role-parent { background: #ffc107; color: #333; }
+        .role-student { background: #17a2b8; color: white; }
+
+        .btn-logout {
+            padding: 8px 16px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: #c82333;
+        }
+
+        .chat-container {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            height: calc(100vh - 180px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .quick-actions {
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .quick-actions h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .quick-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 6px 12px;
+            background: #f5576c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .quick-btn:hover {
+            background: #f03652;
+            transform: translateY(-1px);
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: #f5576c;
+        }
+
+        .message.agent .message-avatar {
+            background: #f093fb;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .message.user .message-content {
+            background: #f5576c;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.agent .message-content {
+            background: #f1f3f5;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        .message.agent .message-content pre {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-top: 8px;
+            font-size: 12px;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 12px 16px;
+            background: #f1f3f5;
+            border-radius: 12px;
+            width: fit-content;
+        }
+
+        .typing-indicator.show {
+            display: block;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #999;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .input-area {
+            padding: 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: none;
+        }
+
+        #messageInput:focus {
+            outline: none;
+            border-color: #f5576c;
+        }
+
+        .btn-send {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-send:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-send:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-banner {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .error-banner.show {
+            display: block;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .status-connected {
+            background: #28a745;
+        }
+
+        .status-disconnected {
+            background: #dc3545;
+        }
+
+        /* Scrollbar styling */
+        .messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .messages::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .json-display {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .json-key {
+            color: #e06c75;
+        }
+
+        .json-string {
+            color: #98c379;
+        }
+
+        .json-number {
+            color: #d19a66;
+        }
+
+        .json-boolean {
+            color: #56b6c2;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-banner" id="errorBanner"></div>
+
+    <div class="header">
+        <h1>📊 Marks Agent Chat</h1>
+        <div class="user-info">
+            <div class="user-details">
+                <span id="userEmail">Loading...</span>
+                <span class="role-badge" id="userRole">-</span>
+            </div>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="quick-actions">
+            <h3>Quick Actions</h3>
+            <div class="quick-buttons">
+                <button class="quick-btn" onclick="sendQuickMessage('Add marks for student John Doe in Math for exam Final: 95')">Add Marks</button>
+                <button class="quick-btn" onclick="sendQuickMessage('Get marks for student ID 123')">View Marks</button>
+                <button class="quick-btn" onclick="sendQuickMessage('Show all marks for exam Midterm')">Exam Marks</button>
+                <button class="quick-btn" onclick="sendQuickMessage('Update marks for student Jane Smith in Science to 88')">Update Marks</button>
+                <button class="quick-btn" onclick="sendQuickMessage('Calculate average marks for class 10A')">Class Average</button>
+                <button class="quick-btn" onclick="sendQuickMessage('Get subject-wise marks for student ID 456')">Subject Analysis</button>
+                <button class="quick-btn" onclick="sendQuickMessage('Delete marks for student ID 789 in exam Quiz1')">Delete Marks</button>
+                <button class="quick-btn" onclick="sendQuickMessage('Show top 5 students in Physics')">Top Performers</button>
+            </div>
+        </div>
+
+        <div class="messages" id="messages">
+            <!-- Welcome message -->
+            <div class="message agent">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div>
+                        <strong>Marks Agent</strong>
+                        <p style="margin-top: 8px;">
+                            Hello! I'm the Marks Agent. I can help you with:
+                        </p>
+                        <ul style="margin-top: 8px; margin-left: 20px;">
+                            <li>Adding and updating marks for students</li>
+                            <li>Retrieving marks by student, exam, or subject</li>
+                            <li>Calculating averages and statistics</li>
+                            <li>Generating performance reports</li>
+                            <li>Managing exam results</li>
+                        </ul>
+                        <p style="margin-top: 8px;">
+                            Use the quick action buttons above or type your query below!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <div class="input-wrapper">
+                <textarea
+                    id="messageInput"
+                    placeholder="Type your marks-related query here..."
+                    rows="1"
+                    onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}"
+                ></textarea>
+                <button class="btn-send" id="sendBtn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        // Configuration
+        const SUPABASE_URL = 'https://nrowqnfyfjbsjbzqvkzr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yb3dxbmZ5Zmpic2pienF2a3pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzODU5NjcsImV4cCI6MjA3Mzk2MTk2N30.FOVosQgwb5aiUNyUcrRV51SwOwbBe99T7cpiWY-fv54';
+        const API_BASE_URL = 'http://localhost:8000';  // Change this to your backend URL
+
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentSession = null;
+        let currentUser = null;
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Check for existing session
+            const { data: { session }, error } = await supabase.auth.getSession();
+
+            if (error || !session) {
+                // No session, redirect to login
+                window.location.href = 'login.html';
+                return;
+            }
+
+            currentSession = session;
+            currentUser = session.user;
+            updateUserInfo();
+
+            // Set up session refresh
+            supabase.auth.onAuthStateChange((_event, session) => {
+                if (!session) {
+                    window.location.href = 'login.html';
+                } else {
+                    currentSession = session;
+                    currentUser = session.user;
+                    updateUserInfo();
+                }
+            });
+
+            setupInputHandlers();
+        });
+
+        function updateUserInfo() {
+            const emailEl = document.getElementById('userEmail');
+            const roleEl = document.getElementById('userRole');
+
+            if (currentUser) {
+                emailEl.textContent = currentUser.email;
+
+                // Get role from user metadata
+                const role = currentUser.user_metadata?.role || 'student';
+                roleEl.textContent = role;
+                roleEl.className = `role-badge role-${role}`;
+            }
+        }
+
+        function setupInputHandlers() {
+            const input = document.getElementById('messageInput');
+
+            // Auto-resize textarea
+            input.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Clear input
+            input.value = '';
+            input.style.height = 'auto';
+
+            // Add user message to chat
+            addMessage('user', message);
+
+            // Disable send button
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+
+            // Show typing indicator
+            showTyping(true);
+
+            try {
+                // Get fresh session token
+                const { data: { session } } = await supabase.auth.getSession();
+
+                if (!session) {
+                    throw new Error('No active session. Please login again.');
+                }
+
+                // Send to backend
+                const response = await fetch(`${API_BASE_URL}/agents/chat/marks`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: Math.random().toString(36).substring(7)
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to send message');
+                }
+
+                const data = await response.json();
+
+                // Add agent response
+                addMessage('agent', data.message || data.response || JSON.stringify(data, null, 2), data);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(error.message);
+                addMessage('agent', `Error: ${error.message}`, null, true);
+            } finally {
+                showTyping(false);
+                sendBtn.disabled = false;
+                input.focus();
+            }
+        }
+
+        function sendQuickMessage(message) {
+            const input = document.getElementById('messageInput');
+            input.value = message;
+            sendMessage();
+        }
+
+        function addMessage(sender, content, fullData = null, isError = false) {
+            const messagesDiv = document.getElementById('messages');
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${sender}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = sender === 'user' ? currentUser?.email?.[0]?.toUpperCase() || 'U' : '🤖';
+
+            const contentEl = document.createElement('div');
+            contentEl.className = 'message-content';
+
+            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            let html = `<div>${formatMessage(content)}</div>`;
+
+            if (fullData && typeof fullData === 'object') {
+                html += `<div class="json-display">${syntaxHighlight(JSON.stringify(fullData, null, 2))}</div>`;
+            }
+
+            html += `<div class="message-time">${time}</div>`;
+            contentEl.innerHTML = html;
+
+            if (isError) {
+                contentEl.style.background = '#f8d7da';
+                contentEl.style.color = '#721c24';
+            }
+
+            messageEl.appendChild(avatar);
+            messageEl.appendChild(contentEl);
+            messagesDiv.appendChild(messageEl);
+
+            // Scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function formatMessage(text) {
+            // Convert markdown-style formatting
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            text = text.replace(/\n/g, '<br>');
+
+            // Convert bullet points
+            text = text.replace(/^- (.*?)$/gm, '<li>$1</li>');
+            if (text.includes('<li>')) {
+                text = '<ul>' + text + '</ul>';
+            }
+
+            return text;
+        }
+
+        function syntaxHighlight(json) {
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        function showTyping(show) {
+            const typingEl = document.getElementById('typingIndicator');
+            if (show) {
+                typingEl.classList.add('show');
+            } else {
+                typingEl.classList.remove('show');
+            }
+
+            // Scroll to bottom
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function showError(message) {
+            const banner = document.getElementById('errorBanner');
+            banner.textContent = message;
+            banner.classList.add('show');
+
+            setTimeout(() => {
+                banner.classList.remove('show');
+            }, 5000);
+        }
+
+        async function logout() {
+            await supabase.auth.signOut();
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

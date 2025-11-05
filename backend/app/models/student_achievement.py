@@ -45,8 +45,8 @@ class StudentAchievement(Base):
         CheckConstraint("date_awarded <= CURRENT_DATE", name="chk_date_awarded_not_future"),
     )
 
-    student = relationship("Student", back_populates="achievements", lazy="selectin")
-    school = relationship("School", back_populates="student_achievements", lazy="selectin")
-    academic_year = relationship("AcademicYear", back_populates="student_achievements", lazy="selectin")
-    awarded_by = relationship("Profile", foreign_keys=[awarded_by_user_id], lazy="selectin")
-    verified_by = relationship("Profile", foreign_keys=[verified_by_user_id], lazy="selectin")
+    student = relationship("Student", back_populates="achievements")
+    school = relationship("School", back_populates="student_achievements")
+    academic_year = relationship("AcademicYear", back_populates="student_achievements")
+    awarded_by = relationship("Profile", foreign_keys=[awarded_by_user_id])
+    verified_by = relationship("Profile", foreign_keys=[verified_by_user_id])

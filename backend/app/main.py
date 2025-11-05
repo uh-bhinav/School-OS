@@ -23,6 +23,10 @@ from app.agents.api import router as agents_router
 from app.api.v1.api import api_router
 from app.api.v1.api import api_router as v1_api_router
 from app.core.config import settings
+
+# CRITICAL: Import base BEFORE init_engine to register all SQLAlchemy models
+# This ensures all models are registered before any database operations
+from app.db import base  # noqa: F401
 from app.db.session import init_engine
 from app.dependencies import limiter
 from app.middleware import RawBodyMiddleware

@@ -27,6 +27,10 @@ from app.api.v1.endpoints.student_contacts import router as student_contacts
 from app.api.v1.endpoints.teachers import router as teachers
 from app.core.security import create_access_token, get_current_user_profile, require_role
 from app.db.session import db_context, get_db, init_engine
+
+# CRITICAL: Importing app.main will automatically import app.db.base
+# which registers all SQLAlchemy models. Do NOT import base separately
+# here as it would cause double registration.
 from app.main import app
 from app.models.profile import Profile
 from app.models.role_definition import RoleDefinition

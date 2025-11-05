@@ -708,9 +708,19 @@ class TimetableGenerationService:
                 await self.db.commit()
 
                 # Re-query with eager loading to populate relationships
-                # CRITICAL: Must eagerly load nested relationships (e.g., subject.streams)
+                # CRITICAL: Must eagerly load nested relationships (e.g., subject.streams, teacher.profile)
                 # to avoid MissingGreenlet errors during Pydantic serialization
-                reloaded_query = select(Timetable).where(Timetable.id.in_(entry_ids)).options(selectinload(Timetable.subject).selectinload(Subject.streams), selectinload(Timetable.teacher), selectinload(Timetable.period))
+                from app.models.teacher import Teacher
+
+                reloaded_query = (
+                    select(Timetable)
+                    .where(Timetable.id.in_(entry_ids))
+                    .options(
+                        selectinload(Timetable.subject).selectinload(Subject.streams),
+                        selectinload(Timetable.teacher).selectinload(Teacher.profile),  # FIX: Load nested profile
+                        selectinload(Timetable.period),
+                    )
+                )
                 reloaded_result = await self.db.execute(reloaded_query)
                 reloaded_entries = reloaded_result.scalars().all()
 
@@ -798,15 +808,25 @@ class TimetableGenerationService:
         from datetime import datetime
 
         # Fetch both entries with eager loading (CRITICAL: Load ALL relationships for Pydantic validation)
+        from app.models.teacher import Teacher
+
         query1 = (
             select(Timetable)
             .where(Timetable.id == entry_1_id, Timetable.is_active, Timetable.school_id == school_id)
-            .options(selectinload(Timetable.subject).selectinload(Subject.streams), selectinload(Timetable.teacher), selectinload(Timetable.period))  # Load nested streams
+            .options(
+                selectinload(Timetable.subject).selectinload(Subject.streams),
+                selectinload(Timetable.teacher).selectinload(Teacher.profile),  # FIX: Load nested profile to avoid MissingGreenlet
+                selectinload(Timetable.period),
+            )
         )
         query2 = (
             select(Timetable)
             .where(Timetable.id == entry_2_id, Timetable.is_active, Timetable.school_id == school_id)
-            .options(selectinload(Timetable.subject).selectinload(Subject.streams), selectinload(Timetable.teacher), selectinload(Timetable.period))  # Load nested streams
+            .options(
+                selectinload(Timetable.subject).selectinload(Subject.streams),
+                selectinload(Timetable.teacher).selectinload(Teacher.profile),  # FIX: Load nested profile to avoid MissingGreenlet
+                selectinload(Timetable.period),
+            )
         )
 
         result1 = await self.db.execute(query1)
@@ -848,8 +868,24 @@ class TimetableGenerationService:
             await self.db.commit()
 
             # Re-fetch entries with eager loading to populate relationships for Pydantic
-            query1_reload = select(Timetable).where(Timetable.id == entry_1_id).options(selectinload(Timetable.subject).selectinload(Subject.streams), selectinload(Timetable.teacher), selectinload(Timetable.period))  # Load nested streams
-            query2_reload = select(Timetable).where(Timetable.id == entry_2_id).options(selectinload(Timetable.subject).selectinload(Subject.streams), selectinload(Timetable.teacher), selectinload(Timetable.period))  # Load nested streams
+            query1_reload = (
+                select(Timetable)
+                .where(Timetable.id == entry_1_id)
+                .options(
+                    selectinload(Timetable.subject).selectinload(Subject.streams),
+                    selectinload(Timetable.teacher).selectinload(Teacher.profile),  # FIX: Load nested profile to avoid MissingGreenlet
+                    selectinload(Timetable.period),
+                )
+            )
+            query2_reload = (
+                select(Timetable)
+                .where(Timetable.id == entry_2_id)
+                .options(
+                    selectinload(Timetable.subject).selectinload(Subject.streams),
+                    selectinload(Timetable.teacher).selectinload(Teacher.profile),  # FIX: Load nested profile to avoid MissingGreenlet
+                    selectinload(Timetable.period),
+                )
+            )
 
             result1_reload = await self.db.execute(query1_reload)
             result2_reload = await self.db.execute(query2_reload)

@@ -668,7 +668,16 @@ async def test_teacher_daily_load_limits(test_client: AsyncClient, db_session: A
     # Step 4: Verify response
     assert response.status_code == status.HTTP_200_OK, f"Expected 200, got {response.status_code}"
     data = response.json()
-    assert data["success"] is True, "Generation should succeed"
+
+    # DEBUG: Print response if generation failed
+    if not data["success"]:
+        import json
+
+        print("\n=== DAILY LOAD TEST - GENERATION FAILED ===")
+        print(json.dumps(data, indent=2))
+        print("=========================\n")
+
+    assert data["success"] is True, f"Generation should succeed. Got: {data.get('generation_metadata', {})}"
 
     print(f"✓ Generated {len(data['generated_entries'])} entries")
 
