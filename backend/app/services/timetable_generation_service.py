@@ -380,7 +380,7 @@ class TimetableScheduler:
 
         # Day-specific periods (School 2 model: periods have day_of_week set)
         if sample.day_of_week is not None:
-            periods_query = select(Period).where(Period.school_id == school_id, Period.is_recess.isFalse(), Period.is_active).order_by(Period.start_time)
+            periods_query = select(Period).where(Period.school_id == school_id, Period.is_recess.is_(False), Period.is_active).order_by(Period.start_time)
 
             periods_result = await self.db.execute(periods_query)
             all_periods = periods_result.scalars().all()
@@ -392,7 +392,7 @@ class TimetableScheduler:
 
         # Day-agnostic periods (School 1 model: periods apply to all days)
         else:
-            periods_query = select(Period).where(Period.school_id == school_id, Period.is_recess.isFalse(), Period.is_active, Period.day_of_week.is_(None)).order_by(Period.period_number)
+            periods_query = select(Period).where(Period.school_id == school_id, Period.is_recess.is_(False), Period.is_active, Period.day_of_week.is_(None)).order_by(Period.period_number)
 
             periods_result = await self.db.execute(periods_query)
             all_periods = periods_result.scalars().all()
