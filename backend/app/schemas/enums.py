@@ -158,11 +158,11 @@ class AchievementType(str, enum.Enum):
     Used by achievement point rules and student achievement records.
     """
 
-    ACADEMIC = "academic"
-    SPORTS = "sports"
-    CULTURAL = "cultural"
-    LEADERSHIP = "leadership"
-    COMMUNITY_SERVICE = "community_service"
+    academic = "academic"
+    sports = "sports"
+    cultural = "cultural"
+    leadership = "leadership"
+    community_service = "community_service"
 
 
 class AchievementVisibility(str, enum.Enum):
@@ -171,9 +171,9 @@ class AchievementVisibility(str, enum.Enum):
     Controls who can view the achievement record.
     """
 
-    PUBLIC = "public"  # Visible to everyone
-    SCHOOL_ONLY = "school_only"  # Visible only within the school
-    PRIVATE = "private"  # Visible only to the student and authorized staff
+    public = "public"  # Visible to everyone
+    school_only = "school_only"  # Visible only within the school
+    private = "private"  # Visible only to the student and authorized staff
 
 
 class ClubType(str, enum.Enum):
@@ -181,11 +181,11 @@ class ClubType(str, enum.Enum):
     Categories of school clubs for organizational purposes.
     """
 
-    ACADEMIC = "academic"  # Academic clubs (debate, science, etc.)
-    SPORTS = "sports"  # Sports clubs
-    ARTS = "arts"  # Arts and creative clubs
-    TECHNICAL = "technical"  # Technology and technical clubs
-    SOCIAL = "social"  # Social service and community clubs
+    academic = "academic"  # Academic clubs (debate, science, etc.)
+    sports = "sports"  # Sports clubs
+    arts = "arts"  # Arts and creative clubs
+    technical = "technical"  # Technology and technical clubs
+    social = "social"  # Social service and community clubs
 
 
 class MeetingFrequency(str, enum.Enum):
@@ -193,9 +193,9 @@ class MeetingFrequency(str, enum.Enum):
     Standard meeting frequencies for club activities.
     """
 
-    WEEKLY = "weekly"
-    BIWEEKLY = "biweekly"
-    MONTHLY = "monthly"
+    weekly = "weekly"
+    biweekly = "biweekly"
+    monthly = "monthly"
 
 
 class ClubMembershipRole(str, enum.Enum):
@@ -204,11 +204,11 @@ class ClubMembershipRole(str, enum.Enum):
     Defines the hierarchy and responsibilities.
     """
 
-    MEMBER = "member"  # Regular member
-    SECRETARY = "secretary"  # Club secretary
-    TREASURER = "treasurer"  # Club treasurer
-    PRESIDENT = "president"  # Club president
-    VICE_PRESIDENT = "vice_president"  # Vice president
+    member = "member"  # Regular member
+    secretary = "secretary"  # Club secretary
+    treasurer = "treasurer"  # Club treasurer
+    president = "president"  # Club president
+    vice_president = "vice_president"  # Vice president
 
 
 class ClubMembershipStatus(str, enum.Enum):
@@ -216,10 +216,10 @@ class ClubMembershipStatus(str, enum.Enum):
     Status of a student's club membership.
     """
 
-    ACTIVE = "active"  # Currently active member
-    INACTIVE = "inactive"  # Temporarily inactive
-    SUSPENDED = "suspended"  # Suspended from club
-    ALUMNI = "alumni"  # Former member
+    active = "active"  # Currently active member
+    inactive = "inactive"  # Temporarily inactive
+    suspended = "suspended"  # Suspended from club
+    alumni = "alumni"  # Former member
 
 
 class ClubActivityType(str, enum.Enum):
@@ -227,11 +227,11 @@ class ClubActivityType(str, enum.Enum):
     Types of club activities for categorization.
     """
 
-    MEETING = "meeting"  # Regular club meeting
-    WORKSHOP = "workshop"  # Educational workshop
-    COMPETITION = "competition"  # Competitive event
-    EVENT = "event"  # Special event
-    PROJECT = "project"  # Club project
+    meeting = "meeting"  # Regular club meeting
+    workshop = "workshop"  # Educational workshop
+    competition = "competition"  # Competitive event
+    event = "event"  # Special event
+    project = "project"  # Club project
 
 
 class ClubActivityStatus(str, enum.Enum):
@@ -239,10 +239,10 @@ class ClubActivityStatus(str, enum.Enum):
     Status of a club activity in its lifecycle.
     """
 
-    PLANNED = "planned"  # Activity is planned
-    ONGOING = "ongoing"  # Activity is currently happening
-    COMPLETED = "completed"  # Activity has finished
-    CANCELLED = "cancelled"  # Activity was cancelled
+    planned = "planned"  # Activity is planned
+    ongoing = "ongoing"  # Activity is currently happening
+    completed = "completed"  # Activity has finished
+    cancelled = "cancelled"  # Activity was cancelled
 
 
 class ProficiencyLevel(str, enum.Enum):
@@ -251,7 +251,6 @@ class ProficiencyLevel(str, enum.Enum):
     Used for subject assignment and scheduling optimization.
     """
 
-    EXPERT = "expert"  # Expert level proficiency
-    INTERMEDIATE = "intermediate"  # Intermediate level
-    BASIC = "basic"  # Basic level  # Stock quantity = 0
-    DISCONTINUED = "discontinued"  # Product no longer sold (is_active = False)
+    expert = "expert"  # Expert level proficiency
+    intermediate = "intermediate"  # Intermediate level
+    basic = "basic"  # Basic level
