@@ -144,6 +144,7 @@ class ProductAvailability(str, enum.Enum):
     IN_STOCK = "in_stock"  # Available for purchase
     LOW_STOCK = "low_stock"  # Below reorder level
     OUT_OF_STOCK = "out_of_stock"
+    DISCONTINUED = "discontinued"
 
 
 # ============================================================================

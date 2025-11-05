@@ -14,11 +14,13 @@ import importlib
 import pkgutil
 from pathlib import Path
 
+EXCLUDED_MODULES = {"package_item"}
+
 
 def _import_all_models() -> None:
     models_path = Path(__file__).resolve().parent.parent / "models"
     for module in pkgutil.iter_modules([str(models_path)]):
-        if module.name.startswith("_"):
+        if module.name.startswith("_") or module.name in EXCLUDED_MODULES:
             continue
         importlib.import_module(f"app.models.{module.name}")
 

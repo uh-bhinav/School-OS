@@ -1,0 +1,241 @@
+from datetime import datetime
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.academic_year import AcademicYear
+from app.models.student import Student
+
+
+def _award_date_iso() -> str:
+    """Return a date string that is never in the future for UTC-based constraints."""
+    return datetime.utcnow().date().isoformat()
+
+
+# Fixtures from conftest.py are assumed:
+# client, test_db_session, admin_auth_headers, teacher_auth_headers
+# test_school, test_academic_year, test_student, test_teacher
+# --- New fixtures assumed for security/multi-tenancy tests ---
+# test_school_two, admin_auth_headers_two, test_student_two
+
+
+@pytest.mark.asyncio
+async def test_achievement_rules_crud_as_admin(client: TestClient, admin_auth_headers: dict, teacher_auth_headers: dict, test_school: dict):
+    # 1. Teachers cannot create rules
+    rule_data = {"achievement_type": "academic", "category_name": "Math Olympiad", "base_points": 100}
+    response = client.post("/api/v1/achievements/rules", headers=teacher_auth_headers, json=rule_data)
+    # Assuming RoleChecker returns 403 Forbidden
+    # If not implemented, this might be 401, but the endpoint is protected
+    assert response.status_code in [403, 401]
+
+    # 2. Admin creates a rule
+    response = client.post("/api/v1/achievements/rules", headers=admin_auth_headers, json=rule_data)
+    assert response.status_code == 201
+    rule = response.json()
+    assert rule["category_name"] == "Math Olympiad"
+    assert rule["base_points"] == 100
+    rule_id = rule["id"]
+
+    # 3. Get all rules
+    response = client.get("/api/v1/achievements/rules", headers=teacher_auth_headers)
+    assert response.status_code == 200
+    rules = response.json()
+    assert isinstance(rules, list)
+    assert len(rules) >= 1
+    assert any(r["category_name"] == "Math Olympiad" for r in rules)
+
+    # 4. Admin updates the rule
+    update_data = {"base_points": 150, "is_active": False}
+    response = client.put(f"/api/v1/achievements/rules/{rule_id}", headers=admin_auth_headers, json=update_data)
+    assert response.status_code == 200
+    updated_rule = response.json()
+    assert updated_rule["base_points"] == 150
+    assert updated_rule["is_active"] is False
+
+
+@pytest.mark.asyncio
+async def test_student_achievement_workflow(client: TestClient, admin_auth_headers: dict, teacher_auth_headers: dict, test_db_session: AsyncSession, test_academic_year: AcademicYear, test_student: Student):
+    # Capture baseline counts for existing achievements in seeded data
+    student_id = test_student.student_id
+    academic_year_id = test_academic_year.id
+
+    baseline_verified_resp = client.get(
+        f"/api/v1/achievements/student/{student_id}",
+        headers=teacher_auth_headers,
+    )
+    assert baseline_verified_resp.status_code == 200
+    baseline_verified = len(baseline_verified_resp.json())
+
+    baseline_all_resp = client.get(
+        f"/api/v1/achievements/student/{student_id}?verified_only=False",
+        headers=teacher_auth_headers,
+    )
+    assert baseline_all_resp.status_code == 200
+    baseline_all = len(baseline_all_resp.json())
+
+    # 1. Create a point rule for this test
+    rule_data = {"achievement_type": "sports", "category_name": "Athletics", "base_points": 75}
+    response = client.post("/api/v1/achievements/rules", headers=admin_auth_headers, json=rule_data)
+    assert response.status_code == 201
+
+    # 2. Teacher adds an unverified achievement
+    achievement_data = {
+        "student_id": student_id,
+        "academic_year_id": academic_year_id,
+        "achievement_type": "sports",
+        "title": "100m Dash Winner",
+        "description": "District level competition",
+        "achievement_category": "Athletics",  # This matches the rule
+        "date_awarded": _award_date_iso(),
+        "visibility": "school_only",
+    }
+    response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=achievement_data)
+    assert response.status_code == 201
+    unverified_ach = response.json()
+    ach_id = unverified_ach["id"]
+
+    assert unverified_ach["is_verified"] is False
+    assert unverified_ach["points_awarded"] == 0
+    assert unverified_ach["title"] == "100m Dash Winner"
+
+    # 3. Teacher can update the unverified achievement
+    update_data = {"title": "100m Dash Gold Medalist"}
+    response = client.put(f"/api/v1/achievements/{ach_id}", headers=teacher_auth_headers, json=update_data)
+    assert response.status_code == 200
+    assert response.json()["title"] == "100m Dash Gold Medalist"
+
+    # 4. Admin verifies the achievement
+    response = client.put(f"/api/v1/achievements/verify/{ach_id}", headers=admin_auth_headers)
+    assert response.status_code == 200
+    verified_ach = response.json()
+
+    assert verified_ach["is_verified"] is True
+    assert verified_ach["points_awarded"] == 75  # Points should be auto-awarded
+    assert verified_ach["verified_by_user_id"] is not None
+
+    # 5. Teacher CANNOT update a verified achievement
+    update_data = {"title": "Trying to change verified title"}
+    response = client.put(f"/api/v1/achievements/{ach_id}", headers=teacher_auth_headers, json=update_data)
+    assert response.status_code == 404  # Service returns None, endpoint raises 404
+
+    # 6. Teacher CANNOT delete a verified achievement
+    response = client.delete(f"/api/v1/achievements/{ach_id}", headers=teacher_auth_headers)
+    assert response.status_code == 404  # Service returns False, endpoint raises 404
+
+    # 7. Add a second, unverified achievement
+    ach_data_2 = {"student_id": student_id, "academic_year_id": academic_year_id, "achievement_type": "cultural", "title": "Singing Contest", "achievement_category": "Music", "date_awarded": _award_date_iso()}
+    response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=ach_data_2)
+    assert response.status_code == 201
+    unverified_ach_2_id = response.json()["id"]
+
+    # 8. Get student achievements (verified only by default)
+    response = client.get(f"/api/v1/achievements/student/{student_id}", headers=teacher_auth_headers)
+    assert response.status_code == 200
+    achievements = response.json()
+    assert len(achievements) == baseline_verified + 1
+    assert any(item["id"] == ach_id for item in achievements)
+
+    # 9. Get all student achievements
+    response = client.get(f"/api/v1/achievements/student/{student_id}?verified_only=False", headers=teacher_auth_headers)
+    assert response.status_code == 200
+    achievements = response.json()
+    assert len(achievements) == baseline_all + 2
+    assert any(item["id"] == ach_id for item in achievements)
+    assert any(item["id"] == unverified_ach_2_id for item in achievements)
+
+    # 10. Teacher CAN delete an unverified achievement
+    response = client.delete(f"/api/v1/achievements/{unverified_ach_2_id}", headers=teacher_auth_headers)
+    assert response.status_code == 204
+
+    # Verify it's gone
+    response = client.get(f"/api/v1/achievements/student/{student_id}?verified_only=False", headers=teacher_auth_headers)
+    assert response.status_code == 200
+    achievements = response.json()
+    assert len(achievements) == baseline_all + 1
+    assert any(item["id"] == ach_id for item in achievements)
+
+
+# --- NEW TESTS for Errors, Validation, and Security ---
+
+
+@pytest.mark.asyncio
+async def test_errors_and_validation(client: TestClient, admin_auth_headers: dict, teacher_auth_headers: dict, test_student: Student):
+    # 1. Test 404 Not Found
+    response = client.put("/api/v1/achievements/verify/999999", headers=admin_auth_headers)
+    assert response.status_code == 404
+
+    response = client.put("/api/v1/achievements/999999", headers=teacher_auth_headers, json={"title": "test"})
+    assert response.status_code == 404
+
+    response = client.delete("/api/v1/achievements/999999", headers=teacher_auth_headers)
+    assert response.status_code == 404
+
+    response = client.put("/api/v1/achievements/rules/999999", headers=admin_auth_headers, json={"base_points": 10})
+    assert response.status_code == 404
+
+    # 2. Test 422 Unprocessable Entity (Invalid Data)
+    invalid_rule_data = {"achievement_type": "academic", "category_name": "Invalid Rule", "base_points": -50}  # Invalid, must be >= 0
+    response = client.post("/api/v1/achievements/rules", headers=admin_auth_headers, json=invalid_rule_data)
+    assert response.status_code == 422
+
+    invalid_achievement_data = {"student_id": test_student.student_id, "academic_year_id": 999, "achievement_type": "invalid_type", "title": "Test", "achievement_category": "Test", "date_awarded": _award_date_iso()}  # Invalid enum
+    response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=invalid_achievement_data)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_teacher_cannot_verify_achievement(client: TestClient, teacher_auth_headers: dict, admin_auth_headers: dict, test_student: Student, test_academic_year: AcademicYear):
+    # 1. Teacher adds an achievement
+    achievement_data = {"student_id": test_student.student_id, "academic_year_id": test_academic_year.id, "achievement_type": "leadership", "title": "Class Captain", "achievement_category": "Responsibility", "date_awarded": _award_date_iso()}
+    response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=achievement_data)
+    assert response.status_code == 201
+    ach_id = response.json()["id"]
+
+    # 2. Teacher tries to verify it
+    response = client.put(f"/api/v1/achievements/verify/{ach_id}", headers=teacher_auth_headers)
+    assert response.status_code in [401, 403]  # Should fail auth
+
+    # 3. Admin *can* verify it
+    response = client.put(f"/api/v1/achievements/verify/{ach_id}", headers=admin_auth_headers)
+    assert response.status_code == 200
+    assert response.json()["is_verified"] is True
+
+
+@pytest.mark.asyncio
+async def test_multi_tenancy_security(
+    client: TestClient, admin_auth_headers: dict, admin_auth_headers_two: dict, test_student: Student, test_academic_year: AcademicYear, teacher_auth_headers: dict  # Assumed fixture for an admin at a different school
+):
+    # This test assumes 'admin_auth_headers' is for School 1
+    # and 'admin_auth_headers_two' is for School 2.
+    # 'test_student' belongs to School 1.
+
+    # 1. Admin from School 1 creates an achievement for a student in School 1
+    achievement_data = {"student_id": test_student.student_id, "academic_year_id": test_academic_year.id, "achievement_type": "community_service", "title": "Beach Cleanup", "achievement_category": "Volunteering", "date_awarded": _award_date_iso()}
+    response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=achievement_data)
+    assert response.status_code == 201
+    ach_id = response.json()["id"]
+
+    # 2. Admin from School 2 tries to verify the achievement from School 1
+    response = client.put(f"/api/v1/achievements/verify/{ach_id}", headers=admin_auth_headers_two)
+    # The service logic should return None, which the endpoint turns into a 404
+    assert response.status_code == 404
+
+    # 3. Admin from School 2 tries to update the achievement
+    response = client.put(f"/api/v1/achievements/{ach_id}", headers=admin_auth_headers_two, json={"title": "Hacking Attempt"})
+    assert response.status_code == 404
+
+    # 4. Admin from School 2 tries to delete the achievement
+    response = client.delete(f"/api/v1/achievements/{ach_id}", headers=admin_auth_headers_two)
+    assert response.status_code == 404
+
+    # 5. Admin from School 2 tries to get achievements for the student from School 1
+    response = client.get(f"/api/v1/achievements/student/{test_student.student_id}", headers=admin_auth_headers_two)
+    # The query is scoped by school_id, so it should return an empty list.
+    assert response.status_code == 200
+    assert response.json() == []
+
+    # 6. Admin from School 1 *can* verify it
+    response = client.put(f"/api/v1/achievements/verify/{ach_id}", headers=admin_auth_headers)
+    assert response.status_code == 200
+    assert response.json()["is_verified"] is True

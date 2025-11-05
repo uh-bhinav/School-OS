@@ -48,6 +48,12 @@ class Student(Base):
     fee_discounts = relationship("StudentFeeDiscount", back_populates="student")
     fee_assignments = relationship("StudentFeeAssignment", back_populates="student")
     orders = relationship("Order", back_populates="student")
-    achievements = relationship("StudentAchievement", back_populates="student", lazy="selectin")
+    # Use fully-qualified class name to avoid SQLAlchemy name-resolution issues
+    # when mappers are configured before all model classes are imported.
+    achievements = relationship(
+        "app.models.student_achievement.StudentAchievement",
+        back_populates="student",
+        lazy="selectin",
+    )
     club_memberships = relationship("ClubMembership", back_populates="student", lazy="selectin")
     organized_club_activities = relationship("ClubActivity", back_populates="organized_by_student", lazy="selectin")

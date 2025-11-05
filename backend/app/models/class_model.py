@@ -2,6 +2,15 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import relationship
 
+import app.models.academic_year  # noqa: F401
+import app.models.attendance_record  # noqa: F401
+import app.models.class_fee_structure  # noqa: F401
+
+# Ensure related models are loaded so SQLAlchemy can resolve string-based relationships.
+import app.models.school  # noqa: F401
+import app.models.subject  # noqa: F401
+import app.models.teacher  # noqa: F401
+import app.models.timetable  # noqa: F401
 from app.db.base_class import Base
 
 # Define the association table for the many-to-many relationship
@@ -36,6 +45,10 @@ class Class(Base):
     # NEW: Many-to-many relationship to subjects
     subjects = relationship("Subject", secondary=class_subjects_association, lazy="selectin")
 
-    timetables = relationship("Timetable", back_populates="class_record")
+    timetables = relationship(
+        "Timetable",
+        back_populates="class_record",
+        foreign_keys="Timetable.class_id",
+    )
     attendance_records = relationship("AttendanceRecord", back_populates="class_record")
     class_fee_structures = relationship("ClassFeeStructure", back_populates="class_")

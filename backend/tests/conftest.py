@@ -11,13 +11,17 @@ import os
 import sys
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import date
+from typing import Any, Generator
 from unittest.mock import MagicMock
 from uuid import UUID
 
 import pytest
 import pytest_asyncio
 from dotenv import load_dotenv
+from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.endpoints.employment_statuses import router as employment_statuses
@@ -25,9 +29,12 @@ from app.api.v1.endpoints.student_contacts import router as student_contacts
 
 # Import and register routers
 from app.api.v1.endpoints.teachers import router as teachers
+from app.core.config import settings
 from app.core.security import create_access_token, get_current_user_profile, require_role
 from app.db.session import db_context, get_db, init_engine
 from app.main import app
+from app.models import teacher_subject  # noqa: F401  # Ensure teacher_subject model is registered
+from app.models.academic_year import AcademicYear
 from app.models.profile import Profile
 from app.models.role_definition import RoleDefinition
 from app.models.school import School
@@ -73,6 +80,122 @@ async def test_client() -> AsyncGenerator[AsyncClient, None]:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
+
+
+@pytest.fixture(scope="function")
+def client() -> Generator[TestClient, None, None]:
+    """Synchronous client for legacy tests that expect requests-style usage."""
+    with TestClient(app) as sync_client:
+        yield sync_client
+
+
+@pytest_asyncio.fixture(scope="function")
+async def async_client(test_client: AsyncClient) -> AsyncGenerator[AsyncClient, None]:
+    """Async client alias when tests need direct async HTTP access."""
+    yield test_client
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_db_session(db_session: AsyncSession) -> AsyncGenerator[AsyncSession, None]:
+    """Backward compatible alias for db_session used in older tests."""
+    yield db_session
+
+
+async def _ensure_school(db_session: AsyncSession, school_id: int, name: str) -> School:
+    """Fetch an existing school or create a minimal one for tests."""
+    school = await db_session.get(School, school_id)
+    if not school:
+        school = School(school_id=school_id, name=name, is_active=True)
+        db_session.add(school)
+        await db_session.flush()
+    return school
+
+
+async def _ensure_academic_year(db_session: AsyncSession, school_id: int) -> AcademicYear:
+    """Fetch or create an active academic year for the supplied school."""
+    stmt = select(AcademicYear).where(AcademicYear.school_id == school_id, AcademicYear.is_active == True).order_by(AcademicYear.start_date.desc())  # noqa: E712
+    result = await db_session.execute(stmt)
+    academic_year = result.scalars().first()
+
+    if not academic_year:
+        current_year = date.today().year
+        academic_year = AcademicYear(
+            school_id=school_id,
+            name=f"{current_year}-{current_year + 1}",
+            start_date=date(current_year, 4, 1),
+            end_date=date(current_year + 1, 3, 31),
+            is_active=True,
+        )
+        db_session.add(academic_year)
+        await db_session.flush()
+
+    return academic_year
+
+
+async def _ensure_student_for_school(db_session: AsyncSession, school_id: int) -> Student:
+    """Fetch or create a student associated with the provided school."""
+    stmt = select(Student).join(Profile, Student.user_id == Profile.user_id).where(Profile.school_id == school_id, Student.is_active == True).order_by(Student.student_id.asc())  # noqa: E712
+    result = await db_session.execute(stmt)
+    student = result.scalars().first()
+
+    if not student:
+        profile = Profile(
+            user_id=uuid.uuid4(),
+            school_id=school_id,
+            first_name="Test",
+            last_name="Student",
+            is_active=True,
+        )
+        db_session.add(profile)
+        await db_session.flush()
+
+        student = Student(
+            user_id=profile.user_id,
+            roll_number=f"T{school_id}001",
+            is_active=True,
+        )
+        db_session.add(student)
+        await db_session.flush()
+
+    return student
+
+
+@pytest_asyncio.fixture
+async def test_school(db_session: AsyncSession) -> dict[str, Any]:
+    """Return metadata for the primary test school (school_id=1)."""
+    school = await _ensure_school(db_session, school_id=1, name="Test School One")
+    return {"school_id": school.school_id, "name": getattr(school, "name", None)}
+
+
+@pytest_asyncio.fixture
+async def test_school_two(db_session: AsyncSession) -> dict[str, Any]:
+    """Return metadata for a secondary school used in multi-tenancy tests."""
+    school = await _ensure_school(db_session, school_id=2, name="Test School Two")
+    return {"school_id": school.school_id, "name": getattr(school, "name", None)}
+
+
+@pytest_asyncio.fixture
+async def test_academic_year(db_session: AsyncSession, test_school: dict[str, Any]) -> AcademicYear:
+    """Provide an active academic year linked to the primary test school."""
+    return await _ensure_academic_year(db_session, school_id=test_school["school_id"])
+
+
+@pytest_asyncio.fixture
+async def test_academic_year_two(db_session: AsyncSession, test_school_two: dict[str, Any]) -> AcademicYear:
+    """Provide an active academic year for the secondary test school."""
+    return await _ensure_academic_year(db_session, school_id=test_school_two["school_id"])
+
+
+@pytest_asyncio.fixture
+async def test_student(db_session: AsyncSession, test_school: dict[str, Any]) -> Student:
+    """Return a student belonging to the primary test school."""
+    return await _ensure_student_for_school(db_session, school_id=test_school["school_id"])
+
+
+@pytest_asyncio.fixture
+async def test_student_two(db_session: AsyncSession, test_school_two: dict[str, Any]) -> Student:
+    """Return a student belonging to the secondary test school."""
+    return await _ensure_student_for_school(db_session, school_id=test_school_two["school_id"])
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -220,68 +343,47 @@ async def student_23(db_session: AsyncSession) -> Student:
     return student
 
 
+async def _get_admin_profile_for_school(db_session: AsyncSession, school_id: int) -> Profile:
+    """Fetch an existing active admin profile for the given school."""
+    stmt = (
+        select(Profile)
+        .join(UserRole, UserRole.user_id == Profile.user_id)
+        .join(RoleDefinition, RoleDefinition.role_id == UserRole.role_id)
+        .where(
+            Profile.school_id == school_id,
+            Profile.is_active == True,  # noqa: E712
+            RoleDefinition.role_name == "Admin",
+        )
+        .order_by(Profile.user_id.asc())
+    )
+    result = await db_session.execute(stmt)
+    profile = result.scalars().first()
+    if not profile:
+        raise RuntimeError(f"Test data is missing an active admin profile for school_id={school_id}.")
+    return profile
+
+
 @pytest_asyncio.fixture
 async def mock_admin_profile_school_2(db_session: AsyncSession) -> Profile:
-    """
-    Provides the specific admin profile for School 2 based on provided data.
-    Ensures the school and profile exist.
-    user_id: 3e163ee6-cd91-4d63-8bc1-189cc0d13860
-    school_id: 2
-    """
-    school_id_2 = 2
-    admin_user_id_2 = uuid.UUID("3e163ee6-cd91-4d63-8bc1-189cc0d13860")
+    """Return an existing admin profile for School 2."""
+    return await _get_admin_profile_for_school(db_session, school_id=2)
 
-    # 1. Ensure School 2 exists
-    school_2 = await db_session.get(School, school_id_2)
-    if not school_2:
-        print(f"INFO: Creating School with school_id={school_id_2} for fixture")
-        school_2 = School(school_id=school_id_2, school_name="Test School Springfield", is_active=True)
-        db_session.add(school_2)
-        # Rely on test transaction rollback/commit
 
-    # 2. Check if the specific admin profile exists
-    admin_profile_2 = await db_session.get(Profile, admin_user_id_2)
-
-    if not admin_profile_2:
-        print(f"INFO: Creating mock admin profile for school_id={school_id_2} with specific UUID")
-        admin_profile_2 = Profile(
-            user_id=admin_user_id_2,
-            school_id=school_id_2,
-            first_name="Admin",
-            last_name="Springfield",
-            phone_number="+91-9876543210",  # Add phone if needed by model
-            email=f"admin_springfield_{admin_user_id_2}@example.com",  # Ensure unique email
-            is_active=True,
-            # Add other fields from your data if they exist in the model
-        )
-        db_session.add(admin_profile_2)
-        await db_session.flush()  # Make sure it's added before returning
-        print(f"INFO: Created profile {admin_profile_2.user_id} for school {admin_profile_2.school_id}")
-    elif admin_profile_2.school_id != school_id_2:
-        # Data integrity issue: Profile exists but belongs to the wrong school
-        raise RuntimeError(f"Fixture Error: Profile {admin_user_id_2} exists but belongs to school {admin_profile_2.school_id}, not school {school_id_2}")
-    else:
-        print(f"INFO: Found existing profile {admin_profile_2.user_id} for school {admin_profile_2.school_id}")
-
-    # Ensure profile is active for the test
-    admin_profile_2.is_active = True
-    await db_session.flush()
-
-    # It's crucial to return the object fetched/created within the current session
-    # Re-fetch just to be absolutely sure it's session-managed correctly
-    refetched_profile = await db_session.get(Profile, admin_user_id_2)
-    if not refetched_profile:
-        raise RuntimeError(f"Fixture Error: Failed to fetch profile {admin_user_id_2} after creation/check.")
-
-    return refetched_profile
+@pytest_asyncio.fixture
+async def admin_auth_headers_two(db_session: AsyncSession) -> dict[str, str]:
+    """Authorization header for an admin belonging to a different school."""
+    profile = await _get_admin_profile_for_school(db_session, school_id=2)
+    token = create_access_token(subject=str(profile.user_id))
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture(scope="session")
-def admin_token(mock_admin_profile: Profile) -> str:
-    """
-    Creates and returns a JWT access token for the mock admin profile.
-    """
-    return create_access_token(subject=str(mock_admin_profile.user_id))
+def admin_auth_headers() -> dict[str, str]:
+    """Authorization header for the primary admin profile."""
+    token = settings.TEST_ADMIN_TOKEN
+    if not token:
+        raise RuntimeError("TEST_ADMIN_TOKEN is not configured in the environment.")
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture(scope="session")
@@ -293,11 +395,12 @@ def parent_token(mock_parent_profile: Profile) -> str:
 
 
 @pytest.fixture(scope="session")
-def teacher_token(mock_teacher_profile: Profile) -> str:
-    """
-    Creates and returns a JWT access token for the mock teacher profile.
-    """
-    return create_access_token(subject=str(mock_teacher_profile.user_id))
+def teacher_auth_headers() -> dict[str, str]:
+    """Authorization header for the teacher profile."""
+    token = settings.TEST_TEACHER_TOKEN
+    if not token:
+        raise RuntimeError("TEST_TEACHER_TOKEN is not configured in the environment.")
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -385,6 +488,8 @@ def mock_admin_profile() -> Profile:
 @pytest.fixture(scope="session", autouse=True)
 def load_env():
     load_dotenv(".env.test")
+    os.environ.setdefault("SECRET_KEY", "test-secret-key")
+    os.environ.setdefault("ALGORITHM", "HS256")
 
 
 @pytest.fixture

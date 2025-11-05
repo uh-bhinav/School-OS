@@ -21,11 +21,29 @@ class Club(Base):
 
     name = Column(String(255), nullable=False)
     description = Column(Text)
-    club_type = Column(SQLAEnum(ClubType, name="club_type", create_type=False), nullable=False, index=True)
+    club_type = Column(
+        SQLAEnum(
+            ClubType,
+            name="club_type",
+            create_type=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        index=True,
+    )
     logo_url = Column(String(500))
 
     meeting_schedule = Column(JSONB)
-    meeting_frequency = Column(SQLAEnum(MeetingFrequency, name="meeting_frequency", create_type=False), nullable=False, default=MeetingFrequency.weekly)
+    meeting_frequency = Column(
+        SQLAEnum(
+            MeetingFrequency,
+            name="meeting_frequency",
+            create_type=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        default=MeetingFrequency.WEEKLY,
+    )
 
     max_members = Column(Integer)
     current_member_count = Column(Integer, nullable=False, default=0)

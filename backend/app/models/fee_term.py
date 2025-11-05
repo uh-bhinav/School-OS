@@ -1,6 +1,7 @@
 from sqlalchemy import TIMESTAMP, Column, Date, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 
+import app.models.student_fee_discount  # noqa: F401
 from app.db.base_class import Base
 
 

@@ -20,7 +20,16 @@ class StudentAchievement(Base):
     awarded_by_user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id", ondelete="RESTRICT"), nullable=False)
     verified_by_user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id", ondelete="SET NULL"), nullable=True)
 
-    achievement_type = Column(SQLAEnum(AchievementType, name="achievement_type", create_type=False), nullable=False, index=True)
+    achievement_type = Column(
+        SQLAEnum(
+            AchievementType,
+            name="achievement_type",
+            create_type=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        index=True,
+    )
     title = Column(String(255), nullable=False)
     description = Column(Text)
     achievement_category = Column(String(100), nullable=False)
@@ -35,7 +44,18 @@ class StudentAchievement(Base):
     is_verified = Column(Boolean, nullable=False, default=False)
     verified_at = Column(TIMESTAMP(timezone=True))
 
-    visibility = Column(SQLAEnum(AchievementVisibility, name="achievement_visibility", create_type=False), nullable=False, default=AchievementVisibility.school_only, index=True)
+    # Use the enum member name defined in schemas.enums (SCHOOL_ONLY)
+    visibility = Column(
+        SQLAEnum(
+            AchievementVisibility,
+            name="achievement_visibility",
+            create_type=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        default=AchievementVisibility.SCHOOL_ONLY,
+        index=True,
+    )
 
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
