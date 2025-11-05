@@ -35,6 +35,7 @@ from app.api.v1.endpoints import (
     subjects,
     teachers,
     timetable,
+    timetable_generation,
     users,
     webhooks,
 )
@@ -61,6 +62,7 @@ api_router.include_router(exams.router, prefix="/exams", tags=["Exams"])
 
 api_router.include_router(attendance_records.router, prefix="/attendance", tags=["Attendance"])
 api_router.include_router(timetable.router, prefix="/timetable", tags=["Timetable"])
+api_router.include_router(timetable_generation.router, prefix="/timetable-generate", tags=["Timetable Generation"])
 api_router.include_router(marks.router, prefix="/marks", tags=["Marks"])
 
 # Admin Endpoints - Catalog Management

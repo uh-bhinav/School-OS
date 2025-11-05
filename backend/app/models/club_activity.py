@@ -15,7 +15,7 @@ class ClubActivity(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     club_id = Column(Integer, ForeignKey("clubs.id", ondelete="CASCADE"), nullable=False, index=True)
-    organized_by_student_id = Column(Integer, ForeignKey("students.student_id", ondelete="SET NULL"), nullable=True, index=True)
+    # student_id = Column(Integer, ForeignKey("students.student_id"))
 
     activity_name = Column(String(255), nullable=False)
     activity_type = Column(SQLAEnum(ClubActivityType, name="club_activity_type", create_type=False), nullable=False, index=True)
@@ -46,5 +46,5 @@ class ClubActivity(Base):
         CheckConstraint("scheduled_date >= CURRENT_DATE - INTERVAL '1 year'", name="chk_activity_scheduled_future"),
     )
 
+    # Relationships
     club = relationship("Club", back_populates="activities", lazy="selectin")
-    organized_by_student = relationship("Student", back_populates="organized_club_activities", lazy="selectin")

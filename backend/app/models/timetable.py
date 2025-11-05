@@ -6,6 +6,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -26,6 +27,11 @@ class Timetable(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now())
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+
+    # Manual Edit Tracking Fields (FIXED: References profiles.user_id instead of users.id)
+    is_editable = Column(Boolean, default=True, nullable=False)
+    last_modified_by = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id"), nullable=True)
+    last_modified_at = Column(DateTime(timezone=True), nullable=True, onupdate=func.now())
 
     # Relationships
     school = relationship("School")
