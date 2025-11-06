@@ -18,9 +18,30 @@ class ClubMembership(Base):
     student_id = Column(Integer, ForeignKey("students.student_id", ondelete="CASCADE"), nullable=False, index=True)
     approved_by_user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id", ondelete="RESTRICT"), nullable=False)
 
-    role = Column(SQLAEnum(ClubMembershipRole, name="club_membership_role", create_type=False), nullable=False, default=ClubMembershipRole.member, index=True)
+    # Use the enum member names defined in app.schemas.enums
+    role = Column(
+        SQLAEnum(
+            ClubMembershipRole,
+            name="club_membership_role",
+            create_type=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        default=ClubMembershipRole.member,
+        index=True,
+    )
     joined_date = Column(Date, nullable=False, server_default=func.current_date())
-    status = Column(SQLAEnum(ClubMembershipStatus, name="club_membership_status", create_type=False), nullable=False, default=ClubMembershipStatus.active, index=True)
+    status = Column(
+        SQLAEnum(
+            ClubMembershipStatus,
+            name="club_membership_status",
+            create_type=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        default=ClubMembershipStatus.active,
+        index=True,
+    )
 
     attendance_count = Column(Integer, nullable=False, default=0)
     contribution_score = Column(Integer, nullable=False, default=0)

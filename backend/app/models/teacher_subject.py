@@ -17,7 +17,17 @@ class TeacherSubject(Base):
     subject_id = Column(Integer, ForeignKey("subjects.subject_id", ondelete="CASCADE"), nullable=False, index=True)
 
     is_primary = Column(Boolean, nullable=False, default=False)
-    proficiency_level = Column(SQLAEnum(ProficiencyLevel, name="proficiency_level", create_type=False), nullable=False, default=ProficiencyLevel.intermediate, index=True)
+    proficiency_level = Column(
+        SQLAEnum(
+            ProficiencyLevel,
+            name="proficiency_level",
+            create_type=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        default=ProficiencyLevel.intermediate,
+        index=True,
+    )
     years_teaching_subject = Column(Integer, default=0)
     certification_number = Column(String(100))
 

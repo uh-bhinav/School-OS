@@ -3,6 +3,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     academic_years,
+    achievements,
     admin_product_categories,
     admin_product_packages,
     admin_products,
@@ -11,6 +12,7 @@ from app.api.v1.endpoints import (
     attendance_records,
     carts,
     classes,
+    clubs,
     communication,
     discounts,
     employment_statuses,
@@ -19,6 +21,7 @@ from app.api.v1.endpoints import (
     fee_structure,
     fee_templates,
     invoices,
+    leaderboards,
     marks,
     media,
     orders,
@@ -93,3 +96,6 @@ api_router.include_router(media.router, prefix="/media", tags=["media"])
 api_router.include_router(teachers.router, prefix="/teachers", tags=["teachers"])
 api_router.include_router(timetable.router, prefix="/timetable", tags=["timetable"])
 api_router.include_router(periods.router, prefix="/periods", tags=["periods"])
+api_router.include_router(achievements.router, prefix="/achievements", tags=["Achievements"])
+api_router.include_router(leaderboards.router, prefix="/leaderboard", tags=["Leaderboards"])
+api_router.include_router(clubs.router, prefix="/clubs", tags=["Clubs"])

@@ -40,7 +40,12 @@ class Student(Base):
 
     # --- Relationships ---
     profile = relationship("Profile", back_populates="student")
-    current_class = relationship("Class")
+    current_class = relationship(
+        "Class",
+        foreign_keys=[current_class_id],
+        viewonly=True,
+        lazy="selectin",
+    )
     marks_records = relationship("Mark", back_populates="student")
     attendance_records = relationship("AttendanceRecord", back_populates="student")
     contacts = relationship("StudentContact", back_populates="student")
@@ -48,6 +53,12 @@ class Student(Base):
     fee_discounts = relationship("StudentFeeDiscount", back_populates="student")
     fee_assignments = relationship("StudentFeeAssignment", back_populates="student")
     orders = relationship("Order", back_populates="student")
-    achievements = relationship("StudentAchievement", back_populates="student")
-    club_memberships = relationship("ClubMembership", back_populates="student")
+    # Use fully-qualified class name to avoid SQLAlchemy name-resolution issues
+    # when mappers are configured before all model classes are imported.
+    achievements = relationship(
+        "app.models.student_achievement.StudentAchievement",
+        back_populates="student",
+        lazy="selectin",
+    )
+    club_memberships = relationship("ClubMembership", back_populates="student", lazy="selectin")
     # organized_club_activities = relationship("ClubActivity", back_populates="organized_by_student", lazy="selectin")

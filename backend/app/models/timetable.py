@@ -35,7 +35,11 @@ class Timetable(Base):
 
     # Relationships
     school = relationship("School")
-    class_record = relationship("Class", back_populates="timetables")
+    class_record = relationship(
+        "Class",
+        back_populates="timetables",
+        foreign_keys=[class_id],
+    )
     teacher = relationship("Teacher", back_populates="timetables")
     period = relationship("Period", back_populates="timetables")
     academic_year = relationship("AcademicYear", back_populates="timetables")

@@ -13,7 +13,16 @@ class AchievementPointRule(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     school_id = Column(Integer, ForeignKey("schools.school_id", ondelete="CASCADE"), nullable=False, index=True)
-    achievement_type = Column(SQLAEnum(AchievementType, name="achievement_type", create_type=False), nullable=False, index=True)
+    achievement_type = Column(
+        SQLAEnum(
+            AchievementType,
+            name="achievement_type",
+            create_type=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        index=True,
+    )
     category_name = Column(String(100), nullable=False)
     base_points = Column(Integer, nullable=False, default=10)
     level_multiplier = Column(JSONB, default={"school": 1.0, "district": 1.5, "state": 2.0, "national": 3.0, "international": 5.0})

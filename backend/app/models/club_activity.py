@@ -15,11 +15,18 @@ class ClubActivity(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     club_id = Column(Integer, ForeignKey("clubs.id", ondelete="CASCADE"), nullable=False, index=True)
-    # student_id = Column(Integer, ForeignKey("students.student_id"))
-    # student_id = Column(Integer, ForeignKey("students.student_id", ondelete="SET NULL"), nullable=True, index=True)
 
     activity_name = Column(String(255), nullable=False)
-    activity_type = Column(SQLAEnum(ClubActivityType, name="club_activity_type", create_type=False), nullable=False, index=True)
+    activity_type = Column(
+        SQLAEnum(
+            ClubActivityType,
+            name="club_activity_type",
+            create_type=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        index=True,
+    )
     description = Column(Text)
 
     scheduled_date = Column(Date, nullable=False, index=True)
@@ -32,7 +39,17 @@ class ClubActivity(Base):
 
     budget_allocated = Column(Numeric(10, 2))
 
-    status = Column(SQLAEnum(ClubActivityStatus, name="club_activity_status", create_type=False), nullable=False, default=ClubActivityStatus.planned, index=True)
+    status = Column(
+        SQLAEnum(
+            ClubActivityStatus,
+            name="club_activity_status",
+            create_type=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        default=ClubActivityStatus.planned,
+        index=True,
+    )
     outcome_notes = Column(Text)
 
     media_urls = Column(JSONB, default=[])
@@ -47,6 +64,4 @@ class ClubActivity(Base):
         CheckConstraint("scheduled_date >= CURRENT_DATE - INTERVAL '1 year'", name="chk_activity_scheduled_future"),
     )
 
-    # Relationships
-    club = relationship("Club", back_populates="activities")
-    # student = relationship("Student", back_populates="organized_club_activities", lazy="selectin")
+    club = relationship("Club", back_populates="activities", lazy="selectin")
