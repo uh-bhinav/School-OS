@@ -2,17 +2,42 @@ from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
 from app.models.academic_year import AcademicYear
 from app.models.profile import Profile
+from app.models.role_definition import RoleDefinition
 from app.models.student import Student
+from app.models.user_roles import UserRole
 
 
 def _award_date_iso() -> str:
     """Return a date string that is never in the future for UTC-based constraints."""
     return datetime.utcnow().date().isoformat()
+
+
+async def _auth_headers_for_role(session: AsyncSession, *, role_name: str, school_id: int) -> dict[str, str]:
+    """Generate an auth header for an active profile with the requested role and school."""
+    stmt = (
+        select(Profile)
+        .join(UserRole, UserRole.user_id == Profile.user_id)
+        .join(RoleDefinition, RoleDefinition.role_id == UserRole.role_id)
+        .where(
+            Profile.school_id == school_id,
+            Profile.is_active == True,  # noqa: E712
+            RoleDefinition.role_name == role_name,
+        )
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    profile = result.scalars().first()
+    if not profile:
+        raise RuntimeError(f"No active {role_name.lower()} profile seeded for school_id={school_id}.")
+
+    token = create_access_token(subject=str(profile.user_id))
+    return {"Authorization": f"Bearer {token}"}
 
 
 # Fixtures from conftest.py are assumed:
@@ -57,7 +82,9 @@ async def test_achievement_rules_crud_as_admin(client: TestClient, admin_auth_he
 
 
 @pytest.mark.asyncio
-async def test_student_achievement_workflow(client: TestClient, admin_auth_headers: dict, teacher_auth_headers: dict, test_db_session: AsyncSession, test_academic_year: AcademicYear, test_student: Student):
+async def test_student_achievement_workflow(client: TestClient, test_db_session: AsyncSession, test_academic_year: AcademicYear, test_student: Student):
+    admin_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Admin", school_id=test_academic_year.school_id)
+    teacher_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Teacher", school_id=test_academic_year.school_id)
     # Capture baseline counts for existing achievements in seeded data
     student_id = test_student.student_id
     academic_year_id = test_academic_year.id
@@ -162,7 +189,9 @@ async def test_student_achievement_workflow(client: TestClient, admin_auth_heade
 
 
 @pytest.mark.asyncio
-async def test_errors_and_validation(client: TestClient, admin_auth_headers: dict, teacher_auth_headers: dict, test_student: Student, test_academic_year: AcademicYear):
+async def test_errors_and_validation(client: TestClient, test_db_session: AsyncSession, test_student: Student, test_academic_year: AcademicYear):
+    admin_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Admin", school_id=test_academic_year.school_id)
+    teacher_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Teacher", school_id=test_academic_year.school_id)
     # 1. Test 404 Not Found
     response = client.put("/api/v1/achievements/verify/999999", headers=admin_auth_headers)
     assert response.status_code == 404
@@ -200,7 +229,9 @@ async def test_errors_and_validation(client: TestClient, admin_auth_headers: dic
 
 
 @pytest.mark.asyncio
-async def test_teacher_cannot_verify_achievement(client: TestClient, teacher_auth_headers: dict, admin_auth_headers: dict, test_student: Student, test_academic_year: AcademicYear):
+async def test_teacher_cannot_verify_achievement(client: TestClient, test_db_session: AsyncSession, test_student: Student, test_academic_year: AcademicYear):
+    teacher_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Teacher", school_id=test_academic_year.school_id)
+    admin_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Admin", school_id=test_academic_year.school_id)
     # 1. Teacher adds an achievement
     achievement_data = {"student_id": test_student.student_id, "academic_year_id": test_academic_year.id, "achievement_type": "leadership", "title": "Class Captain", "achievement_category": "Responsibility", "date_awarded": _award_date_iso()}
     response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=achievement_data)
@@ -219,7 +250,11 @@ async def test_teacher_cannot_verify_achievement(client: TestClient, teacher_aut
 
 @pytest.mark.asyncio
 async def test_multi_tenancy_security(
-    client: TestClient, admin_auth_headers: dict, admin_auth_headers_two: dict, test_student: Student, test_academic_year: AcademicYear, teacher_auth_headers: dict  # Assumed fixture for an admin at a different school
+    client: TestClient,
+    admin_auth_headers_two: dict,
+    test_db_session: AsyncSession,
+    test_student: Student,
+    test_academic_year: AcademicYear,
 ):
     # This test assumes 'admin_auth_headers' is for School 1
     # and 'admin_auth_headers_two' is for School 2.
@@ -228,6 +263,9 @@ async def test_multi_tenancy_security(
     # Capture detached identifiers up front so later sync HTTP calls don't lazily load from the async session
     student_id = test_student.student_id
     academic_year_id = test_academic_year.id
+
+    admin_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Admin", school_id=test_academic_year.school_id)
+    teacher_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Teacher", school_id=test_academic_year.school_id)
 
     # 1. Admin from School 1 creates an achievement for a student in School 1
     achievement_data = {
