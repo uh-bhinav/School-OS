@@ -1,9 +1,12 @@
 # backend/app/api/deps.py
+from collections.abc import AsyncGenerator
+
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.security import get_current_user_profile
+from app.db.session import get_db
 from app.models.class_model import Class
 from app.models.profile import Profile
 from app.models.student import Student
@@ -39,6 +42,12 @@ def is_student(user: Profile) -> bool:
     return "Student" in user_roles
 
 
+def is_parent(user: Profile) -> bool:
+    """Return True when the profile has a Parent role."""
+    user_roles = {role.role_definition.role_name for role in user.roles}
+    return "Parent" in user_roles
+
+
 async def get_user_context_from_user(db: AsyncSession, user: Profile) -> dict:
     """Build a minimal context dict used for permission checks."""
     context = {
@@ -69,3 +78,17 @@ async def get_user_context_from_user(db: AsyncSession, user: Profile) -> dict:
                 context["grade_level"] = grade_level
 
     return context
+
+
+# --- Compatibility helpers ---
+
+
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Proxy to maintain backwards compatibility with earlier dependency names."""
+    async for session in get_db():
+        yield session
+
+
+async def get_current_user(current_user: Profile = Depends(get_current_active_user)) -> Profile:
+    """Alias for get_current_active_user expected by older endpoint modules."""
+    return current_user

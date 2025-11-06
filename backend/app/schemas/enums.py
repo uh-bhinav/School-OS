@@ -143,5 +143,114 @@ class ProductAvailability(str, enum.Enum):
 
     IN_STOCK = "in_stock"  # Available for purchase
     LOW_STOCK = "low_stock"  # Below reorder level
-    OUT_OF_STOCK = "out_of_stock"  # Stock quantity = 0
-    DISCONTINUED = "discontinued"  # Product no longer sold (is_active = False)
+    OUT_OF_STOCK = "out_of_stock"
+    DISCONTINUED = "discontinued"
+
+
+# ============================================================================
+# ACHIEVEMENT & CLUBS MODULE ENUMS
+# ============================================================================
+
+
+class AchievementType(str, enum.Enum):
+    """
+    Categories of student achievements for tracking and rewards.
+    Used by achievement point rules and student achievement records.
+    """
+
+    academic = "academic"
+    sports = "sports"
+    cultural = "cultural"
+    leadership = "leadership"
+    community_service = "community_service"
+
+
+class AchievementVisibility(str, enum.Enum):
+    """
+    Privacy settings for student achievements.
+    Controls who can view the achievement record.
+    """
+
+    public = "public"  # Visible to everyone
+    school_only = "school_only"  # Visible only within the school
+    private = "private"  # Visible only to the student and authorized staff
+
+
+class ClubType(str, enum.Enum):
+    """
+    Categories of school clubs for organizational purposes.
+    """
+
+    academic = "academic"  # Academic clubs (debate, science, etc.)
+    sports = "sports"  # Sports clubs
+    arts = "arts"  # Arts and creative clubs
+    technical = "technical"  # Technology and technical clubs
+    social = "social"  # Social service and community clubs
+
+
+class MeetingFrequency(str, enum.Enum):
+    """
+    Standard meeting frequencies for club activities.
+    """
+
+    weekly = "weekly"
+    biweekly = "biweekly"
+    monthly = "monthly"
+
+
+class ClubMembershipRole(str, enum.Enum):
+    """
+    Roles within a club membership structure.
+    Defines the hierarchy and responsibilities.
+    """
+
+    member = "member"  # Regular member
+    secretary = "secretary"  # Club secretary
+    treasurer = "treasurer"  # Club treasurer
+    president = "president"  # Club president
+    vice_president = "vice_president"  # Vice president
+
+
+class ClubMembershipStatus(str, enum.Enum):
+    """
+    Status of a student's club membership.
+    """
+
+    active = "active"  # Currently active member
+    inactive = "inactive"  # Temporarily inactive
+    suspended = "suspended"  # Suspended from club
+    alumni = "alumni"  # Former member
+
+
+class ClubActivityType(str, enum.Enum):
+    """
+    Types of club activities for categorization.
+    """
+
+    meeting = "meeting"  # Regular club meeting
+    workshop = "workshop"  # Educational workshop
+    competition = "competition"  # Competitive event
+    event = "event"  # Special event
+    project = "project"  # Club project
+
+
+class ClubActivityStatus(str, enum.Enum):
+    """
+    Status of a club activity in its lifecycle.
+    """
+
+    planned = "planned"  # Activity is planned
+    ongoing = "ongoing"  # Activity is currently happening
+    completed = "completed"  # Activity has finished
+    cancelled = "cancelled"  # Activity was cancelled
+
+
+class ProficiencyLevel(str, enum.Enum):
+    """
+    Teacher's proficiency level in teaching a subject.
+    Used for subject assignment and scheduling optimization.
+    """
+
+    expert = "expert"  # Expert level proficiency
+    intermediate = "intermediate"  # Intermediate level
+    basic = "basic"  # Basic level

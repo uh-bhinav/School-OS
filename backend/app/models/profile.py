@@ -43,3 +43,5 @@ class Profile(Base):
     teacher = relationship("Teacher", back_populates="profile", uselist=False)
     contact_for_students = relationship("StudentContact", back_populates="parent_profile")
     cart = relationship("Cart", back_populates="profile", uselist=False)
+    # Note: achievements_awarded and achievements_verified don't have back_populates
+    # because StudentAchievement uses foreign_keys to specify the relationship

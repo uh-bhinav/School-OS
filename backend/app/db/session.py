@@ -18,6 +18,8 @@ def init_engine():
     engine = create_async_engine(
         settings.DATABASE_URL,
         pool_pre_ping=True,
+        pool_size=10,
+        max_overflow=0,
     )
 
     SessionLocal = async_sessionmaker(

@@ -11,23 +11,24 @@ class MarkStudentAttendanceSchema(BaseModel):
 
     student_id: str = Field(
         ...,
-        description="The unique identifier of the student whose attendance is being marked.",
+        description="The unique identifier or name of the student whose attendance is being marked. Can be numeric ID or full name.",
         min_length=1,
     )
     attendance_date: str = Field(
         ...,
-        description="The date for which attendance is being marked (format: YYYY-MM-DD).",
+        description="The date for which attendance is being marked (format: YYYY-MM-DD). Must not be in the future.",
         min_length=10,
+        max_length=10,
     )
     status: str = Field(
         ...,
-        description="The attendance status: 'present', 'absent', 'late', or 'excused'.",
+        description="The attendance status. Valid values: 'present', 'absent', 'late'. Case-insensitive.",
         min_length=1,
     )
-    class_name: Optional[str] = Field(default=None, description="Optional: The class name for additional context.")
+    class_name: Optional[str] = Field(default=None, description="Optional: The class name for additional context (e.g., '10A', 'Grade 10 Section B').")
     remarks: Optional[str] = Field(
         default=None,
-        description="Optional: Any additional remarks or notes about the attendance.",
+        description="Optional: Any additional remarks or notes about the attendance (e.g., 'Medical emergency', 'School event').",
     )
 
     @validator("attendance_date")
@@ -46,7 +47,7 @@ class MarkStudentAttendanceSchema(BaseModel):
     @validator("status")
     def validate_status(cls, v):
         """Ensure status is one of the allowed values."""
-        allowed_statuses = ["present", "absent", "late", "excused"]
+        allowed_statuses = ["present", "absent", "late"]
         if v.lower() not in allowed_statuses:
             raise ValueError(f"Status must be one of: {', '.join(allowed_statuses)}")
         return v.lower()
@@ -54,8 +55,8 @@ class MarkStudentAttendanceSchema(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "student_id": "STU-2025-001",
-                "attendance_date": "2025-10-06",
+                "student_id": "123",
+                "attendance_date": "2025-11-02",
                 "status": "present",
                 "class_name": "10A",
                 "remarks": "Arrived on time",
@@ -66,18 +67,20 @@ class MarkStudentAttendanceSchema(BaseModel):
 class GetStudentAttendanceForDateRangeSchema(BaseModel):
     """Input schema for the get_student_attendance_for_date_range tool."""
 
-    student_id: str = Field(..., description="The unique identifier of the student.", min_length=1)
+    student_id: str = Field(..., description="The unique identifier or name of the student. Can be numeric ID or full name.", min_length=1)
     start_date: str = Field(
         ...,
-        description="The start date of the range (format: YYYY-MM-DD).",
+        description="The start date of the range (format: YYYY-MM-DD). Cannot be after end_date.",
         min_length=10,
+        max_length=10,
     )
     end_date: str = Field(
         ...,
-        description="The end date of the range (format: YYYY-MM-DD).",
+        description="The end date of the range (format: YYYY-MM-DD). Must be on or after start_date.",
         min_length=10,
+        max_length=10,
     )
-    class_name: Optional[str] = Field(default=None, description="Optional: Filter by specific class.")
+    class_name: Optional[str] = Field(default=None, description="Optional: Filter by specific class (e.g., '10A', 'Grade 10 Section B').")
 
     @validator("start_date", "end_date")
     def validate_date_format(cls, v):
@@ -101,7 +104,7 @@ class GetStudentAttendanceForDateRangeSchema(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "student_id": "STU-2025-001",
+                "student_id": "123",
                 "start_date": "2025-09-01",
                 "end_date": "2025-09-30",
                 "class_name": "10A",
@@ -114,13 +117,14 @@ class GetClassAttendanceForDateSchema(BaseModel):
 
     class_name: str = Field(
         ...,
-        description="The name of the class whose attendance is required, e.g., '10A', '12 Science'.",
+        description="The name of the class whose attendance is required (e.g., '10A', 'Grade 10 Section B', '12 Science').",
         min_length=1,
     )
     attendance_date: str = Field(
         ...,
         description="The date for which attendance is required (format: YYYY-MM-DD).",
         min_length=10,
+        max_length=10,
     )
 
     @validator("attendance_date")
@@ -133,23 +137,23 @@ class GetClassAttendanceForDateSchema(BaseModel):
             raise ValueError("Attendance date must be in YYYY-MM-DD format")
 
     class Config:
-        schema_extra = {"example": {"class_name": "10A", "attendance_date": "2025-10-06"}}
+        schema_extra = {"example": {"class_name": "10A", "attendance_date": "2025-11-02"}}
 
 
 class GetStudentAttendanceSummarySchema(BaseModel):
     """Input schema for the get_student_attendance_summary tool."""
 
-    student_id: str = Field(..., description="The unique identifier of the student.", min_length=1)
+    student_id: str = Field(..., description="The unique identifier or name of the student. Can be numeric ID or full name.", min_length=1)
     academic_term: Optional[str] = Field(
         default="current",
-        description="The academic term for which to calculate attendance. Defaults to 'current'.",
+        description="The academic term for which to calculate attendance. Defaults to 'current'. Can also be 'previous' or a specific term identifier.",
     )
-    class_name: Optional[str] = Field(default=None, description="Optional: Filter by specific class.")
+    class_name: Optional[str] = Field(default=None, description="Optional: Filter by specific class (e.g., '10A', 'Grade 10 Section B').")
 
     class Config:
         schema_extra = {
             "example": {
-                "student_id": "STU-2025-001",
+                "student_id": "123",
                 "academic_term": "current",
                 "class_name": "10A",
             }

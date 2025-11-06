@@ -1,11 +1,12 @@
 # backend/app/db/base.py
-"""Ensure SQLAlchemy knows about every model before metadata creation.
+"""Centralized model registry - imports all models for SQLAlchemy.
 
-This module dynamically imports every module inside ``app.models``. Without
-doing so, SQLAlchemy relationships that reference other classes (for example,
-``Exam.school`` -> ``School``) can fail to resolve, leading to runtime errors
-during flush/commit. Importing all models up-front guarantees the mappers are
-registered before we interact with the ORM.
+This module serves as the single source of truth for model imports.
+All models must be imported here to ensure SQLAlchemy's mapper registry
+is properly configured before any database operations occur.
+
+CRITICAL: This module should be imported ONCE at application startup
+(via main.py) to register all models with SQLAlchemy.
 """
 
 from __future__ import annotations
@@ -13,6 +14,8 @@ from __future__ import annotations
 import importlib
 import pkgutil
 from pathlib import Path
+
+from .base_class import Base
 
 
 def _import_all_models() -> None:
@@ -25,4 +28,4 @@ def _import_all_models() -> None:
 
 _import_all_models()
 
-__all__ = ["_import_all_models"]
+__all__ = ["Base"]

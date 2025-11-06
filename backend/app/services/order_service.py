@@ -18,6 +18,7 @@ Security Architecture:
 """
 
 import logging
+import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
@@ -223,7 +224,9 @@ class OrderService:
 
             # Step 6: Create Order record
             today = datetime.now().strftime("%Y%m%d")
-            order_number = f"ORD-{school_id_val}-{today}-{student_id_val}"
+            base_order_number = f"ORD-{school_id_val}-{today}-{student_id_val}"
+            unique_suffix = uuid.uuid4().hex[:6].upper()
+            order_number = f"{base_order_number}-{unique_suffix}"
 
             db_order = Order(
                 student_id=student_id_val,

@@ -24,5 +24,10 @@ class ClassAttendanceWeekly(Base):
     attendance_percentage = Column(Float, nullable=False)
 
     # --- Relationships ---
-    school = relationship("School")
-    class_info = relationship("Class")
+    school = relationship("School", lazy="selectin")
+    class_info = relationship(
+        "Class",
+        foreign_keys=[class_id],
+        viewonly=True,
+        lazy="selectin",
+    )

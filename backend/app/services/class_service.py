@@ -1,15 +1,16 @@
 # backend/app/services/class_service.py
 from typing import Optional
 
-from sqlalchemy import update
+from sqlalchemy import delete, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import raiseload, selectinload
 
-from app.models.class_model import Class
+from app.models.class_model import Class, class_subjects_association
 from app.models.subject import Subject
 from app.models.teacher import Teacher
-from app.schemas.class_schema import ClassCreate, ClassUpdate
+from app.schemas.class_schema import ClassCreate, ClassOut, ClassUpdate
+from app.schemas.subject_schema import SubjectOut
 
 
 async def create_class(db: AsyncSession, *, class_in: ClassCreate) -> Class:
@@ -64,7 +65,10 @@ async def get_all_classes_for_school(db: AsyncSession, school_id: int) -> list[C
         .where(Class.school_id == school_id)
         .options(
             selectinload(Class.class_teacher).selectinload(Teacher.profile),
-            selectinload(Class.subjects),
+            selectinload(Class.subjects).options(
+                selectinload(Subject.streams),
+                raiseload("*"),
+            ),
             selectinload(Class.academic_year),
         )
         .order_by(Class.grade_level, Class.section)
@@ -77,30 +81,73 @@ async def update_class(db: AsyncSession, *, db_obj: Class, class_in: ClassUpdate
     update_data = class_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_obj, field, value)
+    # Capture identifiers before the commit expires the instance.
+    the_class_id = db_obj.class_id
+    the_school_id = db_obj.school_id
+
     db.add(db_obj)
     await db.commit()
-    await db.refresh(db_obj)
-    return db_obj
+
+    # Re-fetch with the same loader options we use elsewhere so no lazy-loads occur.
+    return await get_class(db=db, class_id=the_class_id, school_id=the_school_id)
 
 
-async def assign_subjects_to_class(db: AsyncSession, *, db_class: Class, subject_ids: list[int]) -> Class:
+async def assign_subjects_to_class(db: AsyncSession, *, db_class: Class, subject_ids: list[int]) -> ClassOut | None:
     """
     Assigns a list of subjects to a class, replacing any existing assignments.
     """
-    # CRITICAL FIX 1: Get the IDs BEFORE the commit, while the object is still "fresh".
     the_class_id = db_class.class_id
     the_school_id = db_class.school_id
 
-    # This part fetches the subject objects to be linked
-    subjects = await db.execute(select(Subject).where(Subject.subject_id.in_(subject_ids)))
-    db_class.subjects = list(subjects.scalars().all())
+    if subject_ids:
+        result = await db.execute(select(Subject.subject_id).where(Subject.subject_id.in_(subject_ids)))
+        existing_ids = {row[0] for row in result.all()}
+        missing = set(subject_ids) - existing_ids
+        if missing:
+            raise ValueError(f"Subject IDs not found: {sorted(missing)}")
+    else:
+        existing_ids = set()
 
-    # This part saves the changes, which expires the 'db_class' object
-    db.add(db_class)
+    await db.execute(delete(class_subjects_association).where(class_subjects_association.c.class_id == the_class_id))
+
+    if existing_ids:
+        await db.execute(
+            insert(class_subjects_association),
+            [{"class_id": the_class_id, "subject_id": sid} for sid in existing_ids],
+        )
+
     await db.commit()
 
-    # FIX 2: Call get_class using the saved local variables,not the expired object.
-    return await get_class(db=db, class_id=the_class_id, school_id=the_school_id)
+    ids_stmt = select(class_subjects_association.c.subject_id).where(class_subjects_association.c.class_id == the_class_id)
+    ids_result = await db.execute(ids_stmt)
+    actual_ids = ids_result.scalars().all()
+
+    # Remove the stale instance from the identity map so a fresh load occurs.
+    if db_class in db:
+        db.expunge(db_class)
+
+    fresh = await get_class(db=db, class_id=the_class_id, school_id=the_school_id)
+    if fresh is None:
+        return None
+
+    subjects_out: list[SubjectOut] | None = None
+    if actual_ids:
+        subject_stmt = select(Subject).where(Subject.subject_id.in_(actual_ids)).options(selectinload(Subject.streams), raiseload("*"))
+        subject_result = await db.execute(subject_stmt)
+        subjects_by_id = {sub.subject_id: sub for sub in subject_result.scalars().all()}
+        ordered_subjects = [subjects_by_id[sid] for sid in actual_ids if sid in subjects_by_id]
+        subjects_out = [SubjectOut.model_validate(subject, from_attributes=True) for subject in ordered_subjects]
+
+    return ClassOut(
+        class_id=fresh.class_id,
+        school_id=fresh.school_id,
+        grade_level=fresh.grade_level,
+        section=fresh.section,
+        academic_year_id=fresh.academic_year_id,
+        class_teacher_id=fresh.class_teacher_id,
+        is_active=fresh.is_active,
+        subjects=subjects_out,
+    )
 
 
 async def soft_delete_class(db: AsyncSession, class_id: int) -> Optional[Class]:
@@ -124,7 +171,10 @@ async def search_classes(db: AsyncSession, *, school_id: int, filters: dict) -> 
         .where(Class.school_id == school_id, Class.is_active)
         .options(
             selectinload(Class.class_teacher).selectinload(Teacher.profile),
-            selectinload(Class.subjects),
+            selectinload(Class.subjects).options(
+                selectinload(Subject.streams),
+                raiseload("*"),
+            ),
             selectinload(Class.academic_year),
         )
     )

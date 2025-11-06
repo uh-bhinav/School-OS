@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -6,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.class_model import Class
 from app.models.profile import Profile
-from app.models.subject import Subject
+from app.schemas.class_schema import ClassOut
+from app.schemas.subject_schema import SubjectOut
 from app.services import class_service
 
 
@@ -17,62 +19,111 @@ async def test_assign_subjects_to_class_unit():
     """
     # 1. Arrange: Set up all the mock objects we need
     mock_db = AsyncMock()
+    mock_db.__contains__.return_value = False
 
-    # This represents the existing class object passed into the function
     mock_db_class = MagicMock(spec=Class)
     mock_db_class.class_id = 1
     mock_db_class.school_id = 1
 
-    # These represent the Subject objects we will find in the database
-    mock_subject_1 = MagicMock(spec=Subject)
-    mock_subject_2 = MagicMock(spec=Subject)
+    subject1 = SimpleNamespace(
+        subject_id=10,
+        school_id=1,
+        name="Mathematics",
+        short_code=None,
+        description=None,
+        category=None,
+        is_active=True,
+        streams=[],
+    )
+    subject2 = SimpleNamespace(
+        subject_id=20,
+        school_id=1,
+        name="Science",
+        short_code=None,
+        description=None,
+        category=None,
+        is_active=True,
+        streams=[],
+    )
 
-    # Configure the mock db.execute to return our mock subjects
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = [mock_subject_1, mock_subject_2]
-    mock_db.execute.return_value = mock_result
+    first_lookup = MagicMock()
+    first_lookup.all.return_value = [(10,), (20,)]
+    delete_result = MagicMock()
+    insert_result = MagicMock()
+    second_lookup = MagicMock()
+    second_lookup.scalars.return_value.all.return_value = [10, 20]
+    subjects_result = MagicMock()
+    subjects_scalars = MagicMock()
+    subjects_scalars.all.return_value = [subject1, subject2]
+    subjects_result.scalars.return_value = subjects_scalars
 
-    # Since the service function calls another service function (get_class) at the end,
-    # we use 'patch' to replace it with a mock for this test.
+    mock_db.execute.side_effect = [
+        first_lookup,
+        delete_result,
+        insert_result,
+        second_lookup,
+        subjects_result,
+    ]
+
+    refreshed_class = MagicMock()
+    refreshed_class.class_id = 1
+    refreshed_class.school_id = 1
+    refreshed_class.grade_level = 7
+    refreshed_class.section = "A"
+    refreshed_class.academic_year_id = 2025
+    refreshed_class.class_teacher_id = 5
+    refreshed_class.is_active = True
+
     with patch("app.services.class_service.get_class", new_callable=AsyncMock) as mock_get_class:
-        # 2. Act: Call the function we are testing
-        await class_service.assign_subjects_to_class(db=mock_db, db_class=mock_db_class, subject_ids=[10, 20])
+        mock_get_class.return_value = refreshed_class
 
-    # 3. Assert: Verify the function did what we expected
-    # Did it try to find the subjects in the database?
-    mock_db.execute.assert_awaited_once()
+        result = await class_service.assign_subjects_to_class(db=mock_db, db_class=mock_db_class, subject_ids=[10, 20])
 
-    # Did it correctly assign the found subjects to the class object?
-    assert mock_db_class.subjects == [mock_subject_1, mock_subject_2]
-
-    # Did it save the changes?
     mock_db.commit.assert_awaited_once()
-
-    # Did it call get_class at the end to return a fresh object?
     mock_get_class.assert_awaited_once_with(db=mock_db, class_id=1, school_id=1)
+
+    assert isinstance(result, ClassOut)
+    assert [sub.subject_id for sub in result.subjects] == [10, 20]
+    assert all(isinstance(sub, SubjectOut) for sub in result.subjects)
 
 
 @pytest.mark.asyncio
 async def test_assign_subjects_to_class_with_empty_list():
     """Unit Test (Edge Case): Verifies that an empty list clears all subjects."""
     mock_db = AsyncMock()
-    # Arrange: Start with a class that already has subjects
-    mock_db_class = MagicMock(spec=Class, class_id=1, school_id=1)
-    mock_db_class.subjects = [MagicMock(spec=Subject), MagicMock(spec=Subject)]
+    mock_db.__contains__.return_value = False
 
-    # Arrange: When the DB is queried for an empty list of IDs, it will find nothing
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = []
-    mock_db.execute.return_value = mock_result
+    mock_db_class = MagicMock(spec=Class)
+    mock_db_class.class_id = 1
+    mock_db_class.school_id = 1
+
+    delete_result = MagicMock()
+    ids_after_delete = MagicMock()
+    ids_after_delete.scalars.return_value.all.return_value = []
+
+    mock_db.execute.side_effect = [
+        delete_result,
+        ids_after_delete,
+    ]
+
+    refreshed_class = MagicMock()
+    refreshed_class.class_id = 1
+    refreshed_class.school_id = 1
+    refreshed_class.grade_level = 7
+    refreshed_class.section = "A"
+    refreshed_class.academic_year_id = 2025
+    refreshed_class.class_teacher_id = 5
+    refreshed_class.is_active = True
 
     with patch("app.services.class_service.get_class", new_callable=AsyncMock) as mock_get_class:
-        # Act: Call the function with an empty list
-        await class_service.assign_subjects_to_class(db=mock_db, db_class=mock_db_class, subject_ids=[])
+        mock_get_class.return_value = refreshed_class
+        result = await class_service.assign_subjects_to_class(db=mock_db, db_class=mock_db_class, subject_ids=[])
 
-    # Assert: Verify the subjects list on the class is now empty
-    assert mock_db_class.subjects == []
     mock_db.commit.assert_awaited_once()
     mock_get_class.assert_awaited_once_with(db=mock_db, class_id=1, school_id=1)
+
+    assert isinstance(result, ClassOut)
+    assert result.subjects is None or result.subjects == []
 
 
 @pytest.mark.asyncio

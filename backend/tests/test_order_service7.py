@@ -182,6 +182,11 @@ async def test_parent_cannot_order_for_unlinked_student(db_session: AsyncSession
     product.stock_quantity = 100
     await db_session.commit()
 
+    # Record existing orders for this parent ahead of the failure scenario.
+    baseline_stmt = select(Order.order_id).where(Order.parent_user_id == parent_user_id)
+    baseline_result = await db_session.execute(baseline_stmt)
+    baseline_order_ids = set(baseline_result.scalars().all())
+
     cart_service = CartService(db_session)
     await cart_service.add_item_to_cart(user_id=parent_user_id, item_in=CartItemIn(product_id=16, quantity=1))
     print("✓ Parent added items to cart")
@@ -199,11 +204,11 @@ async def test_parent_cannot_order_for_unlinked_student(db_session: AsyncSession
     print(f"✓ Correctly rejected: {exc_info.value.detail}")
 
     # Verify no order was created
-    stmt = select(Order).where(Order.parent_user_id == parent_user_id)
+    stmt = select(Order.order_id).where(Order.parent_user_id == parent_user_id)
     result = await db_session.execute(stmt)
-    orders = result.scalars().all()
-    assert len(orders) == 0
-    print("✓ No order was created")
+    current_order_ids = set(result.scalars().all())
+    assert current_order_ids == baseline_order_ids
+    print("✓ No new order was created")
 
 
 # ===========================================================================
