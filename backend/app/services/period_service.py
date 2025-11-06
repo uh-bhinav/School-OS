@@ -86,3 +86,26 @@ async def get_recess_periods(db: AsyncSession, school_id: int) -> list[Period]:
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+# Add this function to period_service.py
+
+
+async def get_teaching_periods_for_school(db: AsyncSession, school_id: int, day_of_week: Optional[str] = None) -> list[Period]:
+    """
+    Fetch all non-recess periods for timetable generation.
+    If day_of_week is provided, filter for day-specific periods.
+    """
+    stmt = select(Period).where(
+        Period.school_id == school_id,
+        Period.is_recess.is_(False),
+        Period.is_active.is_(True),
+    )
+
+    if day_of_week:
+        stmt = stmt.where(Period.day_of_week == day_of_week)
+
+    stmt = stmt.order_by(Period.start_time)
+
+    result = await db.execute(stmt)
+    return list(result.scalars().all())

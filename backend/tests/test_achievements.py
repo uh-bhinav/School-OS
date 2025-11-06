@@ -210,8 +210,19 @@ async def test_multi_tenancy_security(
     # and 'admin_auth_headers_two' is for School 2.
     # 'test_student' belongs to School 1.
 
+    # Capture detached identifiers up front so later sync HTTP calls don't lazily load from the async session
+    student_id = test_student.student_id
+    academic_year_id = test_academic_year.id
+
     # 1. Admin from School 1 creates an achievement for a student in School 1
-    achievement_data = {"student_id": test_student.student_id, "academic_year_id": test_academic_year.id, "achievement_type": "community_service", "title": "Beach Cleanup", "achievement_category": "Volunteering", "date_awarded": _award_date_iso()}
+    achievement_data = {
+        "student_id": student_id,
+        "academic_year_id": academic_year_id,
+        "achievement_type": "community_service",
+        "title": "Beach Cleanup",
+        "achievement_category": "Volunteering",
+        "date_awarded": _award_date_iso(),
+    }
     response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=achievement_data)
     assert response.status_code == 201
     ach_id = response.json()["id"]
@@ -230,7 +241,7 @@ async def test_multi_tenancy_security(
     assert response.status_code == 404
 
     # 5. Admin from School 2 tries to get achievements for the student from School 1
-    response = client.get(f"/api/v1/achievements/student/{test_student.student_id}", headers=admin_auth_headers_two)
+    response = client.get(f"/api/v1/achievements/student/{student_id}", headers=admin_auth_headers_two)
     # The query is scoped by school_id, so it should return an empty list.
     assert response.status_code == 200
     assert response.json() == []

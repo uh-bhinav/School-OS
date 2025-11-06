@@ -15,11 +15,10 @@ from app.models.timetable import Timetable
 from app.schemas.timetable_schema import TimetableEntryCreate, TimetableEntryUpdate
 
 
-def _timetable_with_details_options():
-    """Return selectinload options when called at runtime.
-
-    Constructing these at import time can force SQLAlchemy to inspect
-    mappers and fail if not all model classes have been imported yet.
+def get_timetable_with_details_options():
+    """
+    Returns selectinload options for timetable entries.
+    Defined as a function to avoid model configuration issues at module import time.
     """
     return [
         selectinload(Timetable.subject).selectinload(Subject.streams),
@@ -33,7 +32,8 @@ async def get_entry_with_details(db: AsyncSession, entry_id: int) -> Optional[Ti
     Gets a single timetable entry, preloading all nested relationships
     required by the TimetableEntryOut schema to prevent lazy-loading errors.
     """
-    stmt = select(Timetable).where(Timetable.id == entry_id, Timetable.is_active).options(*_timetable_with_details_options())
+    stmt = select(Timetable).where(Timetable.id == entry_id, Timetable.is_active).options(*get_timetable_with_details_options())
+
     result = await db.execute(stmt)
     return result.scalars().first()
 
@@ -55,14 +55,14 @@ async def get_timetable_entry_by_id(db: AsyncSession, entry_id: int) -> Optional
 
 async def get_class_timetable(db: AsyncSession, class_id: int) -> list[Timetable]:
     # Use 'Timetable.is_active' directly for the boolean check
-    stmt = select(Timetable).where(Timetable.class_id == class_id, Timetable.is_active).options(*_timetable_with_details_options()).order_by(Timetable.day_of_week, Timetable.period_id)
+    stmt = select(Timetable).where(Timetable.class_id == class_id, Timetable.is_active).options(*get_timetable_with_details_options()).order_by(Timetable.day_of_week, Timetable.period_id)
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
 async def get_teacher_timetable(db: AsyncSession, teacher_id: int) -> list[Timetable]:
     # Use 'Timetable.is_active' directly for the boolean check
-    stmt = select(Timetable).where(Timetable.teacher_id == teacher_id, Timetable.is_active).options(*_timetable_with_details_options()).order_by(Timetable.day_of_week, Timetable.period_id)
+    stmt = select(Timetable).where(Timetable.teacher_id == teacher_id, Timetable.is_active).options(*get_timetable_with_details_options()).order_by(Timetable.day_of_week, Timetable.period_id)
     result = await db.execute(stmt)
     return result.scalars().all()
 
@@ -110,7 +110,7 @@ async def get_schedule_for_day(
             Timetable.day_of_week == day_of_week,
             Timetable.is_active,
         )
-        .options(*_timetable_with_details_options())
+        .options(*get_timetable_with_details_options())
         .join(Period)
         .order_by(Period.start_time)
     )

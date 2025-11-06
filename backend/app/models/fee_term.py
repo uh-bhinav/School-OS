@@ -27,5 +27,6 @@ class FeeTerm(Base):
     discounts = relationship(
         "StudentFeeDiscount",
         back_populates="fee_term",
-        foreign_keys="[StudentFeeDiscount.fee_term_id]",  # String reference for forward declaration
+        foreign_keys="StudentFeeDiscount.fee_term_id",
+        viewonly=True,
     )

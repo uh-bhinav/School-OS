@@ -22,5 +22,5 @@ class AcademicYear(Base):
     # Relationship to the school
     school = relationship("School")
     timetables = relationship("Timetable", back_populates="academic_year")
-    student_achievements = relationship("StudentAchievement", back_populates="academic_year", lazy="selectin")
-    clubs = relationship("Club", back_populates="academic_year", lazy="selectin")
+    student_achievements = relationship("StudentAchievement", back_populates="academic_year")
+    clubs = relationship("Club", back_populates="academic_year")

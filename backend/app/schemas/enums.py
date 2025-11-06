@@ -186,11 +186,6 @@ class ClubType(str, enum.Enum):
     arts = "arts"  # Arts and creative clubs
     technical = "technical"  # Technology and technical clubs
     social = "social"  # Social service and community clubs
-    ACADEMIC = "academic"
-    SPORTS = "sports"
-    ARTS = "arts"
-    TECHNICAL = "technical"
-    SOCIAL = "social"
 
 
 class MeetingFrequency(str, enum.Enum):

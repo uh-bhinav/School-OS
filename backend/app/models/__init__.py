@@ -21,26 +21,22 @@ Import Order Strategy:
 from app.db.base_class import Base
 
 # ===========================================================================
-# LEVEL 2: Models depending on Level 1
+# LEVEL 2: Models depending on Level 1 (School, Role, etc.)
 # ===========================================================================
 from app.models.academic_year import AcademicYear
 from app.models.achievementPointRules import AchievementPointRule
 from app.models.attendance_record import AttendanceRecord
 from app.models.class_model import Class
+from app.models.club import Club
 
 # ===========================================================================
-# LEVEL 4: Models depending on Level 3
+# LEVEL 6: Models depending on Level 4/5 (Club Activities, Student records, etc.)
 # ===========================================================================
-from app.models.club import Club
 from app.models.club_activity import ClubActivity
 from app.models.club_membership import ClubMembership
 from app.models.employment_status import EmploymentStatus
 from app.models.exam_type import ExamType
 from app.models.exams import Exam
-
-# ===========================================================================
-# LEVEL 6: Models depending on Level 5
-# ===========================================================================
 from app.models.mark import Mark
 from app.models.period import Period
 from app.models.profile import Profile
@@ -53,18 +49,23 @@ from app.models.school import School
 from app.models.streams import Stream
 
 # ===========================================================================
-# LEVEL 3: Models depending on Level 1 & 2
+# LEVEL 4: Models depending on Level 3 (Student, Club, Timetable)
 # ===========================================================================
 from app.models.student import Student
 from app.models.student_achievement import StudentAchievement
 from app.models.student_contact import StudentContact
 from app.models.subject import Subject
-from app.models.teacher import Teacher
 
 # ===========================================================================
-# LEVEL 5: Models depending on Level 4
+# LEVEL 3: Models depending on Level 2 (Teacher, Class)
 # ===========================================================================
+from app.models.teacher import Teacher
 from app.models.teacher_subject import TeacherSubject
+
+# ===========================================================================
+# LEVEL 5: Models with relationships to LEVEL 3/4 (Timetable, AttendanceRecord)
+# CRITICAL: Import these AFTER Class, Teacher, Student are fully loaded
+# ===========================================================================
 from app.models.timetable import Timetable
 from app.models.user_roles import UserRole
 

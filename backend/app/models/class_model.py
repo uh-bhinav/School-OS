@@ -43,22 +43,24 @@ class Class(Base):
     academic_year = relationship("AcademicYear")
 
     # NEW: Many-to-many relationship to subjects
-    subjects = relationship("Subject", secondary=class_subjects_association, lazy="selectin")
+    subjects = relationship("Subject", secondary=class_subjects_association)
 
     timetables = relationship(
         "Timetable",
         back_populates="class_record",
-        foreign_keys="[Timetable.class_id]",
-        viewonly=False,
+        foreign_keys="Timetable.class_id",
+        viewonly=True,
     )
     attendance_records = relationship(
         "AttendanceRecord",
         back_populates="class_record",
-        foreign_keys="[AttendanceRecord.class_id]",  # String reference
+        foreign_keys="AttendanceRecord.class_id",
+        viewonly=True,
     )
 
     class_fee_structures = relationship(
         "ClassFeeStructure",
         back_populates="class_",
-        foreign_keys="[ClassFeeStructure.class_id]",  # String reference
+        foreign_keys="ClassFeeStructure.class_id",  # String reference
+        viewonly=True,
     )

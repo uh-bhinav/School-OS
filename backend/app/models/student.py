@@ -40,7 +40,12 @@ class Student(Base):
 
     # --- Relationships ---
     profile = relationship("Profile", back_populates="student")
-    current_class = relationship("Class")
+    current_class = relationship(
+        "Class",
+        foreign_keys=[current_class_id],
+        viewonly=True,
+        lazy="selectin",
+    )
     marks_records = relationship("Mark", back_populates="student")
     attendance_records = relationship("AttendanceRecord", back_populates="student")
     contacts = relationship("StudentContact", back_populates="student")

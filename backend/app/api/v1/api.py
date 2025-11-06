@@ -39,6 +39,7 @@ from app.api.v1.endpoints import (
     subjects,
     teachers,
     timetable,
+    timetable_generation,
     users,
     webhooks,
 )
@@ -62,6 +63,7 @@ api_router.include_router(attendance_records.router, prefix="/attendance", tags=
 
 # E-commerce
 api_router.include_router(products.router, prefix="/products", tags=["E-Commerce: Products"])
+api_router.include_router(timetable_generation.router, prefix="/timetable-generate", tags=["Timetable Generation"])
 api_router.include_router(admin_products.router, prefix="/admin/products", tags=["Admin: Products"])
 api_router.include_router(admin_product_categories.router, prefix="/admin/product-categories", tags=["Admin: Product Categories"])
 api_router.include_router(admin_product_packages.router, prefix="/admin/product-packages", tags=["Admin: Product Packages"])
