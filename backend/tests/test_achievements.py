@@ -48,7 +48,10 @@ async def _auth_headers_for_role(session: AsyncSession, *, role_name: str, schoo
 
 
 @pytest.mark.asyncio
-async def test_achievement_rules_crud_as_admin(client: TestClient, admin_auth_headers: dict, teacher_auth_headers: dict, test_school: dict):
+async def test_achievement_rules_crud_as_admin(client: TestClient, test_db_session: AsyncSession, test_school: dict):
+    school_id = test_school["school_id"]
+    admin_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Admin", school_id=school_id)
+    teacher_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Teacher", school_id=school_id)
     # 1. Teachers cannot create rules
     rule_data = {"achievement_type": "academic", "category_name": "Math Olympiad", "base_points": 100}
     response = client.post("/api/v1/achievements/rules", headers=teacher_auth_headers, json=rule_data)

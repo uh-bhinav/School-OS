@@ -8,11 +8,13 @@ from uuid import UUID
 
 import pytest
 from fastapi import HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.product import Product
 from app.models.profile import Profile
 from app.models.student import Student
+from app.models.student_contact import StudentContact
 from app.schemas.cart_schema import CartItemIn
 from app.schemas.order_schema import OrderCreateFromCart
 from app.services.cart_service import CartService
@@ -35,6 +37,34 @@ async def checkout_for_parent(db_session: AsyncSession, parent_user_id: UUID, ch
         return ("error", parent_name, e)
     except Exception as e:
         return ("error", parent_name, HTTPException(status_code=500, detail=str(e)))
+
+
+async def _ensure_parent_link(db_session: AsyncSession, parent_profile: Profile, student: Student) -> None:
+    """Guarantee a student contact exists linking this parent and student for checkout auth."""
+    stmt = (
+        select(StudentContact)
+        .where(
+            StudentContact.profile_user_id == parent_profile.user_id,
+            StudentContact.student_id == student.student_id,
+        )
+        .limit(1)
+    )
+    existing = (await db_session.execute(stmt)).scalars().first()
+    if existing:
+        return
+
+    contact = StudentContact(
+        student_id=student.student_id,
+        profile_user_id=parent_profile.user_id,
+        name=f"{getattr(parent_profile, 'first_name', '') or ''} {getattr(parent_profile, 'last_name', '') or ''}".strip() or "Test Parent",
+        phone=getattr(parent_profile, "phone", None) or "0000000000",
+        email=getattr(parent_profile, "email", None) or f"{parent_profile.user_id}@example.test",
+        relationship_type="Parent",
+        is_emergency_contact=True,
+        is_active=True,
+    )
+    db_session.add(contact)
+    await db_session.flush()
 
 
 @pytest.mark.asyncio
@@ -64,6 +94,10 @@ async def test_concurrent_checkout_prevents_overselling(db_session: AsyncSession
     student_22_id = student_22.student_id
     student_23_id = student_23.student_id
 
+    # Ensure each parent has an authorized link to their student so checkout can proceed.
+    await _ensure_parent_link(db_session, parent_profile=parent_profile_1, student=student_22)
+    await _ensure_parent_link(db_session, parent_profile=parent_profile_2, student=student_23)
+
     # Step 1: Setup product with only 1 item in stock
     product = await db_session.get(Product, 16)
     product.is_active = True
@@ -75,6 +109,10 @@ async def test_concurrent_checkout_prevents_overselling(db_session: AsyncSession
     # Step 2: Both parents add to cart (using extracted IDs)
     cart_service_1 = CartService(db_session)
     cart_service_2 = CartService(db_session)
+
+    # Start from a clean slate to avoid seeded cart residue influencing stock calculations.
+    await cart_service_1.clear_cart(user_id=parent_1_user_id)
+    await cart_service_2.clear_cart(user_id=parent_2_user_id)
 
     # Parent 1's cart
     await cart_service_1.add_item_to_cart(user_id=parent_1_user_id, item_in=CartItemIn(product_id=16, quantity=1))
