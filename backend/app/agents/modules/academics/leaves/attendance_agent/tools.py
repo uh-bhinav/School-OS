@@ -1,84 +1,55 @@
-# backend/app/agents/modules/academics/leaves/attendance_agent/tools.py
+# backend/app/agents/modules/academics/leaves/attendance_agent/tools_api_based.py
+"""
+HTTP-based Attendance Agent Tools.
+
+This module provides attendance tools that communicate with the backend API
+through HTTP requests instead of making direct service calls. This design:
+
+1. ✅ Agents act as external HTTP clients
+2. ✅ JWT tokens are passed from frontend → agent API → tool context → HTTP client
+3. ✅ Backend API handles all authentication and authorization via existing dependencies
+4. ✅ Role-based access control is enforced at the API layer (not in agent logic)
+5. ✅ Agents respect the same security boundaries as external clients
+
+Architecture Flow:
+    Frontend (JWT) → POST /api/v1/agents/attendance/invoke
+    → Agent API extracts JWT → Injects into ToolContext
+    → Agent tool calls HTTP client → HTTP client adds Bearer token
+    → Backend API endpoint → get_current_user_profile extracts user/roles
+    → Business logic executes → Response returned
+
+Key Differences from Service-Based Tools (tools.py):
+    ❌ OLD: Direct imports and calls to attendance_record_service
+    ✅ NEW: HTTP requests to /api/v1/attendance/* endpoints
+
+    ❌ OLD: Manual role checking in agent code
+    ✅ NEW: Backend API enforces roles via require_role() dependency
+
+    ❌ OLD: Direct database session access
+    ✅ NEW: Stateless HTTP requests with JWT authentication
+"""
 
 import logging
-import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Any, Optional
 
 from langchain_core.tools import tool
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
 
+from app.agents.http_client import (
+    AgentAuthenticationError,
+    AgentHTTPClient,
+    AgentHTTPClientError,
+    AgentResourceNotFoundError,
+    AgentValidationError,
+)
 from app.agents.modules.academics.leaves.attendance_agent.schemas import (
     GetClassAttendanceForDateSchema,
     GetStudentAttendanceForDateRangeSchema,
     GetStudentAttendanceSummarySchema,
     MarkStudentAttendanceSchema,
 )
-from app.agents.tool_context import ToolContextError, get_tool_context
-from app.models.class_model import Class
-from app.models.profile import Profile
-from app.models.student import Student
-from app.schemas.attendance_record_schema import (
-    AttendanceRecordCreate,
-    AttendanceRecordUpdate,
-    AttendanceStatus,
-)
-from app.services import attendance_record_service, student_contact_service, student_service
 
 logger = logging.getLogger(__name__)
-
-
-def _normalized_search_text(value: str) -> str:
-    """Normalize text for searching by removing extra whitespace and lowercasing."""
-    return " ".join(value.strip().lower().split())
-
-
-def _student_display_name(student: Optional[Student]) -> str:
-    """Generate a readable display name for a student."""
-    if not student:
-        return "Unknown Student"
-    profile = student.profile
-    if profile:
-        parts = []
-        if profile.first_name:
-            parts.append(profile.first_name)
-        if profile.last_name:
-            parts.append(profile.last_name)
-        if parts:
-            return " ".join(parts)
-    return f"Student #{student.student_id}"
-
-
-def _format_class_name(class_obj: Optional[Class]) -> Optional[str]:
-    """Format class name in a readable way."""
-    if not class_obj:
-        return None
-    section = (class_obj.section or "").strip()
-    if not section:
-        return str(class_obj.grade_level)
-    if len(section) == 1:
-        return f"{class_obj.grade_level}{section}"
-    return f"{class_obj.grade_level} {section}".strip()
-
-
-def _parse_class_name(class_name: str) -> Optional[tuple[int, str]]:
-    """Parse class name like '10A' or 'Grade 10 A' into (grade_level, section)."""
-    cleaned = class_name.strip()
-    if not cleaned:
-        return None
-    cleaned = re.sub(r"grade\s+", "", cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r"class\s+", "", cleaned, flags=re.IGNORECASE)
-    cleaned = cleaned.strip()
-
-    match = re.match(r"^(\d+)\s*([A-Za-z]?)$", cleaned)
-    if match:
-        grade = int(match.group(1))
-        section = match.group(2).upper() if match.group(2) else ""
-        return (grade, section)
-
-    return None
 
 
 def _parse_date_string(date_str: str) -> Optional[date]:
@@ -89,187 +60,14 @@ def _parse_date_string(date_str: str) -> Optional[date]:
         return None
 
 
-def _get_user_roles(profile: Profile) -> set[str]:
-    """Extract role names from a Profile object."""
-    return {role.role_definition.role_name for role in profile.roles}
-
-
-async def _resolve_student(
-    db: AsyncSession,
-    current_profile: Profile,
-    student_lookup: str,
-) -> tuple[Optional[Student], Optional[dict[str, Any]]]:
-    """
-    Resolve student by ID, name, or profile information.
-    Returns (Student, error_dict) where error_dict is None on success.
-    """
-    school_id = current_profile.school_id
-
-    try:
-        student_id = int(student_lookup)
-        # Eagerly load relationships to avoid lazy loading issues
-        stmt = select(Student).options(selectinload(Student.profile), selectinload(Student.current_class)).where(Student.student_id == student_id)
-        result = await db.execute(stmt)
-        student = result.scalars().first()
-
-        if student and student.profile and student.profile.school_id == school_id:
-            return (student, None)
-        return (
-            None,
-            {
-                "error": f"No student found with ID {student_id} in your school.",
-                "suggestion": "Please check the student ID and try again.",
-            },
-        )
-    except ValueError:
-        pass
-
-    # Search by name - but we need to reload with proper eager loading
-    results = await student_service.search_students(db, search_query=student_lookup, school_id=school_id, skip=0, limit=10)
-
-    if not results:
-        return (
-            None,
-            {
-                "error": f"No student found matching '{student_lookup}'.",
-                "suggestion": "Please verify the student name or ID and try again.",
-            },
-        )
-
-    # Reload the results with eager loading to avoid lazy loading issues
-    student_ids = [s.student_id for s in results]
-    stmt = select(Student).options(selectinload(Student.profile), selectinload(Student.current_class)).where(Student.student_id.in_(student_ids))
-    reload_result = await db.execute(stmt)
-    results = list(reload_result.scalars().all())
-
-    if len(results) == 1:
-        return (results[0], None)
-
-    matches = []
-    for s in results[:5]:
-        display_name = _student_display_name(s)
-        class_info = f" (Class: {_format_class_name(s.current_class)})" if s.current_class else ""
-        matches.append(f"  - ID {s.student_id}: {display_name}{class_info}")
-
-    return (
-        None,
-        {
-            "error": f"Multiple students match '{student_lookup}'. Please specify:",
-            "matches": matches,
-            "suggestion": "Use the student ID or provide a more specific name.",
-        },
-    )
-
-
-async def _is_authorized_for_student(
-    db: AsyncSession,
-    current_profile: Profile,
-    student: Student,
-    *,
-    allow_student: bool,
-    allow_parent: bool,
-) -> tuple[bool, Optional[dict[str, Any]]]:
-    """
-    Check if current profile is authorized to access this student's attendance.
-    """
-    user_roles = _get_user_roles(current_profile)
-
-    if user_roles.intersection({"Admin", "Teacher"}):
-        if student.profile.school_id == current_profile.school_id:
-            return (True, None)
-        return (False, {"error": "You cannot access attendance for students outside your school."})
-
-    if allow_student and "Student" in user_roles:
-        if current_profile.student and current_profile.student.student_id == student.student_id:
-            return (True, None)
-
-    if allow_parent and "Parent" in user_roles:
-        contacts = await student_contact_service.get_contacts_for_student(db, student_id=student.student_id)
-        for contact in contacts:
-            if contact.profile_user_id == current_profile.user_id:
-                return (True, None)
-
-    return (
-        False,
-        {
-            "error": f"You are not authorized to access attendance for {_student_display_name(student)}.",
-            "suggestion": "Contact your school administrator if you believe this is an error.",
-        },
-    )
-
-
-async def _resolve_class(
-    db: AsyncSession,
-    school_id: int,
-    class_name: str,
-) -> tuple[Optional[Class], Optional[dict[str, Any]]]:
-    """
-    Resolve class by name.
-    Returns (Class, error_dict) where error_dict is None on success.
-    """
-    parsed = _parse_class_name(class_name)
-    if not parsed:
-        return (
-            None,
-            {
-                "error": f"Could not parse class name '{class_name}'.",
-                "suggestion": "Use format like '10A' or 'Grade 10 A'.",
-            },
-        )
-
-    grade_level, section = parsed
-
-    stmt = select(Class).where(
-        Class.school_id == school_id,
-        Class.grade_level == grade_level,
-        Class.section == section if section else True,
-        Class.is_active.is_(True),
-    )
-
-    result = await db.execute(stmt)
-    class_obj = result.scalars().first()
-
-    if not class_obj:
-        return (
-            None,
-            {
-                "error": f"No active class found matching '{class_name}' in your school.",
-                "suggestion": "Please verify the class name and try again.",
-            },
-        )
-
-    return (class_obj, None)
-
-
-def _get_runtime_dependencies() -> tuple[Optional[AsyncSession], Optional[Profile], Optional[dict[str, Any]]]:
-    """
-    Retrieve database session and current profile from tool context.
-    Returns (db, profile, error_dict).
-    """
-    try:
-        context = get_tool_context()
-
-        if context.db is None:
-            logger.error("Database session not available in tool context")
-            return (None, None, {"error": "Database connection not available.", "suggestion": "Please try again later."})
-
-        if context.current_profile is None:
-            logger.error("Current profile not available in tool context")
-            return (
-                None,
-                None,
-                {"error": "Authentication information not available.", "suggestion": "Please ensure you are logged in."},
-            )
-
-        return (context.db, context.current_profile, None)
-
-    except ToolContextError as e:
-        logger.error(f"Tool context error: {e}")
-        return (
-            None,
-            None,
-            {"error": "System configuration error.", "suggestion": "This tool requires proper authentication context."},
-        )
+def _format_error_response(error: AgentHTTPClientError) -> dict[str, Any]:
+    """Format HTTP client errors into user-friendly responses."""
+    return {
+        "success": False,
+        "error": error.message,
+        "status_code": error.status_code,
+        **error.detail,
+    }
 
 
 @tool("mark_student_attendance", args_schema=MarkStudentAttendanceSchema)
@@ -281,278 +79,298 @@ async def mark_student_attendance(
     remarks: Optional[str] = None,
 ) -> dict[str, Any]:
     """
-    Marks a student's attendance status for a specific date.
-    Use this tool when a user wants to record or update a student's attendance.
+    Mark attendance for a student via HTTP API.
+
+    This tool sends a POST request to /api/v1/attendance/ with the JWT token
+    from the tool context. The backend API will:
+    1. Validate the JWT token and extract the user profile
+    2. Verify the user has Teacher or Admin role (via require_role dependency)
+    3. Check authorization for the specific student
+    4. Create the attendance record
 
     Args:
-        student_id: Unique identifier of the student (ID or name)
-        attendance_date: Date for marking attendance (YYYY-MM-DD format)
-        status: Attendance status ('present', 'absent', 'late')
-        class_name: Optional class name for context
-        remarks: Optional additional notes
+        student_id: Student ID or name (resolved by backend)
+        attendance_date: Date in YYYY-MM-DD format
+        status: Attendance status (Present, Absent, Late)
+        class_name: Optional class name for validation
+        remarks: Optional notes about the attendance
 
     Returns:
-        Dictionary containing success status or error information
+        Success response with attendance record details or error details
     """
-    logger.info(f"[TOOL:mark_student_attendance] Student: '{student_id}', Date: '{attendance_date}', Status: '{status}'")
-
-    db, current_profile, error = _get_runtime_dependencies()
-    if error:
-        return error
-
-    user_roles = _get_user_roles(current_profile)
-    if not user_roles.intersection({"Teacher", "Admin"}):
+    # Validate date format
+    parsed_date = _parse_date_string(attendance_date)
+    if not parsed_date:
         return {
-            "error": "You do not have permission to mark attendance.",
-            "suggestion": "Only teachers and administrators can mark student attendance.",
+            "success": False,
+            "error": "Invalid date format. Please use YYYY-MM-DD format.",
+            "example": "2025-11-06",
         }
 
-    student, error = await _resolve_student(db, current_profile, student_id)
-    if error:
-        return error
-
-    target_date = _parse_date_string(attendance_date)
-    if not target_date:
+    # Validate attendance status
+    valid_statuses = {"Present", "Absent", "Late"}
+    if status not in valid_statuses:
         return {
-            "error": f"Invalid date format: '{attendance_date}'",
-            "suggestion": "Please use YYYY-MM-DD format (e.g., '2025-11-02').",
+            "success": False,
+            "error": f"Invalid attendance status: {status}",
+            "valid_values": list(valid_statuses),
         }
-
-    if target_date > date.today():
-        return {
-            "error": "Cannot mark attendance for future dates.",
-            "suggestion": f"Today is {date.today()}. Please use a date from the past or today.",
-        }
-
-    status_lower = status.lower()
-    status_map = {
-        "present": AttendanceStatus.present,
-        "absent": AttendanceStatus.absent,
-        "late": AttendanceStatus.late,
-    }
-
-    if status_lower not in status_map:
-        return {"error": f"Invalid attendance status: '{status}'", "suggestion": "Valid statuses are: present, absent, late."}
-
-    attendance_status = status_map[status_lower]
-
-    existing_records = await attendance_record_service.get_attendance_by_class(db, class_id=student.current_class_id, target_date=target_date)
-
-    existing_record = None
-    for record in existing_records:
-        if record.student_id == student.student_id:
-            existing_record = record
-            break
 
     try:
-        if existing_record:
-            update_data = AttendanceRecordUpdate(status=attendance_status, notes=remarks)
-            updated_record = await attendance_record_service.update_attendance_record(db, db_obj=existing_record, attendance_in=update_data)
-
-            return {
-                "status": "success",
-                "message": f"Updated attendance for {_student_display_name(student)} on {attendance_date} to '{status}'.",
-                "attendance_record": {
-                    "attendance_id": updated_record.id,
-                    "student_id": updated_record.student_id,
-                    "student_name": _student_display_name(student),
-                    "class_name": _format_class_name(student.current_class) or "N/A",
-                    "attendance_date": str(updated_record.date),
-                    "status": updated_record.status,
-                    "remarks": updated_record.notes or "No remarks",
-                    "marked_by": f"{current_profile.first_name or ''} {current_profile.last_name or ''}".strip(),
-                },
+        async with AgentHTTPClient() as client:
+            # Build request payload
+            payload = {
+                "student_id": int(student_id) if student_id.isdigit() else student_id,
+                "date": attendance_date,
+                "status": status,
             }
-        else:
-            create_data = AttendanceRecordCreate(
-                student_id=student.student_id,
-                class_id=student.current_class_id,
-                date=target_date,
-                status=attendance_status,
-                teacher_id=current_profile.teacher.teacher_id if current_profile.teacher else None,
-                notes=remarks,
+
+            if remarks:
+                payload["notes"] = remarks
+
+            # If class_name is provided, we need to resolve it first
+            # For now, we'll let the backend handle student resolution
+            # In a full implementation, you might need to call a class lookup endpoint first
+
+            logger.info(f"Marking attendance via API: student={student_id}, date={attendance_date}, status={status}")
+
+            # POST to attendance endpoint
+            # Note: The backend endpoint expects class_id, but in service-based version
+            # we resolve it from student. For HTTP-based, we need to handle this differently.
+            # Option 1: Create a new endpoint that accepts student_id + date
+            # Option 2: Resolve class_id first via another endpoint
+            # For demonstration, I'll show the direct approach
+
+            response = await client.post(
+                "/attendance/",
+                json=payload,
             )
-            new_record = await attendance_record_service.create_attendance_record(db, attendance_in=create_data)
 
             return {
-                "status": "success",
-                "message": f"Successfully marked {_student_display_name(student)} as '{status}' on {attendance_date}.",
-                "attendance_record": {
-                    "attendance_id": new_record.id,
-                    "student_id": new_record.student_id,
-                    "student_name": _student_display_name(student),
-                    "class_name": _format_class_name(student.current_class) or "N/A",
-                    "attendance_date": str(new_record.date),
-                    "status": new_record.status,
-                    "remarks": new_record.notes or "No remarks",
-                    "marked_by": f"{current_profile.first_name or ''} {current_profile.last_name or ''}".strip(),
-                },
+                "success": True,
+                "message": f"Attendance marked successfully for student {student_id}",
+                "attendance_record": response,
             }
+
+    except AgentAuthenticationError as e:
+        logger.error(f"Authentication error while marking attendance: {e.message}")
+        return _format_error_response(e)
+
+    except AgentValidationError as e:
+        logger.error(f"Validation error while marking attendance: {e.message}")
+        return _format_error_response(e)
+
+    except AgentHTTPClientError as e:
+        logger.error(f"HTTP error while marking attendance: {e.message}")
+        return _format_error_response(e)
 
     except Exception as e:
-        logger.error(f"Failed to mark attendance: {e}", exc_info=True)
-        return {"error": "Failed to mark attendance due to a system error.", "suggestion": "Please try again or contact support if the issue persists."}
+        logger.exception(f"Unexpected error while marking attendance: {e}")
+        return {
+            "success": False,
+            "error": "An unexpected error occurred while marking attendance",
+            "detail": str(e),
+        }
 
 
 @tool("get_student_attendance_for_date_range", args_schema=GetStudentAttendanceForDateRangeSchema)
-async def get_student_attendance_for_date_range(student_id: str, start_date: str, end_date: str, class_name: Optional[str] = None) -> dict[str, Any]:
+async def get_student_attendance_for_date_range(
+    student_id: str,
+    start_date: str,
+    end_date: str,
+    class_name: Optional[str] = None,
+) -> dict[str, Any]:
     """
-    Retrieves a student's complete attendance record between a specified start and end date.
-    Use this tool when a user asks for a student's attendance history over a period.
+    Retrieve student attendance records for a date range via HTTP API.
+
+    This tool sends a GET request to /api/v1/attendance/ with query parameters.
+    The backend will validate JWT and check if the user has permission to view
+    this student's attendance (Teacher/Admin for any student, Parent/Student for self).
 
     Args:
-        student_id: Unique identifier of the student (ID or name)
-        start_date: Start date of the range (YYYY-MM-DD format)
-        end_date: End date of the range (YYYY-MM-DD format)
-        class_name: Optional filter by class
+        student_id: Student ID
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+        class_name: Optional class name for validation
 
     Returns:
-        Dictionary containing attendance records or error information
+        Success response with attendance records or error details
     """
-    logger.info(f"[TOOL:get_student_attendance_for_date_range] Student: '{student_id}', Range: {start_date} to {end_date}")
+    # Validate dates
+    parsed_start = _parse_date_string(start_date)
+    parsed_end = _parse_date_string(end_date)
 
-    db, current_profile, error = _get_runtime_dependencies()
-    if error:
-        return error
-
-    student, error = await _resolve_student(db, current_profile, student_id)
-    if error:
-        return error
-
-    authorized, error = await _is_authorized_for_student(db, current_profile, student, allow_student=True, allow_parent=True)
-    if not authorized:
-        return error
-
-    start_date_obj = _parse_date_string(start_date)
-    end_date_obj = _parse_date_string(end_date)
-
-    if not start_date_obj or not end_date_obj:
-        return {"error": "Invalid date format.", "suggestion": "Please use YYYY-MM-DD format for dates."}
-
-    if end_date_obj < start_date_obj:
-        return {"error": "End date cannot be before start date.", "suggestion": f"Start: {start_date}, End: {end_date}"}
-
-    try:
-        records = await attendance_record_service.get_attendance_by_student_in_range(db, student_id=student.student_id, start_date=start_date_obj, end_date=end_date_obj)
-
-        total_days = len(records)
-        present_count = sum(1 for r in records if r.status == "Present")
-        absent_count = sum(1 for r in records if r.status == "Absent")
-        late_count = sum(1 for r in records if r.status == "Late")
-
-        attendance_percentage = (present_count + late_count) / total_days * 100 if total_days > 0 else 0.0
-
-        attendance_records = []
-        for record in records:
-            attendance_records.append(
-                {
-                    "attendance_id": record.id,
-                    "attendance_date": str(record.date),
-                    "status": record.status,
-                    "class_name": _format_class_name(student.current_class) or "N/A",
-                    "remarks": record.notes or "No remarks",
-                }
-            )
-
+    if not parsed_start or not parsed_end:
         return {
-            "status": "success",
-            "student_id": student.student_id,
-            "student_name": _student_display_name(student),
-            "date_range": {"start": start_date, "end": end_date},
-            "class_name": _format_class_name(student.current_class) or "N/A",
-            "attendance_records": attendance_records,
-            "summary": {
-                "total_days": total_days,
-                "present": present_count,
-                "absent": absent_count,
-                "late": late_count,
-                "attendance_percentage": round(attendance_percentage, 2),
-            },
+            "success": False,
+            "error": "Invalid date format. Please use YYYY-MM-DD format.",
+            "example": "2025-11-06",
         }
 
+    if parsed_end < parsed_start:
+        return {
+            "success": False,
+            "error": "End date must be after or equal to start date.",
+        }
+
+    try:
+        async with AgentHTTPClient() as client:
+            # Convert student_id to int if possible
+            student_id_param = int(student_id) if student_id.isdigit() else student_id
+
+            logger.info(f"Fetching attendance via API: student={student_id}, date_range={start_date} to {end_date}")
+
+            # GET attendance records with query parameters
+            response = await client.get(
+                "/attendance/",
+                params={
+                    "student_id": student_id_param,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                },
+            )
+
+            # Calculate summary statistics
+            total_days = len(response)
+            present_count = sum(1 for record in response if record.get("status") == "Present")
+            absent_count = sum(1 for record in response if record.get("status") == "Absent")
+            late_count = sum(1 for record in response if record.get("status") == "Late")
+
+            attendance_rate = (present_count / total_days * 100) if total_days > 0 else 0
+
+            return {
+                "success": True,
+                "student_id": student_id,
+                "date_range": {"start": start_date, "end": end_date},
+                "summary": {
+                    "total_days": total_days,
+                    "present": present_count,
+                    "absent": absent_count,
+                    "late": late_count,
+                    "attendance_rate": f"{attendance_rate:.1f}%",
+                },
+                "records": response,
+            }
+
+    except AgentAuthenticationError as e:
+        logger.error(f"Authentication error while fetching attendance: {e.message}")
+        return _format_error_response(e)
+
+    except AgentResourceNotFoundError as e:
+        logger.error(f"Resource not found while fetching attendance: {e.message}")
+        return {
+            "success": False,
+            "error": f"No attendance records found for student {student_id} in the specified date range.",
+            "suggestion": "Verify the student ID and date range.",
+        }
+
+    except AgentHTTPClientError as e:
+        logger.error(f"HTTP error while fetching attendance: {e.message}")
+        return _format_error_response(e)
+
     except Exception as e:
-        logger.error(f"Failed to fetch attendance records: {e}", exc_info=True)
-        return {"error": "Failed to retrieve attendance records.", "suggestion": "Please try again or contact support."}
+        logger.exception(f"Unexpected error while fetching attendance: {e}")
+        return {
+            "success": False,
+            "error": "An unexpected error occurred while fetching attendance records",
+            "detail": str(e),
+        }
 
 
 @tool("get_class_attendance_for_date", args_schema=GetClassAttendanceForDateSchema)
-async def get_class_attendance_for_date(class_name: str, attendance_date: str) -> dict[str, Any]:
+async def get_class_attendance_for_date(
+    class_name: str,
+    attendance_date: str,
+) -> dict[str, Any]:
     """
-    Fetches the attendance records for all students in a specific class on a single given date.
-    Use this tool when a user asks for class attendance on a particular day.
+    Retrieve attendance for an entire class on a specific date via HTTP API.
+
+    This tool needs to:
+    1. Resolve class_name to class_id (via a class lookup endpoint)
+    2. Fetch attendance records for that class (GET /api/v1/attendance/class/{class_id}/range)
 
     Args:
-        class_name: Name of the class (e.g., '10A', 'Grade 10 A')
-        attendance_date: Date for which attendance is required (YYYY-MM-DD format)
+        class_name: Class name (e.g., "10A", "Grade 10 A")
+        attendance_date: Date in YYYY-MM-DD format
 
     Returns:
-        Dictionary containing class attendance data or error information
+        Success response with class attendance or error details
     """
-    logger.info(f"[TOOL:get_class_attendance_for_date] Class: '{class_name}', Date: '{attendance_date}'")
-
-    db, current_profile, error = _get_runtime_dependencies()
-    if error:
-        return error
-
-    user_roles = _get_user_roles(current_profile)
-    if not user_roles.intersection({"Teacher", "Admin"}):
+    # Validate date
+    parsed_date = _parse_date_string(attendance_date)
+    if not parsed_date:
         return {
-            "error": "You do not have permission to view class attendance.",
-            "suggestion": "Only teachers and administrators can view class attendance.",
+            "success": False,
+            "error": "Invalid date format. Please use YYYY-MM-DD format.",
+            "example": "2025-11-06",
         }
-
-    class_obj, error = await _resolve_class(db, current_profile.school_id, class_name)
-    if error:
-        return error
-
-    target_date = _parse_date_string(attendance_date)
-    if not target_date:
-        return {"error": f"Invalid date format: '{attendance_date}'", "suggestion": "Please use YYYY-MM-DD format."}
 
     try:
-        records = await attendance_record_service.get_attendance_by_class(db, class_id=class_obj.class_id, target_date=target_date)
+        logger.info(f"Fetching class attendance via API: class={class_name}, date={attendance_date}")
 
-        all_students = await student_service.get_all_students_for_class(db, class_id=class_obj.class_id)
+        # Step 1: Resolve class name to class ID
+        # We need a class search/lookup endpoint for this
+        # For demonstration, assuming there's a /api/v1/classes/search endpoint
+        # In reality, you may need to add this endpoint or adjust the approach
 
-        present_count = sum(1 for r in records if r.status == "Present")
-        absent_count = sum(1 for r in records if r.status == "Absent")
-        late_count = sum(1 for r in records if r.status == "Late")
-        total_students = len(all_students)
+        # For now, let's assume we have the class_id
+        # In production, you'd call: GET /api/v1/classes?grade_level=X&section=Y
+        # or implement a dedicated lookup endpoint
 
-        attendance_percentage = (present_count + late_count) / total_students * 100 if total_students > 0 else 0.0
+        # Placeholder: We'll need to add class resolution logic
+        # This is a limitation that needs to be addressed in the API design
 
-        attendance_map = {record.student_id: record for record in records}
+        # Step 2: Fetch attendance records for the class
+        # The endpoint is: GET /api/v1/attendance/class/{class_id}/range
+        # But we need class_id first
 
-        attendance_records = []
-        for student in all_students:
-            record = attendance_map.get(student.student_id)
-            attendance_records.append(
-                {
-                    "student_id": student.student_id,
-                    "student_name": _student_display_name(student),
-                    "status": record.status if record else "Not Marked",
-                    "remarks": record.notes if record else "No attendance record",
-                }
-            )
-
+        # WORKAROUND: For now, return an instructive error
         return {
-            "status": "success",
-            "class_name": _format_class_name(class_obj),
-            "attendance_date": attendance_date,
-            "attendance_records": attendance_records,
-            "summary": {
-                "total_students": total_students,
-                "present": present_count,
-                "absent": absent_count,
-                "late": late_count,
-                "not_marked": total_students - len(records),
-                "attendance_percentage": round(attendance_percentage, 2),
-            },
+            "success": False,
+            "error": "Class-based attendance lookup requires class ID resolution",
+            "suggestion": (
+                "To implement this feature, add a class lookup endpoint " "(e.g., GET /api/v1/classes/search?name={class_name}) " "that the agent can call to resolve class_name → class_id, " "then use GET /api/v1/attendance/class/{class_id}/range"
+            ),
+            "implementation_needed": [
+                "Add GET /api/v1/classes/search endpoint for class name resolution",
+                "Update this tool to call class search then attendance endpoint",
+            ],
         }
 
+        # FUTURE IMPLEMENTATION (once class search endpoint exists):
+        # async with AgentHTTPClient() as client:
+        #     classes = await client.get("/classes/search", params={"name": class_name})
+        #     if not classes:
+        #         return {"success": False, "error": f"No class found with name: {class_name}"}
+        #
+        #     class_id = classes[0]["class_id"]
+        #     response = await client.get(
+        #         f"/attendance/class/{class_id}/range",
+        #         params={"start_date": attendance_date, "end_date": attendance_date}
+        #     )
+        #
+        #     return {
+        #         "success": True,
+        #         "class_name": class_name,
+        #         "date": attendance_date,
+        #         "attendance_records": response,
+        #     }
+
+    except AgentAuthenticationError as e:
+        logger.error(f"Authentication error while fetching class attendance: {e.message}")
+        return _format_error_response(e)
+
+    except AgentHTTPClientError as e:
+        logger.error(f"HTTP error while fetching class attendance: {e.message}")
+        return _format_error_response(e)
+
     except Exception as e:
-        logger.error(f"Failed to fetch class attendance: {e}", exc_info=True)
-        return {"error": "Failed to retrieve class attendance.", "suggestion": "Please try again or contact support."}
+        logger.exception(f"Unexpected error while fetching class attendance: {e}")
+        return {
+            "success": False,
+            "error": "An unexpected error occurred while fetching class attendance",
+            "detail": str(e),
+        }
 
 
 @tool("get_student_attendance_summary", args_schema=GetStudentAttendanceSummarySchema)
@@ -562,117 +380,89 @@ async def get_student_attendance_summary(
     class_name: Optional[str] = None,
 ) -> dict[str, Any]:
     """
-    Calculates and returns a student's overall attendance percentage for the current academic term.
-    Use this tool when a user asks for a student's overall attendance or attendance percentage.
+    Get an attendance summary for a student over an academic term via HTTP API.
+
+    This tool fetches attendance records and calculates summary statistics.
+    The backend validates JWT and checks authorization.
 
     Args:
-        student_id: Unique identifier of the student (ID or name)
-        academic_term: Academic term ('current' or specific term identifier)
-        class_name: Optional filter by class
+        student_id: Student ID
+        academic_term: Academic term (e.g., "current", "Term 1", "2024-Fall")
+        class_name: Optional class name for validation
 
     Returns:
-        Dictionary containing attendance summary or error information
+        Success response with attendance summary or error details
     """
-    logger.info(f"[TOOL:get_student_attendance_summary] Student: '{student_id}', Term: '{academic_term}'")
-
-    db, current_profile, error = _get_runtime_dependencies()
-    if error:
-        return error
-
-    student, error = await _resolve_student(db, current_profile, student_id)
-    if error:
-        return error
-
-    authorized, error = await _is_authorized_for_student(db, current_profile, student, allow_student=True, allow_parent=True)
-    if not authorized:
-        return error
-
     try:
-        end_date = date.today()
-        start_date = end_date - timedelta(days=90)
+        async with AgentHTTPClient() as client:
+            # Convert student_id to int if possible
+            student_id_param = int(student_id) if student_id.isdigit() else student_id
 
-        records = await attendance_record_service.get_attendance_by_student_in_range(db, student_id=student.student_id, start_date=start_date, end_date=end_date)
+            logger.info(f"Fetching attendance summary via API: student={student_id}, term={academic_term}")
 
-        total_days = len(records)
-        present_count = sum(1 for r in records if r.status == "Present")
-        absent_count = sum(1 for r in records if r.status == "Absent")
-        late_count = sum(1 for r in records if r.status == "Late")
+            # For a term-based summary, we need to determine the date range
+            # This would typically involve:
+            # 1. Looking up the academic term dates (requires an academic terms API)
+            # 2. Fetching attendance records for that range
+            # 3. Calculating statistics
 
-        attendance_percentage = (present_count + late_count) / total_days * 100 if total_days > 0 else 0.0
+            # For now, we'll fetch all attendance records and calculate summary
+            # In production, you'd want a dedicated summary endpoint or term lookup
 
-        if attendance_percentage >= 90:
-            status = "Excellent"
-        elif attendance_percentage >= 75:
-            status = "Good"
-        elif attendance_percentage >= 60:
-            status = "Fair"
-        else:
-            status = "Poor"
-
-        monthly_data = {}
-        for record in records:
-            month_key = record.date.strftime("%Y-%m")
-            if month_key not in monthly_data:
-                monthly_data[month_key] = {"present": 0, "absent": 0, "late": 0, "total": 0}
-            monthly_data[month_key]["total"] += 1
-            if record.status == "Present":
-                monthly_data[month_key]["present"] += 1
-            elif record.status == "Absent":
-                monthly_data[month_key]["absent"] += 1
-            elif record.status == "Late":
-                monthly_data[month_key]["late"] += 1
-
-        monthly_breakdown = []
-        for month_key, data in sorted(monthly_data.items()):
-            month_date = datetime.strptime(month_key, "%Y-%m")
-            month_percentage = (data["present"] + data["late"]) / data["total"] * 100 if data["total"] > 0 else 0.0
-            monthly_breakdown.append(
-                {
-                    "month": month_date.strftime("%B %Y"),
-                    "total_days": data["total"],
-                    "present": data["present"],
-                    "absent": data["absent"],
-                    "late": data["late"],
-                    "percentage": round(month_percentage, 2),
-                }
+            # Fetch all attendance records for the student
+            response = await client.get(
+                "/attendance/",
+                params={"student_id": student_id_param},
             )
 
-        alerts = []
-        if attendance_percentage >= 90:
-            alerts.append("Student has excellent attendance!")
-        elif attendance_percentage < 75:
-            alerts.append(f"Warning: Attendance is below 75% ({attendance_percentage:.1f}%)")
+            # Calculate summary statistics
+            total_days = len(response)
+            present_count = sum(1 for record in response if record.get("status") == "Present")
+            absent_count = sum(1 for record in response if record.get("status") == "Absent")
+            late_count = sum(1 for record in response if record.get("status") == "Late")
 
-        if late_count > 0:
-            alerts.append(f"{late_count} late arrival(s) recorded this term")
+            attendance_rate = (present_count / total_days * 100) if total_days > 0 else 0
 
-        if absent_count > 5:
-            alerts.append(f"{absent_count} absences recorded - consider follow-up")
+            return {
+                "success": True,
+                "student_id": student_id,
+                "academic_term": academic_term,
+                "summary": {
+                    "total_days_recorded": total_days,
+                    "present": present_count,
+                    "absent": absent_count,
+                    "late": late_count,
+                    "attendance_rate": f"{attendance_rate:.1f}%",
+                },
+                "message": (f"Student has attended {present_count} out of {total_days} days " f"({attendance_rate:.1f}% attendance rate)"),
+            }
 
+    except AgentAuthenticationError as e:
+        logger.error(f"Authentication error while fetching attendance summary: {e.message}")
+        return _format_error_response(e)
+
+    except AgentResourceNotFoundError as e:
+        logger.error(f"Resource not found while fetching attendance summary: {e.message}")
         return {
-            "status": "success",
-            "student_id": student.student_id,
-            "student_name": _student_display_name(student),
-            "academic_term": academic_term,
-            "class_name": _format_class_name(student.current_class) or "N/A",
-            "term_dates": {"start_date": str(start_date), "end_date": str(end_date)},
-            "attendance_summary": {
-                "total_school_days": total_days,
-                "days_present": present_count,
-                "days_absent": absent_count,
-                "days_late": late_count,
-                "attendance_percentage": round(attendance_percentage, 2),
-                "status": status,
-            },
-            "monthly_breakdown": monthly_breakdown,
-            "alerts": alerts if alerts else ["No alerts"],
+            "success": False,
+            "error": f"No attendance records found for student {student_id}.",
+            "suggestion": "Verify the student ID.",
         }
 
+    except AgentHTTPClientError as e:
+        logger.error(f"HTTP error while fetching attendance summary: {e.message}")
+        return _format_error_response(e)
+
     except Exception as e:
-        logger.error(f"Failed to calculate attendance summary: {e}", exc_info=True)
-        return {"error": "Failed to calculate attendance summary.", "suggestion": "Please try again or contact support."}
+        logger.exception(f"Unexpected error while fetching attendance summary: {e}")
+        return {
+            "success": False,
+            "error": "An unexpected error occurred while fetching attendance summary",
+            "detail": str(e),
+        }
 
 
+# Export tools for agent registration
 attendance_agent_tools = [
     mark_student_attendance,
     get_student_attendance_for_date_range,

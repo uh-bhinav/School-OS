@@ -20,10 +20,23 @@ from app.models.profile import Profile
 
 @dataclass
 class ToolRuntimeContext:
-    """Holds ambient dependencies required by agent tools."""
+    """Holds ambient dependencies required by agent tools.
+
+    For HTTP-based agents:
+    - jwt_token: JWT token from the frontend client that will be used to authenticate
+      HTTP requests to the backend API. This token is passed from the frontend through
+      the agent invocation layer.
+    - api_base_url: Base URL for the backend API (e.g., http://localhost:8000/api/v1)
+
+    For legacy service-based agents (deprecated):
+    - db: Database session for direct service calls
+    - current_profile: Authenticated user profile
+    """
 
     db: Optional[AsyncSession] = None
     current_profile: Optional[Profile] = None
+    jwt_token: Optional[str] = None
+    api_base_url: Optional[str] = None
 
 
 class ToolContextError(RuntimeError):

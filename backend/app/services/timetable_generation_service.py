@@ -24,7 +24,7 @@ Performance:
 import random
 from collections import defaultdict
 from datetime import time
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -90,33 +90,33 @@ class ScheduleState:
     - Warnings and conflicts encountered
     """
 
-    def __init__(self, class_id: int, school_id: int, working_days: List[int]):
+    def __init__(self, class_id: int, school_id: int, working_days: list[int]):
         self.class_id = class_id
         self.school_id = school_id
         self.working_days = working_days
 
         # Grid structure: day -> period_id -> Slot
-        self.grid: Dict[int, Dict[int, Slot]] = defaultdict(dict)
+        self.grid: dict[int, dict[int, Slot]] = defaultdict(dict)
 
         # Conflict tracking: teacher_id -> day -> set(period_ids)
-        self.teacher_schedule: Dict[int, Dict[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
+        self.teacher_schedule: dict[int, dict[int, set[int]]] = defaultdict(lambda: defaultdict(set))
 
         # Class schedule tracking: day -> set(period_ids)
-        self.class_schedule: Dict[int, Set[int]] = defaultdict(set)
+        self.class_schedule: dict[int, set[int]] = defaultdict(set)
 
         # Subject placement history: subject_id -> [(day, period_id)]
-        self.subject_placements: Dict[int, List[Tuple[int, int]]] = defaultdict(list)
+        self.subject_placements: dict[int, list[tuple[int, int]]] = defaultdict(list)
 
         # Teacher workload tracking (NEW)
         # teacher_id -> day -> count of classes
-        self.teacher_daily_load: Dict[int, Dict[int, int]] = defaultdict(lambda: defaultdict(int))
+        self.teacher_daily_load: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
         # teacher_id -> total classes in week
-        self.teacher_weekly_load: Dict[int, int] = defaultdict(int)
+        self.teacher_weekly_load: dict[int, int] = defaultdict(int)
 
         # Output collections
-        self.entries: List[Dict] = []  # Raw dict entries to be converted to TimetableEntryOut
-        self.warnings: List[str] = []
-        self.conflicts: List[ConflictDetail] = []
+        self.entries: list[dict] = []  # Raw dict entries to be converted to TimetableEntryOut
+        self.warnings: list[str] = []
+        self.conflicts: list[ConflictDetail] = []
 
 
 # ============================================================================
@@ -139,7 +139,7 @@ class ConstraintValidator:
     """
 
     @staticmethod
-    def validate_teacher_availability(teacher_id: int, day: int, period_id: int, state: ScheduleState, constraints: List[ConstraintRule]) -> Tuple[bool, Optional[str]]:
+    def validate_teacher_availability(teacher_id: int, day: int, period_id: int, state: ScheduleState, constraints: list[ConstraintRule]) -> tuple[bool, Optional[str]]:
         """
         Check if teacher is available at this slot.
 
@@ -162,7 +162,7 @@ class ConstraintValidator:
         return True, None
 
     @staticmethod
-    def validate_subject_timing(subject_id: int, period_number: int, period_start_time: time, constraints: List[ConstraintRule]) -> Tuple[bool, Optional[str]]:
+    def validate_subject_timing(subject_id: int, period_number: int, period_start_time: time, constraints: list[ConstraintRule]) -> tuple[bool, Optional[str]]:
         """
         Check if subject can be scheduled at this time.
 
@@ -188,7 +188,7 @@ class ConstraintValidator:
         return True, None
 
     @staticmethod
-    def validate_min_gap_days(subject_id: int, day: int, state: ScheduleState, min_gap: int) -> Tuple[bool, Optional[str]]:
+    def validate_min_gap_days(subject_id: int, day: int, state: ScheduleState, min_gap: int) -> tuple[bool, Optional[str]]:
         """
         Ensure minimum gap between subject occurrences.
 
@@ -208,7 +208,7 @@ class ConstraintValidator:
         return True, None
 
     @staticmethod
-    def find_consecutive_slots(state: ScheduleState, day: int, required_count: int, available_periods: List[Slot]) -> Optional[List[Slot]]:
+    def find_consecutive_slots(state: ScheduleState, day: int, required_count: int, available_periods: list[Slot]) -> Optional[list[Slot]]:
         """
         Find N consecutive free periods on a given day.
 
@@ -257,7 +257,7 @@ class TeacherWorkloadValidator:
     """
 
     @staticmethod
-    def can_assign_teacher(teacher_id: int, day: int, state: ScheduleState, teacher_constraints: Optional["TimetableConstraint"]) -> Tuple[bool, Optional[str]]:
+    def can_assign_teacher(teacher_id: int, day: int, state: ScheduleState, teacher_constraints: Optional["TimetableConstraint"]) -> tuple[bool, Optional[str]]:
         """
         Check if teacher can be assigned to a slot based on workload limits.
 
@@ -293,7 +293,7 @@ class TeacherWorkloadValidator:
         return True, None
 
     @staticmethod
-    def check_minimum_thresholds(state: ScheduleState, teacher_constraints: Optional["TimetableConstraint"]) -> List[str]:
+    def check_minimum_thresholds(state: ScheduleState, teacher_constraints: Optional["TimetableConstraint"]) -> list[str]:
         """
         Check if teachers meet minimum workload thresholds.
 
@@ -354,7 +354,7 @@ class TimetableScheduler:
         self.db = db
         self.validator = ConstraintValidator()
 
-    async def initialize_grid(self, school_id: int, working_days: List[int], state: ScheduleState) -> None:
+    async def initialize_grid(self, school_id: int, working_days: list[int], state: ScheduleState) -> None:
         """
         Build the empty schedule grid based on school's period structure.
 
@@ -415,7 +415,7 @@ class TimetableScheduler:
         mapping = {"Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6, "Sunday": 7}
         return mapping.get(day_name, 1)
 
-    def _sort_subjects_by_priority(self, requirements: List[SubjectRequirement]) -> List[SubjectRequirement]:
+    def _sort_subjects_by_priority(self, requirements: list[SubjectRequirement]) -> list[SubjectRequirement]:
         """
         Sort subjects for optimal scheduling order.
 
@@ -431,12 +431,12 @@ class TimetableScheduler:
             Sorted list with hardest-to-schedule subjects first
         """
 
-        def priority_score(req: SubjectRequirement) -> Tuple[int, int, int]:
+        def priority_score(req: SubjectRequirement) -> tuple[int, int, int]:
             return (1 if req.requires_consecutive else 0, 1 if req.is_core else 0, req.periods_per_week)  # Labs first  # Core second  # High frequency third
 
         return sorted(requirements, key=priority_score, reverse=True)
 
-    async def schedule_subject(self, requirement: SubjectRequirement, state: ScheduleState, constraints: List[ConstraintRule], academic_year_id: int, teacher_constraints: Optional[TimetableConstraint] = None, subject_name: str = "") -> int:
+    async def schedule_subject(self, requirement: SubjectRequirement, state: ScheduleState, constraints: list[ConstraintRule], academic_year_id: int, teacher_constraints: Optional[TimetableConstraint] = None, subject_name: str = "") -> int:
         """
         Schedule all periods for a single subject using greedy algorithm with teacher workload enforcement.
 
@@ -761,7 +761,7 @@ class TimetableGenerationService:
                 generation_metadata={"error": str(e), "error_type": type(e).__name__},
             )
 
-    async def check_teacher_conflict(self, teacher_id: int, day_of_week: int, period_id: int, exclude_entry_id: Optional[int] = None) -> Tuple[bool, Optional[str]]:
+    async def check_teacher_conflict(self, teacher_id: int, day_of_week: int, period_id: int, exclude_entry_id: Optional[int] = None) -> tuple[bool, Optional[str]]:
         """
         Check if placing teacher at this slot creates a conflict.
 
@@ -789,7 +789,7 @@ class TimetableGenerationService:
 
         return False, None
 
-    async def swap_timetable_entries(self, entry_1_id: int, entry_2_id: int, performed_by_user_id: UUID, school_id: int) -> Tuple[bool, str, Optional[List[Timetable]]]:  # Now automatically extracted from JWT in endpoint
+    async def swap_timetable_entries(self, entry_1_id: int, entry_2_id: int, performed_by_user_id: UUID, school_id: int) -> tuple[bool, str, Optional[list[Timetable]]]:  # Now automatically extracted from JWT in endpoint
         """
         Swap two timetable entries after validating no teacher conflicts occur.
 
@@ -898,7 +898,7 @@ class TimetableGenerationService:
             await self.db.rollback()
             return False, f"Database error during swap: {str(e)}", None
 
-    async def _can_swap(self, entry1: Timetable, entry2: Timetable) -> Tuple[bool, Optional[str]]:
+    async def _can_swap(self, entry1: Timetable, entry2: Timetable) -> tuple[bool, Optional[str]]:
         """
         Private helper to validate if two entries can be swapped without conflicts.
 

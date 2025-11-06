@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,7 +54,7 @@ async def delete_club(club_id: int, db: AsyncSession = Depends(get_db_session), 
     return
 
 
-@router.get("/", response_model=List[ClubRead])
+@router.get("/", response_model=list[ClubRead])
 async def get_all_clubs(academic_year_id: Optional[int] = None, db: AsyncSession = Depends(get_db_session), current_user: Profile = Depends(get_current_user)):
     """
     Get all active clubs for the user's school.
@@ -63,7 +63,7 @@ async def get_all_clubs(academic_year_id: Optional[int] = None, db: AsyncSession
     return await service.get_clubs_by_school(current_user.school_id, academic_year_id, is_active=True)
 
 
-@router.get("/my-clubs", response_model=List[ClubMembershipRead])
+@router.get("/my-clubs", response_model=list[ClubMembershipRead])
 async def get_my_clubs(db: AsyncSession = Depends(get_db_session), current_user: Profile = Depends(get_current_user)):
     """
     Get all clubs the currently authenticated student is a member of.
@@ -141,7 +141,7 @@ async def remove_club_member_by_student(club_id: int, student_id: int, db: Async
     return
 
 
-@router.get("/{club_id}/members", response_model=List[ProfileOut])
+@router.get("/{club_id}/members", response_model=list[ProfileOut])
 async def get_club_members(club_id: int, db: AsyncSession = Depends(get_db_session), current_user: Profile = Depends(get_current_user)):
     """
     Get a list of all active members (as student profiles) in a club.
@@ -191,7 +191,7 @@ async def delete_club_activity(activity_id: int, db: AsyncSession = Depends(get_
     return
 
 
-@router.get("/{club_id}/activities", response_model=List[ClubActivityRead])
+@router.get("/{club_id}/activities", response_model=list[ClubActivityRead])
 async def get_club_activities(club_id: int, db: AsyncSession = Depends(get_db_session), current_user: Profile = Depends(get_current_user)):
     """
     Get all activities for a specific club.
@@ -200,7 +200,7 @@ async def get_club_activities(club_id: int, db: AsyncSession = Depends(get_db_se
     return await service.get_club_activities(club_id, current_user.school_id)
 
 
-@router.get("/activities/upcoming", response_model=List[ClubActivityRead])
+@router.get("/activities/upcoming", response_model=list[ClubActivityRead])
 async def get_all_upcoming_activities(db: AsyncSession = Depends(get_db_session), current_user: Profile = Depends(get_current_user)):
     """
     Get all upcoming club activities for the entire school.
