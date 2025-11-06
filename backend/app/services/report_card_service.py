@@ -4,7 +4,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 # --- END OF FIX ---
-from typing import Dict, Optional
+from typing import Optional
 
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
@@ -50,7 +50,7 @@ async def get_student_report_card_data(db: Session, student_id: int, academic_ye
 
     # This dictionary will group all marks by exam name
     # e.g., "Mid-Term": {"marks": [], "total_obtained": 0, "total_max": 0}
-    exam_groups: Dict[str, Dict] = defaultdict(lambda: {"marks": [], "total_obtained": Decimal(0), "total_max": Decimal(0)})
+    exam_groups: dict[str, dict] = defaultdict(lambda: {"marks": [], "total_obtained": Decimal(0), "total_max": Decimal(0)})
 
     grand_total_obtained = Decimal(0)
     grand_total_max_marks = Decimal(0)

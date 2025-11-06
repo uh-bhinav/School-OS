@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +15,7 @@ def get_achievement_service(db: AsyncSession = Depends(get_db)) -> AchievementSe
 
 @router.get(
     "/school/{academic_year_id}",
-    response_model=List[LeaderboardStudent]
+    response_model=list[LeaderboardStudent]
     # dependencies=[Depends(get_current_active_user)]
 )
 async def get_school_leaderboard(academic_year_id: int, service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user)):
@@ -31,7 +29,7 @@ async def get_school_leaderboard(academic_year_id: int, service: AchievementServ
 
 @router.get(
     "/class/{class_id}/{academic_year_id}",
-    response_model=List[LeaderboardStudent]
+    response_model=list[LeaderboardStudent]
     # dependencies=[Depends(get_current_active_user)]
 )
 async def get_class_leaderboard(class_id: int, academic_year_id: int, service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user)):
@@ -46,7 +44,7 @@ async def get_class_leaderboard(class_id: int, academic_year_id: int, service: A
 
 @router.get(
     "/clubs/{academic_year_id}",
-    response_model=List[LeaderboardClub]
+    response_model=list[LeaderboardClub]
     # dependencies=[Depends(get_current_active_user)]
 )
 async def get_club_leaderboard(academic_year_id: int, service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user)):

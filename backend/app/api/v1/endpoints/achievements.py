@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,7 +55,7 @@ async def create_achievement_point_rule(rule_in: AchievementPointRuleCreate, ser
 
 @router.get(
     "/rules",
-    response_model=List[AchievementPointRule]
+    response_model=list[AchievementPointRule]
     # dependencies=[Depends(teacher_roles)]
 )
 async def get_all_achievement_point_rules(service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user)):
@@ -128,7 +126,7 @@ async def verify_student_achievement(achievement_id: int, service: AchievementSe
 
 @router.get(
     "/student/{student_id}",
-    response_model=List[StudentAchievement]
+    response_model=list[StudentAchievement]
     # dependencies=[Depends(get_current_active_user)]
 )
 async def get_achievements_for_student(student_id: int, verified_only: bool = True, service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user)):

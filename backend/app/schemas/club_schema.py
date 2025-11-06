@@ -1,5 +1,5 @@
 from datetime import date, datetime, time
-from typing import Any, List, Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,7 +22,7 @@ class ClubBase(BaseModel):
     registration_start_date: Optional[date] = None
     registration_end_date: Optional[date] = None
     club_rules: Optional[str] = None
-    objectives: Optional[List[str]] = Field(default_factory=list)  # JSONB as list of strings
+    objectives: Optional[list[str]] = Field(default_factory=list)  # JSONB as list of strings
     is_active: bool = True
 
 
@@ -44,7 +44,7 @@ class ClubUpdate(BaseModel):
     registration_start_date: Optional[date] = None
     registration_end_date: Optional[date] = None
     club_rules: Optional[str] = None
-    objectives: Optional[List[str]] = None
+    objectives: Optional[list[str]] = None
     is_active: Optional[bool] = None
     teacher_in_charge_id: Optional[int] = None
     assistant_teacher_id: Optional[int] = None
@@ -128,7 +128,7 @@ class ClubActivityBase(BaseModel):
     budget_allocated: Optional[float] = Field(None, ge=0)  # Using float for NUMERIC
     status: ClubActivityStatus = ClubActivityStatus.planned
     outcome_notes: Optional[str] = None
-    media_urls: Optional[List[str]] = Field(default_factory=list)
+    media_urls: Optional[list[str]] = Field(default_factory=list)
 
 
 class ClubActivityCreate(ClubActivityBase):
@@ -148,7 +148,7 @@ class ClubActivityUpdate(BaseModel):
     budget_allocated: Optional[float] = None
     status: Optional[ClubActivityStatus] = None
     outcome_notes: Optional[str] = None
-    media_urls: Optional[List[str]] = None
+    media_urls: Optional[list[str]] = None
     organized_by_student_id: Optional[int] = None
 
 
