@@ -46,6 +46,11 @@ async def test_checkout_fails_if_any_product_deactivated(db_session: AsyncSessio
     initial_tshirt_stock = product_tshirt.stock_quantity
     initial_tie_stock = product_tie.stock_quantity
     parent_user_id = parent_profile.user_id
+
+    # Capture baseline orders so we can assert none are created during the failure path.
+    baseline_stmt = select(Order.order_id).where(Order.parent_user_id == parent_user_id)
+    baseline_result = await db_session.execute(baseline_stmt)
+    baseline_order_ids = set(baseline_result.scalars().all())
     await db_session.commit()
 
     # Refresh objects after commit to prevent lazy loading issues
@@ -99,9 +104,9 @@ async def test_checkout_fails_if_any_product_deactivated(db_session: AsyncSessio
     # Use proper async query syntax
     # Step 6: Verify NO order created
     # Use proper async query syntax (use pre-extracted parent_user_id)
-    result = await db_session.execute(select(Order).filter(Order.parent_user_id == parent_user_id))
-    orders = result.scalars().all()
-    assert len(orders) == 0
-    print("✓ No order created")
+    result = await db_session.execute(select(Order.order_id).filter(Order.parent_user_id == parent_user_id))
+    current_order_ids = set(result.scalars().all())
+    assert current_order_ids == baseline_order_ids
+    print("✓ No new order created")
 
     print("\n🎉 Test 1.3 PASSED: All-or-nothing validation works correctly")

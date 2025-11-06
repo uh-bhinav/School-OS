@@ -55,6 +55,11 @@ async def test_checkout_fails_when_product_deactivated(db_session: AsyncSession,
     await db_session.refresh(parent_profile)
     parent_user_id = parent_profile.user_id
 
+    # Record existing orders for this parent so we can assert no new ones are created.
+    baseline_stmt = select(Order.order_id).where(Order.parent_user_id == parent_user_id)
+    baseline_result = await db_session.execute(baseline_stmt)
+    baseline_order_ids = set(baseline_result.scalars().all())
+
     # Create CartService instance
     cart_service = CartService(db_session)
 
@@ -105,11 +110,11 @@ async def test_checkout_fails_when_product_deactivated(db_session: AsyncSession,
     print("✓ Cart not cleared (user can manually remove)")
 
     # 5c. NO order created
-    stmt = select(Order).where(Order.parent_user_id == parent_profile.user_id)
+    stmt = select(Order.order_id).where(Order.parent_user_id == parent_user_id)
     result = await db_session.execute(stmt)
-    orders = result.scalars().all()
-    assert len(orders) == 0
-    print("✓ No order created in database")
+    current_order_ids = set(result.scalars().all())
+    assert current_order_ids == baseline_order_ids
+    print("✓ No new order created in database")
     # 5c. NO order created
 
     print("\n🎉 Test 1.2 PASSED: Race condition FIXED!")
