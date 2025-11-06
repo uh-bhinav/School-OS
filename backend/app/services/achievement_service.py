@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import String, cast, desc, func, literal, select
@@ -77,10 +78,15 @@ class AchievementService:
 
     # --- Student Achievement Management ---
 
-    async def add_achievement(self, achievement_data: StudentAchievementCreate, awarded_by_user_id: UUID, school_id: int) -> StudentAchievement:
+    async def add_achievement(self, achievement_data: StudentAchievementCreate, awarded_by_user_id: UUID, school_id: int) -> Optional[StudentAchievement]:
         """
         Adds a new student achievement, initially unverified and with 0 points.
         """
+        student_query = select(Student.student_id).join(Profile, Student.user_id == Profile.user_id).where(Student.student_id == achievement_data.student_id, Profile.school_id == school_id)
+        result = await self.db.execute(student_query)
+        if not result.scalars().first():
+            return None
+
         db_achievement = StudentAchievement(**achievement_data.model_dump(), school_id=school_id, awarded_by_user_id=awarded_by_user_id, is_verified=False, points_awarded=0)  # Points are awarded upon verification
         self.db.add(db_achievement)
         await self.db.commit()

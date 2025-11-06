@@ -42,6 +42,12 @@ def is_student(user: Profile) -> bool:
     return "Student" in user_roles
 
 
+def is_parent(user: Profile) -> bool:
+    """Return True when the profile has a Parent role."""
+    user_roles = {role.role_definition.role_name for role in user.roles}
+    return "Parent" in user_roles
+
+
 async def get_user_context_from_user(db: AsyncSession, user: Profile) -> dict:
     """Build a minimal context dict used for permission checks."""
     context = {

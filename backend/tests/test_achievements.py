@@ -4,7 +4,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import create_access_token
 from app.models.academic_year import AcademicYear
+from app.models.profile import Profile
 from app.models.student import Student
 
 
@@ -160,7 +162,7 @@ async def test_student_achievement_workflow(client: TestClient, admin_auth_heade
 
 
 @pytest.mark.asyncio
-async def test_errors_and_validation(client: TestClient, admin_auth_headers: dict, teacher_auth_headers: dict, test_student: Student):
+async def test_errors_and_validation(client: TestClient, admin_auth_headers: dict, teacher_auth_headers: dict, test_student: Student, test_academic_year: AcademicYear):
     # 1. Test 404 Not Found
     response = client.put("/api/v1/achievements/verify/999999", headers=admin_auth_headers)
     assert response.status_code == 404
@@ -182,6 +184,19 @@ async def test_errors_and_validation(client: TestClient, admin_auth_headers: dic
     invalid_achievement_data = {"student_id": test_student.student_id, "academic_year_id": 999, "achievement_type": "invalid_type", "title": "Test", "achievement_category": "Test", "date_awarded": _award_date_iso()}  # Invalid enum
     response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=invalid_achievement_data)
     assert response.status_code == 422
+
+    missing_student_data = {
+        "student_id": 999999,
+        "academic_year_id": test_academic_year.id,
+        "achievement_type": "academic",
+        "title": "Ghost Entry",
+        "achievement_category": "Competition",
+        "date_awarded": _award_date_iso(),
+        "visibility": "school_only",
+    }
+    response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=missing_student_data)
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Student not found in this school."
 
 
 @pytest.mark.asyncio
@@ -250,3 +265,33 @@ async def test_multi_tenancy_security(
     response = client.put(f"/api/v1/achievements/verify/{ach_id}", headers=admin_auth_headers)
     assert response.status_code == 200
     assert response.json()["is_verified"] is True
+
+
+@pytest.mark.asyncio
+async def test_parent_can_view_linked_student_achievements(
+    client: TestClient,
+    parent_profile_1: Profile,
+    student_22: Student,
+):
+    token = create_access_token(subject=str(parent_profile_1.user_id))
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.get(f"/api/v1/achievements/student/{student_22.student_id}", headers=headers)
+    assert response.status_code == 200
+    achievements = response.json()
+    assert isinstance(achievements, list)
+    assert any(item["student_id"] == student_22.student_id for item in achievements)
+
+
+@pytest.mark.asyncio
+async def test_parent_cannot_view_unlinked_student_achievements(
+    client: TestClient,
+    parent_profile_2: Profile,
+    student_22: Student,
+):
+    token = create_access_token(subject=str(parent_profile_2.user_id))
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.get(f"/api/v1/achievements/student/{student_22.student_id}", headers=headers)
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Not authorized to view this student's achievements."

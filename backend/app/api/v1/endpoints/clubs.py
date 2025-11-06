@@ -132,6 +132,15 @@ async def remove_club_member(membership_id: int, db: AsyncSession = Depends(get_
     return
 
 
+@router.delete("/{club_id}/members/by-student/{student_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RoleChecker(admin_or_teacher_roles))])
+async def remove_club_member_by_student(club_id: int, student_id: int, db: AsyncSession = Depends(get_db_session), current_user: Profile = Depends(get_current_user)):
+    """Remove a student from a club using the student identifier."""
+    service = ClubService(db)
+    if not await service.remove_member_by_student(club_id, student_id, current_user.school_id):
+        raise HTTPException(status_code=404, detail="Membership not found")
+    return
+
+
 @router.get("/{club_id}/members", response_model=List[ProfileOut])
 async def get_club_members(club_id: int, db: AsyncSession = Depends(get_db_session), current_user: Profile = Depends(get_current_user)):
     """

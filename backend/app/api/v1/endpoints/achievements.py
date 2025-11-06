@@ -1,14 +1,19 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     get_current_active_user,
     get_db,
+    is_parent,
     is_school_admin,
+    is_teacher,
 )
 from app.models.profile import Profile
+from app.models.student import Student
+from app.models.student_contact import StudentContact
 from app.schemas.achievement_schema import AchievementPointRule, AchievementPointRuleCreate, AchievementPointRuleUpdate, StudentAchievement, StudentAchievementCreate, StudentAchievementUpdate
 from app.services.achievement_service import AchievementService
 
@@ -97,8 +102,10 @@ async def add_student_achievement(achievement_in: StudentAchievementCreate, serv
     (Requires Teacher, Principal, or Admin role)
     """
     school_id = current_user.school_id
-    # TODO: Add check to ensure student_id belongs to the same school
-    return await service.add_achievement(achievement_data=achievement_in, awarded_by_user_id=current_user.user_id, school_id=school_id)
+    achievement = await service.add_achievement(achievement_data=achievement_in, awarded_by_user_id=current_user.user_id, school_id=school_id)
+    if not achievement:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found in this school.")
+    return achievement
 
 
 @router.put(
@@ -131,6 +138,29 @@ async def get_achievements_for_student(student_id: int, verified_only: bool = Tr
     TODO: Add role check to ensure user is admin, teacher, or parent of student
     """
     school_id = current_user.school_id
+    session: AsyncSession = service.db
+
+    if is_parent(current_user) and not (is_school_admin(current_user) or is_teacher(current_user)):
+        contact_stmt = (
+            select(StudentContact)
+            .where(
+                StudentContact.student_id == student_id,
+                StudentContact.profile_user_id == current_user.user_id,
+                StudentContact.is_active.is_(True),
+            )
+            .limit(1)
+        )
+        contact_result = await session.execute(contact_stmt)
+        if not contact_result.scalars().first():
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this student's achievements.")
+
+        student_school_stmt = select(Profile.school_id).join(Student, Student.user_id == Profile.user_id).where(Student.student_id == student_id)
+        student_school_id = (await session.execute(student_school_stmt)).scalar_one_or_none()
+        if student_school_id is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found.")
+
+        school_id = student_school_id
+
     return await service.get_student_achievements(student_id=student_id, school_id=school_id, only_verified=verified_only)
 
 

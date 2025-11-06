@@ -112,6 +112,10 @@ async def test_update_rule(achievement_service: AchievementService, mock_db_sess
 async def test_add_achievement(achievement_service: AchievementService, mock_db_session):
     ach_data = StudentAchievementCreate(student_id=STUDENT_ID, academic_year_id=ACADEMIC_YEAR_ID, achievement_type=AchievementType.sports, title="100m Dash Winner", achievement_category="Athletics", date_awarded=date(2023, 5, 1))
 
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.first.return_value = STUDENT_ID
+    mock_db_session.execute.return_value = mock_result
+
     await achievement_service.add_achievement(ach_data, TEACHER_USER_ID, SCHOOL_ID)
 
     mock_db_session.add.assert_called_once()
@@ -125,6 +129,22 @@ async def test_add_achievement(achievement_service: AchievementService, mock_db_
     assert added_object.awarded_by_user_id == TEACHER_USER_ID
     assert added_object.is_verified is False
     assert added_object.points_awarded == 0
+
+
+@pytest.mark.asyncio
+async def test_add_achievement_student_not_found(achievement_service: AchievementService, mock_db_session):
+    ach_data = StudentAchievementCreate(student_id=999999, academic_year_id=ACADEMIC_YEAR_ID, achievement_type=AchievementType.academic, title="Invalid", achievement_category="Competition", date_awarded=date(2023, 5, 1))
+
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.first.return_value = None
+    mock_db_session.execute.return_value = mock_result
+
+    result = await achievement_service.add_achievement(ach_data, TEACHER_USER_ID, SCHOOL_ID)
+
+    assert result is None
+    mock_db_session.add.assert_not_called()
+    mock_db_session.commit.assert_not_called()
+    mock_db_session.refresh.assert_not_called()
 
 
 @pytest.mark.asyncio

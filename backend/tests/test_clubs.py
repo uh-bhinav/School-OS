@@ -254,6 +254,55 @@ async def test_club_membership_workflow_and_student_views(
 
 
 @pytest.mark.asyncio
+async def test_remove_member_by_student_identifier(
+    test_client: AsyncClient,
+    db_session: AsyncSession,
+    test_school: dict[str, int],
+    test_academic_year,
+    test_student: Student,
+):
+    school_id = test_school["school_id"]
+    admin_profile = await _get_profile_with_role(db_session, school_id, "Admin")
+    teacher = await _get_teacher_with_profile(db_session, school_id)
+
+    _authenticate_as(admin_profile)
+    club_payload = {
+        "name": f"Science-{uuid.uuid4().hex[:6]}",
+        "description": "Hands-on experiments",
+        "club_type": ClubType.technical.value,
+        "teacher_in_charge_id": teacher.teacher_id,
+        "academic_year_id": test_academic_year.id,
+    }
+    create_response = await test_client.post("/api/v1/clubs/", json=club_payload)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    club_id = create_response.json()["id"]
+
+    _authenticate_as(teacher.profile)
+    membership_payload = {
+        "club_id": club_id,
+        "student_id": test_student.student_id,
+        "role": ClubMembershipRole.member.value,
+    }
+    add_member_response = await test_client.post(
+        f"/api/v1/clubs/{club_id}/members",
+        json=membership_payload,
+    )
+    assert add_member_response.status_code == status.HTTP_201_CREATED
+
+    delete_response = await test_client.delete(f"/api/v1/clubs/{club_id}/members/by-student/{test_student.student_id}")
+    assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+
+    delete_again_response = await test_client.delete(f"/api/v1/clubs/{club_id}/members/by-student/{test_student.student_id}")
+    assert delete_again_response.status_code == status.HTTP_404_NOT_FOUND
+
+    _authenticate_as(admin_profile)
+    members_response = await test_client.get(f"/api/v1/clubs/{club_id}/members")
+    assert members_response.status_code == status.HTTP_200_OK
+    members = members_response.json()
+    assert not any(member.get("student") and member["student"]["student_id"] == test_student.student_id for member in members)
+
+
+@pytest.mark.asyncio
 async def test_student_cannot_create_club(
     test_client: AsyncClient,
     db_session: AsyncSession,

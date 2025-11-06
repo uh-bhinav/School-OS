@@ -135,6 +135,26 @@ class ClubService:
         await self.db.commit()
         return True
 
+    async def remove_member_by_student(self, club_id: int, student_id: int, school_id: int) -> bool:
+        stmt = (
+            select(ClubMembership)
+            .join(Club)
+            .where(
+                ClubMembership.club_id == club_id,
+                ClubMembership.student_id == student_id,
+                Club.school_id == school_id,
+            )
+        )
+        result = await self.db.execute(stmt)
+        db_membership = result.scalars().first()
+
+        if not db_membership:
+            return False
+
+        await self.db.delete(db_membership)
+        await self.db.commit()
+        return True
+
     async def get_club_members(self, club_id: int, school_id: int) -> Sequence[Profile]:
         # Return student profiles for members of a specific club
         stmt = (
