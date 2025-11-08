@@ -14,6 +14,7 @@ from app.models.profile import Profile
 from app.models.subject import Subject
 from app.models.teacher import Teacher
 from app.schemas.timetable_schema import (
+    TeacherFreeSlotResponse,
     TimetableEntryCreate,
     TimetableEntryOut,
     TimetableEntryUpdate,
@@ -232,3 +233,24 @@ async def get_schedule(
         target_id=target_id,
         schedule_date=schedule_date,
     )
+
+
+@router.get("/teacher/{teacher_id}/free-slots", response_model=TeacherFreeSlotResponse, dependencies=[Depends(require_role("Admin", "Teacher"))], tags=["Timetable"], summary="Find all free slots for a teacher on a given day")
+async def get_teacher_free_slots(
+    teacher_id: int,
+    target_date: date = Query(..., description="The date to check in YYYY-MM-DD format"),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    (ROBUST) Get a list of all non-recess periods where a teacher is NOT booked.
+    """
+    # Security Check: Verify teacher belongs to this school
+    target_teacher = await db.get(Teacher, teacher_id)
+    if not target_teacher or target_teacher.school_id != current_profile.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Teacher not found in your school.",
+        )
+
+    return await timetable_service.find_teacher_free_slots(db=db, teacher_id=teacher_id, school_id=current_profile.school_id, target_date=target_date)

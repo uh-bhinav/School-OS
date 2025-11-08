@@ -1,12 +1,12 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.class_model import Class
 from app.models.period import Period
-from app.schemas.period_schema import PeriodCreate, PeriodUpdate
+from app.schemas.period_schema import PeriodCreate, PeriodStructureCreate, PeriodUpdate
 
 
 async def create_period(db: AsyncSession, *, period_in: PeriodCreate) -> Period:
@@ -109,3 +109,37 @@ async def get_teaching_periods_for_school(db: AsyncSession, school_id: int, day_
 
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def bulk_replace_period_structure(db: AsyncSession, *, school_id: int, structure_in: PeriodStructureCreate) -> list[Period]:
+    """
+    A robust "power tool" service.
+    1. Deletes all existing periods for the school (in a transaction).
+    2. Creates all new periods from the provided list.
+    """
+
+    # This service function assumes it's wrapped in a transaction
+    # by the endpoint, or it manages its own. For simplicity,
+    # we'll do it as two operations with one commit.
+
+    # Step 1: Delete all existing, non-deleted periods for this school
+    delete_stmt = delete(Period).where(Period.school_id == school_id)
+    await db.execute(delete_stmt)
+
+    # Step 2: Create new periods
+    new_db_periods = []
+    for period_data in structure_in.periods:
+        # Create the full PeriodCreate object, adding the secure school_id
+        period_in = PeriodCreate(school_id=school_id, **period_data.model_dump())
+        db_obj = Period(**period_in.model_dump())
+        db.add(db_obj)
+        new_db_periods.append(db_obj)
+
+    # Commit the transaction (deletes and new creates)
+    await db.commit()
+
+    # Refresh all new objects to get their IDs
+    for obj in new_db_periods:
+        await db.refresh(obj)
+
+    return new_db_periods

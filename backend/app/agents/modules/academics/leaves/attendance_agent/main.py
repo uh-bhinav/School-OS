@@ -18,67 +18,40 @@ logger = logging.getLogger(__name__)
 class AttendanceAgent(BaseAgent):
     """
     A specialized leaf agent for handling student attendance tracking and management.
-
-    This agent is part of the Academics module's Attendance sub-module.
-    It operates at Layer 4 of the agentic architecture and is responsible for:
-    - Marking student attendance for specific dates
-    - Retrieving attendance records for students over date ranges
-    - Fetching class attendance for specific dates
-    - Calculating attendance summaries and percentages
-    - Managing attendance-related information
-
-    The agent uses a 'power' tier LLM for better tool selection and response generation.
+    This agent uses the secure, robust, agent-ready backend endpoints.
     """
 
-    def __init__(self, llm_tier: str = "power"):
+    def __init__(self, llm_tier: str = "medium"):  # Changed to medium, 'power' is not standard
         """
         Initializes the AttendanceAgent with its specific tools and LLM tier.
 
         Args:
-            llm_tier (str): The tier of LLM to use. Defaults to 'power' for better
-                          function calling capabilities. Options: 'fast', 'medium', 'power'
+            llm_tier (str): The tier of LLM to use. Defaults to 'medium'.
+                          Options: 'fast', 'medium', 'power'
         """
         logger.info("Initializing AttendanceAgent...")
-        super().__init__(tools=attendance_agent_tools, llm_tier=llm_tier)
+        super().__init__(tools=attendance_agent_tools, llm_tier=llm_tier)  # Uses new tools
         logger.info(f"AttendanceAgent initialized with {len(attendance_agent_tools)} tools and '{llm_tier}' tier LLM")
 
     def invoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
         """
         Invokes the agent with a user query, automatically applying the system prompt.
-
-        Args:
-            query (str): The user's question or command.
-            conversation_history (Optional[list]): Previous conversation messages for context.
-                                                   Each item should be a LangChain message object.
-
-        Returns:
-            dict[str, Any]: A dictionary containing:
-                - 'response' (str): The final natural language response
-                - 'messages' (list): All messages including tool calls
-                - 'success' (bool): Whether the invocation was successful
-                - 'error' (str, optional): Error message if invocation failed
         """
         try:
             logger.info(f"AttendanceAgent invoked with query: '{query[:100]}...'")
 
             # Build the message list
-            messages = [SystemMessage(content=SYSTEM_PROMPT)]
+            messages = [SystemMessage(content=SYSTEM_PROMPT)]  # Uses new prompt
 
-            # Add conversation history if provided
             if conversation_history:
                 messages.extend(conversation_history)
                 logger.debug(f"Added {len(conversation_history)} messages from conversation history")
 
-            # Add the current query
             messages.append(HumanMessage(content=query))
 
-            # Invoke the base agent's graph
             result = super().invoke(messages)
 
-            # Extract the final response
             final_message = result["messages"][-1]
-
-            # Determine if it's an AI message with content
             if isinstance(final_message, AIMessage):
                 response_content = final_message.content
             else:

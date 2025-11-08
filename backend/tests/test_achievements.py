@@ -299,8 +299,8 @@ async def test_multi_tenancy_security(
     # 5. Admin from School 2 tries to get achievements for the student from School 1
     response = client.get(f"/api/v1/achievements/student/{student_id}", headers=admin_auth_headers_two)
     # The query is scoped by school_id, so it should return an empty list.
-    assert response.status_code == 200
-    assert response.json() == []
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Student not found in your school."
 
     # 6. Admin from School 1 *can* verify it
     response = client.put(f"/api/v1/achievements/verify/{ach_id}", headers=admin_auth_headers)

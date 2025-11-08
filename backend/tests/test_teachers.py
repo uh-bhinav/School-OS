@@ -3,10 +3,7 @@ from fastapi import status
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import (
-    _get_current_user_profile_from_db,
-    get_current_user_profile,
-)
+from app.core.security import get_current_user_profile
 from app.main import app
 from app.models.profile import Profile
 from app.models.teacher import Teacher
@@ -40,14 +37,16 @@ async def test_get_all_teachers_as_teacher_fails(test_client: AsyncClient, mock_
 
 
 @pytest.mark.asyncio
-async def test_get_teacher_by_id_as_admin(test_client, db_session, mock_admin_profile):
-    app.dependency_overrides[_get_current_user_profile_from_db] = lambda: mock_admin_profile
+async def test_get_teacher_by_id_as_admin(test_client, db_session, mock_admin_profile, mock_admin_auth_headers):
+    # ✅ FIXED: Override both authentication AND database session
+    from app.api.deps import get_db_session
 
-    # ✅ FIXED: Added school_id
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
     new_teacher = Teacher(
-        teacher_id=1,
         user_id=mock_admin_profile.user_id,
-        school_id=mock_admin_profile.school_id,  # Added this line
+        school_id=mock_admin_profile.school_id,
         department="Science",
         subject_specialization="Physics",
         is_certified=True,
@@ -78,14 +77,16 @@ async def test_get_nonexistent_teacher_fails(test_client: AsyncClient, mock_admi
 
 
 @pytest.mark.asyncio
-async def test_update_teacher_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
-    app.dependency_overrides[_get_current_user_profile_from_db] = lambda: mock_admin_profile
+async def test_update_teacher_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile, mock_admin_auth_headers):
+    # ✅ FIXED: Override both authentication AND database session
+    from app.api.deps import get_db_session
 
-    # ✅ FIXED: Added school_id
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
     new_teacher = Teacher(
-        teacher_id=1,
         user_id=mock_admin_profile.user_id,
-        school_id=mock_admin_profile.school_id,  # Added this line
+        school_id=mock_admin_profile.school_id,
         department="Science",
         subject_specialization="Physics",
         is_certified=True,
@@ -126,14 +127,16 @@ async def test_update_nonexistent_teacher_fails(test_client: AsyncClient, mock_a
 
 
 @pytest.mark.asyncio
-async def test_get_teacher_qualifications(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
-    app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+async def test_get_teacher_qualifications(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile, mock_admin_auth_headers):
+    # ✅ FIXED: Override both authentication AND database session
+    from app.api.deps import get_db_session
 
-    # ✅ FIXED: Added school_id
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
     new_teacher = Teacher(
-        teacher_id=1,
         user_id=mock_admin_profile.user_id,
-        school_id=mock_admin_profile.school_id,  # Added this line
+        school_id=mock_admin_profile.school_id,
         department="Science",
         subject_specialization="Physics",
         is_certified=True,
@@ -155,17 +158,19 @@ async def test_get_teacher_qualifications(test_client: AsyncClient, db_session: 
 
 
 @pytest.mark.asyncio
-async def test_deactivate_teacher_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile):
+async def test_deactivate_teacher_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile, mock_admin_auth_headers):
     """
     Happy Path: Tests an admin can soft-delete a teacher.
     """
-    app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+    # ✅ FIXED: Override both authentication AND database session
+    from app.api.deps import get_db_session
 
-    # ✅ FIXED: Added school_id
+    app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
     new_teacher = Teacher(
-        teacher_id=1,
         user_id=mock_admin_profile.user_id,
-        school_id=mock_admin_profile.school_id,  # Added this line
+        school_id=mock_admin_profile.school_id,
         department="Math",
         subject_specialization="Algebra",
         is_certified=True,

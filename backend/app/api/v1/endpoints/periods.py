@@ -7,7 +7,7 @@ from app.db.session import get_db
 from app.models.class_model import Class
 from app.models.period import Period
 from app.models.profile import Profile
-from app.schemas.period_schema import PeriodCreate, PeriodOut, PeriodUpdate
+from app.schemas.period_schema import PeriodCreate, PeriodCreateRequest, PeriodOut, PeriodStructureCreate, PeriodUpdate
 from app.services import period_service
 
 # Required for direct DB access in DELETE/GET
@@ -27,16 +27,18 @@ router = APIRouter()
 async def create_new_period(
     *,
     db: AsyncSession = Depends(get_db),
-    period_in: PeriodCreate,
+    period_request: PeriodCreateRequest,  # <-- Use the new request schema
     current_profile: Profile = Depends(get_current_user_profile),
 ):
-    """Create a new period time slot (e.g., add
-    9:00 AM - 9:45 AM slot). Admin only."""
-    if period_in.school_id != current_profile.school_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot create periods for another school.",
-        )
+    """Create a new period time slot. Admin only.
+    The school_id is automatically taken from the authenticated user.
+    """
+    # Securely create the internal schema by merging the request
+    # with the profile's trusted school_id.
+    period_in = PeriodCreate(**period_request.model_dump(), school_id=current_profile.school_id)
+
+    # The check for `period_in.school_id != ...` is NO LONGER NEEDED.
+    # It's impossible for them to be different.
     return await period_service.create_period(db=db, period_in=period_in)
 
 
@@ -47,7 +49,7 @@ async def create_new_period(
     dependencies=[Depends(require_role("Admin"))],
     tags=["Periods"],
 )
-async def get_all_periods(
+async def get_all_periods_for_school_id(
     school_id: int,
     db: AsyncSession = Depends(get_db),
     current_profile: Profile = Depends(get_current_user_profile),
@@ -60,6 +62,23 @@ async def get_all_periods(
             detail="Cannot view periods for another school.",
         )
     return await period_service.get_all_periods_for_school(db=db, school_id=school_id)
+
+
+# 2. GET ALL: Get All Active Periods (Admin Only) - SECURE VERSION
+@router.get(
+    "/",  # <-- REMOVED /school/{school_id}/all
+    response_model=list[PeriodOut],
+    dependencies=[Depends(require_role("Admin"))],
+    tags=["Periods"],
+)
+async def get_all_periods(
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """Get all active periods for YOUR school. Admin only."""
+    # The school_id is taken directly from the profile.
+    # The client does not need to supply it.
+    return await period_service.get_all_periods_for_school(db=db, school_id=current_profile.school_id)
 
 
 # 3. GET ONE: Get Single Active Period (Admin Only)
@@ -184,3 +203,40 @@ async def get_recess_periods_for_a_school(
             detail="You do not have permission to access this school's information.",
         )
     return await period_service.get_recess_periods(db=db, school_id=school_id)
+
+
+@router.get(
+    "/recess",  # <-- REMOVED /school/{school_id}/recess
+    response_model=list[PeriodOut],
+    dependencies=[Depends(require_role("Admin", "Teacher", "Student"))],
+    tags=["Periods"],
+)
+async def get_recess_periods_(
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get all periods that are marked as recess/breaks for YOUR school.
+    """
+    # The check is GONE. We just USE the profile's school_id.
+    return await period_service.get_recess_periods(db=db, school_id=current_profile.school_id)
+
+
+@router.post(
+    "/structure",
+    response_model=list[PeriodOut],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role("Admin"))],
+    tags=["Periods"],
+)
+async def set_period_structure(
+    *,
+    db: AsyncSession = Depends(get_db),
+    structure_in: PeriodStructureCreate,
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    (ROBUST) Replaces the ENTIRE period structure for your school.
+    Deletes all existing periods and creates the new ones provided.
+    """
+    return await period_service.bulk_replace_period_structure(db=db, school_id=current_profile.school_id, structure_in=structure_in)

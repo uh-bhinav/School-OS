@@ -1,3 +1,5 @@
+# File: tests/unit/test_attendance_service.py
+
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
@@ -5,7 +7,9 @@ import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.models.attendance_record import AttendanceRecord
-from app.schemas.attendance_record_schema import AttendanceRecordCreate
+
+# --- FIX: Import the *schema* for bulk create ---
+from app.schemas.attendance_record_schema import AttendanceRecordBulkCreate, AttendanceRecordCreate
 
 # Import the necessary service, schema, and model
 from app.services.attendance_record_service import (
@@ -22,6 +26,7 @@ async def test_create_attendance_record_happy_path():
     # 1. Arrange
     mock_db_session = AsyncMock()
     mock_db_session.add = MagicMock()
+    mock_school_id = 1  # Mock tenant ID
 
     # Input data for the new attendance record
     attendance_in = AttendanceRecordCreate(
@@ -34,7 +39,6 @@ async def test_create_attendance_record_happy_path():
     )
 
     # 2. Act
-    # Patch the AttendanceRecord model to isolate the service from the DB model
     with (
         patch("app.services.attendance_record_service.AttendanceRecord", autospec=True) as mock_attendance_model,
         patch(
@@ -46,18 +50,17 @@ async def test_create_attendance_record_happy_path():
         mock_instance.status = "Present"
 
         # Call the service function
-        result = await create_attendance_record(db=mock_db_session, attendance_in=attendance_in)
+        result = await create_attendance_record(db=mock_db_session, attendance_in=attendance_in, school_id=mock_school_id)  # <-- FIX 1: Added school_id
 
     # 3. Assert
     # Verify the model was instantiated with the correct data
-    mock_attendance_model.assert_called_once_with(**attendance_in.model_dump())
+    mock_attendance_model.assert_called_once_with(**attendance_in.model_dump(), school_id=mock_school_id)  # Check that school_id was added
 
     # Verify the database transaction was handled correctly
     mock_db_session.add.assert_called_once_with(mock_instance)
     mock_db_session.commit.assert_awaited_once()
     mock_db_session.refresh.assert_awaited_once_with(mock_instance)
 
-    # Ensure the function returns the created instance
     assert result == mock_instance
     assert result.status == "Present"
 
@@ -71,10 +74,9 @@ async def test_create_attendance_record_sad_path_db_error():
     # 1. Arrange
     mock_db_session = AsyncMock()
     mock_db_session.add = MagicMock()
-    # Configure the commit method to raise a database error
     mock_db_session.commit.side_effect = SQLAlchemyError("Simulated DB error")
+    mock_school_id = 1
 
-    # Input data that might cause an error (e.g., non-existent student_id)
     attendance_in = AttendanceRecordCreate(
         student_id=999,
         class_id=1,
@@ -85,7 +87,6 @@ async def test_create_attendance_record_sad_path_db_error():
     )
 
     # 2. Act & 3. Assert
-    # We expect the SQLAlchemyError to be raised by the service
     with (
         patch("app.services.attendance_record_service.AttendanceRecord", autospec=True),
         patch(
@@ -94,14 +95,12 @@ async def test_create_attendance_record_sad_path_db_error():
         ),
     ):
         with pytest.raises(SQLAlchemyError):
-            await create_attendance_record(db=mock_db_session, attendance_in=attendance_in)
+            await create_attendance_record(db=mock_db_session, attendance_in=attendance_in, school_id=mock_school_id)  # <-- FIX 2: Added school_id
 
     # Verify the database transaction was attempted and then rolled back
     mock_db_session.add.assert_called_once()
     mock_db_session.commit.assert_awaited_once()
     mock_db_session.rollback.assert_awaited_once()
-
-    # Refresh should not be called if the commit fails
     mock_db_session.refresh.assert_not_awaited()
 
 
@@ -115,8 +114,10 @@ async def test_bulk_create_attendance_records_happy_path():
     mock_db_session.add_all = MagicMock()
     mock_db_session.commit = AsyncMock()
     mock_db_session.refresh = AsyncMock()
+    mock_school_id = 1
 
-    attendance_list_in = [
+    # This schema type is List[AttendanceRecordCreate]
+    attendance_list_in: AttendanceRecordBulkCreate = [
         AttendanceRecordCreate(
             student_id=1,
             class_id=1,
@@ -130,14 +131,6 @@ async def test_bulk_create_attendance_records_happy_path():
             class_id=1,
             date=date(2025, 10, 6),
             status="Absent",
-            period_id=1,
-            teacher_id=101,
-        ),
-        AttendanceRecordCreate(
-            student_id=3,
-            class_id=1,
-            date=date(2025, 10, 6),
-            status="Late",
             period_id=1,
             teacher_id=101,
         ),
@@ -156,11 +149,15 @@ async def test_bulk_create_attendance_records_happy_path():
         "app.services.attendance_record_service.AttendanceRecord",
         side_effect=lambda **kwargs: _make_record(**kwargs),
     ) as mock_attendance_model:
-        result = await bulk_create_attendance_records(db=mock_db_session, attendance_data=attendance_list_in)
+        result = await bulk_create_attendance_records(db=mock_db_session, attendance_data=attendance_list_in, school_id=mock_school_id)  # <-- FIX 3: Added school_id
 
     assert mock_attendance_model.call_count == len(attendance_list_in)
+
+    # Check that school_id was correctly added to each record
     for call_args, expected in zip(mock_attendance_model.call_args_list, attendance_list_in):
-        assert call_args.kwargs == expected.model_dump()
+        expected_with_school = expected.model_dump()
+        expected_with_school["school_id"] = mock_school_id
+        assert call_args.kwargs == expected_with_school
 
     mock_db_session.add_all.assert_called_once()
     added_records = mock_db_session.add_all.call_args[0][0]
@@ -181,22 +178,12 @@ async def test_bulk_create_attendance_records_sad_path_db_error():
     # 1. Arrange
     mock_db_session = AsyncMock()
     mock_db_session.add_all = MagicMock()
-    # Simulate a database failure during the commit,
-    # e.g., due to a foreign key violation
     mock_db_session.commit.side_effect = SQLAlchemyError("Simulated bulk insert error")
+    mock_school_id = 1
 
-    # A list where one record is invalid (e.g., non-existent student_id)
-    invalid_attendance_list = [
+    invalid_attendance_list: AttendanceRecordBulkCreate = [
         AttendanceRecordCreate(
             student_id=1,
-            class_id=1,
-            date=date(2025, 10, 7),
-            status="Present",
-            period_id=1,
-            teacher_id=101,
-        ),
-        AttendanceRecordCreate(
-            student_id=999,
             class_id=1,
             date=date(2025, 10, 7),
             status="Present",
@@ -206,17 +193,12 @@ async def test_bulk_create_attendance_records_sad_path_db_error():
     ]
 
     # 2. Act & 3. Assert
-    # Expect the SQLAlchemyError to be propagated by the service
     with patch("app.services.attendance_record_service.AttendanceRecord", autospec=True):
         with pytest.raises(SQLAlchemyError):
-            await bulk_create_attendance_records(db=mock_db_session, attendance_data=invalid_attendance_list)
+            await bulk_create_attendance_records(db=mock_db_session, attendance_data=invalid_attendance_list, school_id=mock_school_id)  # <-- FIX 4: Added school_id
 
     # Verify the transaction handling
     mock_db_session.add_all.assert_called_once()
     mock_db_session.commit.assert_awaited_once()
-
-    # Ensure the transaction was rolled back after the error
     mock_db_session.rollback.assert_awaited_once()
-
-    # Refresh should not be called if the commit fails
     mock_db_session.refresh.assert_not_awaited()

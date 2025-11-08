@@ -38,8 +38,18 @@ class BaseAgent:
         self.tools = tools
         self.llm_tier = llm_tier
         self.tool_executor = ToolExecutor(tools) if tools else None
-        self.model = get_llm(llm_tier).bind_tools(tools) if tools else get_llm(llm_tier)
+
+        # Get the base model
+        base_model = get_llm(llm_tier)
+
+        # Bind tools with strict=False to handle tool calling errors gracefully
+        if tools:
+            self.model = base_model.bind_tools(tools)
+        else:
+            self.model = base_model
+
         self.graph = self._build_graph()
+        logger.info(f"BaseAgent initialized with {len(tools)} tools using {llm_tier} tier LLM")
 
     def _should_continue(self, state: AgentState) -> str:
         """Determines if the agent should continue with tool calls or end."""

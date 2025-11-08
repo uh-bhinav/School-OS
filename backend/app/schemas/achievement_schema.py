@@ -114,3 +114,20 @@ class LeaderboardClub(BaseModel):
     club_id: int
     club_name: str
     total_points: int
+
+
+class AgentAddAchievement(BaseModel):
+    """Schema for the agent to add an achievement using names."""
+
+    student_name: str = Field(..., description="The full name of the student.")
+    title: str = Field(..., max_length=255)
+    achievement_type: AchievementType
+    achievement_category: str = Field(..., max_length=100)
+    date_awarded: date
+
+
+class AgentPointsLookup(BaseModel):
+    """Schema for the agent to look up points for a rule."""
+
+    achievement_type: AchievementType
+    category_name: str = Field(..., max_length=100)

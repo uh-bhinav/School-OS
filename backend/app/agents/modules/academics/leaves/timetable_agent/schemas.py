@@ -1,204 +1,56 @@
-# backend/app/agents/modules/academics/leaves/timetable_agent/schemas.py
+# File: app/agents/modules/academics/leaves/timetable_agent/schemas.py
 
+from datetime import date
 from typing import Optional
 
-from pydantic.v1 import BaseModel, Field, validator
+from pydantic.v1 import BaseModel, Field
+
+# --- Tool Schemas ---
 
 
-class GetClassTimetableSchema(BaseModel):
-    """Input schema for the get_class_timetable tool."""
+class GetMyTimetableSchema(BaseModel):
+    """Input schema for the get_my_timetable tool."""
 
-    class_name: str = Field(
-        ...,
-        description="The name of the class whose timetable is required, e.g., '10A', 'Grade 12 Science'.",
-        min_length=1,
-    )
-    day_of_week: Optional[str] = Field(
-        default=None,
-        description="Optional: Filter by specific day of the week (e.g., 'Monday', 'Tuesday').",
-    )
-
-    @validator("day_of_week")
-    def validate_day_of_week(cls, v):
-        """Ensure day_of_week is a valid weekday if provided."""
-        if v is not None:
-            valid_days = [
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday",
-            ]
-            if v not in valid_days:
-                raise ValueError(f"Day must be one of: {', '.join(valid_days)}")
-        return v
-
-    class Config:
-        schema_extra = {"example": {"class_name": "10A", "day_of_week": "Monday"}}
+    timetable_date: Optional[date] = Field(default=None, description="Optional date (YYYY-MM-DD). If not provided, today's schedule is assumed.")
+    date_range: Optional[str] = Field(default=None, description="Optional range, e.g., 'this week' or 'next week'. The service will interpret this.")
 
 
-class GetTeacherTimetableSchema(BaseModel):
-    """Input schema for the get_teacher_timetable tool."""
+class GetClassScheduleSchema(BaseModel):
+    """Input schema for the get_class_schedule tool."""
 
-    teacher_name: str = Field(
-        ...,
-        description="The name of the teacher whose timetable is required, e.g., 'Mr. Sharma', 'Mrs. Patel'.",
-        min_length=1,
-    )
-    day_of_week: Optional[str] = Field(
-        default=None,
-        description="Optional: Filter by specific day of the week (e.g., 'Monday', 'Tuesday').",
-    )
-
-    @validator("day_of_week")
-    def validate_day_of_week(cls, v):
-        """Ensure day_of_week is a valid weekday if provided."""
-        if v is not None:
-            valid_days = [
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday",
-            ]
-            if v not in valid_days:
-                raise ValueError(f"Day must be one of: {', '.join(valid_days)}")
-        return v
-
-    class Config:
-        schema_extra = {"example": {"teacher_name": "Mr. Sharma", "day_of_week": "Wednesday"}}
+    class_name: str = Field(..., description="The name of the class (e.g., '10A' or 'Grade 10 - Section A').")
+    day: Optional[date] = Field(default=None, description="The specific date (YYYY-MM-DD) for the schedule. Defaults to today if not provided.")
 
 
-class FindCurrentPeriodForClassSchema(BaseModel):
-    """Input schema for the find_current_period_for_class tool."""
+class GenerateTimetableSchema(BaseModel):
+    """Input schema for the generate_timetable_for_class tool."""
 
-    class_name: str = Field(
-        ...,
-        description="The name of the class to check the current period for, e.g., '10A', '12 Science'.",
-        min_length=1,
-    )
-
-    class Config:
-        schema_extra = {"example": {"class_name": "10A"}}
+    class_name: str = Field(..., description="The name of the class for which to auto-generate a new timetable.")
 
 
-class FindFreeTeachersSchema(BaseModel):
-    """Input schema for the find_free_teachers tool."""
+class ManualUpdateSlotSchema(BaseModel):
+    """Input schema for the manually_update_timetable_slot tool."""
 
-    day_of_week: str = Field(
-        ...,
-        description="The day of the week to check for free teachers (e.g., 'Monday', 'Friday').",
-        min_length=1,
-    )
-    period_number: int = Field(
-        ...,
-        description="The period number to check (e.g., 1 for first period, 2 for second period).",
-        ge=1,
-        le=10,
-    )
-
-    @validator("day_of_week")
-    def validate_day_of_week(cls, v):
-        """Ensure day_of_week is a valid weekday."""
-        valid_days = [
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-            "Sunday",
-        ]
-        if v not in valid_days:
-            raise ValueError(f"Day must be one of: {', '.join(valid_days)}")
-        return v
-
-    class Config:
-        schema_extra = {"example": {"day_of_week": "Monday", "period_number": 3}}
+    class_name: str = Field(..., description="The name of the class (e.g., '10A').")
+    day: str = Field(..., description="The day of the week (e.g., 'Monday', 'Tuesday').")
+    period_number: int = Field(..., description="The period number to update (e.g., 1, 2).")
+    subject_name: str = Field(..., description="The name of the subject to assign (e.g., 'Mathematics').")
+    teacher_name: str = Field(..., description="The name of the teacher to assign (e.g., 'Priya Sharma').")
 
 
-class CreateOrUpdateTimetableEntrySchema(BaseModel):
-    """Input schema for the create_or_update_timetable_entry tool."""
+class CheckConflictsSchema(BaseModel):
+    """Input schema for the check_timetable_conflicts_for_teacher tool."""
 
-    class_name: str = Field(
-        ...,
-        description="The name of the class for the timetable entry, e.g., '10A', 'Grade 12 Science'.",
-        min_length=1,
-    )
-    day_of_week: str = Field(
-        ...,
-        description="The day of the week for this entry (e.g., 'Monday', 'Tuesday').",
-        min_length=1,
-    )
-    period_number: int = Field(
-        ...,
-        description="The period number for this entry (e.g., 1 for first period).",
-        ge=1,
-        le=10,
-    )
-    subject_name: str = Field(
-        ...,
-        description="The subject to be taught during this period, e.g., 'Mathematics', 'Physics'.",
-        min_length=1,
-    )
-    teacher_name: str = Field(
-        ...,
-        description="The name of the teacher assigned to teach this period, e.g., 'Mr. Sharma'.",
-        min_length=1,
-    )
-    start_time: Optional[str] = Field(
-        default=None,
-        description="Optional: The start time of the period (format: HH:MM).",
-    )
-    end_time: Optional[str] = Field(
-        default=None,
-        description="Optional: The end time of the period (format: HH:MM).",
-    )
-    room_number: Optional[str] = Field(
-        default=None,
-        description="Optional: The classroom or room number where this period takes place.",
-    )
-
-    @validator("day_of_week")
-    def validate_day_of_week(cls, v):
-        """Ensure day_of_week is a valid weekday."""
-        valid_days = [
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-            "Sunday",
-        ]
-        if v not in valid_days:
-            raise ValueError(f"Day must be one of: {', '.join(valid_days)}")
-        return v
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "class_name": "10A",
-                "day_of_week": "Monday",
-                "period_number": 1,
-                "subject_name": "Mathematics",
-                "teacher_name": "Mr. Sharma",
-                "start_time": "08:00",
-                "end_time": "08:45",
-                "room_number": "Room 301",
-            }
-        }
+    teacher_name: str = Field(..., description="The name of the teacher to check for schedule conflicts.")
 
 
-# Export all schemas
-__all__ = [
-    "GetClassTimetableSchema",
-    "GetTeacherTimetableSchema",
-    "FindCurrentPeriodForClassSchema",
-    "FindFreeTeachersSchema",
-    "CreateOrUpdateTimetableEntrySchema",
-]
+class FindFreeSlotSchema(BaseModel):
+    """Input schema for the find_free_slot_for_teacher tool."""
+
+    teacher_name: str = Field(..., description="The name of the teacher for whom to find a free slot.")
+    day: Optional[date] = Field(default=None, description="Optional date (YYYY-MM-DD) to search. Defaults to today.")
+
+
+# --- Exports ---
+
+__all__ = ["GetMyTimetableSchema", "GetClassScheduleSchema", "GenerateTimetableSchema", "ManualUpdateSlotSchema", "CheckConflictsSchema", "FindFreeSlotSchema"]

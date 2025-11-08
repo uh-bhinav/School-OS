@@ -1,15 +1,10 @@
-# backend/app/agents/modules/academics/leaves/subject_agent/__init__.py
-
 """
 Subject Agent Module - Layer 4 Leaf Agent
-Part of the Academics Module's Curriculum & Subjects sub-module.
+Part of the Academics Module's Core sub-module.
 
 This agent handles:
-- Listing subjects in a class's curriculum
-- Identifying teacher assignments for subjects
-- Assigning subjects to classes (Admin function)
-- Retrieving academic stream information (Science, Commerce, Arts, etc.)
-- Assigning teachers to subjects (Admin function)
+- Subject management (create, search, update, delete)
+- Listing teachers qualified for a subject
 """
 
 from app.agents.modules.academics.leaves.subject_agent.main import (

@@ -58,3 +58,52 @@ class ClassAttendanceSummaryOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AttendanceSheetStudent(BaseModel):
+    """A single student on the attendance sheet (the 'to-do' list)."""
+
+    student_id: int
+    full_name: str
+    roll_number: Optional[str] = None
+    status: AttendanceStatus = AttendanceStatus.present  # Default to present
+
+
+class AgentAttendanceSheet(BaseModel):
+    """The 'to-do' list for a teacher taking attendance."""
+
+    class_id: int
+    class_name: str
+    date: Date
+    students: list[AttendanceSheetStudent]
+
+
+class AgentTakeAttendanceRequest(BaseModel):
+    """The schema the agent uses to *submit* attendance."""
+
+    class_name: str
+    date: Date
+    present_student_ids: list[int] = Field(..., description="List of student IDs who are PRESENT.")
+    absent_student_ids: list[int] = Field(..., description="List of student IDs who are ABSENT.")
+    late_student_ids: list[int] = Field(default_factory=list, description="List of student IDs who are LATE.")
+
+
+class DailyAbsenteeRecord(BaseModel):
+    """A single record for the Admin's daily absentee report."""
+
+    student_id: int
+    full_name: str
+    class_name: str
+    status: AttendanceStatus
+    notes: Optional[str] = None
+
+
+class LowAttendanceStudent(BaseModel):
+    """A single record for the low attendance report."""
+
+    student_id: int
+    full_name: str
+    class_name: str
+    attendance_percentage: float
+    total_days: int
+    absent_days: int

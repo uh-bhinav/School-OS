@@ -1,362 +1,212 @@
-# backend/app/agents/modules/academics/leaves/exam_agent/tools.py
-
 import logging
+from datetime import date
 from typing import Any, Optional
 
 from langchain_core.tools import tool
 
-from app.agents.modules.academics.leaves.exam_agent.schemas import (
-    DefineNewExamTypeSchema,
-    GetExamScheduleForClassSchema,
-    GetUpcomingExamsSchema,
-    ScheduleExamSchema,
+from app.agents.http_client import (
+    AgentAuthenticationError,
+    AgentHTTPClient,
+    AgentHTTPClientError,
+    AgentResourceNotFoundError,
+    AgentValidationError,
 )
 
-# Set up logging for tool activity
+from .schemas import (
+    CreateExamSchema,
+    DeleteExamSchema,
+    GetExamDetailsSchema,
+    ListAllExamsSchema,
+    SearchExamsSchema,
+    UpdateExamSchema,
+)
+
 logger = logging.getLogger(__name__)
 
-# Base URL for API calls (would be from environment in production)
-BASE_URL = "http://localhost:8000/api/v1"
 
-
-@tool("schedule_exam", args_schema=ScheduleExamSchema)
-def schedule_exam(
-    class_name: str,
-    subject_name: str,
-    exam_type: str,
-    exam_date: str,
-    start_time: Optional[str] = None,
-    duration_minutes: Optional[int] = 60,
-    max_marks: Optional[float] = 100.0,
-) -> dict[str, Any]:
-    """
-    Schedules a new exam for a specific class and subject.
-    Use this tool when a user wants to create or schedule an exam.
-
-    Args:
-        class_name: Name of the class (e.g., '10A', '12 Science')
-        subject_name: Subject for the exam
-        exam_type: Type of exam (e.g., 'Midterm', 'Final')
-        exam_date: Date of the exam (YYYY-MM-DD format)
-        start_time: Optional start time (HH:MM format)
-        duration_minutes: Duration in minutes (default: 60)
-        max_marks: Maximum marks for the exam (default: 100)
-
-    Returns:
-        Dictionary containing success status or error information
-    """
-    logger.info(f"[TOOL:schedule_exam] Class: '{class_name}', Subject: '{subject_name}', " f"Type: '{exam_type}', Date: '{exam_date}'")
-
-    # Real implementation would be:
-    # try:
-    #     payload = {
-    #         "class_name": class_name,
-    #         "subject_name": subject_name,
-    #         "exam_type": exam_type,
-    #         "exam_date": exam_date,
-    #         "start_time": start_time,
-    #         "duration_minutes": duration_minutes,
-    #         "max_marks": max_marks
-    #     }
-    #     response = requests.post(
-    #         f"{BASE_URL}/exams/",
-    #         json=payload,
-    #         timeout=10
-    #     )
-    #     response.raise_for_status()
-    #     return response.json()
-    # except requests.Timeout:
-    #     logger.error("API request timed out")
-    #     return {"error": "Request timed out. Please try again."}
-    # except requests.RequestException as e:
-    #     logger.error(f"API call failed: {e}")
-    #     return {"error": f"Failed to schedule exam: {str(e)}"}
-
-    # Placeholder confirmation for development/testing
+def _format_error_response(error: AgentHTTPClientError) -> dict[str, Any]:
+    """Helper to format HTTP client errors into user-friendly responses for the LLM."""
     return {
-        "status": "success",
-        "message": f"Successfully scheduled {exam_type} exam for {class_name} - {subject_name} on {exam_date}.",
-        "exam_details": {
-            "exam_id": "EXM-2025-001",
-            "class_name": class_name,
-            "subject_name": subject_name,
-            "exam_type": exam_type,
-            "exam_date": exam_date,
-            "start_time": start_time or "Not specified",
-            "duration_minutes": duration_minutes,
-            "max_marks": max_marks,
-        },
+        "success": False,
+        "error": error.message,
+        "status_code": error.status_code,
+        **error.detail,
     }
 
 
-@tool("get_exam_schedule_for_class", args_schema=GetExamScheduleForClassSchema)
-def get_exam_schedule_for_class(
-    class_name: str,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    subject_name: Optional[str] = None,
+# --- Tool Definitions ---
+
+
+@tool("list_all_exams", args_schema=ListAllExamsSchema)
+async def list_all_exams() -> dict[str, Any]:
+    """
+    (All Users) Retrieves all active exams for the user's school.
+    This tool takes no arguments.
+    """
+    try:
+        async with AgentHTTPClient() as client:
+            logger.info("Calling API: GET /exams/")
+            # This calls the agent-ready GET /exams/ endpoint
+            response = await client.get("/exams/")
+            return {"success": True, "count": len(response), "exams": response}
+    except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
+        logger.error(f"Error listing all exams: {e.message}", exc_info=True)
+        return _format_error_response(e)
+    except Exception as e:
+        logger.exception(f"Unexpected error in list_all_exams: {e}")
+        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
+
+
+@tool("search_exams", args_schema=SearchExamsSchema)
+async def search_exams(
+    name: Optional[str] = None,
+    exam_type_id: Optional[int] = None,
+    academic_year_id: Optional[int] = None,
 ) -> dict[str, Any]:
     """
-    Retrieves the exam schedule for a specific class.
-    Use this tool when a user asks for exam schedules, exam dates, or exam timetable for a class.
-
-    Args:
-        class_name: Name of the class
-        start_date: Optional filter for exams from this date onwards
-        end_date: Optional filter for exams until this date
-        subject_name: Optional filter for specific subject
-
-    Returns:
-        Dictionary containing exam schedule data or error information
+    (All Users) Flexibly search for active exams by name, exam type ID, or academic year ID.
     """
-    logger.info(f"[TOOL:get_exam_schedule_for_class] Class: '{class_name}', " f"Date Range: {start_date or 'Any'} to {end_date or 'Any'}, Subject: {subject_name or 'All'}")
+    try:
+        async with AgentHTTPClient() as client:
+            params = {
+                "name": name,
+                "exam_type_id": exam_type_id,
+                "academic_year_id": academic_year_id,
+            }
+            # Filter out None values
+            params = {k: v for k, v in params.items() if v is not None}
 
-    # Real implementation would be:
-    # try:
-    #     params = {}
-    #     if start_date:
-    #         params["start_date"] = start_date
-    #     if end_date:
-    #         params["end_date"] = end_date
-    #     if subject_name:
-    #         params["subject_name"] = subject_name
-    #
-    #     response = requests.get(
-    #         f"{BASE_URL}/exams/class/{class_name}",
-    #         params=params,
-    #         timeout=10
-    #     )
-    #     response.raise_for_status()
-    #     return response.json()
-    # except requests.Timeout:
-    #     logger.error("API request timed out")
-    #     return {"error": "Request timed out. Please try again."}
-    # except requests.RequestException as e:
-    #     logger.error(f"API call failed: {e}")
-    #     return {"error": f"Failed to fetch exam schedule: {str(e)}"}
-
-    # Placeholder exam schedule for development/testing
-    if subject_name:
-        # Filtered by subject
-        return {
-            "status": "success",
-            "class_name": class_name,
-            "subject_filter": subject_name,
-            "exams": [
-                {
-                    "exam_id": "EXM-2025-001",
-                    "subject_name": subject_name,
-                    "exam_type": "Midterm",
-                    "exam_date": "2025-11-15",
-                    "start_time": "09:00",
-                    "duration_minutes": 90,
-                    "max_marks": 100,
-                },
-                {
-                    "exam_id": "EXM-2025-002",
-                    "subject_name": subject_name,
-                    "exam_type": "Final",
-                    "exam_date": "2025-12-20",
-                    "start_time": "10:00",
-                    "duration_minutes": 120,
-                    "max_marks": 100,
-                },
-            ],
-        }
-    else:
-        # All subjects
-        return {
-            "status": "success",
-            "class_name": class_name,
-            "date_range": {
-                "start": start_date or "No start date filter",
-                "end": end_date or "No end date filter",
-            },
-            "exams": [
-                {
-                    "exam_id": "EXM-2025-001",
-                    "subject_name": "Mathematics",
-                    "exam_type": "Midterm",
-                    "exam_date": "2025-11-15",
-                    "start_time": "09:00",
-                    "duration_minutes": 90,
-                    "max_marks": 100,
-                },
-                {
-                    "exam_id": "EXM-2025-002",
-                    "subject_name": "Physics",
-                    "exam_type": "Midterm",
-                    "exam_date": "2025-11-16",
-                    "start_time": "10:00",
-                    "duration_minutes": 90,
-                    "max_marks": 100,
-                },
-                {
-                    "exam_id": "EXM-2025-003",
-                    "subject_name": "Chemistry",
-                    "exam_type": "Midterm",
-                    "exam_date": "2025-11-17",
-                    "start_time": "09:00",
-                    "duration_minutes": 90,
-                    "max_marks": 100,
-                },
-            ],
-            "total_exams": 3,
-        }
+            logger.info(f"Calling API: GET /exams/search with params: {params}")
+            # This calls the new GET /exams/search endpoint
+            response = await client.get("/exams/search", params=params)
+            return {"success": True, "count": len(response), "exams": response}
+    except AgentResourceNotFoundError as e:
+        logger.warn(f"No exams found for criteria: {params}, {e.message}")
+        return {"success": False, "error": "No exams found matching your criteria."}
+    except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
+        logger.error(f"Error searching exams: {e.message}", exc_info=True)
+        return _format_error_response(e)
+    except Exception as e:
+        logger.exception(f"Unexpected error in search_exams: {e}")
+        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_upcoming_exams", args_schema=GetUpcomingExamsSchema)
-def get_upcoming_exams(
-    days_ahead: Optional[int] = 7,
-    class_name: Optional[str] = None,
-    subject_name: Optional[str] = None,
-    exam_type: Optional[str] = None,
+@tool("get_exam_details", args_schema=GetExamDetailsSchema)
+async def get_exam_details(exam_id: int) -> dict[str, Any]:
+    """
+    (All Users) Get detailed information for a single exam by its ID.
+    """
+    try:
+        async with AgentHTTPClient() as client:
+            logger.info(f"Calling API: GET /exams/{exam_id}")
+            response = await client.get(f"/exams/{exam_id}")
+            return {"success": True, "exam_details": response}
+    except AgentResourceNotFoundError as e:
+        logger.warn(f"Exam not found for id={exam_id}: {e.message}")
+        return {"success": False, "error": f"No exam found with ID {exam_id}."}
+    except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
+        logger.error(f"Error getting exam details: {e.message}", exc_info=True)
+        return _format_error_response(e)
+    except Exception as e:
+        logger.exception(f"Unexpected error in get_exam_details: {e}")
+        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
+
+
+@tool("create_exam", args_schema=CreateExamSchema)
+async def create_exam(
+    school_id: int,
+    exam_name: str,
+    exam_type_id: int,
+    start_date: date,
+    end_date: date,
+    total_marks: float,
+    academic_year_id: int,
 ) -> dict[str, Any]:
     """
-    Retrieves upcoming exams within a specified time period.
-    Use this tool when a user asks about upcoming exams, next exams, or exams in the near future.
-
-    Args:
-        days_ahead: Number of days to look ahead (default: 7)
-        class_name: Optional filter by class
-        subject_name: Optional filter by subject
-        exam_type: Optional filter by exam type
-
-    Returns:
-        Dictionary containing upcoming exam data or error information
+    (Admin Only) Creates a new exam.
     """
-    logger.info(f"[TOOL:get_upcoming_exams] Looking ahead: {days_ahead} days, " f"Class: {class_name or 'All'}, Subject: {subject_name or 'All'}, Type: {exam_type or 'All'}")
+    try:
+        async with AgentHTTPClient() as client:
+            payload = {
+                "school_id": school_id,
+                "exam_name": exam_name,
+                "exam_type_id": exam_type_id,
+                "start_date": str(start_date),
+                "end_date": str(end_date),
+                "total_marks": total_marks,
+                "academic_year_id": academic_year_id,
+            }
 
-    # Real implementation would be:
-    # try:
-    #     params = {"days_ahead": days_ahead}
-    #     if class_name:
-    #         params["class_name"] = class_name
-    #     if subject_name:
-    #         params["subject_name"] = subject_name
-    #     if exam_type:
-    #         params["exam_type"] = exam_type
-    #
-    #     response = requests.get(
-    #         f"{BASE_URL}/exams/upcoming",
-    #         params=params,
-    #         timeout=10
-    #     )
-    #     response.raise_for_status()
-    #     return response.json()
-    # except requests.Timeout:
-    #     logger.error("API request timed out")
-    #     return {"error": "Request timed out. Please try again."}
-    # except requests.RequestException as e:
-    #     logger.error(f"API call failed: {e}")
-    #     return {"error": f"Failed to fetch upcoming exams: {str(e)}"}
-
-    # Placeholder upcoming exams for development/testing
-    upcoming_exams = {
-        "status": "success",
-        "days_ahead": days_ahead,
-        "filters": {
-            "class_name": class_name or "All classes",
-            "subject_name": subject_name or "All subjects",
-            "exam_type": exam_type or "All types",
-        },
-        "exams": [
-            {
-                "exam_id": "EXM-2025-005",
-                "class_name": class_name or "10A",
-                "subject_name": subject_name or "Mathematics",
-                "exam_type": exam_type or "Unit Test",
-                "exam_date": "2025-10-10",
-                "days_until": 4,
-                "start_time": "09:00",
-                "duration_minutes": 60,
-            },
-            {
-                "exam_id": "EXM-2025-006",
-                "class_name": class_name or "10A",
-                "subject_name": subject_name or "Physics",
-                "exam_type": exam_type or "Unit Test",
-                "exam_date": "2025-10-12",
-                "days_until": 6,
-                "start_time": "10:00",
-                "duration_minutes": 60,
-            },
-        ],
-        "total_upcoming_exams": 2,
-    }
-
-    return upcoming_exams
+            logger.info("Calling API: POST /exams/ with payload")
+            response = await client.post("/exams/", json=payload)
+            return {"success": True, "created_exam": response}
+    except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
+        logger.error(f"Error creating exam: {e.message}", exc_info=True)
+        return _format_error_response(e)
+    except Exception as e:
+        logger.exception(f"Unexpected error in create_exam: {e}")
+        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("define_new_exam_type", args_schema=DefineNewExamTypeSchema)
-def define_new_exam_type(
-    exam_type_name: str,
-    description: Optional[str] = None,
-    weightage: Optional[float] = None,
-) -> dict[str, Any]:
+@tool("update_exam", args_schema=UpdateExamSchema)
+async def update_exam(exam_id: int, **updates: Any) -> dict[str, Any]:
     """
-    Defines a new exam type in the system.
-    Use this tool when a user wants to create a new category of exam.
-
-    Args:
-        exam_type_name: Name of the new exam type
-        description: Optional description of the exam type
-        weightage: Optional percentage this exam type contributes to final grades
-
-    Returns:
-        Dictionary containing success status or error information
+    (Admin Only) Updates an existing exam's details.
+    Only provided fields will be updated.
     """
-    logger.info(f"[TOOL:define_new_exam_type] Exam Type: '{exam_type_name}', " f"Weightage: {weightage or 'Not specified'}")
+    try:
+        async with AgentHTTPClient() as client:
+            # Build payload, converting date objects to strings
+            payload = {}
+            for k, v in updates.items():
+                if v is not None:
+                    if isinstance(v, date):
+                        payload[k] = str(v)
+                    else:
+                        payload[k] = v
 
-    # Real implementation would be:
-    # try:
-    #     payload = {
-    #         "exam_type_name": exam_type_name,
-    #         "description": description,
-    #         "weightage": weightage
-    #     }
-    #     response = requests.post(
-    #         f"{BASE_URL}/exams/types/",
-    #         json=payload,
-    #         timeout=10
-    #     )
-    #     response.raise_for_status()
-    #     return response.json()
-    # except requests.Timeout:
-    #     logger.error("API request timed out")
-    #     return {"error": "Request timed out. Please try again."}
-    # except requests.RequestException as e:
-    #     logger.error(f"API call failed: {e}")
-    #     return {"error": f"Failed to define exam type: {str(e)}"}
+            if not payload:
+                return {"success": False, "error": "No update information provided."}
 
-    # Placeholder confirmation for development/testing
-    return {
-        "status": "success",
-        "message": f"Successfully defined new exam type: '{exam_type_name}'.",
-        "exam_type_details": {
-            "exam_type_id": "EXTYPE-2025-001",
-            "exam_type_name": exam_type_name,
-            "description": description or "No description provided",
-            "weightage": weightage,
-            "is_active": True,
-            "created_at": "2025-10-06T10:00:00Z",
-        },
-    }
+            logger.info(f"Calling API: PUT /exams/{exam_id} with payload: {payload}")
+            response = await client.put(f"/exams/{exam_id}", json=payload)
+            return {"success": True, "updated_exam": response}
+    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+        logger.error(f"Error updating exam: {e.message}", exc_info=True)
+        return _format_error_response(e)
+    except Exception as e:
+        logger.exception(f"Unexpected error in update_exam: {e}")
+        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-# Export all tools as a list for the agent to use
+@tool("delete_exam", args_schema=DeleteExamSchema)
+async def delete_exam(exam_id: int) -> dict[str, Any]:
+    """
+    (Admin Only) Soft-deletes an exam.
+    """
+    try:
+        async with AgentHTTPClient() as client:
+            logger.info(f"Calling API: DELETE /exams/{exam_id}")
+            # DELETE returns 204 No Content
+            await client.delete(f"/exams/{exam_id}")
+            return {"success": True, "message": f"Exam {exam_id} deleted successfully."}
+    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+        logger.error(f"Error deleting exam: {e.message}", exc_info=True)
+        return _format_error_response(e)
+    except Exception as e:
+        logger.exception(f"Unexpected error in delete_exam: {e}")
+        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
+
+
+# --- Export the list of tools ---
+
 exam_agent_tools = [
-    schedule_exam,
-    get_exam_schedule_for_class,
-    get_upcoming_exams,
-    define_new_exam_type,
+    list_all_exams,
+    search_exams,
+    get_exam_details,
+    create_exam,
+    update_exam,
+    delete_exam,
 ]
 
-# Export tool names for easy reference
-__all__ = [
-    "exam_agent_tools",
-    "schedule_exam",
-    "get_exam_schedule_for_class",
-    "get_upcoming_exams",
-    "define_new_exam_type",
-]
+__all__ = ["exam_agent_tools"]

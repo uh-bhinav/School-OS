@@ -12,8 +12,7 @@ from app.main import app
 from app.models.profile import Profile
 from app.models.student import Student
 from app.models.teacher import Teacher
-
-SCHOOL_ID = 1
+from tests.conftest import SCHOOL_ID
 
 
 # Note: Using the same ensure_teacher_record helper from the previous test file.

@@ -2,7 +2,7 @@
 from datetime import date
 from typing import Optional
 
-from sqlalchemy import update
+from sqlalchemy import false, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -12,7 +12,7 @@ from app.models.student import Student
 from app.models.subject import Subject
 from app.models.teacher import Teacher
 from app.models.timetable import Timetable
-from app.schemas.timetable_schema import TimetableEntryCreate, TimetableEntryUpdate
+from app.schemas.timetable_schema import TeacherFreeSlot, TeacherFreeSlotResponse, TimetableEntryCreate, TimetableEntryUpdate
 
 
 def get_timetable_with_details_options():
@@ -138,3 +138,55 @@ async def get_schedule_for_day(
     # Execute the final query and return the results
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def find_teacher_free_slots(db: AsyncSession, *, teacher_id: int, school_id: int, target_date: date) -> TeacherFreeSlotResponse:
+    """
+    Finds all free (un-booked) periods for a teacher on a specific date.
+    """
+    day_of_week = target_date.weekday() + 1  # Monday=1, Sunday=7
+
+    # 1. Get all *possible* teaching periods for that day at that school
+    all_periods_stmt = select(Period).where(
+        Period.school_id == school_id,
+        Period.is_active,
+        Period.is_recess.is_(false()),  # We only care about teaching periods
+        Period.day_of_week == day_of_week,  # For day-specific structures
+    )
+    # Fallback for day-agnostic structures
+    all_periods_day_agnostic_stmt = select(Period).where(
+        Period.school_id == school_id,
+        Period.is_active,
+        Period.is_recess.is_(false()),
+        Period.day_of_week.is_(None),  # For day-agnostic structures
+    )
+
+    all_periods_res = await db.execute(all_periods_stmt)
+    all_periods = all_periods_res.scalars().all()
+
+    if not all_periods:
+        all_periods_res_agnostic = await db.execute(all_periods_day_agnostic_stmt)
+        all_periods = all_periods_res_agnostic.scalars().all()
+
+    all_period_map = {p.id: p for p in all_periods}
+
+    # 2. Get all *busy* periods for that teacher on that day
+    busy_periods_stmt = select(Timetable.period_id).where(
+        Timetable.teacher_id == teacher_id,
+        Timetable.day_of_week == day_of_week,
+        Timetable.is_active,
+    )
+
+    busy_periods_res = await db.execute(busy_periods_stmt)
+    busy_period_ids = set(busy_periods_res.scalars().all())
+
+    # 3. Find the difference
+    free_slots = []
+    for period_id, period in all_period_map.items():
+        if period_id not in busy_period_ids:
+            free_slots.append(TeacherFreeSlot(period_id=period.id, period_number=period.period_number, period_name=period.period_name, start_time=period.start_time, end_time=period.end_time, day_of_week=day_of_week))
+
+    # Sort by start time
+    free_slots.sort(key=lambda x: x.start_time)
+
+    return TeacherFreeSlotResponse(teacher_id=teacher_id, day_of_week=day_of_week, free_slots=free_slots)

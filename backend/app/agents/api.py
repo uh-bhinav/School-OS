@@ -1,296 +1,538 @@
-# backend/app/agents/api.py
-
 import logging
+import os
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.modules.academics.leaves.attendance_agent.main import (
-    attendance_agent_app,
+from app.agents.modules.academics.leaves.academic_year_agent.main import (
+    academic_year_agent_app,
 )
-from app.agents.modules.academics.leaves.class_agent.main import class_agent_app
-from app.agents.modules.academics.leaves.exam_agent.main import exam_agent_app
+from app.agents.modules.academics.leaves.achievement_agent.main import (
+    achievement_agent_app,
+)
 
-# Import the singleton instances of the agents we created
-from app.agents.modules.academics.leaves.mark_agent.main import mark_agent_app
-from app.agents.modules.academics.leaves.subject_agent.main import subject_agent_app
-from app.agents.modules.academics.leaves.timetable_agent.main import timetable_agent_app
+# --- L4 Leaf Agents (for testing) ---
+from app.agents.modules.academics.leaves.class_agent.main import (
+    class_agent_app,
+)
+from app.agents.modules.academics.leaves.club_agent.main import (
+    club_agent_app,
+)
+from app.agents.modules.academics.leaves.exam_agent.main import (
+    exam_agent_app,
+)
+from app.agents.modules.academics.leaves.exam_type_agent.main import (
+    exam_type_agent_app,
+)
+from app.agents.modules.academics.leaves.leaderboard_agent.main import (
+    leaderboard_agent_app,
+)
+from app.agents.modules.academics.leaves.mark_agent.main import (
+    mark_agent_app,
+)
+from app.agents.modules.academics.leaves.period_agent.main import (
+    period_agent_app,
+)
+from app.agents.modules.academics.leaves.report_card_agent.main import (
+    report_card_agent_app,
+)
+from app.agents.modules.academics.leaves.student_agent.main import (
+    student_agent_app,
+)
+from app.agents.modules.academics.leaves.subject_agent.main import (
+    subject_agent_app,
+)
+from app.agents.modules.academics.leaves.teacher_agent.main import (
+    teacher_agent_app,
+)
+from app.agents.modules.academics.leaves.timetable_agent.main import (
+    timetable_agent_app,
+)
+
+# --- L1 Root Orchestrator ---
+from app.agents.root_orchestrator import root_orchestrator_app
+
+# --- Core Dependencies ---
 from app.agents.tool_context import ToolRuntimeContext, use_tool_context
-from app.api.deps import get_current_active_user
-from app.db.session import get_db
+from app.api.deps import get_db_session
+from app.core.security import create_access_token, get_current_user_profile
 from app.models.profile import Profile
 
-# Set up logging for this module
+# Set up logging
 logger = logging.getLogger(__name__)
 
-# Add prefix="/agents" to consolidate all agent endpoints
-router = APIRouter(prefix="/agents", tags=["Agents (Development)"])
+# This is the correct router prefix, as defined in main.py
+router = APIRouter(prefix="/agents", tags=["Agents (HTTP-based)"])
 
 
-# Define the request and response models for our chat endpoint
+# Request/Response models
 class AgentChatRequest(BaseModel):
     query: str
-    session_id: str = "default-session"
+    session_id: Optional[str] = "default-session"
 
 
 class AgentChatResponse(BaseModel):
     response: str
-    session_id: str
+    session_id: Optional[str]
 
 
-# ===========================================================================
-# Mark Agent Endpoint
-# ===========================================================================
+def get_api_base_url() -> str:
+    """
+    Get the API base URL for the AgentHTTPClient.
+    This must point to the root of your v1 API.
+    """
+    api_base_url = os.getenv("API_BASE_URL")
+    if api_base_url:
+        return api_base_url.rstrip("/")
+
+    backend_host = os.getenv("BACKEND_HOST", "localhost")
+    backend_port = os.getenv("BACKEND_PORT", "8000")
+    # This MUST point to your v1 API prefix
+    api_v1_str = os.getenv("API_V1_STR", "/api/v1")
+
+    return f"http://{backend_host}:{backend_port}{api_v1_str}".rstrip("/")
 
 
-@router.post("/chat/marks", response_model=AgentChatResponse)
-async def marks_agent_chat(
-    request: AgentChatRequest,
-    db: AsyncSession = Depends(get_db),
-    current_profile: Profile = Depends(get_current_active_user),
+async def _get_agent_context(request: Request, profile: Profile, db: AsyncSession) -> ToolRuntimeContext:
+    """
+    Creates the ToolRuntimeContext for an HTTP-based agent.
+    It generates a new, short-lived JWT token from the given profile.
+    """
+    # Create a new, internal access token from the user's profile
+    # This token will be used by the AgentHTTPClient to authenticate.
+    internal_token = create_access_token(subject=str(profile.user_id))
+    test_client = getattr(request.app.state, "pytest_client", None)
+
+    return ToolRuntimeContext(
+        jwt_token=internal_token,
+        api_base_url=get_api_base_url(),
+        # We also pass the DB and profile for any potential
+        # (rare) service-based tools or logging.
+        db=db,
+        current_profile=profile,
+        client=test_client,
+    )
+
+
+# ============================================================================
+# PRIMARY L1 AGENT ENDPOINT
+# ============================================================================
+
+
+@router.post(
+    "/chat",
+    response_model=AgentChatResponse,
+    tags=["Agents - L1 Root"],
+    summary="Invoke the L1 Root Orchestrator (Main Entry Point)",
+)
+async def root_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
-    Development endpoint to directly interact with the MarkAgent.
-    This allows for isolated testing of the agent's capabilities.
-
-    Endpoint: POST /agents/chat/marks
-
-    Example queries:
-    - "What were Priya's marks in the midterm exam?"
-    - "Record marks for Rohan: Math 85, Science 90 in the final exam"
-    - "Show me the marksheet for Anjali in the final exam"
+    This is the main entry point for the entire agentic system.
+    All frontend queries should be sent to this endpoint.
+    This endpoint uses the user's authenticated profile to
+    generate an internal token for the agentic flow.
     """
+    logger.info(f"--- L1 RootOrchestrator Invoked --- (User: {current_profile.user_id}, Session: {chat_request.session_id})")
+
+    # 1. Create the runtime context
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+
+    # 2. Use the context for the entire duration of the agent's invocation
     try:
-        logger.info(f"Received query for MarkAgent (session: {request.session_id}): '{request.query}'")
-
-        # Provide per-request context to the tools before invoking the agent
-        tool_context = ToolRuntimeContext(db=db, current_profile=current_profile)
-        with use_tool_context(tool_context):
-            result = mark_agent_app.invoke(request.query)
-
-        # The final response from the agent is the last message in the state
-        final_message = result["messages"][-1]
-        response_content = final_message.content
-
-        logger.info(f"Final response from MarkAgent: '{response_content}'")
-
-        return AgentChatResponse(response=response_content, session_id=request.session_id)
-
-    except Exception as e:
-        logger.error(f"Error during MarkAgent execution: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ============================================================================
-# Exam Agent Endpoint
-# ============================================================================
-
-
-@router.post("/chat/exams", response_model=AgentChatResponse)
-async def exams_agent_chat(request: AgentChatRequest):
-    """
-    Development endpoint to directly interact with the ExamAgent.
-    This allows for isolated testing of the agent's capabilities.
-
-    Endpoint: POST /agents/chat/exams
-
-    Example queries:
-    - "When is the Math exam for Class 10A?"
-    - "Schedule a midterm exam for Class 12 Physics on November 15th"
-    - "What exams are coming up this week?"
-    - "Show me the exam schedule for Class 10A"
-    """
-    try:
-        logger.info(f"Received query for ExamAgent (session: {request.session_id}): '{request.query}'")
-
-        # Invoke the agent with the user's query
-        result = exam_agent_app.invoke(request.query)
-
-        # The final response from the agent is the last message in the state
-        final_message = result["messages"][-1]
-        response_content = final_message.content
-
-        logger.info(f"Final response from ExamAgent: '{response_content}'")
-
-        return AgentChatResponse(response=response_content, session_id=request.session_id)
-
-    except Exception as e:
-        logger.error(f"Error during ExamAgent execution: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ============================================================================
-# Class Agent Endpoint
-# ============================================================================
-
-
-@router.post("/chat/classes", response_model=AgentChatResponse)
-async def classes_agent_chat(request: AgentChatRequest):
-    """
-    Development endpoint to directly interact with the ClassAgent.
-    This allows for isolated testing of the agent's capabilities.
-
-    Endpoint: POST /agents/chat/classes
-
-    Example queries:
-    - "List all students in class 10A"
-    - "Create a new class called 'Grade 8 Section D' for the '2025-2026' academic year"
-    - "What is the schedule for class 9B?"
-    - "Assign Mrs. Geeta as the class teacher for 11C"
-    """
-    try:
-        logger.info(f"Received query for ClassAgent (session: {request.session_id}): '{request.query}'")
-
-        # Invoke the agent instance with the user's query
-        # The invoke method returns a dictionary with the response and status
-        result = class_agent_app.invoke(request.query)
-
-        if not result.get("success"):
-            # If the agent's internal error handling caught an issue, raise an exception
-            raise Exception(result.get("error", "Unknown agent error"))
-
-        response_content = result.get("response", "I'm sorry, I couldn't generate a response.")
-
-        logger.info(f"Final response from ClassAgent: '{response_content}'")
-
-        return AgentChatResponse(response=response_content, session_id=request.session_id)
-
-    except Exception as e:
-        logger.error(f"Error during ClassAgent execution: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ============================================================================
-# Attendance Agent Endpoint
-# ============================================================================
-
-
-@router.post("/chat/attendance", response_model=AgentChatResponse)
-async def attendance_agent_chat(
-    request: AgentChatRequest,
-    db: AsyncSession = Depends(get_db),
-    current_profile: Profile = Depends(get_current_active_user),
-):
-    """
-    Development endpoint to directly interact with the AttendanceAgent.
-    This allows for isolated testing of the agent's capabilities.
-
-    Endpoint: POST /agents/chat/attendance
-
-    Example queries:
-    - "Mark student 123 as present today"
-    - "Show me attendance for class 10A on November 2nd"
-    - "What is the attendance percentage for student John Doe?"
-    - "Get attendance records for student 456 from September 1 to September 30"
-    """
-    try:
-        logger.info(f"Attendance agent query: {request.query[:100]}...")
-
-        # Set up tool context with database session and current profile
-        context = ToolRuntimeContext(db=db, current_profile=current_profile)
-
         with use_tool_context(context):
-            # Invoke the attendance agent
-            result = attendance_agent_app.invoke(query=request.query, conversation_history=[])
+            # 3. Invoke the L1 Root Orchestrator
+            result = root_orchestrator_app.invoke(chat_request.query)
 
-            return AgentChatResponse(response=result.get("response", "No response generated"), session_id=request.session_id)
-
-    except Exception as e:
-        logger.error(f"Attendance agent chat failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Attendance agent processing failed: {str(e)}")
-
-
-# ============================================================================
-# Subject Agent Endpoint
-# ============================================================================
-
-
-@router.post("/chat/subjects", response_model=AgentChatResponse)
-async def subject_agent_chat(request: AgentChatRequest):
-    """
-    Development endpoint to directly interact with the SubjectAgent.
-    This allows for isolated testing of the agent's capabilities.
-
-    Endpoint: POST /agents/chat/subjects
-
-    Example queries:
-    - "List all subjects for class 10A"
-    - "Who teaches Physics to Grade 12?"
-    - "What are the available academic streams?"
-    - "Assign Mr. Sharma to teach Chemistry"
-    """
-    try:
-        logger.info(f"Received query for SubjectAgent (session: {request.session_id}): '{request.query}'")
-
-        # Invoke the agent instance with the user's query
-        # The invoke method returns a dictionary with the response and status
-        result = subject_agent_app.invoke(request.query)
-
-        if not result.get("success"):
-            # If the agent's internal error handling caught an issue, raise an exception
-            raise Exception(result.get("error", "Unknown agent error"))
-
-        response_content = result.get("response", "I'm sorry, I couldn't generate a response.")
-
-        logger.info(f"Final response from SubjectAgent: '{response_content}'")
-
-        return AgentChatResponse(response=response_content, session_id=request.session_id)
+        logger.info(f"--- L1 RootOrchestrator Success --- (Session: {chat_request.session_id})")
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
 
     except Exception as e:
-        logger.error(f"Error during SubjectAgent execution: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ============================================================================
-# Timetable Agent Endpoint
-# ============================================================================
-
-
-@router.post("/chat/timetable", response_model=AgentChatResponse)
-async def timetable_agent_chat(request: AgentChatRequest):
-    """
-    Development endpoint to directly interact with the TimetableAgent.
-    This allows for isolated testing of the agent's capabilities related to
-    class schedules, teacher assignments, and period management.
-
-    Endpoint: POST /agents/chat/timetable
-
-    Example queries:
-    - "What is the schedule for class 10A tomorrow?"
-    - "Show me Mr. Sharma's timetable for this week."
-    - "Which teachers are free during the 3rd period on Tuesday?"
-    - "What subject is class 8B having right now?"
-    - "Update the timetable: assign Mrs. Gupta to teach Math to 9C on Friday, 4th period."
-    """
-    try:
-        # Detailed logging for incoming requests
-        logger.info(f"Received query for TimetableAgent (session: {request.session_id}): '{request.query}'")
-
-        # Invoke the agent instance with the user's query. The main.py of the agent
-        # handles the entire graph execution and returns a final dictionary.
-        result = timetable_agent_app.invoke(request.query)
-
-        # Robust error checking based on the agent's own success flag
-        if not result.get("success"):
-            error_message = result.get("error", "Unknown agent error")
-            logger.warning(f"TimetableAgent internal error for session {request.session_id}: {error_message}")
-            # Propagate the internal agent error as a clear exception
-            raise Exception(error_message)
-
-        # Extract the final, user-facing response
-        response_content = result.get("response", "I'm sorry, I couldn't generate a response.")
-
-        logger.info(f"Final response from TimetableAgent for session {request.session_id}: '{response_content}'")
-
-        # Return the successful response in the defined Pydantic model
-        return AgentChatResponse(response=response_content, session_id=request.session_id)
-
-    except Exception as e:
-        # Catch any exception during the process for a graceful failure
         logger.error(
-            f"Error during TimetableAgent execution for session {request.session_id}: {e}",
+            f"CRITICAL: Error in L1 RootOrchestrator for session {chat_request.session_id}: {e}",
             exc_info=True,
         )
-        # Return a standard 500 Internal Server Error
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while processing your request: {str(e)}",
+        )
+
+
+# ============================================================================
+# L4 Agent Endpoints (For Isolated Testing)
+# ============================================================================
+
+# All L4 test endpoints will follow the same pattern as root_chat
+
+
+@router.post(
+    "/chat/academic-year",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Academic Year Agent",
+)
+async def academic_year_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking AcademicYearAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = academic_year_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in AcademicYearAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/student",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Student Profile Agent",
+)
+async def student_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking StudentAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = student_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in StudentAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/class",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Class Management Agent",
+)
+async def class_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking ClassAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = class_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in ClassAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/subject",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Subject Management Agent",
+)
+async def subject_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking SubjectAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = subject_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in SubjectAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/teacher",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Teacher Profile Agent",
+)
+async def teacher_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking TeacherAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = teacher_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in TeacherAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/exam-type",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Exam Type Agent",
+)
+async def exam_type_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking ExamTypeAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = exam_type_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in ExamTypeAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/exam",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Exam Scheduling Agent",
+)
+async def exam_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking ExamAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = exam_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in ExamAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/mark",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Mark Management Agent",
+)
+async def mark_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking MarkAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = mark_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in MarkAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/report-card",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Report Card Agent",
+)
+async def report_card_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking ReportCardAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = report_card_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in ReportCardAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/period",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Period Structure Agent",
+)
+async def period_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking PeriodAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = period_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in PeriodAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/timetable",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Timetable Agent",
+)
+async def timetable_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking TimetableAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = timetable_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in TimetableAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/club",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Club Agent",
+)
+async def club_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking ClubAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = club_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in ClubAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/achievement",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Achievement Agent",
+)
+async def achievement_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking AchievementAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = achievement_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in AchievementAgent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/leaderboard",
+    response_model=AgentChatResponse,
+    tags=["Agents - L4 Testing"],
+    summary="Invoke the Leaderboard Agent",
+)
+async def leaderboard_chat(
+    chat_request: AgentChatRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    logger.info(f"Invoking LeaderboardAgent for session: {chat_request.session_id}")
+    context = await _get_agent_context(request=request, profile=current_profile, db=db)
+    try:
+        with use_tool_context(context):
+            result = leaderboard_agent_app.invoke(chat_request.query)
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=chat_request.session_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in LeaderboardAgent: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

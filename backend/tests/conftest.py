@@ -23,6 +23,7 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import text
 
 from app.api.v1.endpoints.employment_statuses import router as employment_statuses
 from app.api.v1.endpoints.student_contacts import router as student_contacts
@@ -44,6 +45,8 @@ from app.models.role_definition import RoleDefinition
 from app.models.school import School
 from app.models.student import Student
 from app.models.user_roles import UserRole
+
+SCHOOL_ID = 1
 
 app.include_router(teachers, prefix="/v1/teachers", tags=["teachers"])
 app.include_router(student_contacts, prefix="/v1/student-contacts", tags=["student-contacts"])
@@ -558,3 +561,62 @@ def mock_normal_user_profile() -> Profile:
         is_active=True,
         roles=[UserRole(role_definition=RoleDefinition(role_id=3, role_name="Student"))],
     )
+
+
+@pytest.fixture(scope="session")
+def mock_admin_auth_headers(mock_admin_profile: Profile) -> dict[str, str]:
+    """
+    Creates and returns an authentication header for the
+    primary mock admin profile (Priya Singh, school_id=1).
+    """
+    # Use the create_access_token function from your security.py
+    token = create_access_token(subject=str(mock_admin_profile.user_id))
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture(scope="function")
+async def mock_parent_auth_headers(mock_parent_profile: Profile, db_session: AsyncSession) -> dict[str, str]:
+    """
+    Creates and returns an authentication header for the
+    mock parent profile, ensuring the underlying user/profile
+    records exist in the DB for this test.
+    """
+    profile_data = {
+        "user_id": mock_parent_profile.user_id,
+        "school_id": mock_parent_profile.school_id,
+        "first_name": mock_parent_profile.first_name,
+        "last_name": mock_parent_profile.last_name,
+    }
+    role_id = 4  # From your fixture
+    role_name = "Parent"
+    email = f"test.parent.{profile_data['user_id']}@schoolos.dev"
+
+    # 1. Ensure the School exists
+    await _ensure_school(db_session, school_id=profile_data["school_id"], name="Test School One")
+
+    # 2. Ensure the "Parent" role definition exists
+    parent_role = await db_session.get(RoleDefinition, role_id)
+    if not parent_role:
+        parent_role = RoleDefinition(role_id=role_id, role_name=role_name)
+        db_session.add(parent_role)
+
+    # 3. Ensure the user exists in auth.users (for the profile trigger)
+    await db_session.execute(text("INSERT INTO auth.users (id, email) VALUES (:user_id, :email) ON CONFLICT (id) DO NOTHING"), {"user_id": profile_data["user_id"], "email": email})
+
+    # 4. Ensure the Parent profile exists
+    parent_profile = await db_session.get(Profile, profile_data["user_id"])
+    if not parent_profile:
+        parent_profile = Profile(user_id=profile_data["user_id"], school_id=profile_data["school_id"], first_name=profile_data["first_name"], last_name=profile_data["last_name"], is_active=True)
+        db_session.add(parent_profile)
+
+    # 5. Ensure the user_roles link exists
+    parent_role_link = await db_session.get(UserRole, (profile_data["user_id"], role_id))
+    if not parent_role_link:
+        parent_role_link = UserRole(user_id=profile_data["user_id"], role_id=role_id)
+        db_session.add(parent_role_link)
+
+    await db_session.commit()
+
+    # Create and return the token
+    token = create_access_token(subject=str(mock_parent_profile.user_id))
+    return {"Authorization": f"Bearer {token}"}

@@ -1,5 +1,6 @@
 # backend/app/services/mark_service.py
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -91,10 +92,12 @@ async def get_marks_by_student(db: AsyncSession, student_id: int) -> list[Mark]:
     return list(result.scalars().all())
 
 
-async def get_marks_for_student_and_exam(db: AsyncSession, *, student_id: int, exam_id: Optional[int] = None) -> list[Mark]:
+async def get_marks_for_student_and_exam(db: AsyncSession, *, student_id: int, exam_id: Optional[int] = None, subject_id: Optional[int] = None) -> list[Mark]:
     stmt = select(Mark).where(Mark.student_id == student_id)
     if exam_id is not None:
         stmt = stmt.where(Mark.exam_id == exam_id)
+    if subject_id is not None:
+        stmt = stmt.where(Mark.subject_id == subject_id)
 
     stmt = stmt.options(*mark_relationship_options()).order_by(Mark.exam_id)
     result = await db.execute(stmt)
@@ -174,7 +177,7 @@ async def get_student_grade_progression(db: AsyncSession, *, student_id: int, su
     return list(result.scalars().all())
 
 
-async def get_teacher_id_for_user(db: AsyncSession, *, user_id: str) -> Optional[int]:
+async def get_teacher_id_for_user(db: AsyncSession, *, user_id: UUID) -> Optional[int]:
     stmt = select(Teacher.teacher_id).where(Teacher.user_id == user_id)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
