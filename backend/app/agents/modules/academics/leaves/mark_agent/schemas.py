@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from pydantic.v1 import BaseModel, Field
 
@@ -20,7 +20,7 @@ class CreateMarkSchema(BaseModel):
 class BulkCreateMarksSchema(BaseModel):
     """Input schema for the bulk_create_marks tool."""
 
-    marks_list: List[CreateMarkSchema] = Field(..., description="A list of mark-creation objects.")
+    marks_list: list[CreateMarkSchema] = Field(..., description="A list of mark-creation objects.")
 
 
 class SearchMarksSchema(BaseModel):

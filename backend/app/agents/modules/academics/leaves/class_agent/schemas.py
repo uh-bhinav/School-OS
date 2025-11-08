@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from pydantic.v1 import BaseModel, Field
 
@@ -63,7 +63,7 @@ class AssignSubjectsSchema(BaseModel):
     """Input schema for the assign_subjects_to_class tool."""
 
     class_id: int = Field(..., description="The unique ID of the class.")
-    subject_ids: List[int] = Field(..., description="A list of subject IDs to assign to this class.")
+    subject_ids: list[int] = Field(..., description="A list of subject IDs to assign to this class.")
 
 
 # Export all schemas

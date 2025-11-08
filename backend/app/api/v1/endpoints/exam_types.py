@@ -1,6 +1,4 @@
 # backend/app/api/v1/endpoints/exam_types.py
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,7 +45,7 @@ async def create_new_exam_type(
 # New Path: /
 @router.get(
     "/",
-    response_model=List[ExamTypeOut],
+    response_model=list[ExamTypeOut],
     dependencies=[AdminUser],  # Only Admins should manage this
 )
 async def get_all_exam_types(

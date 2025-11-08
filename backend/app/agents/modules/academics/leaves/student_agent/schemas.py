@@ -1,5 +1,5 @@
 from datetime import date
-from typing import List, Optional
+from typing import Optional
 
 # --- THIS IS THE CRITICAL FIX ---
 from pydantic.v1 import BaseModel, Field
@@ -58,7 +58,7 @@ class DeleteStudentSchema(BaseModel):
 class PromoteStudentsSchema(BaseModel):
     """Input schema for the promote_students tool."""
 
-    student_ids: List[int] = Field(..., description="A list of student IDs to promote.")
+    student_ids: list[int] = Field(..., description="A list of student IDs to promote.")
     new_class_id: int = Field(..., description="The ID of the new class to promote students into.")
 
 

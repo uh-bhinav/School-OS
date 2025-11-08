@@ -5,7 +5,6 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-# No longer need 'from typing import List'
 from app.models.exam_type import ExamType
 from app.schemas.exam_type_schema import ExamTypeCreate, ExamTypeUpdate
 

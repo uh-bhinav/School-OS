@@ -2,7 +2,7 @@
 
 import datetime
 from datetime import date
-from typing import List, Optional
+from typing import Optional
 
 from pydantic.v1 import BaseModel, Field
 
@@ -27,9 +27,9 @@ class TakeClassAttendanceSchema(BaseModel):
 
     class_name: str = Field(..., description="The name of the class (e.g., '10A').")
     date: datetime.date = Field(default_factory=date.today, description="The date of the attendance (YYYY-MM-DD). Defaults to today.")
-    present_student_ids: List[int] = Field(..., description="A list of student IDs who are present.")
-    absent_student_ids: List[int] = Field(..., description="A list of student IDs who are absent.")
-    late_student_ids: Optional[List[int]] = Field(default_factory=list, description="A list of student IDs who are late.")
+    present_student_ids: list[int] = Field(..., description="A list of student IDs who are present.")
+    absent_student_ids: list[int] = Field(..., description="A list of student IDs who are absent.")
+    late_student_ids: Optional[list[int]] = Field(default_factory=list, description="A list of student IDs who are late.")
 
 
 class GetAllAbsenteesTodaySchema(BaseModel):

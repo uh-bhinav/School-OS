@@ -2,7 +2,7 @@
 
 import logging
 from datetime import date
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 
@@ -80,7 +80,7 @@ async def get_class_attendance_sheet(class_name: str, date: str) -> dict[str, An
 
 
 @tool("take_class_attendance", args_schema=TakeClassAttendanceSchema)
-async def take_class_attendance(class_name: str, date: str, present_student_ids: List[int], absent_student_ids: List[int], late_student_ids: Optional[List[int]] = None) -> dict[str, Any]:
+async def take_class_attendance(class_name: str, date: str, present_student_ids: list[int], absent_student_ids: list[int], late_student_ids: Optional[list[int]] = None) -> dict[str, Any]:
     """
     (Teacher Tool) Submits the attendance for a class.
     This is the *second step* after getting the student IDs from the sheet.
