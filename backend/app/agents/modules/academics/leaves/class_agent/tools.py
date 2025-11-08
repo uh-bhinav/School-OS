@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 
@@ -207,7 +207,7 @@ async def delete_class(class_id: int) -> dict[str, Any]:
 
 
 @tool("assign_subjects_to_class", args_schema=AssignSubjectsSchema)
-async def assign_subjects_to_class(class_id: int, subject_ids: List[int]) -> dict[str, Any]:
+async def assign_subjects_to_class(class_id: int, subject_ids: list[int]) -> dict[str, Any]:
     """
     (Admin Only) Assigns a list of subjects to a class.
     """

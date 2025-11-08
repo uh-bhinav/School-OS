@@ -1,6 +1,6 @@
 import logging
 from datetime import date
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 
@@ -191,7 +191,7 @@ async def delete_student(student_id: int) -> dict[str, Any]:
 
 
 @tool("promote_students", args_schema=PromoteStudentsSchema)
-async def promote_students(student_ids: List[int], new_class_id: int) -> dict[str, Any]:
+async def promote_students(student_ids: list[int], new_class_id: int) -> dict[str, Any]:
     """
     (Admin Only) Promote a list of students to a new class.
     """

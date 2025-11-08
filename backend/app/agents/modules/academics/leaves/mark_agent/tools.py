@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 
@@ -77,7 +77,7 @@ async def create_mark(
 
 
 @tool("bulk_create_marks", args_schema=BulkCreateMarksSchema)
-async def bulk_create_marks(marks_list: List[dict]) -> dict[str, Any]:
+async def bulk_create_marks(marks_list: list[dict]) -> dict[str, Any]:
     """
     (Teacher/Admin Only) Submits marks for multiple students at once.
     The input is a list of mark creation objects.
