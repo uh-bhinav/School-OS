@@ -1,169 +1,51 @@
-# backend/app/agents/modules/academics/leaves/attendance_agent/schemas.py
+# File: app/agents/modules/academics/leaves/attendance_agent/schemas.py
 
-from datetime import date, datetime
-from typing import Optional
+import datetime
+from datetime import date
+from typing import List, Optional
 
-from pydantic.v1 import BaseModel, Field, validator
+from pydantic.v1 import BaseModel, Field
 
-
-class MarkStudentAttendanceSchema(BaseModel):
-    """Input schema for the mark_student_attendance tool."""
-
-    student_id: str = Field(
-        ...,
-        description="The unique identifier or name of the student whose attendance is being marked. Can be numeric ID or full name.",
-        min_length=1,
-    )
-    attendance_date: str = Field(
-        ...,
-        description="The date for which attendance is being marked (format: YYYY-MM-DD). Must not be in the future.",
-        min_length=10,
-        max_length=10,
-    )
-    status: str = Field(
-        ...,
-        description="The attendance status. Valid values: 'present', 'absent', 'late'. Case-insensitive.",
-        min_length=1,
-    )
-    class_name: Optional[str] = Field(default=None, description="Optional: The class name for additional context (e.g., '10A', 'Grade 10 Section B').")
-    remarks: Optional[str] = Field(
-        default=None,
-        description="Optional: Any additional remarks or notes about the attendance (e.g., 'Medical emergency', 'School event').",
-    )
-
-    @validator("attendance_date")
-    def validate_attendance_date(cls, v):
-        """Ensure attendance_date is in correct format and not in the future."""
-        try:
-            attendance_date_obj = datetime.strptime(v, "%Y-%m-%d").date()
-            if attendance_date_obj > date.today():
-                raise ValueError("Attendance date cannot be in the future")
-            return v
-        except ValueError as e:
-            if "does not match format" in str(e):
-                raise ValueError("Attendance date must be in YYYY-MM-DD format")
-            raise e
-
-    @validator("status")
-    def validate_status(cls, v):
-        """Ensure status is one of the allowed values."""
-        allowed_statuses = ["present", "absent", "late"]
-        if v.lower() not in allowed_statuses:
-            raise ValueError(f"Status must be one of: {', '.join(allowed_statuses)}")
-        return v.lower()
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "student_id": "123",
-                "attendance_date": "2025-11-02",
-                "status": "present",
-                "class_name": "10A",
-                "remarks": "Arrived on time",
-            }
-        }
+# --- Tool Schemas ---
 
 
-class GetStudentAttendanceForDateRangeSchema(BaseModel):
-    """Input schema for the get_student_attendance_for_date_range tool."""
+class GetMyAttendanceReportSchema(BaseModel):
+    """Input schema for the get_my_attendance_report tool."""
 
-    student_id: str = Field(..., description="The unique identifier or name of the student. Can be numeric ID or full name.", min_length=1)
-    start_date: str = Field(
-        ...,
-        description="The start date of the range (format: YYYY-MM-DD). Cannot be after end_date.",
-        min_length=10,
-        max_length=10,
-    )
-    end_date: str = Field(
-        ...,
-        description="The end date of the range (format: YYYY-MM-DD). Must be on or after start_date.",
-        min_length=10,
-        max_length=10,
-    )
-    class_name: Optional[str] = Field(default=None, description="Optional: Filter by specific class (e.g., '10A', 'Grade 10 Section B').")
-
-    @validator("start_date", "end_date")
-    def validate_date_format(cls, v):
-        """Ensure dates are in correct format."""
-        try:
-            datetime.strptime(v, "%Y-%m-%d").date()
-            return v
-        except ValueError:
-            raise ValueError("Date must be in YYYY-MM-DD format")
-
-    @validator("end_date")
-    def validate_date_range(cls, v, values):
-        """Ensure end_date is not before start_date."""
-        if "start_date" in values:
-            start = datetime.strptime(values["start_date"], "%Y-%m-%d").date()
-            end = datetime.strptime(v, "%Y-%m-%d").date()
-            if end < start:
-                raise ValueError("End date cannot be before start date")
-        return v
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "student_id": "123",
-                "start_date": "2025-09-01",
-                "end_date": "2025-09-30",
-                "class_name": "10A",
-            }
-        }
+    date_range: Optional[str] = Field(default=None, description="Optional date range (e.g., 'last 30 days', 'this term').")
 
 
-class GetClassAttendanceForDateSchema(BaseModel):
-    """Input schema for the get_class_attendance_for_date tool."""
+class GetClassAttendanceSheetSchema(BaseModel):
+    """Input schema for the get_class_attendance_sheet tool."""
 
-    class_name: str = Field(
-        ...,
-        description="The name of the class whose attendance is required (e.g., '10A', 'Grade 10 Section B', '12 Science').",
-        min_length=1,
-    )
-    attendance_date: str = Field(
-        ...,
-        description="The date for which attendance is required (format: YYYY-MM-DD).",
-        min_length=10,
-        max_length=10,
-    )
-
-    @validator("attendance_date")
-    def validate_attendance_date(cls, v):
-        """Ensure attendance_date is in correct format."""
-        try:
-            datetime.strptime(v, "%Y-%m-%d").date()
-            return v
-        except ValueError:
-            raise ValueError("Attendance date must be in YYYY-MM-DD format")
-
-    class Config:
-        schema_extra = {"example": {"class_name": "10A", "attendance_date": "2025-11-02"}}
+    class_name: str = Field(..., description="The name of the class (e.g., '10A').")
+    date: datetime.date = Field(default_factory=date.today, description="The date for the attendance sheet (YYYY-MM-DD). Defaults to today.")
 
 
-class GetStudentAttendanceSummarySchema(BaseModel):
-    """Input schema for the get_student_attendance_summary tool."""
+class TakeClassAttendanceSchema(BaseModel):
+    """Input schema for the take_class_attendance tool."""
 
-    student_id: str = Field(..., description="The unique identifier or name of the student. Can be numeric ID or full name.", min_length=1)
-    academic_term: Optional[str] = Field(
-        default="current",
-        description="The academic term for which to calculate attendance. Defaults to 'current'. Can also be 'previous' or a specific term identifier.",
-    )
-    class_name: Optional[str] = Field(default=None, description="Optional: Filter by specific class (e.g., '10A', 'Grade 10 Section B').")
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "student_id": "123",
-                "academic_term": "current",
-                "class_name": "10A",
-            }
-        }
+    class_name: str = Field(..., description="The name of the class (e.g., '10A').")
+    date: datetime.date = Field(default_factory=date.today, description="The date of the attendance (YYYY-MM-DD). Defaults to today.")
+    present_student_ids: List[int] = Field(..., description="A list of student IDs who are present.")
+    absent_student_ids: List[int] = Field(..., description="A list of student IDs who are absent.")
+    late_student_ids: Optional[List[int]] = Field(default_factory=list, description="A list of student IDs who are late.")
 
 
-# Export all schemas
-__all__ = [
-    "MarkStudentAttendanceSchema",
-    "GetStudentAttendanceForDateRangeSchema",
-    "GetClassAttendanceForDateSchema",
-    "GetStudentAttendanceSummarySchema",
-]
+class GetAllAbsenteesTodaySchema(BaseModel):
+    """Input schema for the get_all_absentees_today tool. No arguments needed."""
+
+    pass
+
+
+class GetLowAttendanceReportSchema(BaseModel):
+    """Input schema for the get_students_with_low_attendance_report tool."""
+
+    threshold_percent: float = Field(..., description="The attendance percentage threshold (e.g., 75.0).")
+    start_date: date = Field(..., description="The start date for the report period (YYYY-MM-DD).")
+    end_date: date = Field(default_factory=date.today, description="The end date for the report period (YYYY-MM-DD). Defaults to today.")
+
+
+# --- Exports ---
+
+__all__ = ["GetMyAttendanceReportSchema", "GetClassAttendanceSheetSchema", "TakeClassAttendanceSchema", "GetAllAbsenteesTodaySchema", "GetLowAttendanceReportSchema"]

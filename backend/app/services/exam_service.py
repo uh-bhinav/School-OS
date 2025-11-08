@@ -183,3 +183,20 @@ async def fetch_exams_by_academic_year(db: AsyncSession, academic_year_id: int) 
     result = await db.execute(stmt)
     # Return a list of Exam objects
     return result.scalars().all()
+
+
+async def search_exams(db: AsyncSession, school_id: int, name: Optional[str] = None, exam_type_id: Optional[int] = None, academic_year_id: Optional[int] = None) -> list[Exam]:
+    """
+    Flexibly searches for active exams by name, type, or academic year.
+    """
+    stmt = select(Exam).where(Exam.school_id == school_id, Exam.is_active.is_(True)).order_by(Exam.start_date.desc())
+
+    if name:
+        stmt = stmt.where(Exam.exam_name.ilike(f"%{name}%"))
+    if exam_type_id:
+        stmt = stmt.where(Exam.exam_type_id == exam_type_id)
+    if academic_year_id:
+        stmt = stmt.where(Exam.academic_year_id == academic_year_id)
+
+    result = await db.execute(stmt)
+    return list(result.scalars().all())

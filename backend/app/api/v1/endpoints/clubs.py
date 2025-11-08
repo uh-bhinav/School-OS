@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db_session
 from app.core.security import RoleChecker
 from app.models.profile import Profile
-from app.schemas.club_schema import ClubActivityCreate, ClubActivityRead, ClubActivityUpdate, ClubCreate, ClubMembershipCreate, ClubMembershipRead, ClubMembershipUpdate, ClubRead, ClubUpdate
+from app.schemas.club_schema import AgentAddMember, AgentClubCreate, ClubActivityCreate, ClubActivityRead, ClubActivityUpdate, ClubCreate, ClubMembershipCreate, ClubMembershipRead, ClubMembershipUpdate, ClubRead, ClubUpdate
 from app.schemas.profile_schema import ProfileOut
 from app.services.club_service import ClubService
 
@@ -207,3 +207,83 @@ async def get_all_upcoming_activities(db: AsyncSession = Depends(get_db_session)
     """
     service = ClubService(db)
     return await service.get_upcoming_activities(current_user.school_id)
+
+
+@router.post("/agent/create-club", response_model=ClubRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(RoleChecker(admin_or_teacher_roles))], summary="[AGENT] Create a club using names")
+async def agent_create_club(club_in: AgentClubCreate, db: AsyncSession = Depends(get_db_session), current_user: Profile = Depends(get_current_user)):
+    """
+    (ROBUST) Agent endpoint to create a club using teacher and club names.
+    Translates names to IDs before calling the create service.
+    """
+    service = ClubService(db)
+    school_id = current_user.school_id
+
+    # 1. Translate Teacher Name to ID
+    teacher = await service.get_teacher_by_name(club_in.teacher_coordinator_name, school_id)
+    if not teacher:
+        raise HTTPException(status_code=404, detail=f"Teacher '{club_in.teacher_coordinator_name}' not found.")
+
+    # 2. Get Active Academic Year
+    # This is a placeholder. Implement this service function.
+    active_year_id = await service.get_active_academic_year(school_id)
+    if not active_year_id:
+        raise HTTPException(status_code=404, detail="No active academic year found.")
+
+    # 3. Build the backend-compatible schema
+    internal_club_create = ClubCreate(
+        name=club_in.club_name,
+        description=club_in.description,
+        club_type=club_in.club_type,
+        teacher_in_charge_id=teacher.id,
+        academic_year_id=active_year_id,
+        # Set other defaults as needed
+    )
+
+    # 4. Call the original, secure service
+    return await service.create_club(internal_club_create, school_id=school_id)
+
+
+@router.post("/agent/add-member", response_model=ClubMembershipRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(RoleChecker(admin_or_teacher_roles))], summary="[AGENT] Add student to club using names")
+async def agent_add_member(member_in: AgentAddMember, db: AsyncSession = Depends(get_db_session), current_user: Profile = Depends(get_current_user)):
+    """
+    (ROBUST) Agent endpoint to add a student to a club using names.
+    Translates names to IDs.
+    """
+    service = ClubService(db)
+    school_id = current_user.school_id
+
+    # 1. Translate Club Name to ID
+    club = await service.get_club_by_name(member_in.club_name, school_id)
+    if not club:
+        raise HTTPException(status_code=404, detail=f"Club '{member_in.club_name}' not found.")
+
+    # 2. Translate Student Name to ID
+    student = await service.get_student_by_name(member_in.student_name, school_id)
+    if not student:
+        raise HTTPException(status_code=404, detail=f"Student '{member_in.student_name}' not found.")
+
+    # 3. Build the backend-compatible schema
+    internal_member_create = ClubMembershipCreate(student_id=student.student_id, club_id=club.id)
+
+    # 4. Call the original, secure service
+    membership = await service.add_student_to_club(internal_member_create, approver_user_id=current_user.user_id, school_id=school_id)
+    if not membership:
+        raise HTTPException(status_code=400, detail="Could not add student. Club may be full or student is already a member.")
+    return membership
+
+
+@router.get("/agent/club-members/{club_name}", response_model=list[ProfileOut], summary="[AGENT] Get club members using club name")
+async def agent_get_club_members(club_name: str, db: AsyncSession = Depends(get_db_session), current_user: Profile = Depends(get_current_user)):
+    """
+    (ROBUST) Agent endpoint to get club members using the club's name.
+    """
+    service = ClubService(db)
+    school_id = current_user.school_id
+
+    # 1. Translate Club Name to ID
+    club = await service.get_club_by_name(club_name, school_id)
+    if not club:
+        raise HTTPException(status_code=404, detail=f"Club '{club_name}' not found.")
+
+    # 2. Call the original, secure service
+    return await service.get_club_members(club.id, school_id)

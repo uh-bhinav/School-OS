@@ -47,12 +47,12 @@ def get_llm(tier: LLMTier = "power"):
 
             from langchain_groq import ChatGroq
 
-            logger.info("Initializing fast tier LLM: Groq Gemma 7B")
+            logger.info("Initializing fast tier LLM: Groq Llama 3.1 8B Instant")
             return ChatGroq(
-                model="gemma-7b-it",
+                model="llama-3.1-8b-instant",  # <-- UPDATED MODEL
                 groq_api_key=groq_api_key,
                 temperature=0.1,
-                max_tokens=1024,
+                max_tokens=4096,  # Increased token limit for safety
             )
 
         elif tier == "medium":
@@ -63,12 +63,12 @@ def get_llm(tier: LLMTier = "power"):
 
             from langchain_groq import ChatGroq
 
-            logger.info("Initializing medium tier LLM: Groq Llama 3 8B")
+            logger.info("Initializing medium tier LLM: Groq Mixtral 8x7B")
             return ChatGroq(
-                model="llama3-8b-8192",
+                model="llama-3.3-70b-versatile",  # <-- UPDATED MODEL
                 groq_api_key=groq_api_key,
                 temperature=0.3,
-                max_tokens=2048,
+                max_tokens=8192,  # Increased token limit
             )
 
         elif tier == "power":
@@ -86,12 +86,12 @@ def get_llm(tier: LLMTier = "power"):
                     try:
                         from langchain_groq import ChatGroq
 
-                        logger.info("Initializing power tier LLM: Groq Llama 3.3 70B")
+                        logger.info("Initializing power tier LLM: Groq Llama 3.1 70B")
                         return ChatGroq(
-                            model="llama-3.3-70b-versatile",
+                            model="llama-3.3-70b-versatile",  # <-- UPDATED MODEL
                             groq_api_key=groq_api_key,
                             temperature=0.3,
-                            max_tokens=8000,
+                            max_tokens=8192,
                         )
                     except Exception as e:
                         logger.warning(f"Failed to initialize Groq: {e}")

@@ -7,13 +7,13 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from app.api.deps import get_db_session
 from app.core.security import get_current_user_profile
 from app.main import app
 from app.models.profile import Profile
 from app.models.student import Student
 from app.models.teacher import Teacher
-
-SCHOOL_ID = 1
+from tests.conftest import SCHOOL_ID
 
 
 async def ensure_teacher_record(db_session: AsyncSession, mock_teacher_profile: Profile) -> tuple[uuid.UUID, int]:
@@ -80,6 +80,7 @@ async def test_create_single_mark_as_teacher(
     """
     # --- Step 1: Use Admin to set up dependencies ---
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+    app.dependency_overrides[get_db_session] = lambda: db_session
 
     # Create all necessary dependencies for the mark
     ay_payload = {
@@ -89,6 +90,7 @@ async def test_create_single_mark_as_teacher(
         "end_date": "2026-03-31",
     }
     ay_response = await test_client.post("/api/v1/academic-years/", json=ay_payload)
+    assert ay_response.status_code == status.HTTP_201_CREATED
     academic_year_id = ay_response.json()["id"]
 
     et_payload = {
@@ -96,6 +98,7 @@ async def test_create_single_mark_as_teacher(
         "type_name": f"Mark Entry Test {uuid.uuid4()}",
     }
     et_response = await test_client.post("/api/v1/exam-types/", json=et_payload)
+    assert et_response.status_code == status.HTTP_201_CREATED
     exam_type_id = et_response.json()["exam_type_id"]
 
     exam_payload = {
@@ -108,10 +111,12 @@ async def test_create_single_mark_as_teacher(
         "academic_year_id": academic_year_id,
     }
     exam_response = await test_client.post("/api/v1/exams/", json=exam_payload)
+    assert exam_response.status_code == status.HTTP_201_CREATED
     exam_id = exam_response.json()["id"]
 
     subject_payload = {"school_id": SCHOOL_ID, "name": f"Test Subject {uuid.uuid4()}"}
     subject_response = await test_client.post("/api/v1/subjects/", json=subject_payload)
+    assert subject_response.status_code == status.HTTP_201_CREATED
     subject_id = subject_response.json()["subject_id"]
 
     class_payload = {
@@ -121,6 +126,7 @@ async def test_create_single_mark_as_teacher(
         "academic_year_id": academic_year_id,
     }
     class_response = await test_client.post("/api/v1/classes/", json=class_payload)
+    assert class_response.status_code == status.HTTP_201_CREATED
     class_id = class_response.json()["class_id"]
 
     # --- Step 2: Manually create the Student and its dependencies in the DB ---
@@ -184,6 +190,7 @@ async def test_create_bulk_marks_as_teacher(
     """
     # --- Step 1: Use Admin to set up dependencies ---
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+    app.dependency_overrides[get_db_session] = lambda: db_session
 
     # Create common dependencies
     ay_payload = {
@@ -193,10 +200,12 @@ async def test_create_bulk_marks_as_teacher(
         "end_date": "2026-03-31",
     }
     ay_response = await test_client.post("/api/v1/academic-years/", json=ay_payload)
+    assert ay_response.status_code == status.HTTP_201_CREATED
     academic_year_id = ay_response.json()["id"]
 
     et_payload = {"school_id": SCHOOL_ID, "type_name": f"Bulk Mark Test {uuid.uuid4()}"}
     et_response = await test_client.post("/api/v1/exam-types/", json=et_payload)
+    assert et_response.status_code == status.HTTP_201_CREATED
     exam_type_id = et_response.json()["exam_type_id"]
 
     exam_payload = {
@@ -209,6 +218,7 @@ async def test_create_bulk_marks_as_teacher(
         "academic_year_id": academic_year_id,
     }
     exam_response = await test_client.post("/api/v1/exams/", json=exam_payload)
+    assert exam_response.status_code == status.HTTP_201_CREATED
     exam_id = exam_response.json()["id"]
 
     subject_payload = {
@@ -216,6 +226,7 @@ async def test_create_bulk_marks_as_teacher(
         "name": f"Bulk Test Subject {uuid.uuid4()}",
     }
     subject_response = await test_client.post("/api/v1/subjects/", json=subject_payload)
+    assert subject_response.status_code == status.HTTP_201_CREATED
     subject_id = subject_response.json()["subject_id"]
 
     class_payload = {
@@ -225,6 +236,7 @@ async def test_create_bulk_marks_as_teacher(
         "academic_year_id": academic_year_id,
     }
     class_response = await test_client.post("/api/v1/classes/", json=class_payload)
+    assert class_response.status_code == status.HTTP_201_CREATED
     class_id = class_response.json()["class_id"]
 
     # --- Step 2: Manually create multiple Students in the DB ---
@@ -308,6 +320,7 @@ async def test_get_student_marks_for_report_card(
     """
     # --- Step 1: Use Admin to set up dependencies ---
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
+    app.dependency_overrides[get_db_session] = lambda: db_session
 
     ay_payload = {
         "school_id": SCHOOL_ID,
@@ -316,6 +329,7 @@ async def test_get_student_marks_for_report_card(
         "end_date": "2026-03-31",
     }
     ay_response = await test_client.post("/api/v1/academic-years/", json=ay_payload)
+    assert ay_response.status_code == status.HTTP_201_CREATED
     academic_year_id = ay_response.json()["id"]
 
     et_payload = {
@@ -323,6 +337,7 @@ async def test_get_student_marks_for_report_card(
         "type_name": f"Report Card Test {uuid.uuid4()}",
     }
     et_response = await test_client.post("/api/v1/exam-types/", json=et_payload)
+    assert et_response.status_code == status.HTTP_201_CREATED
     exam_type_id = et_response.json()["exam_type_id"]
 
     exam_payload = {
@@ -335,11 +350,13 @@ async def test_get_student_marks_for_report_card(
         "academic_year_id": academic_year_id,
     }
     exam_response = await test_client.post("/api/v1/exams/", json=exam_payload)
+    assert exam_response.status_code == status.HTTP_201_CREATED
     exam_id = exam_response.json()["id"]
 
     # Create multiple subjects
     subject_1_payload = {"school_id": SCHOOL_ID, "name": f"Math Report {uuid.uuid4()}"}
     subject_1_response = await test_client.post("/api/v1/subjects/", json=subject_1_payload)
+    assert subject_1_response.status_code == status.HTTP_201_CREATED
     subject_1_id = subject_1_response.json()["subject_id"]
 
     subject_2_payload = {
@@ -347,6 +364,7 @@ async def test_get_student_marks_for_report_card(
         "name": f"Science Report {uuid.uuid4()}",
     }
     subject_2_response = await test_client.post("/api/v1/subjects/", json=subject_2_payload)
+    assert subject_2_response.status_code == status.HTTP_201_CREATED
     subject_2_id = subject_2_response.json()["subject_id"]
 
     class_payload = {
@@ -356,6 +374,7 @@ async def test_get_student_marks_for_report_card(
         "academic_year_id": academic_year_id,
     }
     class_response = await test_client.post("/api/v1/classes/", json=class_payload)
+    assert class_response.status_code == status.HTTP_201_CREATED
     class_id = class_response.json()["class_id"]
 
     # --- Step 2: Manually create the Student ---
@@ -391,7 +410,8 @@ async def test_get_student_marks_for_report_card(
             "marks_obtained": mark["marks_obtained"],
             "max_marks": 100.0,
         }
-        await test_client.post("/api/v1/marks/", json=mark_payload)
+        create_response = await test_client.post("/api/v1/marks/", json=mark_payload)
+        assert create_response.status_code == status.HTTP_201_CREATED
 
     # --- Step 4: Make the GET request to fetch the report card data ---
     response = await test_client.get(f"/api/v1/marks/?student_id={student_id}&exam_id={exam_id}")

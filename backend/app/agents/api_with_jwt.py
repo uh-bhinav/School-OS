@@ -57,9 +57,37 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 
+from app.agents.modules.academics.leaves.academic_year_agent.main import (
+    academic_year_agent_app,
+)
 from app.agents.modules.academics.leaves.attendance_agent.main import (
     attendance_agent_app,
 )
+from app.agents.modules.academics.leaves.class_agent.main import (
+    class_agent_app,
+)
+from app.agents.modules.academics.leaves.exam_agent.main import (
+    exam_agent_app,
+)
+from app.agents.modules.academics.leaves.exam_type_agent.main import (
+    exam_type_agent_app,
+)
+from app.agents.modules.academics.leaves.mark_agent.main import (
+    mark_agent_app,
+)
+from app.agents.modules.academics.leaves.report_card_agent.main import (
+    report_card_agent_app,
+)
+from app.agents.modules.academics.leaves.student_agent.main import (
+    student_agent_app,
+)
+from app.agents.modules.academics.leaves.subject_agent.main import (
+    subject_agent_app,
+)
+from app.agents.modules.academics.leaves.teacher_agent.main import (
+    teacher_agent_app,
+)
+from app.agents.root_orchestrator import root_orchestrator_app
 from app.agents.tool_context import ToolRuntimeContext, use_tool_context
 
 # Set up OAuth2 scheme for extracting Bearer tokens
@@ -112,8 +140,62 @@ def get_api_base_url() -> str:
 
 
 # ============================================================================
-# HTTP-based Attendance Agent Endpoint
+# HTTP-based Agent Endpoints
 # ============================================================================
+
+
+@router.post(
+    "/chat",
+    response_model=AgentChatResponse,
+    tags=["Agents - HTTP"],
+    summary="Invoke the L1 Root Orchestrator (Main Entry Point)",
+)
+async def root_chat(
+    request: AgentChatRequest,
+    token: str = Depends(oauth2_scheme),  # Get token from Authorization header
+):
+    """
+    This is the main entry point for the entire agentic system.
+    All frontend queries should be sent to this endpoint.
+
+    This endpoint is secure and role-aware:
+    1. It extracts the user's JWT token.
+    2. It injects the token and API_BASE_URL into the ToolRuntimeContext.
+    3. The L1 RootOrchestrator will receive the query.
+    4. The L1 agent will route to the correct L2 Module (e.g., Academics).
+    5. The L2 agent will route to the correct L3 Router.
+    6. The L3 router will route to the correct L4 Leaf Agent.
+    7. The L4 agent will make the authenticated HTTP call to the secure API.
+    """
+    logger.info(f"--- L1 RootOrchestrator Invoked --- (Session: {request.session_id})")
+
+    # 1. Create the runtime context with the user's JWT
+    context = ToolRuntimeContext(
+        jwt_token=token,
+        api_base_url=os.getenv("API_BASE_URL"),
+    )
+
+    # 2. Use the context for the entire duration of the agent's invocation
+    try:
+        with use_tool_context(context):
+            # 3. Invoke the L1 Root Orchestrator
+            result = root_orchestrator_app.invoke(request.query)
+
+        logger.info(f"--- L1 RootOrchestrator Success --- (Session: {request.session_id})")
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=request.session_id,
+        )
+
+    except Exception as e:
+        logger.error(
+            f"CRITICAL: Error in L1 RootOrchestrator for session {request.session_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while processing your request: {str(e)}",
+        )
 
 
 @router.post("/chat/attendance", response_model=AgentChatResponse)
@@ -200,7 +282,7 @@ async def attendance_agent_chat_http(
 
 
 # ============================================================================
-# Mixed Mode Endpoint (Supports both Service-based and HTTP-based)
+# Mixed Mode Endpoint (Supports both Service-based and HTTP-based) Only for attendance Agent
 # ============================================================================
 
 
@@ -254,6 +336,482 @@ async def attendance_agent_chat_mixed(
     except Exception as e:
         logger.error(f"Mixed-mode agent chat failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/chat/academic-year",
+    response_model=AgentChatResponse,
+    tags=["Agents - HTTP"],
+    summary="Invoke the Academic Year Agent",
+)
+async def academic_year_chat(
+    request: AgentChatRequest,
+    token: str = Depends(oauth2_scheme),  # Get token from Authorization header
+):
+    """
+    Run a query against the specialized Academic Year Agent.
+
+    This endpoint is secure and role-aware:
+    1. It extracts the user's JWT token.
+    2. It injects the token and API_BASE_URL into the ToolRuntimeContext.
+    3. The AcademicYearAgent's tools will use this context to make
+       authenticated HTTP calls to the backend API.
+    4. The backend API (e.g., /api/v1/academic-years/) will enforce all
+       role permissions (e.g., Admin-only for create/update/delete).
+    """
+    logger.info(f"Invoking AcademicYearAgent for session: {request.session_id}")
+
+    # 1. Create the runtime context with the user's JWT
+    context = ToolRuntimeContext(
+        jwt_token=token,
+        api_base_url=os.getenv("API_BASE_URL"),
+        # db and current_profile are intentionally None for HTTP-based agents
+    )
+
+    # 2. Use the context for this agent's invocation
+    try:
+        with use_tool_context(context):
+            # 3. Invoke the agent (using the instance from main.py)
+            result = academic_year_agent_app.invoke(request.query)
+
+        logger.info(f"AcademicYearAgent success for session: {request.session_id}")
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=request.session_id,
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Error in AcademicYearAgent invocation for session {request.session_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while processing your request: {str(e)}",
+        )
+
+
+@router.post(
+    "/chat/student",
+    response_model=AgentChatResponse,
+    tags=["Agents - HTTP"],
+    summary="Invoke the Student Profile Agent",
+)
+async def student_chat(
+    request: AgentChatRequest,
+    token: str = Depends(oauth2_scheme),  # Get token from Authorization header
+):
+    """
+    Run a query against the specialized StudentAgent.
+
+    This endpoint is secure and role-aware:
+    1. It extracts the user's JWT token.
+    2. It injects the token and API_BASE_URL into the ToolRuntimeContext.
+    3. The StudentAgent's tools (12 of them) will use this context to make
+       authenticated HTTP calls to the backend API (e.g., /api/v1/students/).
+    4. The backend API will enforce all role permissions
+       (e.g., Admin-only for 'admit_new_student').
+    """
+    logger.info(f"Invoking StudentAgent for session: {request.session_id}")
+
+    # 1. Create the runtime context with the user's JWT
+    context = ToolRuntimeContext(
+        jwt_token=token,
+        api_base_url=os.getenv("API_BASE_URL"),
+        # db and current_profile are intentionally None for HTTP-based agents
+    )
+
+    # 2. Use the context for this agent's invocation
+    try:
+        with use_tool_context(context):
+            # 3. Invoke the agent (using the instance from main.py)
+            result = student_agent_app.invoke(request.query)
+
+        logger.info(f"StudentAgent success for session: {request.session_id}")
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=request.session_id,
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Error in StudentAgent invocation for session {request.session_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while processing your request: {str(e)}",
+        )
+
+
+@router.post(
+    "/chat/class",
+    response_model=AgentChatResponse,
+    tags=["Agents - HTTP"],
+    summary="Invoke the Class Management Agent",
+)
+async def class_chat(
+    request: AgentChatRequest,
+    token: str = Depends(oauth2_scheme),  # Get token from Authorization header
+):
+    """
+    Run a query against the specialized ClassAgent.
+
+    This endpoint is secure and role-aware:
+    1. It extracts the user's JWT token.
+    2. It injects the token and API_BASE_URL into the ToolRuntimeContext.
+    3. The ClassAgent's tools will use this context to make
+       authenticated HTTP calls to the backend API (e.g., /api/v1/classes/).
+    4. The backend API will enforce all role permissions
+       (e.g., Admin-only for 'create_class').
+    """
+    logger.info(f"Invoking ClassAgent for session: {request.session_id}")
+
+    # 1. Create the runtime context with the user's JWT
+    context = ToolRuntimeContext(
+        jwt_token=token,
+        api_base_url=os.getenv("API_BASE_URL"),
+        # db and current_profile are intentionally None for HTTP-based agents
+    )
+
+    # 2. Use the context for this agent's invocation
+    try:
+        with use_tool_context(context):
+            # 3. Invoke the agent (using the instance from main.py)
+            result = class_agent_app.invoke(request.query)
+
+        logger.info(f"ClassAgent success for session: {request.session_id}")
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=request.session_id,
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Error in ClassAgent invocation for session {request.session_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while processing your request: {str(e)}",
+        )
+
+
+@router.post(
+    "/chat/subject",
+    response_model=AgentChatResponse,
+    tags=["Agents - HTTP"],
+    summary="Invoke the Subject Management Agent",
+)
+async def subject_chat(
+    request: AgentChatRequest,
+    token: str = Depends(oauth2_scheme),  # Get token from Authorization header
+):
+    """
+    Run a query against the specialized SubjectAgent.
+
+    This endpoint is secure and role-aware:
+    1. It extracts the user's JWT token.
+    2. It injects the token and API_BASE_URL into the ToolRuntimeContext.
+    3. The SubjectAgent's tools will use this context to make
+       authenticated HTTP calls to the backend API (e.g., /api/v1/subjects/).
+    4. The backend API will enforce all role permissions
+       (e.g., Admin-only for 'create_subject').
+    """
+    logger.info(f"Invoking SubjectAgent for session: {request.session_id}")
+
+    # 1. Create the runtime context with the user's JWT
+    context = ToolRuntimeContext(
+        jwt_token=token,
+        api_base_url=os.getenv("API_BASE_URL"),
+        # db and current_profile are intentionally None for HTTP-based agents
+    )
+
+    # 2. Use the context for this agent's invocation
+    try:
+        with use_tool_context(context):
+            # 3. Invoke the agent (using the instance from main.py)
+            result = subject_agent_app.invoke(request.query)
+
+        logger.info(f"SubjectAgent success for session: {request.session_id}")
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=request.session_id,
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Error in SubjectAgent invocation for session {request.session_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while processing your request: {str(e)}",
+        )
+
+
+@router.post(
+    "/chat/teacher",
+    response_model=AgentChatResponse,
+    tags=["Agents - HTTP"],
+    summary="Invoke the Teacher Profile Agent",
+)
+async def teacher_chat(
+    request: AgentChatRequest,
+    token: str = Depends(oauth2_scheme),  # Get token from Authorization header
+):
+    """
+    Run a query against the specialized TeacherAgent.
+
+    This endpoint is secure and role-aware:
+    1. It extracts the user's JWT token.
+    2. It injects the token and API_BASE_URL into the ToolRuntimeContext.
+    3. The TeacherAgent's tools will use this context to make
+       authenticated HTTP calls to the backend API (e.g., /api/v1/teachers/).
+    4. The backend API will enforce all role permissions
+       (e.g., Admin-only for all tools).
+    """
+    logger.info(f"Invoking TeacherAgent for session: {request.session_id}")
+
+    # 1. Create the runtime context with the user's JWT
+    context = ToolRuntimeContext(
+        jwt_token=token,
+        api_base_url=os.getenv("API_BASE_URL"),
+        # db and current_profile are intentionally None for HTTP-based agents
+    )
+
+    # 2. Use the context for this agent's invocation
+    try:
+        with use_tool_context(context):
+            # 3. Invoke the agent (using the instance from main.py)
+            result = teacher_agent_app.invoke(request.query)
+
+        logger.info(f"TeacherAgent success for session: {request.session_id}")
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=request.session_id,
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Error in TeacherAgent invocation for session {request.session_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while processing your request: {str(e)}",
+        )
+
+
+@router.post(
+    "/chat/exam-type",
+    response_model=AgentChatResponse,
+    tags=["Agents - HTTP"],
+    summary="Invoke the Exam Type Agent",
+)
+async def exam_type_chat(
+    request: AgentChatRequest,
+    token: str = Depends(oauth2_scheme),  # Get token from Authorization header
+):
+    """
+    Run a query against the specialized ExamTypeAgent.
+
+    This endpoint is secure and role-aware:
+    1. It extracts the user's JWT token.
+    2. It injects the token and API_BASE_URL into the ToolRuntimeContext.
+    3. The ExamTypeAgent's tools will use this context to make
+       authenticated HTTP calls to the backend API (e.g., /api/v1/exam-types/).
+    4. The backend API will enforce all role permissions
+       (e.g., Admin-only for all tools).
+    """
+    logger.info(f"Invoking ExamTypeAgent for session: {request.session_id}")
+
+    # 1. Create the runtime context with the user's JWT
+    context = ToolRuntimeContext(
+        jwt_token=token,
+        api_base_url=os.getenv("API_BASE_URL"),
+        # db and current_profile are intentionally None for HTTP-based agents
+    )
+
+    # 2. Use the context for this agent's invocation
+    try:
+        with use_tool_context(context):
+            # 3. Invoke the agent (using the instance from main.py)
+            result = exam_type_agent_app.invoke(request.query)
+
+        logger.info(f"ExamTypeAgent success for session: {request.session_id}")
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=request.session_id,
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Error in ExamTypeAgent invocation for session {request.session_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while processing your request: {str(e)}",
+        )
+
+
+@router.post(
+    "/chat/exam",
+    response_model=AgentChatResponse,
+    tags=["Agents - HTTP"],
+    summary="Invoke the Exam Scheduling Agent",
+)
+async def exam_chat(
+    request: AgentChatRequest,
+    token: str = Depends(oauth2_scheme),  # Get token from Authorization header
+):
+    """
+    Run a query against the specialized ExamAgent.
+
+    This endpoint is secure and role-aware:
+    1. It extracts the user's JWT token.
+    2. It injects the token and API_BASE_URL into the ToolRuntimeContext.
+    3. The ExamAgent's tools will use this context to make
+       authenticated HTTP calls to the backend API (e.g., /api/v1/exams/).
+    4. The backend API will enforce all role permissions
+       (e.g., Admin-only for 'create_exam').
+    """
+    logger.info(f"Invoking ExamAgent for session: {request.session_id}")
+
+    # 1. Create the runtime context with the user's JWT
+    context = ToolRuntimeContext(
+        jwt_token=token,
+        api_base_url=os.getenv("API_BASE_URL"),
+        # db and current_profile are intentionally None for HTTP-based agents
+    )
+
+    # 2. Use the context for this agent's invocation
+    try:
+        with use_tool_context(context):
+            # 3. Invoke the agent (using the instance from main.py)
+            result = exam_agent_app.invoke(request.query)
+
+        logger.info(f"ExamAgent success for session: {request.session_id}")
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=request.session_id,
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Error in ExamAgent invocation for session {request.session_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while processing your request: {str(e)}",
+        )
+
+
+@router.post(
+    "/chat/mark",
+    response_model=AgentChatResponse,
+    tags=["Agents - HTTP"],
+    summary="Invoke the Mark Management Agent",
+)
+async def mark_chat(
+    request: AgentChatRequest,
+    token: str = Depends(oauth2_scheme),  # Get token from Authorization header
+):
+    """
+    Run a query against the specialized MarkAgent.
+
+    This endpoint is secure and role-aware:
+    1. It extracts the user's JWT token.
+    2. It injects the token and API_BASE_URL into the ToolRuntimeContext.
+    3. The MarkAgent's tools will use this context to make
+       authenticated HTTP calls to the backend API (e.g., /api/v1/marks/).
+    4. The backend API will enforce all role permissions
+       (e.g., Admin-only for 'delete_mark', Parent/Student for 'search_marks').
+    """
+    logger.info(f"Invoking MarkAgent for session: {request.session_id}")
+
+    # 1. Create the runtime context with the user's JWT
+    context = ToolRuntimeContext(
+        jwt_token=token,
+        api_base_url=os.getenv("API_BASE_URL"),
+        # db and current_profile are intentionally None for HTTP-based agents
+    )
+
+    # 2. Use the context for this agent's invocation
+    try:
+        with use_tool_context(context):
+            # 3. Invoke the agent (using the instance from main.py)
+            result = mark_agent_app.invoke(request.query)
+
+        logger.info(f"MarkAgent success for session: {request.session_id}")
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=request.session_id,
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Error in MarkAgent invocation for session {request.session_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while processing your request: {str(e)}",
+        )
+
+
+@router.post(
+    "/chat/report-card",
+    response_model=AgentChatResponse,
+    tags=["Agents - HTTP"],
+    summary="Invoke the Report Card Agent",
+)
+async def report_card_chat(
+    request: AgentChatRequest,
+    token: str = Depends(oauth2_scheme),  # Get token from Authorization header
+):
+    """
+    Run a query against the specialized ReportCardAgent.
+
+    This endpoint is secure and role-aware:
+    1. It extracts the user's JWT token.
+    2. It injects the token and API_BASE_URL into the ToolRuntimeContext.
+    3. The ReportCardAgent's tools will use this context to make
+       authenticated HTTP calls to the backend API (e.g., /api/v1/report-cards/).
+    4. The backend API will enforce all role permissions.
+    """
+    logger.info(f"Invoking ReportCardAgent for session: {request.session_id}")
+
+    # 1. Create the runtime context with the user's JWT
+    context = ToolRuntimeContext(
+        jwt_token=token,
+        api_base_url=os.getenv("API_BASE_URL"),
+        # db and current_profile are intentionally None for HTTP-based agents
+    )
+
+    # 2. Use the context for this agent's invocation
+    try:
+        with use_tool_context(context):
+            # 3. Invoke the agent (using the instance from main.py)
+            result = report_card_agent_app.invoke(request.query)
+
+        logger.info(f"ReportCardAgent success for session: {request.session_id}")
+        return AgentChatResponse(
+            response=result.get("response", "No response generated."),
+            session_id=request.session_id,
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Error in ReportCardAgent invocation for session {request.session_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while processing your request: {str(e)}",
+        )
 
 
 # ============================================================================

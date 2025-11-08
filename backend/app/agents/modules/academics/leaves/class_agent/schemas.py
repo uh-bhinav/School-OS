@@ -1,196 +1,70 @@
-# backend/app/agents/modules/academics/leaves/class_agent/schemas.py
+from typing import List, Optional
 
-from typing import Optional
+from pydantic.v1 import BaseModel, Field
 
-from pydantic.v1 import BaseModel, Field, validator
+# --- Schemas for Class Tools (from classes.py) ---
 
 
-class CreateNewClassSchema(BaseModel):
-    """Input schema for the create_new_class tool."""
+class ListAllClassesSchema(BaseModel):
+    """Input schema for the list_all_classes tool. Takes no arguments."""
 
-    class_name: str = Field(
-        ...,
-        description="The name of the class or section to create, e.g., '10A', 'Grade 12 Science', '9B'.",
-        min_length=1,
-    )
-    academic_year: str = Field(
-        ...,
-        description="The academic year for this class, e.g., '2024-2025', '2025-2026'.",
-        min_length=7,
-    )
-    grade_level: Optional[int] = Field(
-        default=None,
-        description="Optional: The grade level (e.g., 10 for Grade 10).",
-        ge=1,
-        le=12,
-    )
-    section: Optional[str] = Field(
-        default=None,
-        description="Optional: The section identifier (e.g., 'A', 'B', 'Science').",
-        max_length=20,
-    )
-    max_students: Optional[int] = Field(
-        default=40,
-        description="Optional: Maximum number of students allowed in this class. Defaults to 40.",
-        ge=1,
-        le=100,
-    )
+    pass
 
-    @validator("academic_year")
-    def validate_academic_year(cls, v):
-        """Ensure academic_year is in correct format (YYYY-YYYY)."""
-        if "-" not in v or len(v) != 9:
-            raise ValueError("Academic year must be in YYYY-YYYY format (e.g., '2024-2025')")
-        try:
-            start_year, end_year = v.split("-")
-            start = int(start_year)
-            end = int(end_year)
-            if end != start + 1:
-                raise ValueError("Academic year end must be exactly one year after start")
-            return v
-        except ValueError as e:
-            if "invalid literal" in str(e):
-                raise ValueError("Academic year must contain valid year numbers")
-            raise e
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "class_name": "10A",
-                "academic_year": "2024-2025",
-                "grade_level": 10,
-                "section": "A",
-                "max_students": 40,
-            }
-        }
+class SearchClassesSchema(BaseModel):
+    """Input schema for the search_classes tool. All fields are optional."""
+
+    name: Optional[str] = Field(default=None, description="Optional: Filter by class name (e.g., '10A', 'Science').")
+    grade_level: Optional[int] = Field(default=None, description="Optional: Filter by grade level (e.g., 9).")
+    academic_year_id: Optional[int] = Field(default=None, description="Optional: Filter by academic year ID.")
+    teacher_id: Optional[int] = Field(default=None, description="Optional: Filter by the assigned class teacher's ID.")
 
 
 class GetClassDetailsSchema(BaseModel):
     """Input schema for the get_class_details tool."""
 
-    class_name: str = Field(
-        ...,
-        description="The name of the class to retrieve details for, e.g., '10A', 'Grade 12 Science'.",
-        min_length=1,
-    )
-
-    class Config:
-        schema_extra = {"example": {"class_name": "10A"}}
+    class_id: int = Field(..., description="The unique ID of the class.")
 
 
-class ListStudentsInClassSchema(BaseModel):
-    """Input schema for the list_students_in_class tool."""
+class GetClassStudentsSchema(BaseModel):
+    """Input schema for the get_students_in_class tool."""
 
-    class_name: str = Field(
-        ...,
-        description="The name of the class whose student roster is required, e.g., '10A', '12 Science'.",
-        min_length=1,
-    )
-    include_details: Optional[bool] = Field(
-        default=False,
-        description="Optional: Include detailed student information (roll numbers, contact info). Defaults to False.",
-    )
-
-    class Config:
-        schema_extra = {"example": {"class_name": "10A", "include_details": True}}
+    class_id: int = Field(..., description="The unique ID of the class whose students you want to list.")
 
 
-class GetClassScheduleSchema(BaseModel):
-    """Input schema for the get_class_schedule tool."""
+class CreateClassSchema(BaseModel):
+    """Input schema for the create_class tool."""
 
-    class_name: str = Field(
-        ...,
-        description="The name of the class whose schedule/timetable is required, e.g., '10A'.",
-        min_length=1,
-    )
-    day_of_week: Optional[str] = Field(
-        default=None,
-        description="Optional: Specific day to retrieve schedule for (e.g., 'Monday', 'Tuesday'). If not provided, returns full week.",
-    )
-
-    @validator("day_of_week")
-    def validate_day(cls, v):
-        """Ensure day_of_week is a valid day name if provided."""
-        if v is not None:
-            valid_days = [
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday",
-            ]
-            if v not in valid_days:
-                raise ValueError(f"Day must be one of: {', '.join(valid_days)}")
-        return v
-
-    class Config:
-        schema_extra = {"example": {"class_name": "10A", "day_of_week": "Monday"}}
+    school_id: int = Field(..., description="The ID of the school. Must match the Admin's school ID.")
+    grade_level: int = Field(..., description="The grade level for the class (e.g., 1, 10, 12).")
+    section: str = Field(..., description="The section name (e.g., 'A', 'B', 'Science').")
+    academic_year_id: int = Field(..., description="The ID of the academic year this class belongs to.")
+    class_teacher_id: Optional[int] = Field(default=None, description="Optional: The ID of the teacher assigned as the class teacher.")
 
 
-class AssignClassTeacherSchema(BaseModel):
-    """Input schema for the assign_class_teacher tool."""
+class UpdateClassSchema(BaseModel):
+    """Input schema for the update_class tool."""
 
-    class_name: str = Field(
-        ...,
-        description="The name of the class to assign a teacher to, e.g., '10A'.",
-        min_length=1,
-    )
-    teacher_name: str = Field(
-        ...,
-        description="The full name of the teacher to assign as class teacher/proctor.",
-        min_length=2,
-    )
-    effective_from: Optional[str] = Field(
-        default=None,
-        description="Optional: Date from which this assignment is effective (format: YYYY-MM-DD).",
-    )
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "class_name": "10A",
-                "teacher_name": "Mrs. Sharma",
-                "effective_from": "2025-10-01",
-            }
-        }
+    class_id: int = Field(..., description="The unique ID of the class to update.")
+    grade_level: Optional[int] = Field(default=None, description="The new grade level.")
+    section: Optional[str] = Field(default=None, description="The new section name.")
+    academic_year_id: Optional[int] = Field(default=None, description="The new academic year ID.")
+    class_teacher_id: Optional[int] = Field(default=None, description="The new class teacher's ID.")
+    is_active: Optional[bool] = Field(default=None, description="Set the class's active status.")
 
 
-class ListAllClassesSchema(BaseModel):
-    """Input schema for the list_all_classes tool."""
+class DeleteClassSchema(BaseModel):
+    """Input schema for the delete_class tool."""
 
-    academic_year: Optional[str] = Field(
-        default=None,
-        description="Optional: Filter classes by academic year (e.g., '2024-2025').",
-    )
-    grade_level: Optional[int] = Field(
-        default=None,
-        description="Optional: Filter classes by grade level (e.g., 10 for Grade 10).",
-        ge=1,
-        le=12,
-    )
-    include_inactive: Optional[bool] = Field(
-        default=False,
-        description="Optional: Include inactive/archived classes. Defaults to False.",
-    )
+    class_id: int = Field(..., description="The unique ID of the class to soft-delete.")
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "academic_year": "2024-2025",
-                "grade_level": 10,
-                "include_inactive": False,
-            }
-        }
+
+class AssignSubjectsSchema(BaseModel):
+    """Input schema for the assign_subjects_to_class tool."""
+
+    class_id: int = Field(..., description="The unique ID of the class.")
+    subject_ids: List[int] = Field(..., description="A list of subject IDs to assign to this class.")
 
 
 # Export all schemas
-__all__ = [
-    "CreateNewClassSchema",
-    "GetClassDetailsSchema",
-    "ListStudentsInClassSchema",
-    "GetClassScheduleSchema",
-    "AssignClassTeacherSchema",
-    "ListAllClassesSchema",
-]
+__all__ = ["ListAllClassesSchema", "SearchClassesSchema", "GetClassDetailsSchema", "GetClassStudentsSchema", "CreateClassSchema", "UpdateClassSchema", "DeleteClassSchema", "AssignSubjectsSchema"]

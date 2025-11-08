@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 
 # No longer need 'from typing import List'
 from app.models.exam_type import ExamType
-from app.schemas.exam_type_schema import ExamTypeCreate
+from app.schemas.exam_type_schema import ExamTypeCreate, ExamTypeUpdate
 
 
 async def _maybe_await(result):
@@ -68,3 +68,40 @@ async def update_type_name(db: AsyncSession, exam_type_id: int, new_name: str) -
     await db.commit()
     await db.refresh(db_obj)
     return db_obj
+
+
+async def get_exam_type_by_id(db: AsyncSession, exam_type_id: int) -> Optional[ExamType]:
+    """
+    Gets a single exam type by its primary key.
+    """
+    db_obj = await db.get(ExamType, exam_type_id)
+    return db_obj
+
+
+async def update_exam_type(db: AsyncSession, *, db_obj: ExamType, exam_type_in: ExamTypeUpdate) -> ExamType:
+    """
+    Updates an existing exam type.
+    """
+    # Get update data from the schema
+    update_data = exam_type_in.model_dump(exclude_unset=True)
+
+    # Update the object
+    if "type_name" in update_data:
+        db_obj.type_name = update_data["type_name"]
+
+    db.add(db_obj)
+    await db.commit()
+    await db.refresh(db_obj)
+    return db_obj
+
+
+async def delete_exam_type(db: AsyncSession, *, exam_type_id: int) -> None:
+    """
+    Deletes an exam type from the database.
+    (Note: This is a hard delete as the schema does not show an 'is_active' flag)
+    """
+    db_obj = await db.get(ExamType, exam_type_id)
+    if db_obj:
+        await db.delete(db_obj)
+        await db.commit()
+    return None

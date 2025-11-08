@@ -1,17 +1,13 @@
-# backend/app/agents/modules/academics/leaves/attendance_agent/__init__.py
+# File: app/agents/modules/academics/leaves/attendance_agent/__init__.py
 
 """
 Attendance Agent Module - Layer 4 Leaf Agent
-Part of the Academics Module's Attendance sub-module.
+Part of the Academics Module's Scheduling sub-module.
 
-This agent handles:
-- Marking student attendance for specific dates
-- Retrieving student attendance records over date ranges
-- Fetching class attendance for specific dates
-- Calculating student attendance summaries and percentages
+Handles the full workflow for taking, reporting, and analyzing attendance.
 """
 
-from app.agents.modules.academics.leaves.attendance_agent.main import (
+from .main import (
     AttendanceAgent,
     attendance_agent_app,
     attendance_agent_instance,

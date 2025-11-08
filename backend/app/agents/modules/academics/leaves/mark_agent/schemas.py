@@ -1,221 +1,70 @@
-# backend/app/agents/modules/academics/leaves/mark_agent/schemas.py
+from typing import List, Optional
 
-from typing import Optional
+from pydantic.v1 import BaseModel, Field
 
-from pydantic.v1 import BaseModel, Field, validator
-
-
-class MarkInput(BaseModel):
-    """A Pydantic model representing a single mark entry for a subject."""
-
-    subject_name: str = Field(
-        ...,
-        description="The name of the subject, e.g., 'Mathematics' or 'Physics'.",
-        min_length=1,
-    )
-    marks_obtained: float = Field(..., description="The score the student received in the subject.", ge=0, le=100)
-    max_marks: Optional[float] = Field(
-        default=100.0,
-        description="The maximum possible marks for this subject. Defaults to 100.",
-        ge=1,
-    )
-
-    @validator("marks_obtained")
-    def validate_marks_range(cls, v, values):
-        """Ensure marks obtained don't exceed max_marks if max_marks is provided."""
-        max_marks = values.get("max_marks", 100.0)
-        if v > max_marks:
-            raise ValueError(f"Marks obtained ({v}) cannot exceed max marks ({max_marks})")
-        return v
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "subject_name": "Mathematics",
-                "marks_obtained": 85.5,
-                "max_marks": 100.0,
-            }
-        }
+# --- Schemas for Mark Tools (from marks.py) ---
 
 
-class GetStudentMarksSchema(BaseModel):
-    """Input schema for the get_student_marks_for_exam tool."""
+class CreateMarkSchema(BaseModel):
+    """Input schema for the create_mark tool."""
 
-    student_name: str = Field(
-        ...,
-        description="The full name of the student whose marks are required, e.g., 'Rohan Sharma'.",
-        min_length=2,
-    )
-    exam_name: Optional[str] = Field(
-        default=None,
-        description="The name or type of the exam, e.g., 'Midterm', 'Final', 'Unit Test 1'. If not provided, returns marks for all exams.",
-    )
-    subject_name: Optional[str] = Field(default=None, description="Optional: Filter results by a specific subject name.")
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "student_name": "Priya Sharma",
-                "exam_name": "Midterm",
-                "subject_name": "Physics",
-            }
-        }
+    school_id: int = Field(..., description="The ID of the school. Must match the Admin's/Teacher's school ID.")
+    student_id: int = Field(..., description="The ID of the student.")
+    exam_id: int = Field(..., description="The ID of the exam.")
+    subject_id: int = Field(..., description="The ID of the subject.")
+    marks_obtained: float = Field(..., description="The marks the student received.")
+    max_marks: float = Field(default=100.0, description="The maximum possible marks for this test.")
+    remarks: Optional[str] = Field(default=None, description="Optional: Any remarks or notes.")
 
 
-class RecordStudentMarksSchema(BaseModel):
-    """Input schema for the record_student_marks tool."""
+class BulkCreateMarksSchema(BaseModel):
+    """Input schema for the bulk_create_marks tool."""
 
-    student_name: str = Field(
-        ...,
-        description="The full name of the student for whom marks are being recorded, e.g., 'Rohan Sharma'.",
-        min_length=2,
-    )
-    exam_name: str = Field(
-        ...,
-        description="The name or type of the exam for which marks are being recorded, e.g., 'Midterm', 'Final'.",
-        min_length=2,
-    )
-    marks: list[MarkInput] = Field(
-        ...,
-        description="A list of subjects and the marks obtained in each. Must contain at least one mark entry.",
-        min_items=1,
-    )
-    class_name: Optional[str] = Field(
-        default=None,
-        description="Optional: The class/grade of the student, e.g., '10A' or 'Grade 12 Science'.",
-    )
-    exam_date: Optional[str] = Field(
-        default=None,
-        description="Optional: The date when the exam was conducted (format: YYYY-MM-DD).",
-    )
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "student_name": "Rohan Sharma",
-                "exam_name": "Final Exam",
-                "marks": [
-                    {
-                        "subject_name": "Mathematics",
-                        "marks_obtained": 92,
-                        "max_marks": 100,
-                    },
-                    {"subject_name": "Physics", "marks_obtained": 88, "max_marks": 100},
-                ],
-                "class_name": "12A",
-                "exam_date": "2025-10-15",
-            }
-        }
+    marks_list: List[CreateMarkSchema] = Field(..., description="A list of mark-creation objects.")
 
 
-class UpdateStudentMarksSchema(BaseModel):
-    """Input schema for the update_student_marks tool."""
+class SearchMarksSchema(BaseModel):
+    """Input schema for the search_marks tool."""
 
-    student_name: str = Field(
-        ...,
-        description="The full name of the student whose marks need to be updated.",
-        min_length=2,
-    )
-    exam_name: str = Field(
-        ...,
-        description="The name of the exam for which marks are being updated.",
-        min_length=2,
-    )
-    subject_name: str = Field(
-        ...,
-        description="The specific subject whose marks need to be updated.",
-        min_length=1,
-    )
-    new_marks: float = Field(..., description="The corrected/updated marks for the subject.", ge=0, le=100)
-    reason: Optional[str] = Field(
-        default=None,
-        description="Optional: Reason for the marks update (for audit trail).",
-    )
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "student_name": "Priya Sharma",
-                "exam_name": "Midterm",
-                "subject_name": "Chemistry",
-                "new_marks": 91.0,
-                "reason": "Rechecking correction",
-            }
-        }
+    student_id: int = Field(..., description="The ID of the student whose marks you want to search for.")
+    exam_id: Optional[int] = Field(default=None, description="Optional: Filter by a specific exam ID.")
+    subject_id: Optional[int] = Field(default=None, description="Optional: Filter by a specific subject ID.")
 
 
-class GetMarksheetSchema(BaseModel):
-    """Input schema for the get_marksheet_for_exam tool."""
+class UpdateMarkSchema(BaseModel):
+    """Input schema for the update_mark tool."""
 
-    student_name: str = Field(
-        ...,
-        description="The full name of the student for whom the marksheet is required.",
-        min_length=2,
-    )
-    exam_name: str = Field(
-        ...,
-        description="The name of the exam for which the marksheet is required, e.g., 'Final Exam'.",
-        min_length=2,
-    )
-    include_percentage: Optional[bool] = Field(
-        default=True,
-        description="Whether to calculate and include overall percentage in the marksheet.",
-    )
-    include_grade: Optional[bool] = Field(
-        default=True,
-        description="Whether to calculate and include overall grade in the marksheet.",
-    )
+    mark_id: int = Field(..., description="The unique ID of the mark record to update.")
+    marks_obtained: Optional[float] = Field(default=None, description="The new marks obtained.")
+    remarks: Optional[str] = Field(default=None, description="New remarks or notes.")
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "student_name": "Rohan Sharma",
-                "exam_name": "Final Exam",
-                "include_percentage": True,
-                "include_grade": True,
-            }
-        }
+
+class DeleteMarkSchema(BaseModel):
+    """Input schema for the delete_mark tool."""
+
+    mark_id: int = Field(..., description="The unique ID of the mark record to delete.")
 
 
 class GetClassPerformanceSchema(BaseModel):
-    """Input schema for the get_class_performance_in_subject tool."""
+    """Input schema for the get_class_performance tool."""
 
-    class_name: str = Field(
-        ...,
-        description="The name of the class, e.g., '10A', '12 Science'.",
-        min_length=1,
-    )
-    subject_name: str = Field(
-        ...,
-        description="The name of the subject for which performance data is required.",
-        min_length=1,
-    )
-    exam_name: Optional[str] = Field(
-        default=None,
-        description="Optional: Specific exam name. If not provided, returns aggregate performance.",
-    )
-    include_statistics: Optional[bool] = Field(
-        default=True,
-        description="Whether to include statistical data like average, median, highest, and lowest marks.",
-    )
+    class_id: int = Field(..., description="The ID of the class.")
+    exam_id: int = Field(..., description="The ID of the exam.")
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "class_name": "10A",
-                "subject_name": "Mathematics",
-                "exam_name": "Midterm",
-                "include_statistics": True,
-            }
-        }
+
+class GetReportCardSchema(BaseModel):
+    """Input schema for the get_report_card tool."""
+
+    student_id: int = Field(..., description="The ID of the student.")
+    academic_year_id: int = Field(..., description="The ID of the academic year for the report card.")
+
+
+class GetGradeProgressionSchema(BaseModel):
+    """Input schema for the get_grade_progression tool."""
+
+    student_id: int = Field(..., description="The ID of the student.")
+    subject_id: int = Field(..., description="The ID of the subject.")
 
 
 # Export all schemas
-__all__ = [
-    "MarkInput",
-    "GetStudentMarksSchema",
-    "RecordStudentMarksSchema",
-    "UpdateStudentMarksSchema",
-    "GetMarksheetSchema",
-    "GetClassPerformanceSchema",
-]
+__all__ = ["CreateMarkSchema", "BulkCreateMarksSchema", "SearchMarksSchema", "UpdateMarkSchema", "DeleteMarkSchema", "GetClassPerformanceSchema", "GetReportCardSchema", "GetGradeProgressionSchema"]

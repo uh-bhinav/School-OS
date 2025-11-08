@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import String, cast, desc, func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.academic_year import AcademicYear  # Import your model
 from app.models.achievementPointRules import AchievementPointRule
 from app.models.class_model import Class
 from app.models.club import Club
@@ -269,3 +270,63 @@ class AchievementService:
 
         result = await self.db.execute(query)
         return [LeaderboardClub(**row) for row in result.mappings()]
+
+    async def get_student_by_name(self, full_name: str, school_id: int) -> Student | None:
+        """Finds a student by their full name within the school."""
+        stmt = select(Student).join(Profile).where(Profile.full_name.ilike(f"%{full_name}%"), Profile.school_id == school_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().first()  # Returns the first match
+
+    async def get_active_academic_year_id(self, school_id: int) -> int | None:
+        """
+        Stub function: Gets the active academic year ID for the school.
+        You MUST implement this by querying your AcademicYear model.
+        """
+        stmt = select(AcademicYear.id).where(AcademicYear.school_id == school_id, AcademicYear.is_active)
+        result = await self.db.execute(stmt)
+        year_id = result.scalars().first()
+        return year_id
+
+    async def get_unverified_achievements(self, school_id: int) -> list[StudentAchievement]:
+        """
+        (ROBUST TOOL) Gets all achievements pending verification for the school.
+        This is the Admin's "to-do list".
+        """
+        query = (
+            select(StudentAchievement)
+            .where(
+                StudentAchievement.school_id == school_id,
+                StudentAchievement.is_verified.is_(False),
+            )
+            .order_by(desc(StudentAchievement.created_at))
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    async def get_class_by_name(self, class_name: str, school_id: int) -> Class | None:
+        """Finds a class by its name (e.g., '10A') within the school."""
+        # This query assumes 'grade_level' and 'section' (e.g., 10 and A)
+        # You may need to adjust this logic based on your Class model
+
+        # Simple name match (e.g., if you have a 'name' field)
+        stmt = select(Class).where(Class.name.ilike(class_name), Class.school_id == school_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
+    async def run_leaderboard_computation(self, school_id: int, academic_year_id: int) -> dict:
+        """
+        (ROBUST TOOL) Placeholder for a heavy computation job.
+
+        In a production system, this would trigger a background task
+        (e.g., Celery, ARQ) that runs your _get_student_base_query
+        and saves the results to a 'LeaderboardCache' table.
+
+        For now, we will just simulate it.
+        """
+        print(f"SIMULATING: Running heavy leaderboard computation for school {school_id}...")
+
+        # You *could* run the query here, but it's better to
+        # just acknowledge the job.
+
+        print("SIMULATING: Computation complete.")
+        return {"status": "success", "message": "Leaderboard computation job triggered."}

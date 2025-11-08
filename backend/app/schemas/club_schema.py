@@ -160,3 +160,19 @@ class ClubActivityRead(ClubActivityBase):
     organized_by_student_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
+
+
+class AgentClubCreate(BaseModel):
+    """Schema for the agent to create a club using names."""
+
+    club_name: str = Field(..., description="The name of the new club.")
+    teacher_coordinator_name: str = Field(..., description="The full name of the teacher who will be the coordinator.")
+    description: Optional[str] = None
+    club_type: ClubType = ClubType.academic  # Default or you can make the agent ask
+
+
+class AgentAddMember(BaseModel):
+    """Schema for the agent to add a student to a club using names."""
+
+    student_name: str = Field(..., description="The full name of the student.")
+    club_name: str = Field(..., description="The full name of the club.")

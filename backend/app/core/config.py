@@ -62,4 +62,3 @@ if "options=project=" in settings.DATABASE_URL:
     settings.DATABASE_URL = settings.DATABASE_URL.replace("options=project=", "options=-c project=")
 
 print(">>> .env file loaded and settings configured.")
-print(">>> .env file loaded and settings configured.")

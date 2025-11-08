@@ -105,3 +105,21 @@ async def get_teachers_for_subject(db: AsyncSession, *, school_id: int, subject_
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def search_subjects(db: AsyncSession, school_id: int, filters: dict) -> list[Subject]:
+    """
+    Searches for subjects based on filters.
+    (This is the proper implementation for the new endpoint)
+    """
+    stmt = select(Subject).where(Subject.school_id == school_id, Subject.is_active)
+
+    if "name" in filters:
+        stmt = stmt.where(Subject.name.ilike(f"%{filters['name']}%"))
+    if "code" in filters:
+        stmt = stmt.where(Subject.short_code.ilike(f"%{filters['code']}%"))
+    if "category" in filters:
+        stmt = stmt.where(Subject.category.ilike(f"%{filters['category']}%"))
+
+    result = await db.execute(stmt)
+    return list(result.scalars().all())

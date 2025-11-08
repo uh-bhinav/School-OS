@@ -12,6 +12,7 @@ from app.models.club_activity import ClubActivity
 from app.models.club_membership import ClubMembership
 from app.models.profile import Profile
 from app.models.student import Student
+from app.models.teacher import Teacher
 from app.models.user_roles import UserRole
 from app.schemas.club_schema import (
     ClubActivityCreate,
@@ -264,3 +265,24 @@ class ClubService:
 
         result = await self.db.execute(stmt)
         return result.scalars().all()
+
+    async def get_teacher_by_name(self, full_name: str, school_id: int) -> Optional[Teacher]:
+        """Finds a teacher by their full name within the school."""
+        # This assumes Profile has a 'full_name' field. Adjust if needed.
+        stmt = select(Teacher).join(Profile).where(Profile.full_name.ilike(f"%{full_name}%"), Profile.school_id == school_id).options(selectinload(Teacher.profile))
+
+        result = await self.db.execute(stmt)
+        return result.scalars().first()  # Returns the first match
+
+    async def get_student_by_name(self, full_name: str, school_id: int) -> Optional[Student]:
+        """Finds a student by their full name within the school."""
+        stmt = select(Student).join(Profile).where(Profile.full_name.ilike(f"%{full_name}%"), Profile.school_id == school_id).options(selectinload(Student.profile))
+
+        result = await self.db.execute(stmt)
+        return result.scalars().first()  # Returns the first match
+
+    async def get_club_by_name(self, club_name: str, school_id: int) -> Optional[Club]:
+        """Finds a club by its name within the school."""
+        stmt = select(Club).where(Club.name.ilike(f"%{club_name}%"), Club.school_id == school_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().first()

@@ -11,6 +11,7 @@ class AttendanceRecord(Base):
     __tablename__ = "attendance_records"
 
     id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False, index=True)
     student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False)
     class_id = Column(Integer, ForeignKey("classes.class_id"), nullable=False)
     date = Column(Date, nullable=False, default=datetime.date.today)
@@ -25,6 +26,7 @@ class AttendanceRecord(Base):
     )
 
     # Relationships
+    school = relationship("School")
     student = relationship("Student", back_populates="attendance_records")
     class_record = relationship("Class", back_populates="attendance_records")
     teacher = relationship("Teacher", back_populates="attendance_records")

@@ -1,4 +1,5 @@
 # backend/app/schemas/timetable_schema.py
+from datetime import time
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field
@@ -195,3 +196,22 @@ class TimetableSwapResponse(BaseModel):
     message: str
     swapped_entries: Optional[list[TimetableEntryOut]] = None
     conflict_details: Optional[str] = None
+
+
+class TeacherFreeSlot(BaseModel):
+    """Represents a single period where a teacher is free."""
+
+    period_id: int
+    period_number: int
+    period_name: str
+    start_time: time
+    end_time: time
+    day_of_week: int
+
+
+class TeacherFreeSlotResponse(BaseModel):
+    """The response model for a teacher's free slots on a given day."""
+
+    teacher_id: int
+    day_of_week: int
+    free_slots: list[TeacherFreeSlot]

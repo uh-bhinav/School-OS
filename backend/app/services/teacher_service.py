@@ -1,6 +1,7 @@
 # backend/app/services/teacher_service.py
 from typing import Optional
 
+from sqlalchemy import func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -157,3 +158,27 @@ async def get_teacher_qualifications(db: AsyncSession, *, teacher_id: int) -> Op
         years_of_experience=teacher.years_of_experience,
         qualifications=qualifications,
     )
+
+
+async def search_teachers(db: AsyncSession, school_id: int, filters: dict) -> list[Teacher]:
+    """
+    Flexibly searches for teachers by name or department.
+    """
+    stmt = select(Teacher).where(Teacher.school_id == school_id, Teacher.is_active).options(selectinload(Teacher.profile))  # Eager load profile
+
+    if "name" in filters:
+        search_name = filters["name"]
+        # Join Profile and search on first_name, last_name, or full name
+        stmt = stmt.join(Profile, Teacher.user_id == Profile.user_id).where(
+            or_(
+                Profile.first_name.ilike(f"%{search_name}%"),
+                Profile.last_name.ilike(f"%{search_name}%"),
+                (func.concat(Profile.first_name, " ", Profile.last_name)).ilike(f"%{search_name}%"),
+            )
+        )
+
+    if "department" in filters:
+        stmt = stmt.where(Teacher.department.ilike(f"%{filters['department']}%"))
+
+    result = await db.execute(stmt)
+    return list(result.scalars().unique().all())

@@ -17,6 +17,7 @@ Architecture:
 """
 
 import logging
+import os
 from typing import Any, Optional
 
 import httpx
@@ -86,18 +87,30 @@ class AgentHTTPClient:
         self.timeout = timeout
         self.max_retries = max_retries
         self._client: Optional[httpx.AsyncClient] = None
+        self._is_external_client = False
 
     async def __aenter__(self) -> "AgentHTTPClient":
-        """Context manager entry - creates the HTTP client."""
-        self._client = httpx.AsyncClient(
-            timeout=httpx.Timeout(self.timeout),
-            follow_redirects=True,
-        )
+        """Context manager entry - creates or accepts the HTTP client."""
+        context = get_tool_context()  # Get context
+
+        if context.client:
+            # A client was injected (e.g., from pytest)
+            self._client = context.client
+            self._is_external_client = True
+        else:
+            # No client injected (production), create a new one
+            self._client = httpx.AsyncClient(
+                timeout=httpx.Timeout(self.timeout),
+                follow_redirects=True,
+            )
+            self._is_external_client = False
+
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit - closes the HTTP client."""
-        if self._client:
+        """Context manager exit - closes the HTTP client only if we created it."""
+        # Only close the client if this class created it
+        if self._client and not self._is_external_client:
             await self._client.aclose()
 
     def _get_auth_headers(self) -> dict[str, str]:
@@ -150,18 +163,30 @@ class AgentHTTPClient:
     def _get_full_url(self, endpoint: str) -> str:
         """
         Build full API URL from endpoint path.
-
-        Args:
-            endpoint: API endpoint path (e.g., "/attendance/students/123")
-
-        Returns:
-            Full URL (e.g., "http://localhost:8000/api/v1/attendance/students/123")
         """
         context = get_tool_context()
-        base_url = context.api_base_url.rstrip("/")
+        base_url = ""
 
-        # Remove leading slash from endpoint if present
+        # If using an external client (pytest), its base_url is 'http://test'
+        if self._is_external_client and self._client:
+            base_url = str(self._client.base_url).rstrip("/")
+        else:
+            # In production, get the base_url from the context
+            if not context.api_base_url:
+                raise AgentAuthenticationError(
+                    message="API base URL not configured in tool context.",
+                    status_code=500,
+                )
+            base_url = context.api_base_url.rstrip("/")
+
         endpoint = endpoint.lstrip("/")
+
+        # The base_url from get_api_base_url() already includes /api/v1
+        # so we just append the endpoint
+        if self._is_external_client:
+            # Pytest client base_url is 'http://test', we need to add /api/v1
+            api_v1_str = os.getenv("API_V1_STR", "/api/v1")
+            return f"{base_url}{api_v1_str}/{endpoint}"
 
         return f"{base_url}/{endpoint}"
 

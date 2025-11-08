@@ -13,6 +13,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Optional
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.profile import Profile
@@ -37,6 +38,7 @@ class ToolRuntimeContext:
     current_profile: Optional[Profile] = None
     jwt_token: Optional[str] = None
     api_base_url: Optional[str] = None
+    client: Optional[httpx.AsyncClient] = None
 
 
 class ToolContextError(RuntimeError):
