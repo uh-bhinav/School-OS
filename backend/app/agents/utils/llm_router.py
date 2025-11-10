@@ -1,10 +1,12 @@
-# backend/app/agents/utils/llm_router.py
+# File: app/agents/utils/llm_router.py
 
 import logging
 import os
 from typing import Literal
 
 from dotenv import load_dotenv
+from langchain_community.chat_models import ChatOllama  # <-- ADDED
+from langchain_core.language_models.chat_models import BaseChatModel
 
 # Load environment variables
 load_dotenv()
@@ -15,64 +17,67 @@ logger = logging.getLogger(__name__)
 LLMTier = Literal["fast", "medium", "power"]
 
 
-def get_llm(tier: LLMTier = "power"):
+def get_llm(tier: LLMTier = "power") -> BaseChatModel:
     """
-    Returns an LLM instance based on the specified tier.
-    This implements the intelligent funnel approach from your architecture plan.
+    Returns an LLM instance based on the specified tier and environment strategy.
 
-    Tiers:
-    - "fast": Lightweight models for simple routing/classification (Gemma 7B, Mistral 7B)
-    - "medium": Balanced models for moderate complexity (Llama 3 8B)
-    - "power": Most capable models for complex tasks (Llama 3.3 70B, Gemini)
-
-    Args:
-        tier: The performance tier of the LLM to use
-
-    Returns:
-        A LangChain LLM instance configured for the specified tier
+    Reads LLM_PROVIDER_STRATEGY from .env:
+    - "local": Uses local Ollama for all tiers. (FOR TESTING)
+    - "cloud": (Default) Uses the tiered cloud provider logic. (FOR PRODUCTION)
     """
+
+    # --- NEW LOCAL TESTING SWITCH ---
+    strategy = os.getenv("LLM_PROVIDER_STRATEGY", "cloud").strip().lower()
+
+    if strategy == "local":
+        logger.info(f"Using LOCAL strategy: Ollama (llama3:8b) for tier '{tier}'")
+        try:
+            # We ignore the 'tier' and just use your one local model for all tests
+            return ChatOllama(model="llama3:8b", temperature=0.0)
+        except Exception as e:
+            logger.error(f"CRITICAL: Failed to initialize Ollama: {e}", exc_info=True)
+            raise ValueError("Ollama (local strategy) failed to start. Is Ollama running?")
+
+    # --- END OF NEW SWITCH ---
+
+    # If strategy is "cloud" or not set, use your existing cloud logic
+    logger.info(f"Using CLOUD strategy for tier '{tier}'")
     try:
         # Get API keys from environment
         groq_api_key = os.getenv("GROQ_API_KEY", "").strip().strip('"')
-        # mistral_api_key = os.getenv("MISTRAL_API_KEY", "").strip().strip('"')
         deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "").strip().strip('"')
         google_api_key = os.getenv("GOOGLE_API_KEY", "").strip().strip('"')
         preferred_provider = os.getenv("LLM_PREFERRED_PROVIDER", "").strip().lower()
 
         if tier == "fast":
-            # Use Groq with Gemma 7B for fast inference
             if not groq_api_key:
                 logger.warning("GROQ_API_KEY not found, falling back to medium tier")
                 return get_llm("medium")
-
             from langchain_groq import ChatGroq
 
             logger.info("Initializing fast tier LLM: Groq Llama 3.1 8B Instant")
             return ChatGroq(
-                model="llama-3.1-8b-instant",  # <-- UPDATED MODEL
+                model="llama-3.1-8b-instant",
                 groq_api_key=groq_api_key,
                 temperature=0.1,
-                max_tokens=4096,  # Increased token limit for safety
+                max_tokens=4096,
             )
 
         elif tier == "medium":
-            # Use Groq with Llama 3 8B for balanced performance
             if not groq_api_key:
                 logger.warning("GROQ_API_KEY not found, falling back to power tier")
                 return get_llm("power")
-
             from langchain_groq import ChatGroq
 
-            logger.info("Initializing medium tier LLM: Groq Mixtral 8x7B")
+            logger.info("Initializing medium tier LLM: Groq Llama 3.3 70B")
             return ChatGroq(
-                model="llama-3.3-70b-versatile",  # <-- UPDATED MODEL
+                model="llama-3.3-70b-versatile",
                 groq_api_key=groq_api_key,
                 temperature=0.3,
-                max_tokens=8192,  # Increased token limit
+                max_tokens=8192,
             )
 
         elif tier == "power":
-            # Determine provider order based on preference
             provider_order: list[str]
             if preferred_provider in {"gemini", "google"}:
                 provider_order = ["gemini", "groq", "deepseek"]
@@ -88,7 +93,7 @@ def get_llm(tier: LLMTier = "power"):
 
                         logger.info("Initializing power tier LLM: Groq Llama 3.1 70B")
                         return ChatGroq(
-                            model="llama-3.3-70b-versatile",  # <-- UPDATED MODEL
+                            model="llama-3.3-70b-versatile",
                             groq_api_key=groq_api_key,
                             temperature=0.3,
                             max_tokens=8192,
@@ -125,7 +130,6 @@ def get_llm(tier: LLMTier = "power"):
                     except Exception as e:
                         logger.warning(f"Failed to initialize DeepSeek: {e}")
 
-            # Fallback: Raise error if no provider is available
             raise ValueError(
                 "No LLM provider configured for 'power' tier. " "Please set GROQ_API_KEY, GOOGLE_API_KEY, or DEEPSEEK_API_KEY in .env",
             )
@@ -138,38 +142,31 @@ def get_llm(tier: LLMTier = "power"):
         raise
 
 
+# ... (the rest of your file, get_available_tiers and test_llm_connection, is fine) ...
+
+
 def get_available_tiers():
     """
     Returns a list of available LLM tiers based on configured API keys.
-
-    Returns:
-        List of available tier names
     """
+    # ... (no changes needed here) ...
     available = []
-
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip().strip('"')
     google_api_key = os.getenv("GOOGLE_API_KEY", "").strip().strip('"')
     deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "").strip().strip('"')
-
     if groq_api_key:
         available.extend(["fast", "medium", "power"])
     if google_api_key or deepseek_api_key:
         if "power" not in available:
             available.append("power")
-
     return available
 
 
 def test_llm_connection(tier: LLMTier = "power"):
     """
     Tests the LLM connection for a given tier.
-
-    Args:
-        tier: The LLM tier to test
-
-    Returns:
-        Boolean indicating if the connection is successful
     """
+    # ... (no changes needed here) ...
     try:
         # llm = get_llm(tier)
         # response = llm.invoke("Say 'Hello'")

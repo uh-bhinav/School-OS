@@ -1,5 +1,6 @@
 import logging
 
+from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.agents.utils.llm_router import get_llm
@@ -39,10 +40,19 @@ llm = get_llm("fast")
 prompt = ChatPromptTemplate.from_messages([("system", SYSTEM_PROMPT), ("human", "{query}")])
 
 # 4. Bind the structured output schema to the LLM
-llm_with_output = llm.with_structured_output(AssessmentRoute)
+# llm_with_output = llm.with_structured_output(AssessmentRoute)
+
+# model_with_tool = llm.bind_tools(
+#     [AssessmentRoute],
+#     tool_choice="AssessmentRoute"  # Force the LLM to call this tool
+# )
+
+parser = PydanticToolsParser(tools=[AssessmentRoute])
 
 # 5. Create the final routing chain
-router_chain = prompt | llm_with_output
+# router_chain = prompt | llm_with_output
+
+# router_chain = prompt | model_with_tool | parser
 
 
 async def invoke_assessment_router(query: str) -> AssessmentRoute:
@@ -57,7 +67,16 @@ async def invoke_assessment_router(query: str) -> AssessmentRoute:
     """
     logger.info(f"Routing query in AssessmentRouter: '{query[:100]}...'")
     try:
-        route = await router_chain.ainvoke({"query": query})
+        messages = await prompt.ainvoke({"query": query})
+        response = await llm.ainvoke(messages, tools=[AssessmentRoute], tool_choice="AssessmentRoute")  # Force the LLM to call our schema
+        if not hasattr(response, "tool_calls") or not response.tool_calls:
+            raise ValueError("Router LLM failed to produce a tool call.")
+        parsed_tool_calls = parser.invoke(response)
+        # parsed_tool_calls = await router_chain.ainvoke({"query": query})
+        if not parsed_tool_calls:
+            raise ValueError("Router LLM failed to produce valid tool call.")
+        route = parsed_tool_calls[0]
+        # route = await router_chain.ainvoke({"query": query})
         logger.info(f"Routing decision: {route.agent_name}")
         return route
     except Exception as e:

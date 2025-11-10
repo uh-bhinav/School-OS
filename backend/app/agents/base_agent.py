@@ -43,10 +43,11 @@ class BaseAgent:
         base_model = get_llm(llm_tier)
 
         # Bind tools with strict=False to handle tool calling errors gracefully
-        if tools:
-            self.model = base_model.bind_tools(tools)
-        else:
-            self.model = base_model
+        # if tools:
+        #     self.model = base_model.bind_tools(tools)
+        # else:
+        #     self.model = base_model
+        self.model = base_model
 
         self.graph = self._build_graph()
         logger.info(f"BaseAgent initialized with {len(tools)} tools using {llm_tier} tier LLM")
@@ -63,7 +64,10 @@ class BaseAgent:
         """Calls the LLM with the current messages."""
         messages = state["messages"]
         try:
-            response = self.model.invoke(messages)
+            if self.tools:
+                response = self.model.invoke(messages, tools=self.tools)
+            else:
+                response = self.model.invoke(messages)
             logger.debug(f"LLM response: {response}")
             return {"messages": [response]}
         except Exception as e:

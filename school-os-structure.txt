@@ -1,0 +1,562 @@
+.
+├── .DS_Store
+├── .env
+├── .github
+│   └── workflows
+│       └── ci-cd.yml
+├── .gitignore
+├── .ruff_cache
+│   ├── .gitignore
+│   ├── 0.1.6
+│   └── CACHEDIR.TAG
+├── Makefile
+├── attendance-chat.html
+├── backend
+│   ├── .DS_Store
+│   ├── .env
+│   ├── .env.test
+│   ├── .pre-commit-config.yaml
+│   ├── .pytest_cache
+│   │   ├── .gitignore
+│   │   ├── CACHEDIR.TAG
+│   │   ├── README.md
+│   │   └── v
+│   │       └── cache
+│   │           ├── lastfailed
+│   │           └── nodeids
+│   ├── .ruff_cache
+│   │   ├── .gitignore
+│   │   ├── 0.1.6
+│   │   │   ├── 10220173601480226805
+│   │   │   ├── 11747545955479957921
+│   │   │   ├── 15993072044455967979
+│   │   │   ├── 2371008897385567940
+│   │   │   └── 92268788215223016
+│   │   ├── 0.11.13
+│   │   │   ├── 12634869919784389703
+│   │   │   ├── 15554818475836041043
+│   │   │   ├── 18260005419641824374
+│   │   │   ├── 3733813804227470719
+│   │   │   └── 7151153135384347501
+│   │   ├── 0.13.3
+│   │   │   └── 10960745759403134724
+│   │   └── CACHEDIR.TAG
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── app
+│   │   ├── .DS_Store
+│   │   ├── __init__.py
+│   │   ├── agents
+│   │   │   ├── .DS_Store
+│   │   │   ├── __init__.py
+│   │   │   ├── api.py
+│   │   │   ├── api_with_jwt.py
+│   │   │   ├── base_agent.py
+│   │   │   ├── http_client.py
+│   │   │   ├── modules
+│   │   │   │   ├── .DS_Store
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── academics
+│   │   │   │       ├── .DS_Store
+│   │   │   │       ├── __init__.py
+│   │   │   │       ├── leaves
+│   │   │   │       │   ├── __init__.py
+│   │   │   │       │   ├── academic_year_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── achievement_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── attendance_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── attendance_agent_ui.html
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── class_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── class_agent_ui.html
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── club_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── exam_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── exam_type_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── leaderboard_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── mark_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── period_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── report_card_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── student_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── subject_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   ├── teacher_agent
+│   │   │   │       │   │   ├── __init__.py
+│   │   │   │       │   │   ├── main.py
+│   │   │   │       │   │   ├── prompts.py
+│   │   │   │       │   │   ├── schemas.py
+│   │   │   │       │   │   └── tools.py
+│   │   │   │       │   └── timetable_agent
+│   │   │   │       │       ├── __init__.py
+│   │   │   │       │       ├── main.py
+│   │   │   │       │       ├── prompts.py
+│   │   │   │       │       ├── schemas.py
+│   │   │   │       │       └── tools.py
+│   │   │   │       ├── module_agent.py
+│   │   │   │       ├── module_prompts.py
+│   │   │   │       ├── module_schemas.py
+│   │   │   │       ├── module_tools.py
+│   │   │   │       └── routers
+│   │   │   │           ├── __init__.py
+│   │   │   │           ├── assessment_router.py
+│   │   │   │           ├── assessment_schemas.py
+│   │   │   │           ├── core_curriculum_router.py
+│   │   │   │           ├── core_curriculum_schemas.py
+│   │   │   │           ├── holistic_router.py
+│   │   │   │           ├── holistic_schemas.py
+│   │   │   │           ├── scheduling_router.py
+│   │   │   │           └── scheduling_schemas.py
+│   │   │   ├── root_orchestrator
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── main.py
+│   │   │   │   ├── prompts.py
+│   │   │   │   ├── schemas.py
+│   │   │   │   └── tools.py
+│   │   │   ├── tool_context.py
+│   │   │   └── utils
+│   │   │       ├── __init__.py
+│   │   │       └── llm_router.py
+│   │   ├── api
+│   │   │   ├── __init__.py
+│   │   │   ├── deps.py
+│   │   │   └── v1
+│   │   │       ├── __init__.py
+│   │   │       ├── api.py
+│   │   │       └── endpoints
+│   │   │           ├── __init__.py
+│   │   │           ├── academic_years.py
+│   │   │           ├── achievements.py
+│   │   │           ├── admin_product_categories.py
+│   │   │           ├── admin_product_packages.py
+│   │   │           ├── admin_products.py
+│   │   │           ├── albums.py
+│   │   │           ├── announcements.py
+│   │   │           ├── attendance_records.py
+│   │   │           ├── carts.py
+│   │   │           ├── classes.py
+│   │   │           ├── clubs.py
+│   │   │           ├── communication.py
+│   │   │           ├── discounts.py
+│   │   │           ├── employment_statuses.py
+│   │   │           ├── exam_types.py
+│   │   │           ├── exams.py
+│   │   │           ├── fee_structure.py
+│   │   │           ├── fee_templates.py
+│   │   │           ├── invoices.py
+│   │   │           ├── leaderboards.py
+│   │   │           ├── marks.py
+│   │   │           ├── media.py
+│   │   │           ├── orders.py
+│   │   │           ├── payment_gateway.py
+│   │   │           ├── payments.py
+│   │   │           ├── periods.py
+│   │   │           ├── products.py
+│   │   │           ├── profiles.py
+│   │   │           ├── refunds.py
+│   │   │           ├── report_cards.py
+│   │   │           ├── schools.py
+│   │   │           ├── student_contacts.py
+│   │   │           ├── student_fee_assignments.py
+│   │   │           ├── students.py
+│   │   │           ├── subjects.py
+│   │   │           ├── teachers.py
+│   │   │           ├── timetable.py
+│   │   │           ├── timetable_generation.py
+│   │   │           ├── users.py
+│   │   │           └── webhooks.py
+│   │   ├── core
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py
+│   │   │   ├── crypto_service.py
+│   │   │   ├── dependencies.py
+│   │   │   ├── metrics.py
+│   │   │   ├── security.py
+│   │   │   └── storage.py
+│   │   ├── db
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py
+│   │   │   ├── base_class.py
+│   │   │   └── session.py
+│   │   ├── dependencies.py
+│   │   ├── main.py
+│   │   ├── middleware
+│   │   │   ├── __init__.py
+│   │   │   └── raw_body.py
+│   │   ├── models
+│   │   │   ├── __init__.py
+│   │   │   ├── _package_item_reference.py
+│   │   │   ├── academic_year.py
+│   │   │   ├── achievementPointRules.py
+│   │   │   ├── album.py
+│   │   │   ├── album_target.py
+│   │   │   ├── announcement.py
+│   │   │   ├── announcement_target.py
+│   │   │   ├── applied_discount.py
+│   │   │   ├── attendance_record.py
+│   │   │   ├── audit.py
+│   │   │   ├── cart.py
+│   │   │   ├── cart_item.py
+│   │   │   ├── class_attendance_weekly.py
+│   │   │   ├── class_fee_structure.py
+│   │   │   ├── class_model.py
+│   │   │   ├── club.py
+│   │   │   ├── club_activity.py
+│   │   │   ├── club_membership.py
+│   │   │   ├── conversation.py
+│   │   │   ├── conversation_participant.py
+│   │   │   ├── discount.py
+│   │   │   ├── employment_status.py
+│   │   │   ├── exam_type.py
+│   │   │   ├── exams.py
+│   │   │   ├── fee_component.py
+│   │   │   ├── fee_template.py
+│   │   │   ├── fee_template_component.py
+│   │   │   ├── fee_term.py
+│   │   │   ├── gateway_webhook_event.py
+│   │   │   ├── invoice.py
+│   │   │   ├── invoice_item.py
+│   │   │   ├── log.py
+│   │   │   ├── mark.py
+│   │   │   ├── media_item.py
+│   │   │   ├── message.py
+│   │   │   ├── order.py
+│   │   │   ├── order_item.py
+│   │   │   ├── payment.py
+│   │   │   ├── payment_allocation.py
+│   │   │   ├── period.py
+│   │   │   ├── product.py
+│   │   │   ├── product_album_link.py
+│   │   │   ├── product_category.py
+│   │   │   ├── product_package.py
+│   │   │   ├── profile.py
+│   │   │   ├── refund.py
+│   │   │   ├── role_definition.py
+│   │   │   ├── school.py
+│   │   │   ├── streams.py
+│   │   │   ├── student.py
+│   │   │   ├── student_achievement.py
+│   │   │   ├── student_contact.py
+│   │   │   ├── student_fee_assignment.py
+│   │   │   ├── student_fee_discount.py
+│   │   │   ├── subject.py
+│   │   │   ├── teacher.py
+│   │   │   ├── teacher_subject.py
+│   │   │   ├── timetable.py
+│   │   │   └── user_roles.py
+│   │   ├── schemas
+│   │   │   ├── __init__.py
+│   │   │   ├── academic_year_schema.py
+│   │   │   ├── achievement_schema.py
+│   │   │   ├── album_schema.py
+│   │   │   ├── album_target_schema.py
+│   │   │   ├── announcement_schema.py
+│   │   │   ├── applied_discount_schema.py
+│   │   │   ├── attendance_record_schema.py
+│   │   │   ├── audit_schema.py
+│   │   │   ├── cart_schema.py
+│   │   │   ├── class_fee_structure_schema.py
+│   │   │   ├── class_schema.py
+│   │   │   ├── club_schema.py
+│   │   │   ├── communication_schema.py
+│   │   │   ├── discount_schema.py
+│   │   │   ├── employment_status_schema.py
+│   │   │   ├── enums.py
+│   │   │   ├── exam_schema.py
+│   │   │   ├── exam_type_schema.py
+│   │   │   ├── fee_component_schema.py
+│   │   │   ├── fee_template_schema.py
+│   │   │   ├── fee_term_schema.py
+│   │   │   ├── invoice_item_schema.py
+│   │   │   ├── invoice_schema.py
+│   │   │   ├── log_schema.py
+│   │   │   ├── mark_schema.py
+│   │   │   ├── media_item_schema.py
+│   │   │   ├── order_schema.py
+│   │   │   ├── payment_allocation_schema.py
+│   │   │   ├── payment_gateway_schema.py
+│   │   │   ├── payment_schema.py
+│   │   │   ├── period_schema.py
+│   │   │   ├── product_album_link_schema.py
+│   │   │   ├── product_category_schema.py
+│   │   │   ├── product_package_schema.py
+│   │   │   ├── product_schema.py
+│   │   │   ├── profile_schema.py
+│   │   │   ├── refund_schema.py
+│   │   │   ├── report_card_schema.py
+│   │   │   ├── school_schema.py
+│   │   │   ├── stream_schema.py
+│   │   │   ├── student_contact_schema.py
+│   │   │   ├── student_fee_assignment_schema.py
+│   │   │   ├── student_fee_discount_schema.py
+│   │   │   ├── student_schema.py
+│   │   │   ├── subject_schema.py
+│   │   │   ├── teacher_schema.py
+│   │   │   ├── timetable_schema.py
+│   │   │   └── user_schema.py
+│   │   └── services
+│   │       ├── __init__.py
+│   │       ├── academic_year_service.py
+│   │       ├── achievement_service.py
+│   │       ├── admin_product_categories.py
+│   │       ├── album_service.py
+│   │       ├── album_target_service.py
+│   │       ├── announcement_service.py
+│   │       ├── attendance_record_service.py
+│   │       ├── audit_service.py
+│   │       ├── cart_service.py
+│   │       ├── class_service.py
+│   │       ├── club_service.py
+│   │       ├── communication_service.py
+│   │       ├── discount_service.py
+│   │       ├── employment_status_service.py
+│   │       ├── exam_service.py
+│   │       ├── exam_type_service.py
+│   │       ├── fee_structure_service.py
+│   │       ├── fee_template_service.py
+│   │       ├── invoice_service.py
+│   │       ├── logging_service.py
+│   │       ├── mark_service.py
+│   │       ├── media_service.py
+│   │       ├── order_service.py
+│   │       ├── payment_gateway_service.py
+│   │       ├── payment_service.py
+│   │       ├── pdf_service.py
+│   │       ├── period_service.py
+│   │       ├── product_category_service.py
+│   │       ├── product_package_service.py
+│   │       ├── product_service.py
+│   │       ├── profile_service.py
+│   │       ├── refund_service.py
+│   │       ├── report_card_service.py
+│   │       ├── school_service.py
+│   │       ├── stream_service.py
+│   │       ├── student_contact_service.py
+│   │       ├── student_fee_assignment_service.py
+│   │       ├── student_service.py
+│   │       ├── subject_service.py
+│   │       ├── teacher_service.py
+│   │       ├── timetable_generation_service.py
+│   │       └── timetable_service.py
+│   ├── cs.py
+│   ├── db_test.py
+│   ├── docs
+│   │   ├── AUTHORIZED_PAYMENT_RECONCILIATION.md
+│   │   ├── HTTP_AGENTS_IMPLEMENTATION_SUMMARY.md
+│   │   ├── HTTP_AGENTS_VERIFICATION_CHECKLIST.md
+│   │   ├── HTTP_BASED_AGENTS_ARCHITECTURE.md
+│   │   ├── HTTP_BASED_AGENTS_QUICK_REF.md
+│   │   ├── IMPLEMENTATION_SUMMARY.md
+│   │   ├── ROW_LEVEL_LOCKING_IMPLEMENTATION.md
+│   │   ├── ROW_LEVEL_LOCKING_SUMMARY.md
+│   │   ├── SECURITY_ENHANCEMENT_SUMMARY.md
+│   │   └── WEBHOOK_SECURITY_LOGGING.md
+│   ├── login.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── poetry.lock
+│   ├── pyproject.toml
+│   ├── pytest.ini
+│   ├── scripts
+│   │   └── check_orm_health.py
+│   ├── supabase
+│   │   ├── .branches
+│   │   │   └── _current_branch
+│   │   ├── .gitignore
+│   │   ├── .temp
+│   │   │   ├── cli-latest
+│   │   │   ├── gotrue-version
+│   │   │   ├── pooler-url
+│   │   │   ├── postgres-version
+│   │   │   ├── project-ref
+│   │   │   ├── rest-version
+│   │   │   ├── storage-migration
+│   │   │   └── storage-version
+│   │   └── config.toml
+│   ├── test_connection.py
+│   └── tests
+│       ├── __init__.py
+│       ├── conftest.py
+│       ├── core
+│       │   ├── test_crypto_service.py
+│       │   └── test_payment_gateway_api.py
+│       ├── integration
+│       │   ├── conftest.py
+│       │   └── test_golden_paths.py
+│       ├── test_academic_years.py
+│       ├── test_achievements.py
+│       ├── test_agent_hierarchy.py
+│       ├── test_agentic_functions.py
+│       ├── test_albums.py
+│       ├── test_announcements.py
+│       ├── test_attendance.py
+│       ├── test_cart_service.py
+│       ├── test_cart_service2.py
+│       ├── test_cart_service3.py
+│       ├── test_cart_service4.py
+│       ├── test_cart_service5.py
+│       ├── test_classes.py
+│       ├── test_clubs.py
+│       ├── test_communications.py
+│       ├── test_employment_statuses.py
+│       ├── test_exams.py
+│       ├── test_fee_structure.py
+│       ├── test_invoice.py
+│       ├── test_marks.py
+│       ├── test_media.py
+│       ├── test_order_service.py
+│       ├── test_order_service2.py
+│       ├── test_order_service3.py
+│       ├── test_order_service4.py
+│       ├── test_order_service5.py
+│       ├── test_order_service6.py
+│       ├── test_order_service7.py
+│       ├── test_payment.py
+│       ├── test_periods.py
+│       ├── test_placeholder.py
+│       ├── test_product_service.py
+│       ├── test_product_service2.py
+│       ├── test_product_service3.py
+│       ├── test_product_service4.py
+│       ├── test_product_service5.py
+│       ├── test_profiles.py
+│       ├── test_schools.py
+│       ├── test_student_contacts.py
+│       ├── test_student_fee_assignment.py
+│       ├── test_students.py
+│       ├── test_subjects.py
+│       ├── test_teachers.py
+│       ├── test_timetable.py
+│       ├── test_timetable_generation.py
+│       ├── test_users.py
+│       ├── unit
+│       │   ├── l3_agents
+│       │   │   ├── conftest.py
+│       │   │   ├── test_assessment_router.py
+│       │   │   └── test_core_curriculum_router.py
+│       │   ├── l4_agents
+│       │   │   ├── assessment
+│       │   │   │   ├── conftest.py
+│       │   │   │   ├── test_exam_agent.py
+│       │   │   │   └── test_mark_agent.py
+│       │   │   └── core
+│       │   │       ├── conftest.py
+│       │   │       ├── test_class_agent.py
+│       │   │       └── test_student_agent.py
+│       │   ├── test_academic_year_service.py
+│       │   ├── test_achievement_service.py
+│       │   ├── test_album_service.py
+│       │   ├── test_album_target_service.py
+│       │   ├── test_announcement_service.py
+│       │   ├── test_attendance_service.py
+│       │   ├── test_cart_service_unit.py
+│       │   ├── test_class_service.py
+│       │   ├── test_club_service.py
+│       │   ├── test_communication_service.py
+│       │   ├── test_discount_service.py
+│       │   ├── test_employment_status_service.py
+│       │   ├── test_exam_service.py
+│       │   ├── test_fee_structure_service.py
+│       │   ├── test_mark_service.py
+│       │   ├── test_media_service.py
+│       │   ├── test_order_service_unit.py
+│       │   ├── test_payment_Service.py
+│       │   ├── test_pdf_service.py
+│       │   ├── test_period_service.py
+│       │   ├── test_product_service_unit.py
+│       │   ├── test_profile_service.py
+│       │   ├── test_reconciliation_unit.py
+│       │   ├── test_report_card_service.py
+│       │   ├── test_school_service.py
+│       │   ├── test_student_contact_service.py
+│       │   ├── test_student_service.py
+│       │   ├── test_subject_service.py
+│       │   ├── test_teacher_service.py
+│       │   └── test_timetable_service.py
+│       └── utils
+│           ├── __init__.py
+│           └── albums.py
+├── class-chat.html
+├── login.html
+├── marks-chat.html
+├── razorpay-test.html
+├── school-os-structure.txt
+├── signup.html
+├── subjects-chat.html
+└── supabase
+    ├── .branches
+    │   └── _current_branch
+    ├── .temp
+    │   ├── cli-latest
+    │   ├── gotrue-version
+    │   ├── pooler-url
+    │   ├── postgres-version
+    │   ├── project-ref
+    │   ├── rest-version
+    │   ├── storage-migration
+    │   └── storage-version
+    ├── schema.sql
+    ├── schema_full.sql
+    └── schema_with_data.sql
+
+62 directories, 498 files

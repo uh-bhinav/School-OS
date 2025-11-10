@@ -1,5 +1,6 @@
 import logging
 
+from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.agents.utils.llm_router import get_llm
@@ -33,10 +34,18 @@ prompt = ChatPromptTemplate.from_messages([("system", SYSTEM_PROMPT), ("human", 
 
 # 4. Bind the structured output schema to the LLM
 # This forces the LLM to *always* return a valid CoreCurriculumRoute JSON
-llm_with_output = llm.with_structured_output(CoreCurriculumRoute)
+# llm_with_output = llm.with_structured_output(CoreCurriculumRoute)
+# model_with_tool = llm.bind_tools(
+#     [CoreCurriculumRoute],
+#     tool_choice="CoreCurriculumRoute"  # Force the LLM to call this tool
+# )
 
 # 5. Create the final routing chain
-router_chain = prompt | llm_with_output
+parser = PydanticToolsParser(tools=[CoreCurriculumRoute])
+
+# Create the final routing chain
+# router_chain = prompt | model_with_tool | parser
+# router_chain = prompt | llm_with_output
 
 
 async def invoke_core_curriculum_router(query: str) -> CoreCurriculumRoute:
@@ -51,7 +60,17 @@ async def invoke_core_curriculum_router(query: str) -> CoreCurriculumRoute:
     """
     logger.info(f"Routing query in CoreCurriculumRouter: '{query[:100]}...'")
     try:
-        route = await router_chain.ainvoke({"query": query})
+        messages = await prompt.ainvoke({"query": query})
+        response = await llm.ainvoke(messages, tools=[CoreCurriculumRoute], tool_choice="CoreCurriculumRoute")  # Force the LLM to call our schema
+        if not hasattr(response, "tool_calls") or not response.tool_calls:
+            raise ValueError("Router LLM failed to produce a tool call.")
+        parsed_tool_calls = parser.invoke(response)
+        # parsed_tool_calls = await router_chain.ainvoke({"query": query})
+        if not parsed_tool_calls:
+            raise ValueError("Router LLM failed to produce valid tool call.")
+
+        route = parsed_tool_calls[0]
+        # route = await router_chain.ainvoke({"query": query})
         logger.info(f"Routing decision: {route.agent_name}")
         return route
     except Exception as e:

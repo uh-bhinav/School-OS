@@ -2,6 +2,7 @@
 
 import logging
 
+from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from langchain_core.prompts import ChatPromptTemplate
 
 # Assuming you have a central get_llm function as in your example
@@ -48,10 +49,11 @@ llm = get_llm("fast")
 prompt = ChatPromptTemplate.from_messages([("system", SYSTEM_PROMPT), ("human", "{query}")])
 
 # 4. Bind the structured output schema to the LLM
-llm_with_output = llm.with_structured_output(SchedulingRoute)
+# llm_with_output = llm.with_structured_output(SchedulingRoute)
 
-# 5. Create the final routing chain
-router_chain = prompt | llm_with_output
+# # 5. Create the final routing chain
+# router_chain = prompt | llm_with_output
+parser = PydanticToolsParser(tools=[SchedulingRoute])
 
 
 async def invoke_scheduling_router(query: str) -> SchedulingRoute:
@@ -66,7 +68,23 @@ async def invoke_scheduling_router(query: str) -> SchedulingRoute:
     """
     logger.info(f"Routing query in SchedulingRouter: '{query[:100]}...'")
     try:
-        route = await router_chain.ainvoke({"query": query})
+        messages = await prompt.ainvoke({"query": query})
+
+        # 2. Call the LLM with tools and tool_choice at INVOKE time
+        # This is the "universal" method that BaseAgent now uses
+        response = await llm.ainvoke(messages, tools=[SchedulingRoute], tool_choice="SchedulingRoute")  # Force the LLM to call our schema
+
+        # 3. Manually parse the tool calls from the response
+        if not hasattr(response, "tool_calls") or not response.tool_calls:
+            raise ValueError("Router LLM failed to produce a tool call.")
+
+        parsed_tool_calls = parser.invoke(response)
+        if not parsed_tool_calls:
+            raise ValueError("Failed to parse the LLM tool call.")
+
+        # The parser returns a list, we just need the first item
+        route = parsed_tool_calls[0]
+        # route = await router_chain.ainvoke({"query": query})
         logger.info(f"Routing decision: {route.agent_name}")
         return route
     except Exception as e:
