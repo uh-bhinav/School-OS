@@ -1,0 +1,46 @@
+{
+  "name": "School-OS",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "dev:web": "pnpm --filter admin-web dev",
+    "build:web": "pnpm --filter admin-web build"
+  },
+  "keywords": [],
+  "author": "",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "@types/react-router-dom": "^5.3.3",
+    "eslint": "^9.39.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2",
+    "turbo": "^2.6.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.5",
+    "@mui/material": "^7.3.5",
+    "@tanstack/react-query": "^5.90.7",
+    "axios": "^1.13.2",
+    "msw": "^2.12.0",
+    "react-router-dom": "^7.9.5",
+    "zod": "^4.1.12",
+    "zustand": "^5.0.8"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
+}
