@@ -1,6 +1,7 @@
 from sqlalchemy import TIMESTAMP, Column, Date, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 
+import app.models.student_fee_discount  # noqa: F401
 from app.db.base_class import Base
 
 
@@ -17,5 +18,15 @@ class FeeTerm(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default="now()")
 
     # The relationship syntax itself does not change
-    fee_template = relationship("FeeTemplate", back_populates="fee_terms")
-    discounts = relationship("StudentFeeDiscount", back_populates="fee_term")
+    fee_template = relationship(
+        "FeeTemplate",
+        back_populates="fee_terms",
+        foreign_keys=[fee_template_id],
+    )
+
+    discounts = relationship(
+        "StudentFeeDiscount",
+        back_populates="fee_term",
+        foreign_keys="StudentFeeDiscount.fee_term_id",
+        viewonly=True,
+    )

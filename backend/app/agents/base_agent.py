@@ -1,4 +1,5 @@
 # backend /app/agents/base_agent.py
+import asyncio
 import logging
 from collections.abc import Sequence
 from typing import Annotated, TypedDict
@@ -82,7 +83,7 @@ class BaseAgent:
 
             try:
                 action = ToolInvocation(tool=tool_name, tool_input=tool_args)
-                result = self.tool_executor.invoke(action)
+                result = self._run_coroutine(self.tool_executor.ainvoke(action))
 
                 # Create a ToolMessage with the result
                 tool_message = ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
@@ -99,6 +100,21 @@ class BaseAgent:
                 tool_messages.append(error_message)
 
         return {"messages": tool_messages}
+
+    @staticmethod
+    def _run_coroutine(coro):
+        """Utility to execute a coroutine from synchronous context."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # We are inside an existing running loop; schedule safely.
+            future = asyncio.run_coroutine_threadsafe(coro, loop)
+            return future.result()
+
+        return asyncio.run(coro)
 
     def _build_graph(self) -> StateGraph:
         """Builds and compiles the agent's workflow graph."""

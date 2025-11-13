@@ -14,5 +14,5 @@ class ProductAlbumLink(Base):
     is_primary = Column(Boolean, default=False)
     display_order = Column(Integer, default=0)
 
-    product = relationship("Product", back_populates="album_links")
+    product = relationship("Product")
     album = relationship("Album")

@@ -550,8 +550,35 @@
             </div>
 
             <div class="next-steps">
-                <h4>🚀 Using the Token in Postman</h4>
+                <h4>🚀 Using the Token</h4>
                 <ol>
+                    <li><strong>Try the AI Agents:</strong>
+                        <button
+                            onclick="window.location.href='attendance-chat.html'"
+                            style="margin: 10px 0; padding: 12px 24px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; display: block; width: 100%;"
+                        >
+                            🎓 Open Attendance Agent Chat
+                        </button>
+                        <button
+                            onclick="window.location.href='class-chat.html'"
+                            style="margin: 10px 0; padding: 12px 24px; background: #00d2ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; display: block; width: 100%;"
+                        >
+                            🏫 Open Class Agent Chat
+                        </button>
+                        <button
+                            onclick="window.location.href='marks-chat.html'"
+                            style="margin: 10px 0; padding: 12px 24px; background: #f5576c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; display: block; width: 100%;"
+                        >
+                            📊 Open Marks Agent Chat
+                        </button>
+                        <button
+                            onclick="window.location.href='subjects-chat.html'"
+                            style="margin: 10px 0; padding: 12px 24px; background: #fa709a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; display: block; width: 100%;"
+                        >
+                            📚 Open Subjects Agent Chat
+                        </button>
+                    </li>
+                    <li><strong>Or use in Postman:</strong></li>
                     <li>Copy the JWT access token using the button above</li>
                     <li>Open Postman → Select your Environment</li>
                     <li>Add variable: <code>{{role}}_token</code> (e.g., <code>teacher_token</code>)</li>

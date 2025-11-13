@@ -34,3 +34,8 @@ class Subject(Base):
 
     streams = relationship("Stream", secondary=stream_subjects_association, back_populates="subjects")
     timetables = relationship("Timetable", back_populates="subject")
+    teacher_subjects = relationship(
+        "app.models.teacher_subject.TeacherSubject",
+        back_populates="subject",
+        lazy="selectin",
+    )

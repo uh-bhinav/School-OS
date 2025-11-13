@@ -61,6 +61,9 @@ class Product(Base):
     # One-to-many relationship with PackageItem (association object)
     package_items = relationship("PackageItem", back_populates="product", lazy="selectin")
 
+    # One-to-many relationship with ProductAlbumLink
+    album_links = relationship("ProductAlbumLink", back_populates="product", lazy="selectin")
+
     # --- Constraints ---
     __table_args__ = (
         CheckConstraint("stock_quantity >= 0", name="chk_product_stock_non_negative"),

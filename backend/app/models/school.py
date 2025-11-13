@@ -37,3 +37,7 @@ class School(Base):
     product_packages = relationship("ProductPackage", back_populates="school")
     products = relationship("Product", back_populates="school")
     product_categories = relationship("ProductCategory", back_populates="school")
+    academic_years = relationship("AcademicYear", back_populates="school")
+    achievement_point_rules = relationship("AchievementPointRule", back_populates="school")
+    student_achievements = relationship("StudentAchievement", back_populates="school")
+    clubs = relationship("Club", back_populates="school")

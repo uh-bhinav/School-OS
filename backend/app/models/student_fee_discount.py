@@ -22,6 +22,6 @@ class StudentFeeDiscount(Base):
     discount_id = Column(Integer, ForeignKey("discounts.id"), nullable=False)
 
     student = relationship("Student", back_populates="fee_discounts")
-    fee_term = relationship("FeeTerm", back_populates="discounts")
+    fee_term = relationship("FeeTerm", back_populates="discounts", foreign_keys=[fee_term_id])
     discount = relationship("Discount")
     applied_by = relationship("Profile")
