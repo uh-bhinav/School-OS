@@ -7,7 +7,7 @@ import { useConfigStore } from "../../../stores/useConfigStore";
 export default function AttendanceRoute() {
   const role = useAuthStore(s=>s.role);
   const cfg = useConfigStore(s=>s.config);
-  const hasModule = cfg?.modules.subscribed.includes("academics.attendance");
+  const hasModule = cfg?.modules.subscribed.includes("attendance");
   if (role !== "admin" || !hasModule) return <Navigate to="/" replace />;
   return <AttendancePage />;
 }

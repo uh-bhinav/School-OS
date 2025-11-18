@@ -33,41 +33,53 @@ interface KPICardsProps {
  * Integration Note: Data comes from /api/v1/marks/kpi endpoint
  */
 export function KPICards({ data, loading }: KPICardsProps) {
+  // Calculate derived values from backend schema
+  const totalStudents = data?.total_students ?? 0;
+  const averageScore = data?.class_average ?? 0;
+  const highestScore = data?.highest_score ?? 0;
+  const studentsPassed = data?.students_passed ?? 0;
+
+  // Pass rate = (students_passed / total_students) * 100
+  const passRate = totalStudents > 0 ? (studentsPassed / totalStudents) * 100 : 0;
+
+  // Low performers = total - students_passed (students who failed)
+  const lowPerformers = totalStudents - studentsPassed;
+
   const kpiItems = [
     {
       label: "Total Students",
-      value: data?.total_students ?? 0,
+      value: totalStudents,
       icon: <PeopleIcon sx={{ fontSize: 40 }} />,
       color: "#1976d2",
       tooltip: "Number of students in the selected class/section/exam",
     },
     {
       label: "Average Score",
-      value: data?.average_score ? `${data.average_score.toFixed(1)}%` : "0%",
+      value: `${averageScore.toFixed(1)}`,
       icon: <TrendingUpIcon sx={{ fontSize: 40 }} />,
       color: "#2e7d32",
       tooltip: "Mean marks obtained across all subjects and students",
     },
     {
       label: "Pass Rate",
-      value: data?.pass_rate ? `${data.pass_rate.toFixed(1)}%` : "0%",
+      value: `${passRate.toFixed(1)}%`,
       icon: <CheckCircleIcon sx={{ fontSize: 40 }} />,
       color: "#388e3c",
       tooltip: "Percentage of students scoring ≥40%",
     },
     {
       label: "Highest Score",
-      value: data?.highest_score ?? 0,
+      value: highestScore,
       icon: <TrophyIcon sx={{ fontSize: 40 }} />,
       color: "#f57c00",
       tooltip: "Top marks achieved in the selected filters",
     },
     {
       label: "Low Performers",
-      value: data?.low_performers ?? 0,
+      value: lowPerformers,
       icon: <WarningIcon sx={{ fontSize: 40 }} />,
       color: "#d32f2f",
-      tooltip: "Students scoring below 50% - need attention",
+      tooltip: "Students scoring below 40% - need attention",
     },
   ];
 

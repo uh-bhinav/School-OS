@@ -23,6 +23,7 @@ from app.agents.api import router as agents_router
 from app.api.v1.api import api_router
 from app.api.v1.api import api_router as v1_api_router
 from app.core.config import settings
+from app.core.supabase import close_supabase_client, init_supabase_client
 
 # CRITICAL: Import base BEFORE init_engine to register all SQLAlchemy models
 # This ensures all models are registered before any database operations
@@ -61,14 +62,39 @@ else:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Lifespan manager for the FastAPI application.
-    This function will be called once when the application starts.
+    Application lifespan manager.
+
+    CRITICAL: This ensures proper initialization and cleanup of global resources.
+    All singleton initialization (database engine, Supabase client) happens here.
     """
+    # === STARTUP ===
+    print("🚀 Application starting...")
+
+    # Initialize database engine (existing)
     engine = init_engine()
-    yield
+    print("✅ Database engine initialized")
+
+    # Initialize Supabase client (NEW)
+    await init_supabase_client()
+    print("✅ Supabase client initialized")
+
+    print("✅ Application startup complete")
+
+    yield  # Application runs here
+
+    # === SHUTDOWN ===
+    print("🛑 Application shutting down...")
+
+    # Close Supabase client (NEW)
+    await close_supabase_client()
+    print("✅ Supabase client closed")
+
     # Any cleanup code would go here, after the yield.
     if engine:
         await engine.dispose()
+        print("✅ Database engine disposed")
+
+    print("✅ Application shutdown complete")
 
 
 # Initialize FastAPI application

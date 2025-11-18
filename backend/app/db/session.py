@@ -13,13 +13,22 @@ def init_engine():
     """
     Initialize the SQLAlchemy async engine and sessionmaker.
     Uses Supabase session pooler (5432), works over IPv4.
+
+    CRITICAL CONFIG FOR SUPABASE:
+    - pool_size=3: Small pool to avoid hitting Supabase limits
+    - max_overflow=2: Allow temporary connections during bursts
+    - pool_recycle=300: Recycle connections every 5 minutes (prevents stale connections)
+    - pool_pre_ping=True: Verify connections before use
+    - pool_timeout=30: Wait max 30s for connection
     """
 
     engine = create_async_engine(
         settings.DATABASE_URL,
         pool_pre_ping=True,
-        pool_size=10,
-        max_overflow=0,
+        pool_size=10,  # Reduced from 10 to 3
+        max_overflow=5,  # Allow 2 extra connections during bursts (total max: 5)
+        pool_recycle=300,  # Recycle connections every 5 minutes
+        pool_timeout=30,  # Wait 30s for connection before failing
     )
 
     SessionLocal = async_sessionmaker(

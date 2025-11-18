@@ -13,14 +13,17 @@ interface SummaryCardsProps {
  *
  * Features:
  * - Total marks entered
- * - Published vs Draft count
+ * - Marks with teacher attribution (Published)
+ * - Marks without teacher attribution (Draft)
  * - Quick stats overview
+ *
+ * Integration Note: Uses real backend data
  */
 export function SummaryCards({ totalMarks = 0, publishedCount = 0, draftCount = 0 }: SummaryCardsProps) {
   const stats = [
     { label: "Total Marks Entered", value: totalMarks, color: "#1976d2" },
-    { label: "Published", value: publishedCount, color: "#2e7d32" },
-    { label: "Draft", value: draftCount, color: "#ed6c02" },
+    { label: "With Teacher Attribution", value: publishedCount, color: "#2e7d32" },
+    { label: "Without Attribution", value: draftCount, color: "#ed6c02" },
   ];
 
   return (

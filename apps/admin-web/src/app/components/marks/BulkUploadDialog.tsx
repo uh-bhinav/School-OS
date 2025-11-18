@@ -31,7 +31,12 @@ interface BulkUploadDialogProps {
  * - File preview (name, size)
  *
  * Integration Note: Connect onUpload to useBulkUploadMarks mutation.
- * Expected CSV format: student_id, subject_id, exam_id, marks_obtained, total_marks
+ * Expected CSV format: student_id,subject_id,exam_id,marks_obtained,max_marks,remarks
+ *
+ * Example CSV:
+ * student_id,subject_id,exam_id,marks_obtained,max_marks,remarks
+ * 1,5,3,85,100,Excellent work
+ * 2,5,3,72,100,Good effort
  */
 export function BulkUploadDialog({ open, onClose, onUpload, loading }: BulkUploadDialogProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -91,7 +96,14 @@ export function BulkUploadDialog({ open, onClose, onUpload, loading }: BulkUploa
         <Box sx={{ display: "grid", gap: 2 }}>
           {/* Instructions */}
           <Alert severity="info">
-            Upload a CSV file with columns: student_id, subject_id, exam_id, marks_obtained, total_marks
+            <Typography variant="body2" fontWeight={600} gutterBottom>
+              CSV Format Requirements:
+            </Typography>
+            <Typography variant="body2" component="div">
+              Required columns: student_id, subject_id, exam_id, marks_obtained
+              <br />
+              Optional columns: max_marks (default: 100), remarks
+            </Typography>
           </Alert>
 
           {/* Drag & Drop Zone */}

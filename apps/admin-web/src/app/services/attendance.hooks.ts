@@ -1,7 +1,7 @@
 // services/attendance.hooks.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  listAttendance, createAttendance, updateAttendance, deleteAttendance,
+  getClassAttendanceForDate, createAttendance, updateAttendance, deleteAttendance,
   createBulkAttendance, getClassRange, getClassWeeklySummary, getStudentHistory
 } from "./attendance.api";
 
@@ -18,13 +18,23 @@ const attendanceKeys = {
   student: (studentId: number) => [...attendanceKeys.students(), studentId] as const,
 };
 
+/**
+ * Hook to list attendance for a class on a specific date
+ * Note: Backend requires class_id and date, returns attendance records for that day
+ * Returns: { items: AttendanceRecord[], total: number }
+ */
 export function useAttendanceList(q: { class_id?: number; date?: string; page?: number; page_size?: number }) {
   return useQuery({
     queryKey: attendanceKeys.list(q),
-    queryFn: () => listAttendance(q),
+    queryFn: () => {
+      if (!q.class_id || !q.date) {
+        return { items: [], total: 0 };
+      }
+      return getClassAttendanceForDate(q.class_id, q.date);
+    },
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!q.class_id, // Only fetch when class is selected
+    enabled: !!q.class_id && !!q.date, // Only fetch when both class and date are selected
   });
 }
 
@@ -88,7 +98,17 @@ export const useClassRange = (class_id: number, from: string, to: string) =>
 export const useWeeklySummary = (class_id: number, week?: string) =>
   useQuery({
     queryKey: attendanceKeys.weekly(class_id, week),
-    queryFn: () => getClassWeeklySummary(class_id, week),
+    queryFn: () => {
+      if (!week) {
+        // If no week provided, use current week's Monday
+        const today = new Date();
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - today.getDay() + 1);
+        const weekStart = monday.toISOString().split('T')[0];
+        return getClassWeeklySummary(class_id, weekStart);
+      }
+      return getClassWeeklySummary(class_id, week);
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: !!class_id,
   });

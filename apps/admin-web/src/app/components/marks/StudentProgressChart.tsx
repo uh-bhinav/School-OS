@@ -18,7 +18,7 @@ interface StudentProgressChartProps {
  * - Responsive design
  * - Loading state
  *
- * Integration Note: Data from /api/v1/marks/progression/student/{id}/subject/{id}
+ * Integration Note: Data from /marks/student/{id}/subject/{id}/progression
  */
 export function StudentProgressChart({ data, loading }: StudentProgressChartProps) {
   if (loading) {
@@ -32,7 +32,7 @@ export function StudentProgressChart({ data, loading }: StudentProgressChartProp
     );
   }
 
-  if (!data || data.marks.length === 0) {
+  if (!data || data.exams.length === 0) {
     return (
       <Card>
         <CardContent>
@@ -49,10 +49,17 @@ export function StudentProgressChart({ data, loading }: StudentProgressChartProp
     );
   }
 
-  // Transform data for recharts
-  const chartData = data.dates.map((date, index) => ({
-    date: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    marks: data.marks[index],
+  // Transform backend data for recharts
+  const chartData = data.exams.map((exam) => ({
+    exam: exam.exam_name,
+    date: new Date(exam.date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    }),
+    percentage: exam.percentage,
+    marks: exam.marks_obtained,
+    maxMarks: exam.max_marks,
   }));
 
   return (
@@ -65,17 +72,51 @@ export function StudentProgressChart({ data, loading }: StudentProgressChartProp
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis domain={[0, 100]} />
-            <Tooltip />
+            <XAxis
+              dataKey="exam"
+              angle={-45}
+              textAnchor="end"
+              height={80}
+            />
+            <YAxis domain={[0, 100]} label={{ value: "Percentage", angle: -90, position: "insideLeft" }} />
+            <Tooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <Box
+                      sx={{
+                        bgcolor: "background.paper",
+                        p: 1.5,
+                        border: "1px solid",
+                        borderColor: "divider",
+                        borderRadius: 1,
+                      }}
+                    >
+                      <Typography variant="subtitle2">{data.exam}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {data.date}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                        Marks: {data.marks}/{data.maxMarks}
+                      </Typography>
+                      <Typography variant="body2" color="primary">
+                        Percentage: {data.percentage}%
+                      </Typography>
+                    </Box>
+                  );
+                }
+                return null;
+              }}
+            />
             <Legend />
             <Line
               type="monotone"
-              dataKey="marks"
+              dataKey="percentage"
               stroke="#2e7d32"
               strokeWidth={2}
               activeDot={{ r: 6 }}
-              name="Marks"
+              name="Percentage"
             />
           </LineChart>
         </ResponsiveContainer>

@@ -14,6 +14,7 @@ from app.api.v1.endpoints import (
     classes,
     clubs,
     communication,
+    dashboard,
     discounts,
     employment_statuses,
     exam_types,
@@ -48,6 +49,7 @@ api_router = APIRouter()
 
 # Include all the individual routers into the main v1 router
 api_router.include_router(schools.router, prefix="/schools", tags=["Schools"])
+api_router.include_router(dashboard.router, prefix="", tags=["Dashboard"])  # Dashboard endpoints
 api_router.include_router(academic_years.router, prefix="/academic-years", tags=["Academic Years"])
 api_router.include_router(classes.router, prefix="/classes", tags=["Classes"])
 api_router.include_router(subjects.router, prefix="/subjects", tags=["Subjects"])

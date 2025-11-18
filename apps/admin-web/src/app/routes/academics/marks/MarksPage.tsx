@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Box, Typography, Button, Snackbar, Alert } from "@mui/material";
 import { Add as AddIcon, Upload as UploadIcon } from "@mui/icons-material";
-import { FiltersBar } from "@/app/components/marks/FiltersBar";
+import { MarksFilterBar } from "@/app/components/marks/MarksFilterBar";
 import { KPICards } from "@/app/components/marks/KPICards";
 import { MarksTable } from "@/app/components/marks/MarksTable";
 import { MarkDialog } from "@/app/components/marks/MarkDialog";
@@ -62,9 +62,23 @@ export default function MarksPage() {
 
   // Data queries
   const { data: marks, isLoading: marksLoading, refetch: refetchMarks } = useMarks(filters);
-  const { data: kpi, isLoading: kpiLoading } = useMarksKpi(filters);
-  const { data: classPerformance } = useClassPerformance(classId || 8, examId || 5);
-  const { data: studentProgress } = useStudentProgress(1001, subjectId || 21);
+
+  // KPI requires both class_id and exam_id
+  const kpiFilters = classId && examId ? { class_id: classId, exam_id: examId } : undefined;
+  const { data: kpi, isLoading: kpiLoading } = useMarksKpi(kpiFilters || { class_id: 0, exam_id: 0 });
+
+  // Class performance requires both class_id and exam_id
+  const { data: classPerformance } = useClassPerformance(
+    classId || 0,
+    examId || 0
+  );
+
+  // Student progress - use first student from marks data if available
+  const firstStudentId = marks && marks.length > 0 ? marks[0].student_id : 0;
+  const { data: studentProgress } = useStudentProgress(
+    firstStudentId,
+    subjectId || 0
+  );
 
   // Mutations
   const createMark = useCreateMark();
@@ -107,10 +121,24 @@ export default function MarksPage() {
     }
   };
 
-  const handleMarkSubmit = async (data: Partial<Mark>) => {
+  const handleMarkSubmit = async (data: {
+    student_id: number;
+    subject_id: number;
+    exam_id: number;
+    marks_obtained: number;
+    max_marks: number;
+    remarks?: string;
+  }) => {
     try {
       if (selectedMark) {
-        await updateMark.mutateAsync({ id: selectedMark.id, payload: data });
+        // Only send marks_obtained and remarks for updates
+        await updateMark.mutateAsync({
+          id: selectedMark.id,
+          payload: {
+            marks_obtained: data.marks_obtained,
+            remarks: data.remarks
+          }
+        });
         showSnackbar("Mark updated successfully");
       } else {
         await createMark.mutateAsync(data);
@@ -126,24 +154,7 @@ export default function MarksPage() {
 
   const handleBulkUpload = async (file: File) => {
     try {
-      // In real implementation, parse CSV and convert to marks array
-      // For now, simulate with mock data
-      const mockMarks = [
-        {
-          student_id: 1001,
-          student_name: "Rahul Verma",
-          class_id: 8,
-          section: "A",
-          subject_id: 21,
-          subject_name: "Mathematics",
-          exam_id: 5,
-          exam_name: "Mid-Term",
-          marks_obtained: 85,
-          total_marks: 100,
-        },
-      ];
-
-      await bulkUpload.mutateAsync(mockMarks);
+      await bulkUpload.mutateAsync(file);
       showSnackbar(`Successfully uploaded marks from ${file.name}`);
       setBulkUploadOpen(false);
       refetchMarks();
@@ -156,15 +167,15 @@ export default function MarksPage() {
     if (!marks) return;
 
     // Generate CSV content
-    const headers = ["Student", "Roll No", "Subject", "Exam", "Marks", "Grade", "Status"];
+    const headers = ["Student", "Roll No", "Subject", "Exam", "Marks", "Grade", "Percentage"];
     const rows = marks.map((m: Mark) => [
       m.student_name,
       m.roll_no || "",
       m.subject_name,
       m.exam_name,
-      `${m.marks_obtained}/${m.total_marks}`,
+      `${m.marks_obtained}/${m.max_marks}`,
       m.grade || "",
-      m.is_published ? "Published" : "Draft",
+      m.percentage ? `${m.percentage}%` : "",
     ]);
 
     const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
@@ -183,9 +194,11 @@ export default function MarksPage() {
     showSnackbar("PDF export functionality coming soon");
   };
 
-  // Calculate summary stats
+  // Calculate summary stats from real data
   const totalMarksCount = marks?.length || 0;
-  const publishedCount = marks?.filter((m: Mark) => m.is_published).length || 0;
+  // Since backend doesn't have is_published, we show total in all three cards
+  // Or we can compute based on whether entered_by_teacher_id exists
+  const publishedCount = marks?.filter((m: Mark) => m.entered_by_teacher_id !== null).length || 0;
   const draftCount = totalMarksCount - publishedCount;
 
   return (
@@ -217,7 +230,7 @@ export default function MarksPage() {
 
       {/* Filters */}
       <Box sx={{ mb: 3 }}>
-        <FiltersBar />
+        <MarksFilterBar />
       </Box>
 
       {/* KPI Cards */}

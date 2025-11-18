@@ -21,8 +21,6 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   MoreVert as MoreVertIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
 import { Mark } from "@/app/services/marks.schema";
 
@@ -169,7 +167,7 @@ export function MarksTable({ data, loading, onEdit, onDelete }: MarksTableProps)
               <TableCell sx={{ fontWeight: 600 }}>Exam</TableCell>
               <TableCell align="center" sx={{ fontWeight: 600 }}>Marks</TableCell>
               <TableCell align="center" sx={{ fontWeight: 600 }}>Grade</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Remarks</TableCell>
               <TableCell align="center" sx={{ fontWeight: 600 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -200,10 +198,10 @@ export function MarksTable({ data, loading, onEdit, onDelete }: MarksTableProps)
                 </TableCell>
                 <TableCell align="center">
                   <Typography variant="body2" fontWeight={600}>
-                    {mark.marks_obtained}/{mark.total_marks}
+                    {mark.marks_obtained}/{mark.max_marks}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    ({((mark.marks_obtained / mark.total_marks) * 100).toFixed(1)}%)
+                    ({mark.percentage?.toFixed(1) || ((mark.marks_obtained / mark.max_marks) * 100).toFixed(1)}%)
                   </Typography>
                 </TableCell>
                 <TableCell align="center">
@@ -220,14 +218,10 @@ export function MarksTable({ data, loading, onEdit, onDelete }: MarksTableProps)
                     </Typography>
                   )}
                 </TableCell>
-                <TableCell align="center">
-                  <Chip
-                    icon={mark.is_published ? <VisibilityIcon /> : <VisibilityOffIcon />}
-                    label={mark.is_published ? "Published" : "Draft"}
-                    size="small"
-                    color={mark.is_published ? "success" : "default"}
-                    variant={mark.is_published ? "filled" : "outlined"}
-                  />
+                <TableCell>
+                  <Typography variant="body2" color="text.secondary">
+                    {mark.remarks || "-"}
+                  </Typography>
                 </TableCell>
                 <TableCell align="center">
                   <IconButton

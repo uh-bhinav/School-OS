@@ -99,12 +99,20 @@ export default function TimetablePage() {
   }
 
   async function handleGenerate() {
-    await genMut.mutateAsync({
-      academic_year_id: filters.academic_year_id,
-      class_id: filters.class_id,
-      section: filters.section,
-    });
-    refetch();
+    try {
+      await genMut.mutateAsync({
+        academic_year_id: filters.academic_year_id,
+        class_id: filters.class_id,
+        section: filters.section,
+        week_start: filters.week_start, // ✅ Pass the current week being viewed
+      });
+      // Close the dialog
+      setShowGenerateDialog(false);
+      // Refetch the grid to show newly generated entries
+      await refetch();
+    } catch (error) {
+      console.error("Failed to generate timetable:", error);
+    }
   }
 
   return (

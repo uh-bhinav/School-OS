@@ -4,7 +4,6 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeRoot } from "./providers/ThemeProvider";
 import { AuthRoot } from "./providers/AuthProvider";
-import { ConfigRoot } from "./providers/ConfigProvider";
 import ChatProvider from "./providers/ChatProvider";
 import "../index.css"; // ✅ CRITICAL: Import Tailwind CSS
 import Login from "./routes/auth/login";
@@ -15,16 +14,50 @@ import TimetableRoute from "./routes/academics/timetable/TimetableRoute";
 import ExamsRoute from "./routes/academics/exams/ExamsRoute";
 import MarksRoute from "./routes/academics/marks/MarksRoute";
 import MarksPage from "./routes/academics/marks/MarksPage";
+import LeaderboardsPage from "./routes/academics/leaderboards/LeaderboardsPage";
+import TeachersPage from "./routes/academics/teachers/TeachersPage";
+import ClubsPage from "./routes/academics/clubs/ClubsPage";
+import AchievementsPage from "./routes/academics/achievements/AchievementsPage";
+import AnnouncementsPage from "./routes/announcements";
+import CommunicationsPage from "./routes/communications";
+import FeeManagementPage from "./routes/finance";
+import InvoicesPage from "./routes/finance/invoices/InvoicesPage";
+import PaymentsPage from "./routes/finance/payments/PaymentsPage";
+import DiscountsPage from "./routes/finance/discounts/DiscountsPage";
+import RefundsPage from "./routes/finance/refunds/RefundsPage";
+import AlbumsPage from "./routes/media/albums/AlbumsPage";
+import ProductsPage from "./routes/media/products/ProductsPage";
 import { Shell, Protected } from "./components/Shell";
+import { runAuthMigration } from "./utils/authCleanup";
+import { logDemoModeStatus } from "./mockDataProviders";
 
-// Create QueryClient with better defaults
+// ============================================================================
+// AUTH MIGRATION - Clean up stale auth state from previous sessions
+// ============================================================================
+runAuthMigration();
+
+// ============================================================================
+// DEMO MODE STATUS - Log on app startup
+// ============================================================================
+logDemoModeStatus();
+
+// Create QueryClient with proper error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-      retry: 1,
+      retry: (failureCount, error: any) => {
+        // Never retry on 401/403 (auth errors)
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          return false;
+        }
+        // Retry up to 2 times for other errors
+        return failureCount < 2;
+      },
       refetchOnWindowFocus: false,
+      // Don't run queries with null/undefined in query keys
+      enabled: true,
     },
   },
 });
@@ -73,48 +106,84 @@ const router = createBrowserRouter([
           },
         ],
       },
+      {
+        path: "academics/leaderboards",
+        element: <LeaderboardsPage />,
+      },
+      {
+        path: "academics/teachers",
+        element: <TeachersPage />,
+      },
+      {
+        path: "academics/clubs",
+        element: <ClubsPage />,
+      },
+      {
+        path: "academics/achievements",
+        element: <AchievementsPage />,
+      },
+      {
+        path: "announcements",
+        element: <AnnouncementsPage />,
+      },
+      {
+        path: "communications",
+        element: <CommunicationsPage />,
+      },
+      {
+        path: "finance/fees",
+        element: <FeeManagementPage />,
+      },
+      {
+        path: "finance/invoices",
+        element: <InvoicesPage />,
+      },
+      {
+        path: "finance/payments",
+        element: <PaymentsPage />,
+      },
+      {
+        path: "finance/discounts",
+        element: <DiscountsPage />,
+      },
+      {
+        path: "finance/refunds",
+        element: <RefundsPage />,
+      },
+      {
+        path: "media/albums",
+        element: <AlbumsPage />,
+      },
+      {
+        path: "media/products",
+        element: <ProductsPage />,
+      },
     ],
   },
 ]);
 
-// Initialize MSW in development mode
-async function enableMocking() {
-  if (import.meta.env.DEV) {
-    const { worker } = await import("./mocks/browser");
-    await worker.start({
-      onUnhandledRequest: "bypass",
-    });
-    console.log("🔶 MSW mocking enabled");
+// ============================================================================
+// START THE APP - MSW COMPLETELY REMOVED
+// ============================================================================
+// ✅ No more MSW initialization
+// ✅ Direct app startup - no async wrapper needed
+// ✅ Clean bootstrap sequence
+// ============================================================================
 
-    // Auto-login for development
-    const { useAuthStore } = await import("./stores/useAuthStore");
-    const authState = useAuthStore.getState();
-    if (!authState.userId) {
-      authState.setAuth({
-        userId: "dev-user-123",
-        schoolId: 2,
-        role: "admin",
-      });
-      console.log("🔐 Auto-logged in as admin (dev mode)");
-    }
-  }
-}
+console.log("🚀 Starting SchoolOS Admin Panel...");
+console.log("� Mode:", import.meta.env.DEV ? "Development" : "Production");
+console.log("� API Base:", import.meta.env.VITE_API_BASE_URL || "No base URL (will use relative paths)");
 
-// Start the app
-enableMocking().then(() => {
-  ReactDOM.createRoot(document.getElementById("root")!).render(
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <AuthRoot>
-          <ConfigRoot>
-            <ThemeRoot>
-              <RouterProvider router={router} />
-            </ThemeRoot>
-          </ConfigRoot>
-        </AuthRoot>
-        {/* ✅ ADD ChatProvider at the end for global chatbot overlay */}
-        <ChatProvider />
-      </QueryClientProvider>
-    </React.StrictMode>
-  );
-});
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <AuthRoot>
+        <ThemeRoot>
+          <RouterProvider router={router} />
+        </ThemeRoot>
+      </AuthRoot>
+      {/* ✅ ChatProvider at the end for global chatbot overlay */}
+      <ChatProvider />
+    </QueryClientProvider>
+  </React.StrictMode>
+);

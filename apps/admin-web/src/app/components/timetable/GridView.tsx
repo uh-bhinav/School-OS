@@ -175,9 +175,12 @@ export default function GridView({
 
   const cellLookup = useMemo(() => {
     const map = new Map<string, TimetableEntry>();
-    entries.forEach((entry) => {
-      map.set(`${entry.day}-${entry.period_no}`, entry);
-    });
+    // ✅ FIX: Handle undefined or null entries
+    if (entries && Array.isArray(entries)) {
+      entries.forEach((entry) => {
+        map.set(`${entry.day}-${entry.period_no}`, entry);
+      });
+    }
     return map;
   }, [entries]);
 

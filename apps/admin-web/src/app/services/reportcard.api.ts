@@ -1,15 +1,38 @@
 import { http } from "./http";
-import { ReportCard } from "./exams.schema";
+import { ReportCard } from "./reportcard.schema";
 
-const BASE = "/api/v1/report_cards";
-const PDF = "/api/v1/pdf/report_card";
+const BASE = "/report-card"; // Backend uses /api/v1/report-card
 
-export async function getReportCard(exam_id: number) {
-  const { data } = await http.get<ReportCard>(`${BASE}/${exam_id}`);
+/**
+ * Get report card for a student
+ * Backend endpoint: GET /api/v1/report-card/student/{student_id}?academic_year_id={year_id}
+ */
+export async function getReportCard(student_id: number, academic_year_id: number) {
+  const { data } = await http.get<ReportCard>(`${BASE}/student/${student_id}`, {
+    params: { academic_year_id }
+  });
   return data;
 }
 
-export async function downloadReportCardPDF(exam_id: number) {
-  const { data } = await http.get(`${PDF}/${exam_id}`, { responseType: "blob" });
+/**
+ * Download report card PDF for a student
+ * Backend endpoint: GET /api/v1/report-card/student/{student_id}/pdf?academic_year_id={year_id}
+ */
+export async function downloadReportCardPDF(student_id: number, academic_year_id: number) {
+  const { data } = await http.get(`${BASE}/student/${student_id}/pdf`, {
+    params: { academic_year_id },
+    responseType: "blob"
+  });
+  return data;
+}
+
+/**
+ * Get report cards for an entire class
+ * Backend endpoint: GET /api/v1/report-card/class/{class_id}?academic_year_id={year_id}
+ */
+export async function getClassReportCards(class_id: number, academic_year_id: number) {
+  const { data } = await http.get<ReportCard[]>(`${BASE}/class/${class_id}`, {
+    params: { academic_year_id }
+  });
   return data;
 }

@@ -9,15 +9,50 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true, // Let Supabase handle automatic refresh
+    detectSessionInUrl: true,
+    storage: window.localStorage,
+    storageKey: 'supabase.auth.token',
+  },
+});
 
-export async function getAccessToken(): Promise<string | null> {
-  const { data, error } = await supabase.auth.getSession();
+/**
+ * Get access token from Supabase session
+ * This is called by the Axios request interceptor
+ *
+ * CRITICAL: Must return valid token for authenticated requests
+ * FIXED: Now synchronous, reads from localStorage directly to avoid race conditions
+ */
+export function getAccessToken(): string | null {
+  try {
+    // Read directly from localStorage (synchronous, no await needed)
+    const storageKey = 'supabase.auth.token';
+    const storedSession = localStorage.getItem(storageKey);
 
-  if (error) {
-    console.error("Error getting access token:", error);
+    if (!storedSession) {
+      console.warn("[SUPABASE] ⚠️ No session in localStorage");
+      return null;
+    }
+
+    const session = JSON.parse(storedSession);
+    const token = session?.currentSession?.access_token || session?.access_token;
+
+    if (!token) {
+      console.error("[SUPABASE] ❌ Session exists but no access_token!");
+      return null;
+    }
+
+    console.log(`[SUPABASE] ✅ Token retrieved from localStorage:`, {
+      length: token.length,
+      preview: token.substring(0, 30) + '...',
+    });
+
+    return token;
+  } catch (error) {
+    console.error("[SUPABASE] 💥 Exception getting access token:", error);
     return null;
   }
-
-  return data.session?.access_token ?? null;
 }

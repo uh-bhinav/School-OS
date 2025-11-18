@@ -1,5 +1,5 @@
 // src/app/components/Shell.tsx (enhanced version)
-import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
@@ -15,6 +15,7 @@ import {
   MenuItem,
   Divider,
   Collapse,
+  CircularProgress,
 } from "@mui/material";
 import {
   Dashboard as DashboardIcon,
@@ -30,16 +31,61 @@ import {
   CalendarToday,
   Assignment,
   BarChart,
+  EmojiEvents,
+  People,
+  Groups,
+  Star,
+  Receipt,
+  Payment,
+  LocalOffer,
+  Undo,
+  PhotoLibrary,
+  ShoppingBag,
 } from "@mui/icons-material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useConfigStore } from "../stores/useConfigStore";
 import { supabase } from "../services/supabase";
+import { ConfigRoot } from "../providers/ConfigProvider"; // ✅ Import ConfigProvider
 
 export function Protected({ children }: { children: React.ReactNode }) {
-  const role = useAuthStore((s) => s.role);
-  if (!role) return <Navigate to="/auth/login" replace />;
-  if (role !== "admin")
+  const { role, schoolId, userId } = useAuthStore();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Simple check - if no auth data, redirect to login
+    // AuthProvider handles all the session restoration logic
+    if (!role || !schoolId || !userId) {
+      console.log("[PROTECTED] ❌ No auth data - redirecting to login");
+      navigate("/auth/login", { replace: true });
+    } else {
+      console.log("[PROTECTED] ✅ Auth verified:", { role, schoolId });
+    }
+  }, [role, schoolId, userId, navigate]);
+
+  // If no auth, don't render (will redirect)
+  if (!role || !schoolId || !userId) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
+        <CircularProgress />
+        <Typography variant="body2" color="text.secondary">
+          Checking authentication...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Check admin privileges
+  if (role !== "admin") {
     return (
       <Box
         sx={{
@@ -54,6 +100,8 @@ export function Protected({ children }: { children: React.ReactNode }) {
         </Typography>
       </Box>
     );
+  }
+
   return <>{children}</>;
 }
 
@@ -81,11 +129,29 @@ const navigationItems: NavItem[] = [
     icon: <SchoolIcon />,
     path: '/academics',
     children: [
-      { key: 'attendance', label: 'Attendance', icon: <CalendarToday fontSize="small" />, path: '/academics/attendance', module: 'academics.attendance' },
-      { key: 'timetable', label: 'Timetable', icon: <Assignment fontSize="small" />, path: '/academics/timetable', module: 'academics.timetable' },
-      { key: 'exams', label: 'Exams', icon: <BarChart fontSize="small" />, path: '/academics/exams', module: 'academics.exams' },
-      { key: 'marks', label: 'Marks', icon: <Assignment fontSize="small" />, path: '/academics/marks', module: 'academics.marks' },
+      { key: 'attendance', label: 'Attendance', icon: <CalendarToday fontSize="small" />, path: '/academics/attendance', module: 'attendance' },
+      { key: 'timetable', label: 'Timetable', icon: <Assignment fontSize="small" />, path: '/academics/timetable', module: 'timetable' },
+      { key: 'exams', label: 'Exams', icon: <BarChart fontSize="small" />, path: '/academics/exams', module: 'exams' },
+      { key: 'marks', label: 'Marks', icon: <Assignment fontSize="small" />, path: '/academics/marks', module: 'marks' },
+      { key: 'leaderboards', label: 'Leaderboards', icon: <EmojiEvents fontSize="small" />, path: '/academics/leaderboards' },
+      { key: 'teachers', label: 'Teachers', icon: <People fontSize="small" />, path: '/academics/teachers' },
+      { key: 'clubs', label: 'Clubs & Activities', icon: <Groups fontSize="small" />, path: '/academics/clubs' },
+      { key: 'achievements', label: 'Achievements', icon: <Star fontSize="small" />, path: '/academics/achievements' },
     ],
+  },
+  {
+    key: 'announcements',
+    label: 'Announcements',
+    icon: <AnnouncementIcon />,
+    path: '/announcements',
+    module: 'announcements',
+  },
+  {
+    key: 'communications',
+    label: 'Messages',
+    icon: <AnnouncementIcon />,
+    path: '/communications',
+    module: 'communications',
   },
   {
     key: 'finance',
@@ -93,22 +159,22 @@ const navigationItems: NavItem[] = [
     icon: <MoneyIcon />,
     path: '/finance',
     children: [
-      { key: 'fees', label: 'Fees', icon: <MoneyIcon fontSize="small" />, path: '/finance/fees', module: 'finance.fees' },
+      { key: 'fees', label: 'Fees', icon: <MoneyIcon fontSize="small" />, path: '/finance/fees', module: 'fee-management' },
+      { key: 'invoices', label: 'Invoices', icon: <Receipt fontSize="small" />, path: '/finance/invoices' },
+      { key: 'payments', label: 'Payments', icon: <Payment fontSize="small" />, path: '/finance/payments' },
+      { key: 'discounts', label: 'Discounts', icon: <LocalOffer fontSize="small" />, path: '/finance/discounts' },
+      { key: 'refunds', label: 'Refunds', icon: <Undo fontSize="small" />, path: '/finance/refunds' },
     ],
   },
   {
     key: 'media',
-    label: 'Media',
+    label: 'Media & Store',
     icon: <ImageIcon />,
     path: '/media',
-    module: 'media.media',
-  },
-  {
-    key: 'comms',
-    label: 'Communications',
-    icon: <AnnouncementIcon />,
-    path: '/comms',
-    module: 'comms.announcements',
+    children: [
+      { key: 'albums', label: 'Albums', icon: <PhotoLibrary fontSize="small" />, path: '/media/albums' },
+      { key: 'products', label: 'Products', icon: <ShoppingBag fontSize="small" />, path: '/media/products' },
+    ],
   },
 ];
 
@@ -151,8 +217,10 @@ export function Shell() {
     return location.pathname === path;
   };
 
+  // ✅ Wrap Shell content in ConfigRoot to load configuration after auth
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+    <ConfigRoot>
+      <Box sx={{ display: "flex", minHeight: "100vh" }}>
       <AppBar
         position="fixed"
         sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
@@ -300,5 +368,6 @@ export function Shell() {
         <Outlet />
       </Box>
     </Box>
+    </ConfigRoot>
   );
 }

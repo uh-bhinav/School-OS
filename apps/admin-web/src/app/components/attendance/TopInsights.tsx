@@ -29,7 +29,7 @@ export default function TopInsights({
     }
 
     // Insight 1: Overall class performance
-    if (weeklySummary && weeklySummary.buckets.length > 0) {
+    if (weeklySummary && weeklySummary.buckets && weeklySummary.buckets.length > 0) {
       const avgPresent = weeklySummary.buckets.reduce((sum, b) => sum + b.present_pct, 0) / weeklySummary.buckets.length;
 
       if (avgPresent >= 95) {
@@ -68,7 +68,7 @@ export default function TopInsights({
     }
 
     // Insight 3: Current day status
-    if (currentData && currentData.items.length > 0) {
+    if (currentData && currentData.items && currentData.items.length > 0) {
       const late = currentData.items.filter((i) => i.status === "LATE").length;
       const total = currentData.items.length;
       const unmarked = Math.max(0, currentData.total - total);
