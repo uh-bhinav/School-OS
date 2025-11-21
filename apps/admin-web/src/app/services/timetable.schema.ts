@@ -74,3 +74,33 @@ export const ConflictCheckResponse = z.object({
   })),
 });
 export type ConflictCheckResponse = z.infer<typeof ConflictCheckResponse>;
+
+// Custom constraint for timetable generation
+export const CustomConstraint = z.object({
+  id: z.string(),
+  description: z.string(),
+  priority: z.union([z.literal(1), z.literal(2), z.literal(3)]), // 1=High, 2=Medium, 3=Low
+});
+export type CustomConstraint = z.infer<typeof CustomConstraint>;
+
+// Teacher workload constraints
+export const TeacherConstraints = z.object({
+  maxClassesPerDay: z.number().min(1).max(10),
+  maxClassesPerWeek: z.number().min(1).max(50),
+  minClassesPerDay: z.number().min(0).max(10),
+  minClassesPerWeek: z.number().min(0).max(50),
+  prioritizeCoreSubjects: z.boolean(),
+  coreSubjectNames: z.array(z.string()),
+});
+export type TeacherConstraints = z.infer<typeof TeacherConstraints>;
+
+// Request schema for timetable generation
+export const TimetableGenerateRequest = z.object({
+  academic_year_id: z.number(),
+  class_id: z.number(),
+  section: z.string(),
+  week_start: z.string().optional(),
+  constraints: z.array(CustomConstraint).optional(),
+  teacher_constraints: TeacherConstraints.optional(),
+});
+export type TimetableGenerateRequest = z.infer<typeof TimetableGenerateRequest>;

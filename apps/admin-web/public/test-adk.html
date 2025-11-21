@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADK Server Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>ADK Server Connection Test</h1>
+    <p>Testing connection to: <strong id="api-url">http://localhost:8004</strong></p>
+
+    <button onclick="testHealth()">Test Health Endpoint</button>
+    <button onclick="testRoot()">Test Root Endpoint</button>
+    <button onclick="testNewSession()">Test New Session</button>
+    <button onclick="testSendMessage()">Test Send Message</button>
+
+    <div id="result"></div>
+
+    <script>
+        const API_URL = 'http://localhost:8004';
+        const resultDiv = document.getElementById('result');
+
+        function log(message, isError = false) {
+            const timestamp = new Date().toLocaleTimeString();
+            resultDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            resultDiv.className = isError ? 'error' : 'success';
+            console.log(message);
+        }
+
+        function clearLog() {
+            resultDiv.innerHTML = '';
+        }
+
+        async function testHealth() {
+            clearLog();
+            log('Testing health endpoint...');
+            try {
+                const response = await fetch(`${API_URL}/api/health`);
+                log(`Status: ${response.status} ${response.statusText}`);
+                const data = await response.json();
+                log(`Response: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                log(`ERROR: ${error.message}`, true);
+                log(`Full error: ${JSON.stringify(error, null, 2)}`, true);
+            }
+        }
+
+        async function testRoot() {
+            clearLog();
+            log('Testing root endpoint...');
+            try {
+                const response = await fetch(`${API_URL}/`);
+                log(`Status: ${response.status} ${response.statusText}`);
+                const data = await response.json();
+                log(`Response: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                log(`ERROR: ${error.message}`, true);
+                log(`Full error: ${JSON.stringify(error, null, 2)}`, true);
+            }
+        }
+
+        async function testNewSession() {
+            clearLog();
+            log('Testing new session endpoint...');
+            try {
+                const response = await fetch(`${API_URL}/api/chat/new_session`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                log(`Status: ${response.status} ${response.statusText}`);
+                const data = await response.json();
+                log(`Response: ${JSON.stringify(data, null, 2)}`);
+                window.testSessionId = data.session_id;
+                log(`Session ID saved: ${window.testSessionId}`);
+            } catch (error) {
+                log(`ERROR: ${error.message}`, true);
+                log(`Full error: ${JSON.stringify(error, null, 2)}`, true);
+            }
+        }
+
+        async function testSendMessage() {
+            clearLog();
+            if (!window.testSessionId) {
+                log('Creating session first...');
+                await testNewSession();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            log(`Sending test message with session_id: ${window.testSessionId}`);
+            try {
+                const response = await fetch(`${API_URL}/api/chat/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: 'Hello, this is a test!',
+                        session_id: window.testSessionId
+                    })
+                });
+                log(`Status: ${response.status} ${response.statusText}`);
+                const data = await response.json();
+                log(`Response: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                log(`ERROR: ${error.message}`, true);
+                log(`Full error: ${JSON.stringify(error, null, 2)}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

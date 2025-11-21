@@ -41,6 +41,7 @@ import {
   Undo,
   PhotoLibrary,
   ShoppingBag,
+  PersonOutline,
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../stores/useAuthStore";
@@ -135,6 +136,7 @@ const navigationItems: NavItem[] = [
       { key: 'marks', label: 'Marks', icon: <Assignment fontSize="small" />, path: '/academics/marks', module: 'marks' },
       { key: 'leaderboards', label: 'Leaderboards', icon: <EmojiEvents fontSize="small" />, path: '/academics/leaderboards' },
       { key: 'teachers', label: 'Teachers', icon: <People fontSize="small" />, path: '/academics/teachers' },
+      { key: 'students', label: 'Students', icon: <PersonOutline fontSize="small" />, path: '/academics/students' },
       { key: 'clubs', label: 'Clubs & Activities', icon: <Groups fontSize="small" />, path: '/academics/clubs' },
       { key: 'achievements', label: 'Achievements', icon: <Star fontSize="small" />, path: '/academics/achievements' },
     ],

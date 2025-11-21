@@ -99,10 +99,11 @@ function initializeMockClubs() {
       });
     }
 
-    // Generate memberships
+    // Generate memberships - assign random students from 1-700
     const roles = [ClubMembershipRole.president, ClubMembershipRole.vice_president, ClubMembershipRole.secretary, ClubMembershipRole.treasurer, ClubMembershipRole.member];
     for (let i = 0; i < memberCount; i++) {
-      const studentId = 1000 + clubId * 100 + i;
+      // Distribute students across all 700 students, ensuring variety
+      const studentId = Math.floor(Math.random() * 700) + 1;
       const role = i < 4 ? roles[i] : roles[4];
 
       mockClubMemberships.push({

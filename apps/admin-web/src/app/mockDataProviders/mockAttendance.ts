@@ -26,11 +26,7 @@ const mockAttendanceRecords: AttendanceRecord[] = [];
 function initializeMockAttendance() {
   if (mockAttendanceRecords.length > 0) return; // Already initialized
 
-  const statuses: AttendanceStatus[] = ["PRESENT", "ABSENT", "LATE", "EXCUSED"];
-  const classIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Classes 1-10
-  const studentsPerClass = 40;
-
-  // Generate attendance for last 30 days
+  // Generate attendance for last 30 days for student IDs 1-700 (matching mockStudents pattern)
   const today = new Date();
   for (let dayOffset = 0; dayOffset < 30; dayOffset++) {
     const date = new Date(today);
@@ -40,30 +36,28 @@ function initializeMockAttendance() {
     // Skip weekends
     if (date.getDay() === 0 || date.getDay() === 6) continue;
 
-    classIds.forEach((classId) => {
-      for (let studentNum = 1; studentNum <= studentsPerClass; studentNum++) {
-        const studentId = classId * 1000 + studentNum;
+    for (let studentId = 1; studentId <= 700; studentId++) {
+      const classId = Math.ceil(studentId / 70); // Approx 70 students per class
 
-        // 85% present, 5% absent, 5% late, 5% excused
-        const rand = Math.random();
-        let status: AttendanceStatus;
-        if (rand < 0.85) status = "PRESENT";
-        else if (rand < 0.90) status = "ABSENT";
-        else if (rand < 0.95) status = "LATE";
-        else status = "EXCUSED";
+      // 85% present, 5% absent, 5% late, 5% excused
+      const rand = Math.random();
+      let status: AttendanceStatus;
+      if (rand < 0.85) status = "PRESENT";
+      else if (rand < 0.90) status = "ABSENT";
+      else if (rand < 0.95) status = "LATE";
+      else status = "EXCUSED";
 
-        mockAttendanceRecords.push({
-          attendance_id: ++attendanceIdCounter,
-          student_id: studentId,
-          class_id: classId,
-          date: dateStr,
-          status,
-          remarks: status === "ABSENT" ? "Medical leave" : null,
-          marked_by: "Teacher",
-          marked_at: new Date().toISOString(),
-        });
-      }
-    });
+      mockAttendanceRecords.push({
+        attendance_id: ++attendanceIdCounter,
+        student_id: studentId,
+        class_id: classId,
+        date: dateStr,
+        status,
+        remarks: status === "ABSENT" ? "Medical leave" : null,
+        marked_by: "Teacher",
+        marked_at: new Date().toISOString(),
+      });
+    }
   }
 
   console.log(`[MOCK ATTENDANCE] Initialized ${mockAttendanceRecords.length} records`);
@@ -84,13 +78,13 @@ export async function getMockClassAttendanceForDate(
     (r) => r.class_id === classId && r.date === date
   );
 
-  // If no records exist for this date, generate them on the fly
+  // If no records exist for this date, generate them on the fly for students in that class
   if (records.length === 0) {
-    const studentsPerClass = 40;
+    // Get students for this class (approx 70 students per class)
+    const startStudentId = (classId - 1) * 70 + 1;
+    const endStudentId = classId * 70;
 
-    for (let studentNum = 1; studentNum <= studentsPerClass; studentNum++) {
-      const studentId = classId * 1000 + studentNum;
-
+    for (let studentId = startStudentId; studentId <= Math.min(endStudentId, 700); studentId++) {
       // 85% present, 5% absent, 5% late, 5% excused
       const rand = Math.random();
       let status: AttendanceStatus;

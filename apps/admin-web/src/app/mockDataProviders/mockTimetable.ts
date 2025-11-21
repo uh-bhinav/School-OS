@@ -21,30 +21,41 @@ import type {
 let entryIdCounter = 10000;
 const mockTimetableEntries: TimetableEntry[] = [];
 
-// Standard periods for all classes
+// Standard periods for all classes (with breaks)
 const standardPeriods: Period[] = [
   { period_no: 1, start_time: "08:00", end_time: "08:45" },
   { period_no: 2, start_time: "08:50", end_time: "09:35" },
   { period_no: 3, start_time: "09:40", end_time: "10:25" },
-  { period_no: 4, start_time: "10:45", end_time: "11:30" }, // After break
+  // SHORT BREAK: 10:25 - 10:45 (20 mins)
+  { period_no: 4, start_time: "10:45", end_time: "11:30" },
   { period_no: 5, start_time: "11:35", end_time: "12:20" },
   { period_no: 6, start_time: "12:25", end_time: "13:10" },
-  { period_no: 7, start_time: "14:00", end_time: "14:45" }, // After lunch
+  // LUNCH BREAK: 13:10 - 14:00 (50 mins)
+  { period_no: 7, start_time: "14:00", end_time: "14:45" },
   { period_no: 8, start_time: "14:50", end_time: "15:35" },
 ];
 
-const weekDays: DayOfWeek[] = ["MON", "TUE", "WED", "THU", "FRI"];
+const weekDays: DayOfWeek[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-const subjects = [
-  { id: 1, name: "Mathematics" },
-  { id: 2, name: "Science" },
-  { id: 3, name: "English" },
-  { id: 4, name: "Social Studies" },
-  { id: 5, name: "Hindi" },
-  { id: 6, name: "Physical Education" },
-  { id: 7, name: "Computer Science" },
-  { id: 8, name: "Arts" },
+// Core subjects (taught before lunch, high priority)
+const coreSubjects = [
+  { id: 1, name: "Mathematics", category: "core" },
+  { id: 2, name: "Science", category: "core" },
+  { id: 3, name: "English", category: "core" },
+  { id: 4, name: "Social Studies", category: "core" },
 ];
+
+// Secondary subjects (can be anywhere, but preferably afternoon)
+const secondarySubjects = [
+  { id: 5, name: "Hindi", category: "language" },
+  { id: 6, name: "Physical Education", category: "activity" },
+  { id: 7, name: "Computer Science", category: "lab" },
+  { id: 8, name: "Arts & Crafts", category: "activity" },
+  { id: 9, name: "Music", category: "activity" },
+  { id: 10, name: "Sanskrit", category: "language" },
+];
+
+const allSubjects = [...coreSubjects, ...secondarySubjects];
 
 const teachers = [
   { id: 1, name: "Mr. Sharma" },
@@ -55,6 +66,8 @@ const teachers = [
   { id: 6, name: "Mr. Kumar" },
   { id: 7, name: "Ms. Reddy" },
   { id: 8, name: "Mr. Mehta" },
+  { id: 9, name: "Mrs. Desai" },
+  { id: 10, name: "Mr. Joshi" },
 ];
 
 const rooms = [
@@ -64,7 +77,137 @@ const rooms = [
   { id: 4, name: "Lab 1" },
   { id: 5, name: "Lab 2" },
   { id: 6, name: "Sports Hall" },
+  { id: 7, name: "Music Room" },
+  { id: 8, name: "Art Studio" },
 ];
+
+/**
+ * Generate a realistic timetable schedule with proper subject distribution
+ * Rules:
+ * - Core subjects (Math, Science, English, Social) in periods 1-6 (before lunch)
+ * - Each core subject appears daily
+ * - One core subject has 2 periods on one day (block period)
+ * - Languages and activities (PE, Music, Arts) after lunch (periods 7-8)
+ * - Computer Science lab on one day (block period)
+ */
+function generateRealisticSchedule(
+  classId: number,
+  section: string,
+  weekStart: string,
+  academicYearId: number
+): TimetableEntry[] {
+  const entries: TimetableEntry[] = [];
+
+  // Define weekly schedule template (what subject goes where)
+  const weeklySchedule: Record<DayOfWeek, { period: number; subjectId: number; teacherId: number; roomId?: number }[]> = {
+    MON: [
+      { period: 1, subjectId: 1, teacherId: 1, roomId: 1 }, // Mathematics
+      { period: 2, subjectId: 2, teacherId: 2, roomId: 1 }, // Science
+      { period: 3, subjectId: 3, teacherId: 3, roomId: 1 }, // English
+      // SHORT BREAK
+      { period: 4, subjectId: 1, teacherId: 1, roomId: 1 }, // Mathematics (double period)
+      { period: 5, subjectId: 4, teacherId: 4, roomId: 1 }, // Social Studies
+      { period: 6, subjectId: 2, teacherId: 2, roomId: 1 }, // Science
+      // LUNCH BREAK
+      { period: 7, subjectId: 5, teacherId: 5, roomId: 2 }, // Hindi
+      { period: 8, subjectId: 6, teacherId: 6, roomId: 6 }, // PE
+    ],
+    TUE: [
+      { period: 1, subjectId: 2, teacherId: 2, roomId: 1 }, // Science
+      { period: 2, subjectId: 1, teacherId: 1, roomId: 1 }, // Mathematics
+      { period: 3, subjectId: 3, teacherId: 3, roomId: 1 }, // English
+      // SHORT BREAK
+      { period: 4, subjectId: 4, teacherId: 4, roomId: 1 }, // Social Studies
+      { period: 5, subjectId: 7, teacherId: 7, roomId: 4 }, // Computer Science (block period)
+      { period: 6, subjectId: 7, teacherId: 7, roomId: 4 }, // Computer Science (block period)
+      // LUNCH BREAK
+      { period: 7, subjectId: 10, teacherId: 10, roomId: 2 }, // Sanskrit
+      { period: 8, subjectId: 8, teacherId: 8, roomId: 8 }, // Arts & Crafts
+    ],
+    WED: [
+      { period: 1, subjectId: 1, teacherId: 1, roomId: 1 }, // Mathematics
+      { period: 2, subjectId: 3, teacherId: 3, roomId: 1 }, // English
+      { period: 3, subjectId: 2, teacherId: 2, roomId: 1 }, // Science (double period)
+      // SHORT BREAK
+      { period: 4, subjectId: 2, teacherId: 2, roomId: 5 }, // Science Lab (block period)
+      { period: 5, subjectId: 4, teacherId: 4, roomId: 1 }, // Social Studies
+      { period: 6, subjectId: 1, teacherId: 1, roomId: 1 }, // Mathematics
+      // LUNCH BREAK
+      { period: 7, subjectId: 5, teacherId: 5, roomId: 2 }, // Hindi
+      { period: 8, subjectId: 9, teacherId: 9, roomId: 7 }, // Music
+    ],
+    THU: [
+      { period: 1, subjectId: 3, teacherId: 3, roomId: 1 }, // English
+      { period: 2, subjectId: 1, teacherId: 1, roomId: 1 }, // Mathematics
+      { period: 3, subjectId: 4, teacherId: 4, roomId: 1 }, // Social Studies
+      // SHORT BREAK
+      { period: 4, subjectId: 2, teacherId: 2, roomId: 1 }, // Science
+      { period: 5, subjectId: 3, teacherId: 3, roomId: 1 }, // English (double period)
+      { period: 6, subjectId: 1, teacherId: 1, roomId: 1 }, // Mathematics
+      // LUNCH BREAK
+      { period: 7, subjectId: 6, teacherId: 6, roomId: 6 }, // PE
+      { period: 8, subjectId: 10, teacherId: 10, roomId: 2 }, // Sanskrit
+    ],
+    FRI: [
+      { period: 1, subjectId: 2, teacherId: 2, roomId: 1 }, // Science
+      { period: 2, subjectId: 3, teacherId: 3, roomId: 1 }, // English
+      { period: 3, subjectId: 1, teacherId: 1, roomId: 1 }, // Mathematics
+      // SHORT BREAK
+      { period: 4, subjectId: 4, teacherId: 4, roomId: 1 }, // Social Studies (double period)
+      { period: 5, subjectId: 4, teacherId: 4, roomId: 1 }, // Social Studies (double period)
+      { period: 6, subjectId: 2, teacherId: 2, roomId: 1 }, // Science
+      // LUNCH BREAK
+      { period: 7, subjectId: 5, teacherId: 5, roomId: 2 }, // Hindi
+      { period: 8, subjectId: 8, teacherId: 8, roomId: 8 }, // Arts & Crafts
+    ],
+    SAT: [
+      { period: 1, subjectId: 1, teacherId: 1, roomId: 1 }, // Mathematics
+      { period: 2, subjectId: 3, teacherId: 3, roomId: 1 }, // English
+      { period: 3, subjectId: 2, teacherId: 2, roomId: 1 }, // Science
+      // SHORT BREAK
+      { period: 4, subjectId: 7, teacherId: 7, roomId: 4 }, // Computer Science
+      { period: 5, subjectId: 4, teacherId: 4, roomId: 1 }, // Social Studies
+      { period: 6, subjectId: 1, teacherId: 1, roomId: 1 }, // Mathematics
+      // LUNCH BREAK
+      { period: 7, subjectId: 6, teacherId: 6, roomId: 6 }, // PE
+      { period: 8, subjectId: 9, teacherId: 9, roomId: 7 }, // Music
+    ],
+    SUN: [], // No classes on Sunday
+  };
+
+  // Generate entries from the schedule
+  weekDays.forEach((day) => {
+    const daySchedule = weeklySchedule[day];
+    daySchedule.forEach((slot) => {
+      const subject = allSubjects.find((s) => s.id === slot.subjectId);
+      const teacher = teachers.find((t) => t.id === slot.teacherId);
+      const room = slot.roomId ? rooms.find((r) => r.id === slot.roomId) : null;
+
+      if (subject && teacher) {
+        entries.push({
+          id: ++entryIdCounter,
+          academic_year_id: academicYearId,
+          school_id: 1,
+          class_id: classId,
+          section,
+          week_start: weekStart,
+          day,
+          period_no: slot.period,
+          subject_id: subject.id,
+          subject_name: subject.name,
+          teacher_id: teacher.id,
+          teacher_name: teacher.name,
+          room_id: room?.id || null,
+          room_name: room?.name || null,
+          is_published: false,
+          is_editable: true,
+        });
+      }
+    });
+  });
+
+  return entries;
+}
 
 // ============================================================================
 // INITIALIZATION
@@ -73,57 +216,25 @@ function initializeMockTimetable() {
   if (mockTimetableEntries.length > 0) return;
 
   const classIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  const sections = ["A", "B", "C"];
+  const sections = ["A", "B"];
 
-  // Get current week's Monday
+  // Get current week's Monday (same calculation as in component)
   const today = new Date();
+  const dayOfWeek = today.getDay();
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   const monday = new Date(today);
-  monday.setDate(today.getDate() - today.getDay() + 1);
+  monday.setDate(today.getDate() + diff);
   const weekStart = monday.toISOString().split("T")[0];
 
   classIds.forEach((classId) => {
     sections.forEach((section) => {
-      weekDays.forEach((day, dayIndex) => {
-        standardPeriods.forEach((period) => {
-          // Skip lunch period (period 6-7 transition)
-          if (period.period_no === 7) return;
-
-          // Select subject cyclically
-          const subjectIdx = (dayIndex * standardPeriods.length + period.period_no - 1) % subjects.length;
-          const subject = subjects[subjectIdx];
-
-          // Assign teacher based on subject
-          const teacherIdx = subjectIdx % teachers.length;
-          const teacher = teachers[teacherIdx];
-
-          // Assign room
-          const roomIdx = (classId + dayIndex + period.period_no) % rooms.length;
-          const room = rooms[roomIdx];
-
-          mockTimetableEntries.push({
-            id: ++entryIdCounter,
-            academic_year_id: 2025,
-            school_id: 1,
-            class_id: classId,
-            section,
-            week_start: weekStart,
-            day,
-            period_no: period.period_no,
-            subject_id: subject.id,
-            subject_name: subject.name,
-            teacher_id: teacher.id,
-            teacher_name: teacher.name,
-            room_id: room.id,
-            room_name: room.name,
-            is_published: true,
-            is_editable: true,
-          });
-        });
-      });
+      // Use the realistic schedule generator with academic_year_id: 1 to match component
+      const entries = generateRealisticSchedule(classId, section, weekStart, 1);
+      mockTimetableEntries.push(...entries);
     });
   });
 
-  console.log(`[MOCK TIMETABLE] Initialized ${mockTimetableEntries.length} entries`);
+  console.log(`[MOCK TIMETABLE] Initialized ${mockTimetableEntries.length} entries for week ${weekStart}`);
 }
 
 // ============================================================================
@@ -139,6 +250,9 @@ export async function getMockTimetableGrid(params: {
   initializeMockTimetable();
   await simulateDelay();
 
+  console.log(`[MOCK TIMETABLE] getTimetableGrid called with:`, params);
+  console.log(`[MOCK TIMETABLE] Total entries in memory:`, mockTimetableEntries.length);
+
   const entries = mockTimetableEntries.filter(
     (e) =>
       e.academic_year_id === params.academic_year_id &&
@@ -147,7 +261,7 @@ export async function getMockTimetableGrid(params: {
       e.week_start === params.week_start
   );
 
-  console.log(`[MOCK TIMETABLE] getTimetableGrid → ${entries.length} entries`);
+  console.log(`[MOCK TIMETABLE] getTimetableGrid → ${entries.length} entries found for class ${params.class_id}, section ${params.section}, week ${params.week_start}`);
 
   return {
     academic_year_id: params.academic_year_id,
@@ -173,7 +287,7 @@ export async function createMockEntry(payload: TimetableUpsert): Promise<Timetab
   initializeMockTimetable();
   await simulateDelay(250);
 
-  const subject = subjects.find((s) => s.id === payload.subject_id);
+  const subject = allSubjects.find((s) => s.id === payload.subject_id);
   const teacher = teachers.find((t) => t.id === payload.teacher_id);
   const room = payload.room_id ? rooms.find((r) => r.id === payload.room_id) : null;
 
@@ -209,7 +323,7 @@ export async function updateMockEntry(id: number, patch: Partial<TimetableUpsert
   if (!entry) throw new Error(`Timetable entry #${id} not found`);
 
   if (patch.subject_id !== undefined) {
-    const subject = subjects.find((s) => s.id === patch.subject_id);
+    const subject = allSubjects.find((s) => s.id === patch.subject_id);
     entry.subject_id = patch.subject_id;
     entry.subject_name = subject?.name || "Unknown Subject";
   }
@@ -300,7 +414,7 @@ export async function generateMockTimetable(payload: {
   week_start?: string;
 }): Promise<{ entries: TimetableEntry[] }> {
   initializeMockTimetable();
-  await simulateDelay(1000); // Longer delay for generation
+  await simulateDelay(1500); // Longer delay for realistic generation
 
   // Use provided week_start or default to current week's Monday
   let weekStart: string;
@@ -331,41 +445,15 @@ export async function generateMockTimetable(payload: {
     mockTimetableEntries.splice(existingIndices[i], 1);
   }
 
-  const newEntries: TimetableEntry[] = [];
+  // Generate realistic schedule
+  const newEntries = generateRealisticSchedule(
+    payload.class_id,
+    payload.section,
+    weekStart,
+    payload.academic_year_id
+  );
 
-  weekDays.forEach((day, dayIndex) => {
-    standardPeriods.forEach((period) => {
-      // Generate for all periods including period 7
-      const subjectIdx = (dayIndex * standardPeriods.length + period.period_no - 1) % subjects.length;
-      const subject = subjects[subjectIdx];
-      const teacherIdx = subjectIdx % teachers.length;
-      const teacher = teachers[teacherIdx];
-      const roomIdx = (payload.class_id + dayIndex + period.period_no) % rooms.length;
-      const room = rooms[roomIdx];
-
-      const entry: TimetableEntry = {
-        id: ++entryIdCounter,
-        academic_year_id: payload.academic_year_id,
-        school_id: 1,
-        class_id: payload.class_id,
-        section: payload.section,
-        week_start: weekStart,
-        day,
-        period_no: period.period_no,
-        subject_id: subject.id,
-        subject_name: subject.name,
-        teacher_id: teacher.id,
-        teacher_name: teacher.name,
-        room_id: room.id,
-        room_name: room.name,
-        is_published: false,
-        is_editable: true,
-      };
-
-      mockTimetableEntries.push(entry);
-      newEntries.push(entry);
-    });
-  });
+  mockTimetableEntries.push(...newEntries);
 
   console.log(`[MOCK TIMETABLE] Generated ${newEntries.length} entries for week ${weekStart}`);
   return { entries: newEntries };

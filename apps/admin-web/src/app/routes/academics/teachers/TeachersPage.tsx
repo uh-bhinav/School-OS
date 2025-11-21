@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -18,11 +19,12 @@ import {
   InputAdornment,
   Button,
 } from '@mui/material';
-import { Search, Edit, Delete, Add, Phone, Email } from '@mui/icons-material';
+import { Search, Edit, Delete, Add, Phone, Email, Visibility } from '@mui/icons-material';
 import { getTeachers, getTeacherKPI } from '@/app/services/teachers.api';
 import type { Teacher } from '@/app/services/teacher.schema';
 
 export default function TeachersPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const teachers = getTeachers();
   const kpi = getTeacherKPI();
@@ -115,7 +117,12 @@ export default function TeachersPage() {
           </TableHead>
           <TableBody>
             {filteredTeachers.map((teacher: Teacher) => (
-              <TableRow key={teacher.teacher_id} hover>
+              <TableRow
+                key={teacher.teacher_id}
+                hover
+                onClick={() => navigate(`/academics/teachers/${teacher.teacher_id}`)}
+                sx={{ cursor: 'pointer' }}
+              >
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Avatar>{teacher.full_name.charAt(0)}</Avatar>
@@ -166,10 +173,28 @@ export default function TeachersPage() {
                   />
                 </TableCell>
                 <TableCell align="right">
-                  <IconButton size="small" color="primary">
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/academics/teachers/${teacher.teacher_id}`);
+                    }}
+                  >
+                    <Visibility fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Edit fontSize="small" />
                   </IconButton>
-                  <IconButton size="small" color="error">
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Delete fontSize="small" />
                   </IconButton>
                 </TableCell>

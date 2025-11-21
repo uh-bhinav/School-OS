@@ -24,47 +24,45 @@ const mockMarks: Mark[] = [];
 function initializeMockMarks() {
   if (mockMarks.length > 0) return;
 
-  const classIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const examIds = [1, 2, 3, 4, 5]; // Reference to exams
   const subjectIds = [1, 2, 3, 4, 5]; // Math, Science, English, Social, Hindi
   const subjectNames = ["Mathematics", "Science", "English", "Social Studies", "Hindi"];
-  const studentsPerClass = 40;
 
-  classIds.forEach((classId) => {
-    for (let studentNum = 1; studentNum <= studentsPerClass; studentNum++) {
-      const studentId = classId * 1000 + studentNum;
+  // Generate marks for student IDs 1-700 (matching mockStudents pattern)
+  for (let studentId = 1; studentId <= 700; studentId++) {
+    const classId = Math.ceil(studentId / 70); // Approx 70 students per class (classes 1-10)
+    const rollNo = ((studentId - 1) % 70) + 1;
 
-      examIds.forEach((examId) => {
-        subjectIds.forEach((subjectId, idx) => {
-          const maxMarks = 100;
-          const obtainedMarks = Math.round(35 + Math.random() * 60);
-          const percentage = calculatePercentage(obtainedMarks, maxMarks);
-          const grade = calculateGrade(percentage);
+    examIds.forEach((examId) => {
+      subjectIds.forEach((subjectId, idx) => {
+        const maxMarks = 100;
+        const obtainedMarks = Math.round(35 + Math.random() * 60);
+        const percentage = calculatePercentage(obtainedMarks, maxMarks);
+        const grade = calculateGrade(percentage);
 
-          mockMarks.push({
-            id: ++markIdCounter,
-            school_id: 1,
-            student_id: studentId,
-            exam_id: examId,
-            subject_id: subjectId,
-            marks_obtained: obtainedMarks,
-            max_marks: maxMarks,
-            remarks: percentage < 40 ? "Needs improvement" : null,
-            entered_by_teacher_id: 1,
-            student_name: `Student ${studentNum}`,
-            roll_no: String(studentNum),
-            class_id: classId,
-            section: "A",
-            subject_name: subjectNames[idx],
-            exam_name: `Exam ${examId}`,
-            exam_date: `2025-${String(examId + 7).padStart(2, "0")}-15`,
-            grade,
-            percentage,
-          });
+        mockMarks.push({
+          id: ++markIdCounter,
+          school_id: 1,
+          student_id: studentId,
+          exam_id: examId,
+          subject_id: subjectId,
+          marks_obtained: obtainedMarks,
+          max_marks: maxMarks,
+          remarks: percentage < 40 ? "Needs improvement" : null,
+          entered_by_teacher_id: 1,
+          student_name: `Student ${studentId}`,
+          roll_no: String(rollNo),
+          class_id: classId,
+          section: studentId % 2 === 0 ? "A" : "B",
+          subject_name: subjectNames[idx],
+          exam_name: `Exam ${examId}`,
+          exam_date: `2025-${String(examId + 7).padStart(2, "0")}-15`,
+          grade,
+          percentage,
         });
       });
-    }
-  });
+    });
+  }
 
   console.log(`[MOCK MARKS] Initialized ${mockMarks.length} marks`);
 }

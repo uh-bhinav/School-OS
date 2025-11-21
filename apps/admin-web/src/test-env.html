@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environment Variable Test</title>
+</head>
+<body>
+    <h1>Environment Variable Test</h1>
+    <div id="result"></div>
+
+    <script type="module">
+        const adkUrl = import.meta.env.VITE_ADK_API_URL;
+        const resultDiv = document.getElementById('result');
+
+        resultDiv.innerHTML = `
+            <p><strong>VITE_ADK_API_URL:</strong> ${adkUrl || 'NOT DEFINED'}</p>
+            <p><strong>Expected:</strong> http://localhost:8004</p>
+            <p><strong>Status:</strong> ${adkUrl === 'http://localhost:8004' ? '✅ CORRECT' : '❌ INCORRECT - Please restart the dev server!'}</p>
+        `;
+
+        console.log('VITE_ADK_API_URL:', adkUrl);
+    </script>
+</body>
+</html>

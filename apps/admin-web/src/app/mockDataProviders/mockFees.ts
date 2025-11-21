@@ -72,46 +72,42 @@ const mockPayments: Payment[] = [];
 function initializeMockFees() {
   if (mockInvoices.length > 0) return;
 
-  const classIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  const studentsPerClass = 40;
+  // Generate invoices for student IDs 1-700 (matching mockStudents pattern)
+  for (let studentId = 1; studentId <= 700; studentId++) {
+    const classId = Math.ceil(studentId / 70); // Approx 70 students per class (classes 1-10)
+    const totalAmount = 6500; // Sum of all fees
+    const paidAmount = Math.random() > 0.3 ? totalAmount : Math.floor(Math.random() * totalAmount);
+    const pendingAmount = totalAmount - paidAmount;
 
-  classIds.forEach((classId) => {
-    for (let studentNum = 1; studentNum <= studentsPerClass; studentNum++) {
-      const studentId = classId * 1000 + studentNum;
-      const totalAmount = 6500; // Sum of all fees
-      const paidAmount = Math.random() > 0.3 ? totalAmount : Math.floor(Math.random() * totalAmount);
-      const pendingAmount = totalAmount - paidAmount;
+    let status: Invoice["status"];
+    if (paidAmount === totalAmount) status = "PAID";
+    else if (paidAmount > 0) status = "PARTIAL";
+    else if (new Date() > new Date("2025-04-30")) status = "OVERDUE";
+    else status = "PENDING";
 
-      let status: Invoice["status"];
-      if (paidAmount === totalAmount) status = "PAID";
-      else if (paidAmount > 0) status = "PARTIAL";
-      else if (new Date() > new Date("2025-04-30")) status = "OVERDUE";
-      else status = "PENDING";
+    const invoice: Invoice = {
+      id: ++invoiceIdCounter,
+      student_id: studentId,
+      student_name: `Student ${studentId}`,
+      class_id: classId,
+      section: studentId % 2 === 0 ? "A" : "B",
+      invoice_number: `INV-2025-${String(invoiceIdCounter).padStart(6, "0")}`,
+      total_amount: totalAmount,
+      paid_amount: paidAmount,
+      pending_amount: pendingAmount,
+      status,
+      due_date: "2025-04-30",
+      created_at: "2025-03-01T10:00:00Z",
+      items: [
+        { id: 1, fee_type: "Tuition Fee", description: "Annual tuition fee", amount: 5000, discount: 0, final_amount: 5000 },
+        { id: 2, fee_type: "Library Fee", description: "Annual library fee", amount: 500, discount: 0, final_amount: 500 },
+        { id: 3, fee_type: "Sports Fee", description: "Annual sports fee", amount: 300, discount: 0, final_amount: 300 },
+        { id: 4, fee_type: "Lab Fee", description: "Annual lab fee", amount: 700, discount: 0, final_amount: 700 },
+      ],
+    };
 
-      const invoice: Invoice = {
-        id: ++invoiceIdCounter,
-        student_id: studentId,
-        student_name: `Student ${studentNum}`,
-        class_id: classId,
-        section: "A",
-        invoice_number: `INV-2025-${String(invoiceIdCounter).padStart(6, "0")}`,
-        total_amount: totalAmount,
-        paid_amount: paidAmount,
-        pending_amount: pendingAmount,
-        status,
-        due_date: "2025-04-30",
-        created_at: "2025-03-01T10:00:00Z",
-        items: [
-          { id: 1, fee_type: "Tuition Fee", description: "Annual tuition fee", amount: 5000, discount: 0, final_amount: 5000 },
-          { id: 2, fee_type: "Library Fee", description: "Annual library fee", amount: 500, discount: 0, final_amount: 500 },
-          { id: 3, fee_type: "Sports Fee", description: "Annual sports fee", amount: 300, discount: 0, final_amount: 300 },
-          { id: 4, fee_type: "Lab Fee", description: "Annual lab fee", amount: 700, discount: 0, final_amount: 700 },
-        ],
-      };
-
-      mockInvoices.push(invoice);
-    }
-  });
+    mockInvoices.push(invoice);
+  }
 
   console.log(`[MOCK FEES] Initialized ${mockInvoices.length} invoices`);
 }
@@ -238,7 +234,7 @@ export async function getMockPayments(invoiceId: number): Promise<Payment[]> {
 // ANALYTICS
 // ============================================================================
 
-export async function getMockFeeAnalytics(filters: { academic_year_id: number }): Promise<{
+export async function getMockFeeAnalytics(_filters: { academic_year_id: number }): Promise<{
   total_revenue: number;
   pending_revenue: number;
   collection_rate: number;

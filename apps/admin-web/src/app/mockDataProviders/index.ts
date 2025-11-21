@@ -21,6 +21,8 @@ export { mockAchievementProvider } from "./mockAchievements";
 export { mockClubProvider } from "./mockClubs";
 export { mockFinanceProvider } from "./mockFinance";
 export { mockMediaProvider } from "./mockMedia";
+export { mockStudentDetailsProvider } from "./mockStudentDetails";
+export { mockReportCardProvider } from "./mockStudentReportCard";
 
 // ============================================================================
 // DEMO MODE UTILITIES

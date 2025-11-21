@@ -1,7 +1,8 @@
 import { http } from "./http";
 import {
   TimetableUpsert, TimetableEntry,
-  KPISnapshot, ConflictCheckResponse
+  KPISnapshot, ConflictCheckResponse,
+  TimetableGenerateRequest
 } from "./timetable.schema";
 import { isDemoMode, mockTimetableProvider } from "../mockDataProviders";
 
@@ -118,9 +119,7 @@ export async function checkConflict(payload: TimetableUpsert) {
   const { data } = await http.post<ConflictCheckResponse>(`${GEN}/check-conflict`, payload);
   return data;
 }
-export async function generateTimetable(payload: {
-  academic_year_id: number; class_id: number; section: string; week_start?: string;
-}) {
+export async function generateTimetable(payload: TimetableGenerateRequest) {
   // DEMO MODE: Return mock data
   if (isDemoMode()) {
     return mockTimetableProvider.generateTimetable(payload);

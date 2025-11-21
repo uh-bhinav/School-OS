@@ -16,6 +16,9 @@ import MarksRoute from "./routes/academics/marks/MarksRoute";
 import MarksPage from "./routes/academics/marks/MarksPage";
 import LeaderboardsPage from "./routes/academics/leaderboards/LeaderboardsPage";
 import TeachersPage from "./routes/academics/teachers/TeachersPage";
+import TeacherDetailPage from "./routes/academics/teachers/TeacherDetailPage";
+import StudentsPage from "./routes/academics/students/StudentsPage";
+import StudentDetailPage from "./routes/academics/students/StudentDetailPage";
 import ClubsPage from "./routes/academics/clubs/ClubsPage";
 import AchievementsPage from "./routes/academics/achievements/AchievementsPage";
 import AnnouncementsPage from "./routes/announcements";
@@ -113,6 +116,18 @@ const router = createBrowserRouter([
       {
         path: "academics/teachers",
         element: <TeachersPage />,
+      },
+      {
+        path: "academics/teachers/:teacherId",
+        element: <TeacherDetailPage />,
+      },
+      {
+        path: "academics/students",
+        element: <StudentsPage />,
+      },
+      {
+        path: "academics/students/:studentId",
+        element: <StudentDetailPage />,
       },
       {
         path: "academics/clubs",

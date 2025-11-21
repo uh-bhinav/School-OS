@@ -3,7 +3,7 @@ import SendIcon from "@mui/icons-material/Send";
 import MicIcon from "@mui/icons-material/Mic";
 import CloseIcon from "@mui/icons-material/Close";
 import { useChatStore } from "@/app/stores/useChatStore";
-import { useAgentQuery } from "@/app/services/agent.hooks";
+import { sendMessageToBackend } from "@/app/services/chatService";
 
 const quickReplies = [
   "Show today's attendance",
@@ -21,13 +21,11 @@ export default function InputBar() {
   const {
     activeId,
     pushMessage,
-    contextChips,
     setLoading,
     sessions,
     isLoading,
     setInputFocused,
   } = useChatStore();
-  const { mutate } = useAgentQuery();
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -44,9 +42,20 @@ export default function InputBar() {
     setShowSuggestions(input === "" && session?.messages.length === 0);
   }, [input, activeId, sessions]);
 
-  const handleSend = (message?: string) => {
+  const handleSend = async (message?: string) => {
+    console.log("🚀 handleSend called!", { message, input, activeId, isLoading });
+
     const messageToSend = message || input;
-    if (!messageToSend.trim() || !activeId || isLoading) return;
+    if (!messageToSend.trim() || !activeId || isLoading) {
+      console.log("❌ handleSend blocked:", {
+        hasMessage: !!messageToSend.trim(),
+        hasActiveId: !!activeId,
+        isLoading
+      });
+      return;
+    }
+
+    console.log("✅ Proceeding with send...");
 
     const userMsg = {
       id: crypto.randomUUID(),
@@ -59,37 +68,32 @@ export default function InputBar() {
     setInput("");
     setLoading(true);
 
-    mutate(
-      {
-        body: {
-          session_id: activeId,
-          message: messageToSend,
-          context: { chips: contextChips },
-          routing: { auto: true },
-        },
-        auth: { jwt: "demo-jwt", school_id: 101 },
-      },
-      {
-        onSuccess: (res: any) => {
-          pushMessage(activeId, {
-            id: res.message_id,
-            role: "assistant",
-            content: res.content,
-            ts: Date.now(),
-          });
-          setLoading(false);
-        },
-        onError: () => {
-          pushMessage(activeId, {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: "Sorry, I encountered an error. Please try again.",
-            ts: Date.now(),
-          });
-          setLoading(false);
-        },
-      }
-    );
+    try {
+      console.log("📞 Calling sendMessageToBackend...");
+      // Call ADK backend
+      const response = await sendMessageToBackend(activeId, messageToSend);
+
+      // Add assistant message
+      pushMessage(activeId, {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: response.message,
+        ts: new Date(response.timestamp).getTime(),
+      });
+    } catch (error) {
+      console.error("Error sending message to ADK backend:", error);
+
+      // Add error message
+      pushMessage(activeId, {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content:
+          "Sorry, I encountered an error connecting to the backend. Please make sure the ADK server is running on http://localhost:8004",
+        ts: Date.now(),
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -163,7 +167,10 @@ export default function InputBar() {
         </button>
 
         <button
-          onClick={() => handleSend()}
+          onClick={() => {
+            console.log("🖱️ Send button clicked!");
+            handleSend();
+          }}
           disabled={!input.trim() || isLoading}
           className="p-3 rounded-full bg-primary text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition hover:scale-105 active:scale-95"
           aria-label="Send message"

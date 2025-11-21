@@ -127,8 +127,16 @@ export const useChatStore = create<ChatState>()(
 
       setOpen(b) {
         set({ open: b });
-        if (b && get().sessions.length === 0) {
-          get().createSession("New Chat");
+        if (b) {
+          const state = get();
+          // If no sessions exist, create one
+          if (state.sessions.length === 0) {
+            state.createSession("New Chat");
+          }
+          // If sessions exist but no active session, set the first one as active
+          else if (!state.activeId) {
+            set({ activeId: state.sessions[0].id });
+          }
         }
       },
 

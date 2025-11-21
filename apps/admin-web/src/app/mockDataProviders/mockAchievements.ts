@@ -102,11 +102,11 @@ function initializeMockAchievements() {
     },
   ];
 
-  // Generate student achievements
+  // Generate student achievements for student IDs 1-700 (matching mockStudents pattern)
   const achievementTypes = Object.values(AchievementType);
   const visibilities = Object.values(AchievementVisibility);
 
-  for (let studentId = 1001; studentId <= 1100; studentId++) {
+  for (let studentId = 1; studentId <= 700; studentId++) {
     // Each student gets 2-8 achievements
     const numAchievements = Math.floor(Math.random() * 7) + 2;
 

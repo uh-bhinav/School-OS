@@ -98,13 +98,30 @@ export default function TimetablePage() {
     }));
   }
 
-  async function handleGenerate() {
+  async function handleGenerate(constraints?: {
+    customConstraints: Array<{
+      id: string;
+      description: string;
+      priority: 1 | 2 | 3;
+    }>;
+    teacherConstraints: {
+      maxClassesPerDay: number;
+      maxClassesPerWeek: number;
+      minClassesPerDay: number;
+      minClassesPerWeek: number;
+      prioritizeCoreSubjects: boolean;
+      coreSubjectNames: string[];
+    };
+  }) {
     try {
       await genMut.mutateAsync({
         academic_year_id: filters.academic_year_id,
         class_id: filters.class_id,
         section: filters.section,
-        week_start: filters.week_start, // ✅ Pass the current week being viewed
+        week_start: filters.week_start,
+        // Pass constraints to backend (will be used when backend is integrated)
+        constraints: constraints?.customConstraints,
+        teacher_constraints: constraints?.teacherConstraints,
       });
       // Close the dialog
       setShowGenerateDialog(false);
