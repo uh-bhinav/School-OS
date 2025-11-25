@@ -1,6 +1,5 @@
 import logging
 
-from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.agents.utils.llm_router import get_llm
@@ -20,7 +19,7 @@ You must route to one of the following 4 agents. Be very precise in your choice:
     (e.g., "Create a new 'Unit Test' type", "List all exam types")
 
 - `ExamAgent`: Manages exam *schedules* and dates.
-    (e.g., "When is the midterm?", "Schedule the final exams")
+    (e.g., "When is the Surprise exam?", "Get exam ID for Final exam", "Schedule the final exams", "Search for Midterm exam")
 
 - `MarkAgent`: Manages the *entry, updating, and viewing* of individual marks and class analytics.
     (e.g., "Enter marks for 10A", "What did Rohan get in Physics?", "Show class performance")
@@ -30,55 +29,39 @@ You must route to one of the following 4 agents. Be very precise in your choice:
 
 - If the query is a simple greeting ("hi", "hello") or a general question about this module ("what can you do?"), route to `__self__`.
 
+**CRITICAL:** If a query mentions a specific exam NAME (like "Final exam", "Class 10 Midterm"),
+route to `ExamAgent` because it needs to search for and find that specific exam schedule by name.
+
 Respond *only* with the JSON object matching the requested schema.
 """
 
-# 2. Get the "fast" LLM, as recommended for routing
+
+# 2. Get the "fast" LLM
 llm = get_llm("fast")
 
 # 3. Create the prompt
 prompt = ChatPromptTemplate.from_messages([("system", SYSTEM_PROMPT), ("human", "{query}")])
 
-# 4. Bind the structured output schema to the LLM
-# llm_with_output = llm.with_structured_output(AssessmentRoute)
+# 4. FIX: Bind the structured output schema directly to the LLM.
+# This replaces the parser and the manual tool-calling.
+llm_with_output = llm.with_structured_output(AssessmentRoute)
 
-# model_with_tool = llm.bind_tools(
-#     [AssessmentRoute],
-#     tool_choice="AssessmentRoute"  # Force the LLM to call this tool
-# )
-
-parser = PydanticToolsParser(tools=[AssessmentRoute])
-
-# 5. Create the final routing chain
-# router_chain = prompt | llm_with_output
-
-# router_chain = prompt | model_with_tool | parser
+# 5. Create the final, simple routing chain
+router_chain = prompt | llm_with_output
 
 
 async def invoke_assessment_router(query: str) -> AssessmentRoute:
     """
     Invokes the Assessment router to get a routing decision.
-
-    Args:
-        query: The user's input query.
-
-    Returns:
-        An AssessmentRoute object with the agent_name to route to.
     """
     logger.info(f"Routing query in AssessmentRouter: '{query[:100]}...'")
     try:
-        messages = await prompt.ainvoke({"query": query})
-        response = await llm.ainvoke(messages, tools=[AssessmentRoute], tool_choice="AssessmentRoute")  # Force the LLM to call our schema
-        if not hasattr(response, "tool_calls") or not response.tool_calls:
-            raise ValueError("Router LLM failed to produce a tool call.")
-        parsed_tool_calls = parser.invoke(response)
-        # parsed_tool_calls = await router_chain.ainvoke({"query": query})
-        if not parsed_tool_calls:
-            raise ValueError("Router LLM failed to produce valid tool call.")
-        route = parsed_tool_calls[0]
-        # route = await router_chain.ainvoke({"query": query})
+        # 6. FIX: Use the new, simpler chain.
+        route = await router_chain.ainvoke({"query": query})
+
         logger.info(f"Routing decision: {route.agent_name}")
         return route
+
     except Exception as e:
         logger.error(f"Error in AssessmentRouter: {e}", exc_info=True)
         # Fallback in case of a routing error

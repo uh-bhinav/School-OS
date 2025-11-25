@@ -13,8 +13,6 @@ from app.agents.http_client import (
     AgentValidationError,
 )
 
-from .schemas import AddStudentAchievementSchema, GetPointsForAchievementSchema, GetStudentAchievementsSchema, GetUnverifiedAchievementsSchema, VerifyAchievementSchema
-
 logger = logging.getLogger(__name__)
 
 
@@ -29,20 +27,62 @@ def _format_error_response(error: AgentHTTPClientError) -> dict[str, Any]:
 
 
 # --- Tool Definitions ---
+# Add at the TOP after imports:
 
 
-@tool("get_student_achievements", args_schema=GetStudentAchievementsSchema)
-async def get_student_achievements(student_name: str, verified_only: bool = True) -> dict[str, Any]:
+@tool("search_student_by_name")
+async def search_student_by_name(student_name: str) -> dict[str, Any]:
     """
-    Fetches a list of achievements for a specific student.
+    Search for a student by name and get their student_id.
+    Returns student details including the numeric student_id needed for other tools.
+    This is a helper tool - use it first to get the student_id before calling other tools.
+    """
+    try:
+        async with AgentHTTPClient() as client:
+            logger.info(f"Searching for student by name: {student_name}")
+            response = await client.get("/students/search", params={"name": student_name})
+
+            students = response.get("data", []) if isinstance(response, dict) else response
+
+            if not students or len(students) == 0:
+                return {"success": False, "error": f"No student found with name '{student_name}'", "suggestion": "Check the spelling and try again."}
+
+            # Return first match
+            student = students[0]
+            return {
+                "success": True,
+                "student_id": student.get("student_id"),
+                "name": student.get("name") or f"{student.get('first_name', '')} {student.get('last_name', '')}",
+                "email": student.get("email"),
+                "grade_level": student.get("grade_level"),
+                "section": student.get("section"),
+            }
+
+    except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
+        logger.error(f"Error searching for student: {e.message}", exc_info=True)
+        return _format_error_response(e)
+    except Exception as e:
+        logger.exception(f"Unexpected error in search_student_by_name: {e}")
+        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
+
+
+# Then UPDATE get_student_achievements:
+
+
+@tool("get_student_achievements")
+async def get_student_achievements(student_id: int, verified_only: bool = True) -> dict[str, Any]:
+    """
+    Fetches a list of achievements for a specific student using their student_id.
     By default, it only returns verified achievements.
+
+    IMPORTANT: Use search_student_by_name first to get the student_id if you only have their name.
     """
     try:
         async with AgentHTTPClient() as client:
             params = {"verified_only": verified_only}
-            logger.info(f"Calling API: GET /achievements/student/{student_name} with params={params}")
-            response = await client.get(f"/achievements/student/{student_name}", params=params)
-            return {"success": True, "count": len(response), "achievements": response}
+            logger.info(f"Fetching achievements for student ID: {student_id} with params={params}")
+            response = await client.get(f"/achievements/student/{student_id}", params=params)
+            return {"success": True, "student_id": student_id, "count": len(response), "achievements": response}
     except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
         logger.error(f"Error getting student achievements: {e.message}", exc_info=True)
         return _format_error_response(e)
@@ -51,7 +91,7 @@ async def get_student_achievements(student_name: str, verified_only: bool = True
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("add_student_achievement", args_schema=AddStudentAchievementSchema)
+@tool("add_student_achievement")
 async def add_student_achievement(student_name: str, title: str, achievement_type: str, level: Optional[str] = None, issued_by: Optional[str] = None) -> dict[str, Any]:
     """
     (Teacher Tool) Adds a new, unverified achievement for a student.
@@ -73,7 +113,7 @@ async def add_student_achievement(student_name: str, title: str, achievement_typ
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("verify_achievement", args_schema=VerifyAchievementSchema)
+@tool("verify_achievement")
 async def verify_achievement(achievement_id: int) -> dict[str, Any]:
     """
     (Admin Only) Verifies a pending achievement.
@@ -92,7 +132,7 @@ async def verify_achievement(achievement_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_unverified_achievements_list", args_schema=GetUnverifiedAchievementsSchema)
+@tool("get_unverified_achievements_list")
 async def get_unverified_achievements_list() -> dict[str, Any]:
     """
     (Admin Tool) Fetches a list of all achievements that are pending verification.
@@ -111,7 +151,7 @@ async def get_unverified_achievements_list() -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_points_for_achievement", args_schema=GetPointsForAchievementSchema)
+@tool("get_points_for_achievement")
 async def get_points_for_achievement(achievement_type: str, level: str) -> dict[str, Any]:
     """
     Looks up the points value for a specific type and level of achievement
@@ -134,6 +174,7 @@ async def get_points_for_achievement(achievement_type: str, level: str) -> dict[
 # --- Export the list of tools ---
 
 achievement_agent_tools = [
+    search_student_by_name,
     get_student_achievements,
     add_student_achievement,
     verify_achievement,

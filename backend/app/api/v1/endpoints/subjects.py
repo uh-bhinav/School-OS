@@ -53,6 +53,59 @@ async def get_all_subjects(
 
 
 # --- END REFACTOR ---
+@router.get(
+    "/search",
+    response_model=list[SubjectOut],
+    dependencies=[Depends(require_role("Admin", "Teacher"))],
+)
+async def search_subjects(
+    *,
+    name: Optional[str] = None,
+    code: Optional[str] = None,
+    category: Optional[str] = None,
+    db: AsyncSession = Depends(deps.get_db_session),
+    current_profile: Profile = Depends(deps.get_current_active_user),
+):
+    """
+    Flexibly search for subjects within the user's school.
+    Gets school_id from the user's token.
+    Can search by name, code, or category.
+    """
+    # Build the filters dictionary
+    filters = {}
+    if name is not None:
+        filters["name"] = name
+    if code is not None:
+        filters["code"] = code
+    if category is not None:
+        filters["category"] = category
+
+    # We need to ensure your subject_service has a 'search_subjects' function.
+    # For now, we assume it does or will.
+    # If it doesn't, this will be a Phase 4 task to implement the service logic.
+    # For now, we'll make it call the 'get_all_subjects_for_school' and filter in Python
+    # This is INEFFICIENT but works as a placeholder without service changes.
+
+    # --- Placeholder logic (replace later with service.search_subjects) ---
+    all_subjects = await subject_service.get_all_subjects_for_school(db=db, school_id=current_profile.school_id)
+
+    if not filters:
+        return all_subjects
+
+    filtered_subjects = []
+    for subject in all_subjects:
+        matches = True
+        if name and name.lower() not in subject.name.lower():
+            matches = False
+        if code and subject.short_code and code.lower() not in subject.short_code.lower():
+            matches = False
+        if category and subject.category and category.lower() not in subject.category.lower():
+            matches = False
+
+        if matches:
+            filtered_subjects.append(subject)
+
+    return filtered_subjects
 
 
 @router.get(
@@ -140,61 +193,6 @@ async def delete_subject(
 
     await subject_service.soft_delete_subject(db, subject_id=subject_id)
     return None
-
-
-@router.get(
-    "/search",
-    response_model=list[SubjectOut],
-    dependencies=[Depends(require_role("Admin", "Teacher"))],
-)
-async def search_subjects(
-    *,
-    name: Optional[str] = None,
-    code: Optional[str] = None,
-    category: Optional[str] = None,
-    db: AsyncSession = Depends(deps.get_db_session),
-    current_profile: Profile = Depends(deps.get_current_active_user),
-):
-    """
-    Flexibly search for subjects within the user's school.
-    Gets school_id from the user's token.
-    Can search by name, code, or category.
-    """
-    # Build the filters dictionary
-    filters = {}
-    if name is not None:
-        filters["name"] = name
-    if code is not None:
-        filters["code"] = code
-    if category is not None:
-        filters["category"] = category
-
-    # We need to ensure your subject_service has a 'search_subjects' function.
-    # For now, we assume it does or will.
-    # If it doesn't, this will be a Phase 4 task to implement the service logic.
-    # For now, we'll make it call the 'get_all_subjects_for_school' and filter in Python
-    # This is INEFFICIENT but works as a placeholder without service changes.
-
-    # --- Placeholder logic (replace later with service.search_subjects) ---
-    all_subjects = await subject_service.get_all_subjects_for_school(db=db, school_id=current_profile.school_id)
-
-    if not filters:
-        return all_subjects
-
-    filtered_subjects = []
-    for subject in all_subjects:
-        matches = True
-        if name and name.lower() not in subject.name.lower():
-            matches = False
-        if code and subject.short_code and code.lower() not in subject.short_code.lower():
-            matches = False
-        if category and subject.category and category.lower() not in subject.category.lower():
-            matches = False
-
-        if matches:
-            filtered_subjects.append(subject)
-
-    return filtered_subjects
 
 
 # --- END NEW ENDPOINT ---

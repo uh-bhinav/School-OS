@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Optional
 
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 # We are using Pydantic v2 (BaseModel) as seen in your academic_year_schema.py
 # Your attendance_agent/schemas.py uses Pydantic v1, but we should

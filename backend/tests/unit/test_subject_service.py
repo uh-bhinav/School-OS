@@ -60,7 +60,7 @@ async def test_get_teachers_for_subject_happy_path():
     # Mock the final db.execute call as before
     mock_teacher_result = MagicMock()
     mock_teacher_result.scalars.return_value.all.return_value = [MagicMock(spec=Teacher)]
-    mock_db.execute.return_value = mock_teacher_result
+    mock_db.execute = AsyncMock(return_value=mock_teacher_result)
 
     # Mock the internal get_subject call as before
     with patch(

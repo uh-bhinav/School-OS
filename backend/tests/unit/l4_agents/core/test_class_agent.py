@@ -58,7 +58,7 @@ async def test_happy_path_get_students_in_class(mock_class_llm_invoke, mock_clas
     mock_class_http_client.get.side_effect = [search_response, students_response]
 
     # 3. Invoke Agent
-    result = class_agent_instance.invoke(query)
+    result = await class_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -84,7 +84,7 @@ async def test_guardrail_deflects_attendance_query(mock_class_llm_invoke, mock_c
     mock_class_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = class_agent_instance.invoke(query)
+    result = await class_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True

@@ -2,7 +2,7 @@
 
 from typing import Literal, Optional
 
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 Category = Literal["academic", "sports", "arts", "community", "overall"]
 

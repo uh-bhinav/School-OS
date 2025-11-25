@@ -11,15 +11,6 @@ from app.agents.http_client import (
     AgentValidationError,
 )
 
-from .schemas import (
-    DeactivateTeacherSchema,
-    GetTeacherDetailsSchema,
-    GetTeacherQualificationsSchema,
-    ListAllTeachersSchema,
-    SearchTeachersSchema,
-    UpdateTeacherSchema,
-)
-
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +27,7 @@ def _format_error_response(error: AgentHTTPClientError) -> dict[str, Any]:
 # --- Tool Definitions ---
 
 
-@tool("list_all_teachers", args_schema=ListAllTeachersSchema)
+@tool("list_all_teachers")
 async def list_all_teachers() -> dict[str, Any]:
     """
     (Admin Only) Retrieves all active teacher records for the admin's school.
@@ -56,7 +47,7 @@ async def list_all_teachers() -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("search_teachers", args_schema=SearchTeachersSchema)
+@tool("search_teachers")
 async def search_teachers(
     name: Optional[str] = None,
     department: Optional[str] = None,
@@ -88,7 +79,7 @@ async def search_teachers(
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_teacher_details", args_schema=GetTeacherDetailsSchema)
+@tool("get_teacher_details")
 async def get_teacher_details(teacher_id: int) -> dict[str, Any]:
     """
     (Admin Only) Get detailed information for a single teacher by their ID.
@@ -109,7 +100,7 @@ async def get_teacher_details(teacher_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_teacher_qualifications", args_schema=GetTeacherQualificationsSchema)
+@tool("get_teacher_qualifications")
 async def get_teacher_qualifications(teacher_id: int) -> dict[str, Any]:
     """
     (Admin Only) Gets a teacher's specific qualifications and experience.
@@ -130,7 +121,7 @@ async def get_teacher_qualifications(teacher_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("update_teacher", args_schema=UpdateTeacherSchema)
+@tool("update_teacher")
 async def update_teacher(teacher_id: int, **updates: Any) -> dict[str, Any]:
     """
     (Admin Only) Updates an existing teacher's details.
@@ -154,7 +145,7 @@ async def update_teacher(teacher_id: int, **updates: Any) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("deactivate_teacher", args_schema=DeactivateTeacherSchema)
+@tool("deactivate_teacher")
 async def deactivate_teacher(teacher_id: int) -> dict[str, Any]:
     """
     (Admin Only) Deactivates a teacher (soft-delete).

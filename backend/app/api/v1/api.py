@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
     communication,
     discounts,
     employment_statuses,
+    exam_class_mappings,
     exam_types,
     exams,
     fee_structure,
@@ -53,6 +54,8 @@ api_router.include_router(classes.router, prefix="/classes", tags=["Classes"])
 api_router.include_router(subjects.router, prefix="/subjects", tags=["Subjects"])
 api_router.include_router(students.router, prefix="/students", tags=["Students"])
 api_router.include_router(student_contacts.router, prefix="/student-contacts", tags=["Students"])
+api_router.include_router(exam_class_mappings.router, prefix="/exam-class-mappings", tags=["Exam Class Mappings"])
+
 
 # Academics
 api_router.include_router(exams.router, prefix="/exams", tags=["Exams"])

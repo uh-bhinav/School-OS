@@ -1,11 +1,7 @@
-# File: app/agents/modules/academics/routers/holistic_router.py
-
 import logging
 
-from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from langchain_core.prompts import ChatPromptTemplate
 
-# Assuming you have a central get_llm function
 from app.agents.utils.llm_router import get_llm
 
 from .holistic_schemas import HolisticRoute
@@ -42,49 +38,31 @@ You must route to one of the following 4 agents. Be very precise in your choice.
 Respond *only* with the JSON object matching the requested schema.
 """
 
-# 2. Get the "fast" LLM, as recommended for routing
+# 2. Get the "fast" LLM
 llm = get_llm("fast")
 
 # 3. Create the prompt
 prompt = ChatPromptTemplate.from_messages([("system", SYSTEM_PROMPT), ("human", "{query}")])
 
-# 4. Bind the structured output schema to the LLM
-# llm_with_output = llm.with_structured_output(HolisticRoute)
+# 4. FIX: Bind the structured output schema directly to the LLM.
+llm_with_output = llm.with_structured_output(HolisticRoute)
 
-parser = PydanticToolsParser(tools=[HolisticRoute])
-# 5. Create the final routing chain
-# router_chain = prompt | llm_with_output
+# 5. Create the final, simple routing chain
+router_chain = prompt | llm_with_output
 
 
 async def invoke_holistic_router(query: str) -> HolisticRoute:
     """
-    Invokes the Holistic router to get a routing decision.
-
-    Args:
-        query: The user's input query.
-
-    Returns:
-        A HolisticRoute object with the agent_name to route to.
+    Invokes the Core Curriculum router to get a routing decision.
     """
     logger.info(f"Routing query in HolisticRouter: '{query[:100]}...'")
     try:
-        messages = await prompt.ainvoke({"query": query})
+        # 6. FIX: Use the new, simpler chain.
+        route = await router_chain.ainvoke({"query": query})
 
-        # 2. Call the LLM with tools and tool_choice at INVOKE time
-        # This is the "universal" method that BaseAgent now uses
-        response = await llm.ainvoke(messages, tools=[HolisticRoute], tool_choice="HolisticRoute")  # Force the LLM to call our schema
-
-        # 3. Manually parse the tool calls from the response
-        if not hasattr(response, "tool_calls") or not response.tool_calls:
-            raise ValueError("Router LLM failed to produce a tool call.")
-
-        parsed_tool_calls = parser.invoke(response)
-        if not parsed_tool_calls:
-            raise ValueError("Failed to parse the LLM tool call.")
-        route = parsed_tool_calls[0]
-        # route = await router_chain.ainvoke({"query": query})
         logger.info(f"Routing decision: {route.agent_name}")
         return route
+
     except Exception as e:
         logger.error(f"Error in HolisticRouter: {e}", exc_info=True)
         # Fallback in case of a routing error

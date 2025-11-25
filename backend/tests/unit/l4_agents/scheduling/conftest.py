@@ -46,13 +46,13 @@ def mock_timetable_llm_invoke():
 
     mock_model = MagicMock()
     # Set a default return value for safety
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default TimetableAgent mock response"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default TimetableAgent mock response"))
 
     # The key fix: replace the entire .model object
     original_model = timetable_agent_instance.model
     timetable_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     # Restore the original model after the test
     timetable_agent_instance.model = original_model
@@ -88,13 +88,13 @@ def mock_attendance_llm_invoke():
 
     mock_model = MagicMock()
     # Set a default return value for safety
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default AttendanceAgent mock response"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default AttendanceAgent mock response"))
 
     # The key fix: replace the entire .model object
     original_model = attendance_agent_instance.model
     attendance_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     # Restore the original model after the test
     attendance_agent_instance.model = original_model
@@ -130,13 +130,13 @@ def mock_period_llm_invoke():
 
     mock_model = MagicMock()
     # Set a default return value for safety
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default PeriodAgent mock response"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default PeriodAgent mock response"))
 
     # The key fix: replace the entire .model object
     original_model = period_agent_instance.model
     period_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     # Restore the original model after the test
     period_agent_instance.model = original_model

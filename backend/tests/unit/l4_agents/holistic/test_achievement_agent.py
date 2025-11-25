@@ -49,7 +49,7 @@ async def test_happy_path_get_unverified_list(mock_achievement_llm_invoke, mock_
     mock_achievement_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = achievement_agent_instance.invoke(query)
+    result = await achievement_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -79,7 +79,7 @@ async def test_happy_path_verify_achievement(mock_achievement_llm_invoke, mock_a
     mock_achievement_http_client.post.return_value = mock_response
 
     # 3. Invoke Agent
-    result = achievement_agent_instance.invoke(query)
+    result = await achievement_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -102,7 +102,7 @@ async def test_guardrail_deflects_marks_query(mock_achievement_llm_invoke, mock_
     mock_achievement_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = achievement_agent_instance.invoke(query)
+    result = await achievement_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True

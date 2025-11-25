@@ -27,7 +27,7 @@ from app.core.config import settings
 # CRITICAL: Import base BEFORE init_engine to register all SQLAlchemy models
 # This ensures all models are registered before any database operations
 from app.db import base  # noqa: F401
-from app.db.session import init_engine
+from app.db.session import close_db, init_engine
 from app.dependencies import limiter
 from app.middleware import RawBodyMiddleware
 
@@ -64,11 +64,27 @@ async def lifespan(app: FastAPI):
     Lifespan manager for the FastAPI application.
     This function will be called once when the application starts.
     """
-    engine = init_engine()
+    logger.info("=" * 80)
+    logger.info(f"Starting {settings.PROJECT_NAME}")
+    logger.info(f"API Version: {settings.API_V1_STR}")
+    logger.info("Docs available at: /docs")
+    logger.info("Agent testing available at: POST /agents/chat")
+    logger.info("=" * 80)
+
+    init_engine()
+    logger.info("✅ Database engine initialized")
+
     yield
+
+    logger.info("=" * 80)
+    logger.info("Shutting down SchoolOS API...")
+
     # Any cleanup code would go here, after the yield.
-    if engine:
-        await engine.dispose()
+    print("🔴 Shutting down database connections...")
+    await close_db()
+    print("✅ All database connections closed")
+
+    logger.info("=" * 80)
 
 
 # Initialize FastAPI application
@@ -98,23 +114,6 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 logger.info("CORS middleware configured")
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Actions to perform on application startup."""
-    logger.info("=" * 80)
-    logger.info(f"Starting {settings.PROJECT_NAME}")
-    logger.info(f"API Version: {settings.API_V1_STR}")
-    logger.info("Docs available at: /docs")
-    logger.info("Agent testing available at: POST /agents/chat/marks")
-    logger.info("=" * 80)
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Actions to perform on application shutdown."""
-    logger.info("Shutting down SchoolOS API")
 
 
 if sys.platform.startswith("win"):

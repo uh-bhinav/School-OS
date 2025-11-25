@@ -11,14 +11,6 @@ from app.agents.http_client import (
     AgentValidationError,
 )
 
-from .schemas import (
-    CreateYearSchema,
-    DeleteYearSchema,
-    ListYearsSchema,
-    SetActiveYearSchema,
-    UpdateYearSchema,
-)
-
 logger = logging.getLogger(__name__)
 
 
@@ -57,7 +49,7 @@ async def get_active_academic_year() -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("list_academic_years", args_schema=ListYearsSchema)
+@tool("list_academic_years")
 async def list_academic_years(include_inactive: bool = False) -> dict[str, Any]:
     """
     Lists all academic years for the user's school.
@@ -77,7 +69,7 @@ async def list_academic_years(include_inactive: bool = False) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("create_academic_year", args_schema=CreateYearSchema)
+@tool("create_academic_year")
 async def create_academic_year(school_id: int, name: str, start_date: str, end_date: str) -> dict[str, Any]:
     """
     (Admin Only) Creates a new academic year.
@@ -102,7 +94,7 @@ async def create_academic_year(school_id: int, name: str, start_date: str, end_d
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("update_academic_year", args_schema=UpdateYearSchema)
+@tool("update_academic_year")
 async def update_academic_year(year_id: int, name: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, is_active: Optional[bool] = None) -> dict[str, Any]:
     """
     (Admin Only) Updates the details of a specific academic year.
@@ -126,7 +118,7 @@ async def update_academic_year(year_id: int, name: Optional[str] = None, start_d
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("set_active_academic_year", args_schema=SetActiveYearSchema)
+@tool("set_active_academic_year")
 async def set_active_academic_year(year_id: int) -> dict[str, Any]:
     """
     (Admin Only) Sets a specific academic year as the active one.
@@ -145,7 +137,7 @@ async def set_active_academic_year(year_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("delete_academic_year", args_schema=DeleteYearSchema)
+@tool("delete_academic_year")
 async def delete_academic_year(year_id: int) -> dict[str, Any]:
     """
     (Admin Only) Soft-deletes an academic year.

@@ -66,7 +66,7 @@ async def test_happy_path_get_teacher_qualifications(mock_teacher_llm_invoke, mo
     mock_teacher_http_client.get.side_effect = [search_response, qualifications_response]
 
     # 3. Invoke Agent
-    result = teacher_agent_instance.invoke(query)
+    result = await teacher_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -91,7 +91,7 @@ async def test_guardrail_deflects_schedule_query(mock_teacher_llm_invoke, mock_t
     mock_teacher_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = teacher_agent_instance.invoke(query)
+    result = await teacher_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True
@@ -129,7 +129,7 @@ async def test_edge_case_handles_auth_error_403(mock_teacher_llm_invoke, mock_te
     mock_teacher_http_client.get.side_effect = AgentAuthenticationError("Insufficient permissions", status_code=403)
 
     # 3. Invoke Agent
-    result = teacher_agent_instance.invoke(query)
+    result = await teacher_agent_instance.ainvoke(query)
 
     # 4. Assertions
     # The graph *succeeds* because the BaseAgent handled the error gracefully

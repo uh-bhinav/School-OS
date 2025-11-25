@@ -2,7 +2,7 @@ from datetime import date
 from typing import Optional
 
 # --- THIS IS THE CRITICAL FIX ---
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 # --- END FIX ---
 

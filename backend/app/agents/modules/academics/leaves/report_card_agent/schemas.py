@@ -1,4 +1,4 @@
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 # --- Schemas for Report Card Tools (from report_cards.py) ---
 

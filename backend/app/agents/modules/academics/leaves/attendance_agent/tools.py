@@ -14,8 +14,6 @@ from app.agents.http_client import (
     AgentValidationError,
 )
 
-from .schemas import GetAllAbsenteesTodaySchema, GetClassAttendanceSheetSchema, GetLowAttendanceReportSchema, GetMyAttendanceReportSchema, TakeClassAttendanceSchema
-
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +30,7 @@ def _format_error_response(error: AgentHTTPClientError) -> dict[str, Any]:
 # --- Tool Definitions ---
 
 
-@tool("get_my_attendance_report", args_schema=GetMyAttendanceReportSchema)
+@tool("get_my_attendance_report")
 async def get_my_attendance_report(start_date: Optional[date] = None, end_date: Optional[date] = None) -> dict[str, Any]:
     """
     (Student/Parent Tool) Fetches the personal attendance report for the authenticated user
@@ -59,7 +57,7 @@ async def get_my_attendance_report(start_date: Optional[date] = None, end_date: 
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_class_attendance_sheet", args_schema=GetClassAttendanceSheetSchema)
+@tool("get_class_attendance_sheet")
 async def get_class_attendance_sheet(class_name: str, date: str) -> dict[str, Any]:
     """
     (Teacher Tool) Fetches the 'to-do' list of students for a class.
@@ -79,7 +77,7 @@ async def get_class_attendance_sheet(class_name: str, date: str) -> dict[str, An
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("take_class_attendance", args_schema=TakeClassAttendanceSchema)
+@tool("take_class_attendance")
 async def take_class_attendance(class_name: str, date: str, present_student_ids: list[int], absent_student_ids: list[int], late_student_ids: Optional[list[int]] = None) -> dict[str, Any]:
     """
     (Teacher Tool) Submits the attendance for a class.
@@ -105,7 +103,7 @@ async def take_class_attendance(class_name: str, date: str, present_student_ids:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_all_absentees_today", args_schema=GetAllAbsenteesTodaySchema)
+@tool("get_all_absentees_today")
 async def get_all_absentees_today() -> dict[str, Any]:
     """
     (Admin Tool) Fetches a list of all students marked absent or late
@@ -124,7 +122,7 @@ async def get_all_absentees_today() -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_students_with_low_attendance_report", args_schema=GetLowAttendanceReportSchema)
+@tool("get_students_with_low_attendance_report")
 async def get_students_with_low_attendance_report(threshold_percent: float, start_date: str, end_date: str) -> dict[str, Any]:
     """
     (Admin/Teacher Tool) Generates a report of students whose attendance
@@ -144,6 +142,49 @@ async def get_students_with_low_attendance_report(threshold_percent: float, star
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
+@tool("record_class_attendance_bulk")
+async def record_class_attendance_bulk(class_name: str, target_date: Optional[str] = None, absent_student_names: Optional[list[str]] = None) -> dict[str, Any]:
+    """
+    (Teacher Tool) Records attendance for an entire class in one go.
+
+    Args:
+        class_name: Class name (e.g., "Class 1A", "Grade 2 Section A", "1A")
+        target_date: Date in YYYY-MM-DD format (defaults to today)
+        absent_student_names: List of student names who are absent (e.g., ["Aarav", "Priya"])
+
+    Example:
+        - "Record attendance for Class 1A today - all present except Aarav"
+        - Input: class_name="Class 1A", target_date="2025-11-19", absent_student_names=["Aarav"]
+
+    Returns:
+        Success response with attendance summary or error details
+    """
+    try:
+        # Parse date
+        if not target_date:
+            target_date = date.today().isoformat()
+
+        # Parse absent students (default to empty list)
+        if not absent_student_names:
+            absent_student_names = []
+
+        logger.info(f"Recording attendance: class={class_name}, date={target_date}, absent={absent_student_names}")
+
+        async with AgentHTTPClient() as client:
+            payload = {"class_name": class_name, "target_date": target_date, "absent_student_names": absent_student_names}
+
+            response = await client.post("/attendance/agent/bulk-record", json=payload)
+
+            return {"success": True, "data": response}
+
+    except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
+        logger.error(f"Error recording attendance: {e.message}", exc_info=True)
+        return _format_error_response(e)
+    except Exception as e:
+        logger.exception(f"Unexpected error in record_class_attendance_bulk: {e}")
+        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
+
+
 # --- Export the list of tools ---
 # We are replacing your old tool list with this new, robust list
 attendance_agent_tools = [
@@ -152,6 +193,7 @@ attendance_agent_tools = [
     take_class_attendance,
     get_all_absentees_today,
     get_students_with_low_attendance_report,
+    record_class_attendance_bulk,
 ]
 
 __all__ = ["attendance_agent_tools"]

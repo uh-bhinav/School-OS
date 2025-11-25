@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from sqlalchemy import and_, func, or_, select, update
@@ -23,53 +24,95 @@ from app.schemas.student_schema import (
 )
 from supabase import Client
 
+logger = logging.getLogger(__name__)
+
 
 async def create_student(db: AsyncSession, supabase: Client, *, student_in: StudentCreate) -> Optional[Student]:
     """
     Creates a student record in the local DB. Assumes the user was just created in Supabase.
-    This function is now robust and will create a profile if one doesn't exist.
     """
     try:
-        # Find the user created by the endpoint
-        list_users_response = await supabase.auth.admin.list_users(filters={"email": student_in.email})
-        if not list_users_response.users:
+        logger.info(f"Looking up user: {student_in.email}")
+        list_users_response = await supabase.auth.admin.list_users()
+        matching_users = [u for u in list_users_response if u.email == student_in.email]
+
+        if not matching_users:
+            logger.error(f"❌ User not found in Supabase: {student_in.email}")
             return None
-        new_user = list_users_response.users[0]
-    except Exception:
+
+        new_user = matching_users[0]
+        logger.info(f"✅ Found user in Supabase: {new_user.id}")
+
+    except Exception as e:
+        logger.error(f"❌ Error fetching user from Supabase: {e}", exc_info=True)
         return None
 
-    # --- THE FINAL FIX: Manually create a profile if the trigger didn't ---
-    # Check if a profile for this user already exists.
-    existing_profile = await db.get(Profile, new_user.id)
-    if not existing_profile:
-        # If no profile is found, create one. This makes the function
-        # independent of the database trigger, fixing our test.
-        profile = Profile(
+    try:
+        # ✅ FIX: Query by user_id, not student_id
+        logger.info(f"Checking for existing student record: {new_user.id}")
+        result = await db.execute(select(Student).where(Student.user_id == new_user.id))
+        existing_student = result.scalars().first()
+
+        if existing_student:
+            logger.info(f"✅ Student record already exists: {existing_student.student_id}")
+            return existing_student
+
+        # Check if a profile for this user already exists
+        logger.info(f"Checking for existing profile: {new_user.id}")
+        existing_profile = await db.get(Profile, new_user.id)
+
+        if not existing_profile:
+            logger.info(f"Creating profile for user: {new_user.id}")
+            profile = Profile(
+                user_id=new_user.id,
+                school_id=student_in.school_id,
+                first_name=student_in.first_name,
+                last_name=student_in.last_name,
+                phone_number=student_in.phone_number,
+                gender=student_in.gender,
+                date_of_birth=student_in.date_of_birth,
+            )
+            db.add(profile)
+            await db.flush()
+            logger.info("✅ Profile created")
+        else:
+            logger.info("✅ Profile already exists")
+
+        # Create student record
+        logger.info(f"Creating student: class_id={student_in.current_class_id}, roll={student_in.roll_number}, enrollment={student_in.enrollment_date}")
+        db_student = Student(
             user_id=new_user.id,
-            school_id=student_in.school_id,
-            first_name=student_in.first_name,
-            last_name=student_in.last_name,
-            phone_number=student_in.phone_number,
-            gender=student_in.gender,
-            date_of_birth=student_in.date_of_birth,
+            current_class_id=student_in.current_class_id,
+            roll_number=student_in.roll_number,
+            enrollment_date=student_in.enrollment_date,
         )
-        db.add(profile)
+        db.add(db_student)
+        await db.flush()
+        logger.info(f"✅ Student record created: {db_student.student_id}")
 
-    # Proceed with creating the student in our local database
-    db_student = Student(
-        user_id=new_user.id,
-        current_class_id=student_in.current_class_id,
-        roll_number=student_in.roll_number,
-        enrollment_date=student_in.enrollment_date,
-    )
-    db.add(db_student)
+        # Create user_role
+        logger.info("Creating user_role with role_id=3")
+        result = await db.execute(select(UserRole).where((UserRole.user_id == new_user.id) & (UserRole.role_id == 3)))
+        existing_role = result.scalars().first()
 
-    db_user_role = UserRole(user_id=new_user.id, role_id=3)  # Assuming role_id 3 is 'Student'
-    db.add(db_user_role)
+        if not existing_role:
+            db_user_role = UserRole(user_id=new_user.id, role_id=3)
+            db.add(db_user_role)
+            await db.flush()
+            logger.info("✅ UserRole created")
+        else:
+            logger.info("✅ UserRole already exists")
 
-    await db.commit()
-    await db.refresh(db_student)
-    return db_student
+        await db.commit()
+        await db.refresh(db_student)
+        logger.info(f"✅✅✅ Successfully created student: {db_student.student_id}")
+        return db_student
+
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"❌ Error in create_student: {e}", exc_info=True)
+        logger.error(f"Student input data: {student_in.model_dump()}")
+        return None
 
 
 async def get_student_by_id(db: AsyncSession, student_id: int) -> Optional[Student]:

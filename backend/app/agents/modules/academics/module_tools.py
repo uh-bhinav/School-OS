@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 from langchain_core.tools import tool
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 # Import the L4 agent instances. The L2 orchestrator needs to be able
 # to call them directly after routing.
@@ -62,7 +62,7 @@ class L2ToolInputSchema(BaseModel):
 # --- L2 Tool Definitions ---
 
 
-@tool("core_curriculum_tool", args_schema=L2ToolInputSchema)
+@tool("core_curriculum_tool")
 async def core_curriculum_tool(query: str) -> dict[str, Any]:
     """
     Use this tool for any query related to core curriculum:
@@ -89,10 +89,11 @@ async def core_curriculum_tool(query: str) -> dict[str, Any]:
 
     # 4. Invoke the L4 Leaf Agent
     logger.info(f"L2 Orchestrator: Invoking L4 Agent: {agent_name}")
-    return leaf_agent.invoke(query)
+    result = await leaf_agent.ainvoke(query)
+    return result
 
 
-@tool("assessment_tool", args_schema=L2ToolInputSchema)
+@tool("assessment_tool")
 async def assessment_tool(query: str) -> dict[str, Any]:
     """
     Use this tool for any query related to assessment and grading:
@@ -118,10 +119,11 @@ async def assessment_tool(query: str) -> dict[str, Any]:
 
     # 4. Invoke the L4 Leaf Agent
     logger.info(f"L2 Orchestrator: Invoking L4 Agent: {agent_name}")
-    return leaf_agent.invoke(query)
+    result = await leaf_agent.ainvoke(query)
+    return result
 
 
-@tool("scheduling_tool", args_schema=L2ToolInputSchema)
+@tool("scheduling_tool")
 async def scheduling_tool(query: str) -> dict[str, Any]:
     """
     Use this tool for any query related to scheduling:
@@ -146,10 +148,11 @@ async def scheduling_tool(query: str) -> dict[str, Any]:
 
     # 4. Invoke the L4 Leaf Agent
     logger.info(f"L2 Orchestrator: Invoking L4 Agent: {agent_name}")
-    return leaf_agent.invoke(query)
+    result = await leaf_agent.ainvoke(query)
+    return result
 
 
-@tool("holistic_tool", args_schema=L2ToolInputSchema)
+@tool("holistic_tool")
 async def holistic_tool(query: str) -> dict[str, Any]:
     """
     Use this tool for any query related to holistic development:
@@ -174,7 +177,8 @@ async def holistic_tool(query: str) -> dict[str, Any]:
 
     # 4. Invoke the L4 Leaf Agent
     logger.info(f"L2 Orchestrator: Invoking L4 Agent: {agent_name}")
-    return leaf_agent.invoke(query)
+    result = await leaf_agent.ainvoke(query)
+    return result
 
 
 # --- Export the list of tools ---

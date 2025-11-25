@@ -13,7 +13,7 @@ from app.agents.http_client import (
     AgentValidationError,
 )
 
-from .schemas import Category, GetClassLeaderboardSchema, GetClubLeaderboardSchema, GetSchoolLeaderboardSchema, RunLeaderboardComputationSchema
+from .schemas import Category
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def _format_error_response(error: AgentHTTPClientError) -> dict[str, Any]:
 # --- Tool Definitions ---
 
 
-@tool("get_school_leaderboard", args_schema=GetSchoolLeaderboardSchema)
+@tool("get_school_leaderboard")
 async def get_school_leaderboard(category: Category = "overall", top_n: int = 10) -> dict[str, Any]:
     """
     Fetches the school-wide leaderboard for a specific category (e.g., 'academic', 'overall').
@@ -39,8 +39,8 @@ async def get_school_leaderboard(category: Category = "overall", top_n: int = 10
     try:
         async with AgentHTTPClient() as client:
             params = {"category": category, "top_n": top_n}
-            logger.info(f"Calling API: GET /leaderboard/school with params={params}")
-            response = await client.get("/leaderboard/school", params=params)
+            logger.info(f"Calling API: GET /leaderboard/agent/school with params={params}")
+            response = await client.get("/leaderboard/agent/school", params=params)
             return {"success": True, "category": category, "leaderboard": response}
     except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
         logger.error(f"Error getting school leaderboard: {e.message}", exc_info=True)
@@ -50,7 +50,7 @@ async def get_school_leaderboard(category: Category = "overall", top_n: int = 10
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_class_leaderboard", args_schema=GetClassLeaderboardSchema)
+@tool("get_class_leaderboard")
 async def get_class_leaderboard(class_name: str, category: Category = "academic", top_n: int = 10) -> dict[str, Any]:
     """
     Fetches the leaderboard for a single class, usually for 'academic' or 'overall' categories.
@@ -58,8 +58,8 @@ async def get_class_leaderboard(class_name: str, category: Category = "academic"
     try:
         async with AgentHTTPClient() as client:
             params = {"category": category, "top_n": top_n}
-            logger.info(f"Calling API: GET /leaderboard/class/{class_name} with params={params}")
-            response = await client.get(f"/leaderboard/class/{class_name}", params=params)
+            logger.info(f"Calling API: GET /leaderboard/agent/class-by-name/{class_name} with params={params}")
+            response = await client.get(f"/leaderboard/agent/class-by-name/{class_name}", params=params)
             return {"success": True, "class_name": class_name, "category": category, "leaderboard": response}
     except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
         logger.error(f"Error getting class leaderboard: {e.message}", exc_info=True)
@@ -69,17 +69,17 @@ async def get_class_leaderboard(class_name: str, category: Category = "academic"
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_club_leaderboard", args_schema=GetClubLeaderboardSchema)
-async def get_club_leaderboard(club_name: str, top_n: int = 5) -> dict[str, Any]:
+@tool("get_club_leaderboard")
+async def get_club_leaderboard(top_n: int = 5) -> dict[str, Any]:
     """
-    Fetches the points-based leaderboard for members of a specific club.
+    Fetches the points-based leaderboard for clubs.
     """
     try:
         async with AgentHTTPClient() as client:
             params = {"top_n": top_n}
-            logger.info(f"Calling API: GET /leaderboard/club/{club_name} with params={params}")
-            response = await client.get(f"/leaderboard/club/{club_name}", params=params)
-            return {"success": True, "club_name": club_name, "leaderboard": response}
+            logger.info(f"Calling API: GET /leaderboard/agent/clubs with params={params}")
+            response = await client.get("/leaderboard/agent/clubs", params=params)
+            return {"success": True, "leaderboard": response}
     except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
         logger.error(f"Error getting club leaderboard: {e.message}", exc_info=True)
         return _format_error_response(e)
@@ -88,7 +88,7 @@ async def get_club_leaderboard(club_name: str, top_n: int = 5) -> dict[str, Any]
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("run_leaderboard_computation", args_schema=RunLeaderboardComputationSchema)
+@tool("run_leaderboard_computation")
 async def run_leaderboard_computation() -> dict[str, Any]:
     """
     (Admin Only) Triggers a complex backend service to aggregate all marks and
@@ -97,8 +97,8 @@ async def run_leaderboard_computation() -> dict[str, Any]:
     """
     try:
         async with AgentHTTPClient() as client:
-            logger.info("Calling API: POST /leaderboard/compute")
-            response = await client.post("/leaderboard/compute")
+            logger.info("Calling API: POST /leaderboard/agent/compute")
+            response = await client.post("/leaderboard/agent/compute")
             return {"success": True, "computation_job": response}
     except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
         logger.error(f"Error running leaderboard computation: {e.message}", exc_info=True)

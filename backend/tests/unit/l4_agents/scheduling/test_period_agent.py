@@ -49,7 +49,7 @@ async def test_happy_path_list_periods(mock_period_llm_invoke, mock_period_http_
     mock_period_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = period_agent_instance.invoke(query)
+    result = await period_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -75,7 +75,7 @@ async def test_guardrail_deflects_timetable_query(mock_period_llm_invoke, mock_p
     mock_period_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = period_agent_instance.invoke(query)
+    result = await period_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True

@@ -257,7 +257,7 @@ except AgentHTTPClientError as e:
 
 **Example:**
 ```python
-@tool("mark_student_attendance", args_schema=MarkStudentAttendanceSchema)
+@tool("mark_student_attendance")
 async def mark_student_attendance(
     student_id: str,
     attendance_date: str,

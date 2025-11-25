@@ -53,7 +53,7 @@ async def test_happy_path_get_active_year(mock_academic_year_llm_invoke, mock_ac
     mock_academic_year_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = academic_year_agent_instance.invoke(query)
+    result = await academic_year_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -79,7 +79,7 @@ async def test_guardrail_deflects_marks_query(mock_academic_year_llm_invoke, moc
     mock_academic_year_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = academic_year_agent_instance.invoke(query)
+    result = await academic_year_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True
@@ -117,7 +117,7 @@ async def test_edge_case_handles_auth_error_403(mock_academic_year_llm_invoke, m
     mock_academic_year_http_client.post.side_effect = AgentAuthenticationError("Insufficient permissions", status_code=403)
 
     # 3. Invoke Agent
-    result = academic_year_agent_instance.invoke(query)
+    result = await academic_year_agent_instance.ainvoke(query)
 
     # 4. Assertions
     # The graph succeeds because the error was handled gracefully

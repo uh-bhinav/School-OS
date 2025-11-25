@@ -25,6 +25,7 @@ class Exam(Base):
     exam_type = relationship("ExamType")
     academic_year = relationship("AcademicYear")
     marks_records = relationship("Mark", back_populates="exam")
+    class_mappings = relationship("ExamClassMapping", back_populates="exam", cascade="all, delete-orphan")
 
     def __init__(self, **kwargs):
         if "total_marks" in kwargs and "marks" not in kwargs:

@@ -25,7 +25,7 @@ def test_mark_agent_loads_tools():
     """
     [cite_start]Tests that the agent is configured with the correct 8 tools. [cite: 397-405]
     """
-    assert len(mark_agent_tools) == 8
+    assert len(mark_agent_tools) == 9
     tool_names = [tool.name for tool in mark_agent_tools]
     assert "search_marks" in tool_names
     assert "get_class_performance" in tool_names
@@ -52,7 +52,7 @@ async def test_happy_path_search_marks(mock_mark_llm_invoke, mock_mark_http_clie
     mock_mark_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = mark_agent_instance.invoke(query)
+    result = await mark_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True, f"Agent hit exception: {result.get('error')}"
@@ -81,7 +81,7 @@ async def test_happy_path_get_class_performance(mock_mark_llm_invoke, mock_mark_
     mock_mark_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = mark_agent_instance.invoke(query)
+    result = await mark_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -105,7 +105,7 @@ async def test_guardrail_deflects_exam_schedule_query(mock_mark_llm_invoke, mock
     mock_mark_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = mark_agent_instance.invoke(query)
+    result = await mark_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True
@@ -132,7 +132,7 @@ async def test_guardrail_deflects_attendance_query(mock_mark_llm_invoke, mock_ma
     mock_mark_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = mark_agent_instance.invoke(query)
+    result = await mark_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True
@@ -154,7 +154,7 @@ async def test_guardrail_agent_asks_for_id(mock_mark_llm_invoke, mock_mark_http_
     mock_mark_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = mark_agent_instance.invoke(query)
+    result = await mark_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True

@@ -1,5 +1,6 @@
+import logging
 import uuid
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,22 +23,24 @@ from app.schemas.student_schema import (
 from app.services import student_service
 from supabase import Client
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
-@router.post("/", response_model=StudentOut, status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 async def enroll_new_student(
     student_in: StudentCreate,
     db: AsyncSession = Depends(get_db),
     supabase: Client = Depends(get_supabase_client),
     current_user: Profile = Depends(require_role("Admin")),
-):
+) -> Dict[str, Any]:  # ✅ Return dict, not StudentOut
     """
     Enroll a new student. Only admins can perform this action.
     """
     try:
-        # --- FIX: Added the missing 'await' keyword ---
-        response = supabase.auth.admin.create_user(
+        logger.info(f"Attempting to create Supabase user: {student_in.email}")
+        response = await supabase.auth.admin.create_user(
             {
                 "email": student_in.email,
                 "password": student_in.password or str(uuid.uuid4()),
@@ -46,19 +49,42 @@ async def enroll_new_student(
         supabase_user = getattr(response, "user", None) or (response.get("user") if isinstance(response, dict) else None)
         if not supabase_user:
             raise ValueError("Supabase user creation failed")
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Supabase user creation failed: {str(e)}",
-        )
 
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Supabase user creation error: {error_msg}")
+
+        if "already been registered" in error_msg or "already exists" in error_msg.lower():
+            logger.info("User already exists in Supabase, continuing...")
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Supabase user creation failed: {error_msg}",
+            )
+
+    logger.info(f"Calling create_student for {student_in.email}")
     student = await student_service.create_student(db=db, supabase=supabase, student_in=student_in)
+
     if not student:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to create student. The user may already exist or input data is invalid.",
+            detail="Failed to create student. Check logs for details.",
         )
-    return student
+
+    logger.info(f"✅ Successfully created student: {student.student_id}")
+
+    # ✅ Return simple dict - NO lazy-loaded relationships
+    return {
+        "success": True,
+        "student_id": student.student_id,
+        "user_id": str(student.user_id),
+        "current_class_id": student.current_class_id,
+        "email": student_in.email,
+        "first_name": student_in.first_name,
+        "last_name": student_in.last_name,
+        "enrollment_date": student.enrollment_date.isoformat(),
+        "message": f"✅ Successfully enrolled {student_in.first_name} {student_in.last_name} in Class {student_in.current_class_id}",
+    }
 
 
 @router.get("/search", response_model=list[StudentOut])
@@ -107,7 +133,7 @@ async def get_all_students(
     dependencies=[Depends(require_role("Admin"))],
 )
 async def update_existing_student(student_id: int, *, db: AsyncSession = Depends(get_db), student_in: StudentUpdate):
-    db_student = await student_service.get_student(db=db, student_id=student_id)
+    db_student = await student_service.get_student_by_id(db=db, student_id=student_id)
     if not db_student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
 

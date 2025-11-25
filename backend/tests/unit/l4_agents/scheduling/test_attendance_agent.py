@@ -54,7 +54,7 @@ async def test_happy_path_step_1_get_sheet(mock_attendance_llm_invoke, mock_atte
     mock_attendance_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = attendance_agent_instance.invoke(query)
+    result = await attendance_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -82,7 +82,7 @@ async def test_happy_path_step_2_take_attendance(mock_attendance_llm_invoke, moc
     mock_attendance_http_client.post.return_value = mock_response
 
     # 3. Invoke Agent
-    result = attendance_agent_instance.invoke(query)
+    result = await attendance_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -105,7 +105,7 @@ async def test_guardrail_deflects_timetable_query(mock_attendance_llm_invoke, mo
     mock_attendance_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = attendance_agent_instance.invoke(query)
+    result = await attendance_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True
@@ -125,7 +125,7 @@ async def test_guardrail_deflects_marks_query(mock_attendance_llm_invoke, mock_a
     mock_attendance_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = attendance_agent_instance.invoke(query)
+    result = await attendance_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True

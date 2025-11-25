@@ -51,7 +51,7 @@ async def test_happy_path_get_school_leaderboard(mock_leaderboard_llm_invoke, mo
     mock_leaderboard_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = leaderboard_agent_instance.invoke(query)
+    result = await leaderboard_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -79,7 +79,7 @@ async def test_guardrail_deflects_marks_query(mock_leaderboard_llm_invoke, mock_
     mock_leaderboard_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = leaderboard_agent_instance.invoke(query)
+    result = await leaderboard_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True

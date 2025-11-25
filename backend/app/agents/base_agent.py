@@ -1,16 +1,14 @@
-# backend /app/agents/base_agent.py
-import asyncio
+import json
 import logging
 from collections.abc import Sequence
-from typing import Annotated, TypedDict
+from typing import Annotated, Optional, TypedDict
 
-from langchain_core.messages import BaseMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
+from langchain_core.tools import BaseTool
 from langgraph.graph import END, StateGraph
-from langgraph.prebuilt import ToolExecutor, ToolInvocation
 
-from app.agents.utils.llm_router import get_llm
+from app.agents.utils.llm_router import get_llm, get_llm_with_fallback
 
-# Set up logging
 logger = logging.getLogger(__name__)
 
 
@@ -21,69 +19,103 @@ class AgentState(TypedDict):
 
 
 class BaseAgent:
-    """
-    A base class for creating tool-using LangGraph agents.
-    This class encapsulates the core logic for the agent's workflow graph,
-    allowing leaf agents to be created by simply providing their specific tools and model.
-    """
+    """Base class for tool-using LangGraph agents (fully async)."""
 
-    def __init__(self, tools: list, llm_tier: str = "power"):
+    def __init__(self, tools: list, llm_tier: str = "fast", use_fallback: bool = True):
         """
-        Initializes the BaseAgent.
+        Initializes the BaseAgent with cost-efficient LLM strategy.
 
         Args:
-            tools (list): A list of tools for the agent to use.
-            llm_tier (str): The tier of the LLM to use ('fast', 'medium', 'power').
+            tools: List of tools available to the agent
+            llm_tier: Starting LLM tier ("fast", "medium", "power")
+            use_fallback: If True, automatically try cheaper models first
         """
-        self.tools = tools
+        processed_tools = []
+        self.tools_by_name = {}
+
+        for tool in tools:
+            if isinstance(tool, BaseTool):
+                tool_name = tool.name
+                tool_description = tool.description or f"Tool for {tool_name}"
+
+                if hasattr(tool, "args_schema") and tool.args_schema:
+                    try:
+                        schema = tool.args_schema.model_json_schema()
+                    except (AttributeError, TypeError):
+                        schema = {"type": "object", "properties": {}}
+                else:
+                    schema = {"type": "object", "properties": {}}
+
+                tool_def = {
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "description": tool_description,
+                        "parameters": {
+                            "type": "object",
+                            "properties": schema.get("properties", {}),
+                            "required": schema.get("required", []),
+                        },
+                    },
+                }
+                processed_tools.append(tool_def)
+                self.tools_by_name[tool_name] = tool
+                logger.debug(f"Converted BaseTool '{tool_name}' to OpenAI tool schema")
+            else:
+                processed_tools.append(tool)
+
+        self.tools = processed_tools
         self.llm_tier = llm_tier
-        self.tool_executor = ToolExecutor(tools) if tools else None
+        self.use_fallback = use_fallback
 
-        # Get the base model
-        base_model = get_llm(llm_tier)
-
-        # Bind tools with strict=False to handle tool calling errors gracefully
-        # if tools:
-        #     self.model = base_model.bind_tools(tools)
-        # else:
-        #     self.model = base_model
-        self.model = base_model
+        # Get LLM with intelligent fallback strategy
+        self.model = self._get_llm_with_strategy()
 
         self.graph = self._build_graph()
-        logger.info(f"BaseAgent initialized with {len(tools)} tools using {llm_tier} tier LLM")
+        logger.info(f"BaseAgent initialized with {len(processed_tools)} tools, " f"tier={llm_tier}, fallback={'✅ enabled' if use_fallback else '❌ disabled'}")
+
+    def _get_llm_with_strategy(self):
+        """
+        Get LLM with intelligent fallback strategy.
+        Tries cheaper models first before expensive ones.
+        """
+        if not self.use_fallback:
+            # No fallback, just use the specified tier
+            logger.info(f"📌 Using tier '{self.llm_tier}' (no fallback)")
+            return get_llm(self.llm_tier)
+
+        # Use fallback strategy: fast → medium → power
+        logger.info(f"🔄 Fallback strategy ENABLED (starting at '{self.llm_tier}')")
+        return get_llm_with_fallback(self.llm_tier)
 
     def _should_continue(self, state: AgentState) -> str:
-        """Determines if the agent should continue with tool calls or end."""
+        """Determines if agent should continue or end."""
         last_message = state["messages"][-1]
-        # Check if the message has tool_calls attribute and if it's not empty
         if hasattr(last_message, "tool_calls") and last_message.tool_calls:
             return "continue"
         return "end"
 
-    def _call_model(self, state: AgentState) -> dict:
-        """Calls the LLM with the current messages."""
+    async def _call_model(self, state: AgentState) -> dict:
+        """Calls the LLM asynchronously."""
         messages = state["messages"]
         try:
             if self.tools:
-                response = self.model.invoke(messages, tools=self.tools)
+                response = await self.model.ainvoke(messages, tools=self.tools)
             else:
-                response = self.model.invoke(messages)
-            logger.debug(f"LLM response: {response}")
+                response = await self.model.ainvoke(messages)
+            logger.debug("LLM response received")
+            # CRITICAL: Always return a list of messages, not a dict
             return {"messages": [response]}
         except Exception as e:
             logger.error(f"LLM invocation failed: {e}", exc_info=True)
-            # Return an error message that doesn't trigger tool calls
-            from langchain_core.messages import AIMessage
-
             error_response = AIMessage(content=f"I encountered an error: {str(e)}")
             return {"messages": [error_response]}
 
-    def _call_tool(self, state: AgentState) -> dict:
-        """Executes tool calls from the last message."""
+    async def _call_tool(self, state: AgentState) -> dict:
+        """Executes tool calls asynchronously."""
         last_message = state["messages"][-1]
         tool_messages = []
 
-        # Safety check
         if not hasattr(last_message, "tool_calls") or not last_message.tool_calls:
             logger.warning("_call_tool invoked but no tool_calls found")
             return {"messages": []}
@@ -96,11 +128,48 @@ class BaseAgent:
             logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
 
             try:
-                action = ToolInvocation(tool=tool_name, tool_input=tool_args)
-                result = self._run_coroutine(self.tool_executor.ainvoke(action))
+                tool = self.tools_by_name.get(tool_name)
+                if not tool:
+                    raise ValueError(f"Tool '{tool_name}' not found")
 
-                # Create a ToolMessage with the result
-                tool_message = ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
+                # Await the async tool invocation
+                result = await tool.ainvoke(tool_args)
+
+                result_str = ""
+
+                # Convert result to a string that preserves the data
+                if isinstance(result, dict):
+                    # If it's a dict with 'response' key, use that (from nested agents)
+                    if "response" in result:
+                        result_str = str(result["response"])
+                    elif "messages" in result:
+                        # Extract text from messages list
+                        messages = result["messages"]
+                        if isinstance(messages, list) and messages:
+                            last_msg = messages[-1]
+                            if hasattr(last_msg, "content"):
+                                result_str = str(last_msg.content)
+                            else:
+                                result_str = str(last_msg)
+                        else:
+                            result_str = str(result)
+                    else:
+                        # For dicts without 'response' or 'messages', preserve the actual data
+                        # Format it nicely so the LLM can read it
+                        try:
+                            result_str = json.dumps(result, indent=2, default=str)
+                        except (TypeError, ValueError):
+                            result_str = str(result)
+                else:
+                    result_str = str(result)
+
+                # Ensure we have content
+                if not result_str:
+                    result_str = "Tool executed successfully but returned no data."
+
+                logger.info(f"Tool {tool_name} result: {result_str[:150]}...")
+
+                tool_message = ToolMessage(content=result_str, tool_call_id=tool_id, name=tool_name)
                 tool_messages.append(tool_message)
                 logger.info(f"Tool {tool_name} executed successfully")
 
@@ -113,25 +182,11 @@ class BaseAgent:
                 )
                 tool_messages.append(error_message)
 
+        # CRITICAL: Always return a list of messages, not a dict or string
         return {"messages": tool_messages}
 
-    @staticmethod
-    def _run_coroutine(coro):
-        """Utility to execute a coroutine from synchronous context."""
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
-            # We are inside an existing running loop; schedule safely.
-            future = asyncio.run_coroutine_threadsafe(coro, loop)
-            return future.result()
-
-        return asyncio.run(coro)
-
     def _build_graph(self) -> StateGraph:
-        """Builds and compiles the agent's workflow graph."""
+        """Builds and compiles the async agent workflow graph."""
         workflow = StateGraph(AgentState)
         workflow.add_node("agent", self._call_model)
         workflow.add_node("action", self._call_tool)
@@ -140,19 +195,13 @@ class BaseAgent:
         workflow.add_edge("action", "agent")
         return workflow.compile()
 
-    def invoke(self, messages: list) -> dict:
-        """
-        Invokes the agent's graph with a list of messages.
-
-        Args:
-            messages (list): List of messages to process
-
-        Returns:
-            dict: The final state containing all messages
-        """
+    async def ainvoke(self, messages: list, conversation_history: Optional[list] = None) -> dict[str]:
+        """Invokes the agent's graph asynchronously."""
         try:
             logger.info(f"Invoking agent with {len(messages)} messages")
-            result = self.graph.invoke({"messages": messages})
+
+            result = await self.graph.ainvoke({"messages": messages}, config={"recursion_limit": 100})
+
             logger.info("Agent invocation completed successfully")
             return result
         except Exception as e:

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 # Define the exact L2 modules this router can route to.
 # For now, it's only "Academics".

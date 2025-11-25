@@ -41,7 +41,7 @@ class AcademicYearAgent(BaseAgent):
         super().__init__(tools=academic_year_agent_tools, llm_tier=llm_tier)
         logger.info(f"AcademicYearAgent initialized with {len(academic_year_agent_tools)} tools " f"and '{llm_tier}' tier LLM")
 
-    def invoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
+    async def ainvoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
         """
         Invokes the agent with a user query, automatically applying the system prompt.
 
@@ -72,7 +72,7 @@ class AcademicYearAgent(BaseAgent):
             messages.append(HumanMessage(content=query))
 
             # Invoke the base agent's graph
-            result = super().invoke(messages)
+            result = await super().ainvoke(messages)
 
             # Extract the final response
             final_message = result["messages"][-1]
@@ -111,11 +111,11 @@ academic_year_agent_app = academic_year_agent_instance
 
 
 # Convenience function for direct invocation
-def invoke_academic_year_agent(query: str) -> str:
+async def invoke_academic_year_agent(query: str) -> str:
     """
     Convenience function to invoke the AcademicYearAgent and return just the response string.
     """
-    result = academic_year_agent_instance.invoke(query)
+    result = await academic_year_agent_instance.ainvoke(query)
     return result.get("response", "I couldn't process that request.")
 
 

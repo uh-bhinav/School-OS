@@ -46,13 +46,13 @@ def mock_club_llm_invoke():
 
     mock_model = MagicMock()
     # Set a default return value for safety
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default ClubAgent mock response"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default ClubAgent mock response"))
 
     # The key fix: replace the entire .model object
     original_model = club_agent_instance.model
     club_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     # Restore the original model after the test
     club_agent_instance.model = original_model
@@ -88,13 +88,13 @@ def mock_achievement_llm_invoke():
 
     mock_model = MagicMock()
     # Set a default return value for safety
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default AchievementAgent mock response"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default AchievementAgent mock response"))
 
     # The key fix: replace the entire .model object
     original_model = achievement_agent_instance.model
     achievement_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     # Restore the original model after the test
     achievement_agent_instance.model = original_model
@@ -130,13 +130,13 @@ def mock_leaderboard_llm_invoke():
 
     mock_model = MagicMock()
     # Set a default return value for safety
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default LeaderboardAgent mock response"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default LeaderboardAgent mock response"))
 
     # The key fix: replace the entire .model object
     original_model = leaderboard_agent_instance.model
     leaderboard_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     # Restore the original model after the test
     leaderboard_agent_instance.model = original_model

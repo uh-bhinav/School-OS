@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 # Define the exact L3 routers this agent can route to.
 RouterName = Literal["CoreCurriculumRouter", "AssessmentRouter", "SchedulingRouter", "HolisticRouter", "__self__"]  # <-- ADDED  # For general greetings/questions

@@ -31,6 +31,41 @@ async def get_all_teachers_for_school_id(school_id: int, db: AsyncSession = Depe
 
 
 @router.get(
+    "/search",
+    response_model=list[TeacherOut],
+    dependencies=[AdminUser],
+)
+async def search_teachers(
+    *,
+    name: Optional[str] = None,
+    department: Optional[str] = None,
+    db: AsyncSession = Depends(deps.get_db_session),
+    current_profile: Profile = Depends(deps.get_current_active_user),
+):
+    """
+    (Admin Only) Flexibly search for teachers in the admin's school.
+    Can search by name or department.
+    """
+    # Build the filters dictionary
+    filters = {}
+    if name is not None:
+        filters["name"] = name
+    if department is not None:
+        filters["department"] = department
+
+    # This assumes a 'search_teachers' function exists in your service
+    # similar to the one we planned for 'subject_service'.
+    teachers = await teacher_service.search_teachers(db=db, school_id=current_profile.school_id, filters=filters)
+
+    if not teachers:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No teachers found matching the criteria.",
+        )
+    return teachers
+
+
+@router.get(
     "/{teacher_id}",
     response_model=TeacherOut,
     dependencies=[AdminUser],
@@ -147,42 +182,3 @@ async def get_all_teachers(
 
 
 # --- END REFACTOR ---
-
-
-# --- NEW, ESSENTIAL ENDPOINT ---
-@router.get(
-    "/search",
-    response_model=list[TeacherOut],
-    dependencies=[AdminUser],
-)
-async def search_teachers(
-    *,
-    name: Optional[str] = None,
-    department: Optional[str] = None,
-    db: AsyncSession = Depends(deps.get_db_session),
-    current_profile: Profile = Depends(deps.get_current_active_user),
-):
-    """
-    (Admin Only) Flexibly search for teachers in the admin's school.
-    Can search by name or department.
-    """
-    # Build the filters dictionary
-    filters = {}
-    if name is not None:
-        filters["name"] = name
-    if department is not None:
-        filters["department"] = department
-
-    # This assumes a 'search_teachers' function exists in your service
-    # similar to the one we planned for 'subject_service'.
-    teachers = await teacher_service.search_teachers(db=db, school_id=current_profile.school_id, filters=filters)
-
-    if not teachers:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No teachers found matching the criteria.",
-        )
-    return teachers
-
-
-# --- END NEW ENDPOINT ---

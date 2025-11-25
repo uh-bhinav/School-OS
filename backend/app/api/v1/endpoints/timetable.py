@@ -1,10 +1,12 @@
 # backend/app/api/v1/endpoints/timetable.py
 
+import re
 from datetime import date
 from enum import Enum
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.core.security import get_current_user_profile, require_role
 from app.db.session import get_db
@@ -110,6 +112,96 @@ async def get_timetable_for_class(
     if not timetable:
         raise HTTPException(status_code=404, detail="Timetable not found for this class.")
     return timetable
+
+
+# ADD THIS NEW ENDPOINT - MUST BE BEFORE THE /{entry_id} endpoint
+@router.get(
+    "/class/{class_identifier}",
+    response_model=list[TimetableEntryOut],
+    dependencies=[Depends(require_role("Admin", "Teacher", "Student", "Parent"))],
+)
+async def get_timetable_by_class_name(
+    class_identifier: str,
+    day: str | None = Query(None, description="Day name (Monday, Tuesday, etc.) or day_of_week (1-7)"),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get timetable for a class by name/identifier like '11A'.
+    Optionally filter by day.
+    """
+    # Parse identifier like "11A" into grade_level and section
+    match = re.match(r"^(\d+)([A-Z])$", class_identifier.upper())
+
+    if not match:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid class identifier. Use format like '11A', '10B', etc.")
+
+    grade_level = int(match.group(1))
+    section = match.group(2)
+
+    # Find the class by grade and section in user's school
+    stmt = select(Class).where(Class.school_id == current_profile.school_id, Class.grade_level == grade_level, Class.section == section, Class.is_active)
+    result = await db.execute(stmt)
+    target_class = result.scalar_one_or_none()
+
+    if not target_class:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Class {class_identifier} not found in your school.")
+
+    # Get timetable for this class
+    timetable = await timetable_service.get_class_timetable(db=db, class_id=target_class.class_id)
+
+    if not timetable:
+        raise HTTPException(status_code=404, detail="Timetable not found for this class.")
+
+    # Filter by day if provided
+    if day:
+        day_num = _parse_day(day)
+        timetable = [entry for entry in timetable if entry.day_of_week == day_num]
+
+    return timetable
+
+
+# Helper function to convert day names to numbers
+def _parse_day(day: str) -> int:
+    """Convert day name or number to day_of_week (1=Monday, 7=Sunday)"""
+    day_map = {
+        "monday": 1,
+        "mon": 1,
+        "tuesday": 2,
+        "tue": 2,
+        "wednesday": 3,
+        "wed": 3,
+        "thursday": 4,
+        "thu": 4,
+        "friday": 5,
+        "fri": 5,
+        "saturday": 6,
+        "sat": 6,
+        "sunday": 7,
+        "sun": 7,
+        "1st day": 1,
+        "2nd day": 2,
+        "3rd day": 3,
+        "4th day": 4,
+        "5th day": 5,
+        "6th day": 6,
+    }
+
+    day_lower = day.lower().strip()
+
+    # Try direct lookup first
+    if day_lower in day_map:
+        return day_map[day_lower]
+
+    # Try parsing as integer
+    try:
+        num = int(day_lower)
+        if 1 <= num <= 7:
+            return num
+    except ValueError:
+        pass
+
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid day: {day}. Use day names (Monday-Sunday) or numbers (1-7).")
 
 
 # Teacher only: Get personalized timetable

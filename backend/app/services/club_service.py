@@ -1,8 +1,10 @@
+import logging
 from collections.abc import Sequence
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy import func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload, selectinload
@@ -24,6 +26,8 @@ from app.schemas.club_schema import (
     ClubUpdate,
 )
 from app.schemas.enums import ClubMembershipStatus
+
+logger = logging.getLogger(__name__)
 
 
 class ClubService:
@@ -274,15 +278,60 @@ class ClubService:
         result = await self.db.execute(stmt)
         return result.scalars().first()  # Returns the first match
 
-    async def get_student_by_name(self, full_name: str, school_id: int) -> Optional[Student]:
-        """Finds a student by their full name within the school."""
-        stmt = select(Student).join(Profile).where(Profile.full_name.ilike(f"%{full_name}%"), Profile.school_id == school_id).options(selectinload(Student.profile))
-
-        result = await self.db.execute(stmt)
-        return result.scalars().first()  # Returns the first match
+    async def get_student_by_name(self, full_name: str, school_id: int):
+        """
+        Search for a student by their full name (first_name + last_name).
+        """
+        try:
+            # ✅ CORRECT: Concatenate first_name and last_name
+            stmt = (
+                select(Student)
+                .join(Profile)
+                .where(or_(func.concat(Profile.first_name, " ", Profile.last_name).ilike(f"%{full_name}%"), Profile.first_name.ilike(f"%{full_name}%"), Profile.last_name.ilike(f"%{full_name}%")), Profile.school_id == school_id)
+                .options(selectinload(Student.profile))
+            )
+            result = await self.db.execute(stmt)
+            return result.scalars().first()
+        except Exception as e:
+            logger.error(f"Error fetching student by name: {e}")
+            return None
 
     async def get_club_by_name(self, club_name: str, school_id: int) -> Optional[Club]:
         """Finds a club by its name within the school."""
         stmt = select(Club).where(Club.name.ilike(f"%{club_name}%"), Club.school_id == school_id)
         result = await self.db.execute(stmt)
         return result.scalars().first()
+
+    async def get_club_memberships_by_club(self, club_id: int, school_id: int) -> Sequence[ClubMembership]:
+        """
+        Get all club memberships for a specific club with eager-loaded student data.
+
+        Returns:
+            Sequence[ClubMembership]: List of memberships with student data pre-loaded
+
+        Raises:
+            No exceptions - returns empty list if none found
+
+        NOTE: All relationships are eagerly loaded to prevent:
+        - greenlet switching errors
+        - lazy loading in async context
+        - DetachedInstanceError when accessed outside session
+        """
+        stmt = (
+            select(ClubMembership)
+            .join(Club, ClubMembership.club_id == Club.id)
+            .where(
+                Club.id == club_id,
+                Club.school_id == school_id,
+                ClubMembership.status == ClubMembershipStatus.active,
+            )
+            .options(
+                joinedload(ClubMembership.student).joinedload(Student.profile),
+                joinedload(ClubMembership.club),
+            )
+        )
+
+        result = await self.db.execute(stmt)
+        memberships = result.scalars().unique().all()
+
+        return memberships

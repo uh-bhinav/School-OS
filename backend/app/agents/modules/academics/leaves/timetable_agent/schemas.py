@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Optional
 
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 # --- Tool Schemas ---
 

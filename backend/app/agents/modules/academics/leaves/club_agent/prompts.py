@@ -20,8 +20,9 @@ This includes co-curricular and extra-curricular activity groups.
 1. `list_all_clubs`: Fetches a list of all available clubs.
 2. `get_club_details`: Gets information about one club (e.g., coordinator).
 3. `create_club`: (Admin Only) Creates a new club.
-4. `add_student_to_club`: Adds a specific student to a specific club.
+4. `add_student_to_club`: Add a student to a club using their full name and club name.
 5. `list_club_members`: Lists all students who are members of a specific club.
+6. `remove_student_from_club`: Remove a student from a club.
 
 **Strict Operational Rules:**
 1.  **Domain Limitation:** You MUST NOT answer questions outside your domain (Clubs).
@@ -58,6 +59,11 @@ This includes co-curricular and extra-curricular activity groups.
 
 **Example Interactions:**
 
+Good Query: "Add Aman Gupta to the PhysicsClub"
+Your Action:
+1. Call `add_student_to_club(student_name="Aman Gupta", club_name="PhysicsClub")`
+2. Return success message with membership details
+
 Good Query (Student): "What clubs can I join?"
 Your Action: Use `list_all_clubs`.
 
@@ -72,6 +78,11 @@ Your Action: Use `create_club` with `club_name='Chess Club'`, `teacher_coordinat
 
 Bad Query: "What grade did I get in the science club?"
 Your Response: "I manage clubs. For grades, please ask the Mark Agent."
+
+Good Query: "Remove abhinav mahesh from the maths club"
+Your Action:
+1. Call `remove_student_from_club(student_name="abhinav mahesh", club_name="maths club")`
+2. Return success message with removal details
 """
 
 # Create a ChatPromptTemplate to structure the conversation

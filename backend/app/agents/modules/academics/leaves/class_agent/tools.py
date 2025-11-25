@@ -11,17 +11,6 @@ from app.agents.http_client import (
     AgentValidationError,
 )
 
-from .schemas import (
-    AssignSubjectsSchema,
-    CreateClassSchema,
-    DeleteClassSchema,
-    GetClassDetailsSchema,
-    GetClassStudentsSchema,
-    ListAllClassesSchema,
-    SearchClassesSchema,
-    UpdateClassSchema,
-)
-
 logger = logging.getLogger(__name__)
 
 
@@ -38,7 +27,7 @@ def _format_error_response(error: AgentHTTPClientError) -> dict[str, Any]:
 # --- Tool Definitions ---
 
 
-@tool("list_all_classes", args_schema=ListAllClassesSchema)
+@tool("list_all_classes")
 async def list_all_classes() -> dict[str, Any]:
     """
     Retrieves all active classes for the user's school.
@@ -58,7 +47,7 @@ async def list_all_classes() -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("search_classes", args_schema=SearchClassesSchema)
+@tool("search_classes")
 async def search_classes(
     name: Optional[str] = None,
     grade_level: Optional[int] = None,
@@ -91,7 +80,7 @@ async def search_classes(
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_class_details", args_schema=GetClassDetailsSchema)
+@tool("get_class_details")
 async def get_class_details(class_id: int) -> dict[str, Any]:
     """
     (Admin/Teacher Only) Get detailed information for a single class by its ID.
@@ -112,7 +101,7 @@ async def get_class_details(class_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_students_in_class", args_schema=GetClassStudentsSchema)
+@tool("get_students_in_class")
 async def get_students_in_class(class_id: int) -> dict[str, Any]:
     """
     (Admin/Teacher Only) Lists all students enrolled in a specific class.
@@ -130,7 +119,7 @@ async def get_students_in_class(class_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("create_class", args_schema=CreateClassSchema)
+@tool("create_class")
 async def create_class(
     school_id: int,
     grade_level: int,
@@ -163,7 +152,7 @@ async def create_class(
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("update_class", args_schema=UpdateClassSchema)
+@tool("update_class")
 async def update_class(class_id: int, **updates: Any) -> dict[str, Any]:
     """
     (Admin Only) Updates an existing class's details.
@@ -187,7 +176,7 @@ async def update_class(class_id: int, **updates: Any) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("delete_class", args_schema=DeleteClassSchema)
+@tool("delete_class")
 async def delete_class(class_id: int) -> dict[str, Any]:
     """
     (Admin Only) Soft-deletes a class.
@@ -206,7 +195,7 @@ async def delete_class(class_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("assign_subjects_to_class", args_schema=AssignSubjectsSchema)
+@tool("assign_subjects_to_class")
 async def assign_subjects_to_class(class_id: int, subject_ids: list[int]) -> dict[str, Any]:
     """
     (Admin Only) Assigns a list of subjects to a class.
@@ -225,6 +214,63 @@ async def assign_subjects_to_class(class_id: int, subject_ids: list[int]) -> dic
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
+# Add this NEW tool at the end:
+
+# REPLACE the get_class_with_teachers_and_subjects function with:
+
+
+@tool("get_class_with_teachers_and_subjects")
+async def get_class_with_teachers_and_subjects(
+    class_name: str,
+) -> dict[str, Any]:
+    """
+    Get COMPLETE class information in ONE call:
+    - Class details
+    - All subjects taught in the class
+    - Class teacher information
+
+    This tool avoids multiple LLM decisions by doing everything at once.
+    Perfect for queries like: "What subjects in class 1A and who teaches?"
+
+    Args:
+        class_name (str): Name of the class (e.g., "1A", "10B")
+
+    Returns:
+        dict with complete class + subjects + teacher information
+    """
+    try:
+        async with AgentHTTPClient() as client:
+            logger.info(f"Searching for class: {class_name}")
+
+            # Step 1: Search for the class by name
+            search_response = await client.get("/classes/search", params={"name": class_name})
+
+            if not search_response or len(search_response) == 0:
+                return {"success": False, "error": f"Class '{class_name}' not found"}
+
+            class_data = search_response[0]
+            class_id = class_data["class_id"]
+
+            logger.info(f"Found class {class_name} with ID {class_id}. Fetching complete info...")
+
+            # Step 2: Get complete class info (subjects + teacher) in ONE call
+            complete_info = await client.get(f"/classes/{class_id}/complete-info")
+
+            logger.info(f"Successfully retrieved complete class info for class {class_name}")
+
+            return complete_info
+
+    except AgentResourceNotFoundError as e:
+        logger.warn(f"Class not found: {e.message}")
+        return {"success": False, "error": f"Class '{class_name}' not found"}
+    except AgentHTTPClientError as e:
+        logger.error(f"HTTP error fetching class info: {e.message}", exc_info=True)
+        return {"success": False, "error": f"Error fetching class information: {e.message}", "status_code": getattr(e, "status_code", 500)}
+    except Exception as e:
+        logger.exception(f"Unexpected error in get_class_with_teachers_and_subjects: {e}")
+        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
+
+
 # --- Export the list of tools ---
 
 class_agent_tools = [
@@ -236,6 +282,7 @@ class_agent_tools = [
     update_class,
     delete_class,
     assign_subjects_to_class,
+    get_class_with_teachers_and_subjects,
 ]
 
 __all__ = ["class_agent_tools"]

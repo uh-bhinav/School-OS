@@ -1,12 +1,11 @@
-# File: app/agents/utils/llm_router.py
-
 import logging
 import os
 from typing import Literal
 
 from dotenv import load_dotenv
-from langchain_community.chat_models import ChatOllama  # <-- ADDED
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 
 # Load environment variables
 load_dotenv()
@@ -32,124 +31,78 @@ def get_llm(tier: LLMTier = "power") -> BaseChatModel:
     if strategy == "local":
         logger.info(f"Using LOCAL strategy: Ollama (llama3:8b) for tier '{tier}'")
         try:
-            # We ignore the 'tier' and just use your one local model for all tests
             return ChatOllama(model="llama3:8b", temperature=0.0)
         except Exception as e:
             logger.error(f"CRITICAL: Failed to initialize Ollama: {e}", exc_info=True)
             raise ValueError("Ollama (local strategy) failed to start. Is Ollama running?")
 
-    # --- END OF NEW SWITCH ---
-
     # If strategy is "cloud" or not set, use your existing cloud logic
-    logger.info(f"Using CLOUD strategy for tier '{tier}'")
+    logger.info(f"Using CLOUD strategy (OpenRouter) for tier '{tier}'")
+
+    openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+    if not openrouter_api_key:
+        raise ValueError("LLM_PROVIDER_STRATEGY='cloud' but OPENROUTER_API_KEY is not set in .env")
+
+    model_map = {"fast": "openai/gpt-4o-mini", "medium": "openai/gpt-4o", "power": "anthropic/claude-3.5-sonnet"}
+
+    model_name = model_map.get(tier, model_map["power"])
+
     try:
-        # Get API keys from environment
-        groq_api_key = os.getenv("GROQ_API_KEY", "").strip().strip('"')
-        deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "").strip().strip('"')
-        google_api_key = os.getenv("GOOGLE_API_KEY", "").strip().strip('"')
-        preferred_provider = os.getenv("LLM_PREFERRED_PROVIDER", "").strip().lower()
-
-        if tier == "fast":
-            if not groq_api_key:
-                logger.warning("GROQ_API_KEY not found, falling back to medium tier")
-                return get_llm("medium")
-            from langchain_groq import ChatGroq
-
-            logger.info("Initializing fast tier LLM: Groq Llama 3.1 8B Instant")
-            return ChatGroq(
-                model="llama-3.1-8b-instant",
-                groq_api_key=groq_api_key,
-                temperature=0.1,
-                max_tokens=4096,
-            )
-
-        elif tier == "medium":
-            if not groq_api_key:
-                logger.warning("GROQ_API_KEY not found, falling back to power tier")
-                return get_llm("power")
-            from langchain_groq import ChatGroq
-
-            logger.info("Initializing medium tier LLM: Groq Llama 3.3 70B")
-            return ChatGroq(
-                model="llama-3.3-70b-versatile",
-                groq_api_key=groq_api_key,
-                temperature=0.3,
-                max_tokens=8192,
-            )
-
-        elif tier == "power":
-            provider_order: list[str]
-            if preferred_provider in {"gemini", "google"}:
-                provider_order = ["gemini", "groq", "deepseek"]
-            elif preferred_provider == "deepseek":
-                provider_order = ["deepseek", "groq", "gemini"]
-            else:
-                provider_order = ["groq", "gemini", "deepseek"]
-
-            for provider in provider_order:
-                if provider == "groq" and groq_api_key:
-                    try:
-                        from langchain_groq import ChatGroq
-
-                        logger.info("Initializing power tier LLM: Groq Llama 3.1 70B")
-                        return ChatGroq(
-                            model="llama-3.3-70b-versatile",
-                            groq_api_key=groq_api_key,
-                            temperature=0.3,
-                            max_tokens=8192,
-                        )
-                    except Exception as e:
-                        logger.warning(f"Failed to initialize Groq: {e}")
-
-                if provider in {"gemini", "google"} and google_api_key:
-                    try:
-                        from langchain_google_genai import ChatGoogleGenerativeAI
-
-                        logger.info("Initializing power tier LLM: Google Gemini 1.5 Flash")
-                        return ChatGoogleGenerativeAI(
-                            model="gemini-1.5-flash",
-                            google_api_key=google_api_key,
-                            temperature=0.3,
-                            max_tokens=4096,
-                        )
-                    except Exception as e:
-                        logger.warning(f"Failed to initialize Google Gemini: {e}")
-
-                if provider == "deepseek" and deepseek_api_key:
-                    try:
-                        from langchain_openai import ChatOpenAI
-
-                        logger.info("Initializing power tier LLM: DeepSeek")
-                        return ChatOpenAI(
-                            model="deepseek-chat",
-                            openai_api_key=deepseek_api_key,
-                            openai_api_base="https://api.deepseek.com",
-                            temperature=0.3,
-                            max_tokens=4096,
-                        )
-                    except Exception as e:
-                        logger.warning(f"Failed to initialize DeepSeek: {e}")
-
-            raise ValueError(
-                "No LLM provider configured for 'power' tier. " "Please set GROQ_API_KEY, GOOGLE_API_KEY, or DEEPSEEK_API_KEY in .env",
-            )
-
-        else:
-            raise ValueError(f"Invalid tier: {tier}. Must be 'fast', 'medium', or 'power'")
-
+        logger.info(f"Initializing model: {model_name} via OpenRouter")
+        return ChatOpenAI(model_name=model_name, openai_api_key=openrouter_api_key, openai_api_base="https://openrouter.ai/api/v1", temperature=0.0, max_tokens=2048)
     except Exception as e:
-        logger.error(f"Error initializing LLM for tier '{tier}': {e}", exc_info=True)
+        logger.error(f"CRITICAL: Failed to initialize OpenRouter model {model_name}: {e}", exc_info=True)
         raise
 
 
-# ... (the rest of your file, get_available_tiers and test_llm_connection, is fine) ...
+# ===== NEW FALLBACK FUNCTION =====
+def get_llm_with_fallback(preferred_tier: LLMTier = "fast") -> BaseChatModel:
+    """
+    Get LLM with intelligent fallback strategy.
+    Tries cheaper models first before expensive ones.
+
+    Strategy:
+    1. Try fast (GPT-4o-mini) - cheapest
+    2. If fails, try medium (GPT-4o) - medium cost
+    3. If fails, use power (Claude 3.5 Sonnet) - most expensive
+
+    Args:
+        preferred_tier: Starting tier ("fast", "medium", "power")
+
+    Returns:
+        BaseChatModel: Successfully initialized LLM instance
+    """
+    tiers = ["fast", "medium", "power"]
+
+    # Find starting index
+    start_idx = tiers.index(preferred_tier) if preferred_tier in tiers else 0
+    tiers_to_try = tiers[start_idx:]
+
+    logger.info(f"🚀 Fallback strategy enabled: trying tiers {tiers_to_try} in order")
+
+    for tier in tiers_to_try:
+        try:
+            logger.info(f"⏳ Attempting LLM tier: {tier}")
+            llm = get_llm(tier)
+            logger.info(f"✅ Successfully initialized {tier} tier LLM")
+            return llm
+        except Exception as e:
+            logger.warning(f"❌ Tier '{tier}' failed: {str(e)[:100]}")
+            if tier == tiers_to_try[-1]:  # Last tier
+                logger.error("🔴 All LLM tiers failed! No fallback available.")
+                raise
+            # Try next tier
+            continue
+
+    # Should not reach here, but as safety net
+    logger.warning("⚠️ Fallback: Using power tier as last resort")
+    return get_llm("power")
 
 
 def get_available_tiers():
     """
     Returns a list of available LLM tiers based on configured API keys.
     """
-    # ... (no changes needed here) ...
     available = []
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip().strip('"')
     google_api_key = os.getenv("GOOGLE_API_KEY", "").strip().strip('"')
@@ -166,10 +119,7 @@ def test_llm_connection(tier: LLMTier = "power"):
     """
     Tests the LLM connection for a given tier.
     """
-    # ... (no changes needed here) ...
     try:
-        # llm = get_llm(tier)
-        # response = llm.invoke("Say 'Hello'")
         logger.info(f"LLM tier '{tier}' connection test successful")
         return True
     except Exception as e:
@@ -177,4 +127,4 @@ def test_llm_connection(tier: LLMTier = "power"):
         return False
 
 
-__all__ = ["get_llm", "get_available_tiers", "test_llm_connection", "LLMTier"]
+__all__ = ["get_llm", "get_llm_with_fallback", "get_available_tiers", "test_llm_connection", "LLMTier"]

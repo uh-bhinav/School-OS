@@ -19,7 +19,9 @@ def init_engine():
         settings.DATABASE_URL,
         pool_pre_ping=True,
         pool_size=10,
-        max_overflow=0,
+        max_overflow=5,
+        pool_recycle=3600,  # ← Recycle connections after 1 hour
+        echo=False,
     )
 
     SessionLocal = async_sessionmaker(
@@ -55,3 +57,14 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
+
+
+async def close_db():
+    """
+    Closes all database connections.
+    Call this in app shutdown event.
+    """
+    engine = db_context.get("engine")
+    if engine:
+        await engine.dispose()
+        print("✅ Database engine disposed")

@@ -3,7 +3,7 @@ import os
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.modules.academics.leaves.academic_year_agent.main import (
@@ -74,8 +74,12 @@ class AgentChatRequest(BaseModel):
 
 
 class AgentChatResponse(BaseModel):
-    response: str
+    response: str = Field(..., description="The agent's response")
     session_id: Optional[str]
+
+    class Config:
+        # Allow arbitrary types and longer strings
+        json_schema_extra = {"example": {"response": "This is a detailed response from the agent...", "session_id": "default-session"}}
 
 
 def get_api_base_url() -> str:
@@ -148,7 +152,7 @@ async def root_chat(
     try:
         with use_tool_context(context):
             # 3. Invoke the L1 Root Orchestrator
-            result = root_orchestrator_app.invoke(chat_request.query)
+            result = await root_orchestrator_app.ainvoke(chat_request.query)
 
         logger.info(f"--- L1 RootOrchestrator Success --- (Session: {chat_request.session_id})")
         return AgentChatResponse(
@@ -190,7 +194,7 @@ async def academic_year_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = academic_year_agent_app.invoke(chat_request.query)
+            result = await academic_year_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -216,7 +220,7 @@ async def student_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = student_agent_app.invoke(chat_request.query)
+            result = await student_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -242,7 +246,7 @@ async def class_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = class_agent_app.invoke(chat_request.query)
+            result = await class_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -268,7 +272,7 @@ async def subject_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = subject_agent_app.invoke(chat_request.query)
+            result = await subject_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -294,7 +298,7 @@ async def teacher_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = teacher_agent_app.invoke(chat_request.query)
+            result = await teacher_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -320,7 +324,7 @@ async def exam_type_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = exam_type_agent_app.invoke(chat_request.query)
+            result = await exam_type_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -346,7 +350,7 @@ async def exam_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = exam_agent_app.invoke(chat_request.query)
+            result = await exam_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -372,7 +376,7 @@ async def mark_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = mark_agent_app.invoke(chat_request.query)
+            result = await mark_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -398,7 +402,7 @@ async def report_card_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = report_card_agent_app.invoke(chat_request.query)
+            result = await report_card_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -424,7 +428,7 @@ async def period_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = period_agent_app.invoke(chat_request.query)
+            result = await period_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -450,7 +454,7 @@ async def timetable_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = timetable_agent_app.invoke(chat_request.query)
+            result = await timetable_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -476,7 +480,7 @@ async def club_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = club_agent_app.invoke(chat_request.query)
+            result = await club_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -502,7 +506,7 @@ async def achievement_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = achievement_agent_app.invoke(chat_request.query)
+            result = await achievement_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,
@@ -528,7 +532,7 @@ async def leaderboard_chat(
     context = await _get_agent_context(request=request, profile=current_profile, db=db)
     try:
         with use_tool_context(context):
-            result = leaderboard_agent_app.invoke(chat_request.query)
+            result = await leaderboard_agent_app.ainvoke(chat_request.query)
         return AgentChatResponse(
             response=result.get("response", "No response generated."),
             session_id=chat_request.session_id,

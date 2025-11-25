@@ -55,7 +55,7 @@ async def test_happy_path_get_class_schedule(mock_timetable_llm_invoke, mock_tim
     mock_timetable_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = timetable_agent_instance.invoke(query)
+    result = await timetable_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -82,7 +82,7 @@ async def test_guardrail_deflects_attendance_query(mock_timetable_llm_invoke, mo
     mock_timetable_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = timetable_agent_instance.invoke(query)
+    result = await timetable_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True
@@ -102,7 +102,7 @@ async def test_guardrail_deflects_period_query(mock_timetable_llm_invoke, mock_t
     mock_timetable_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = timetable_agent_instance.invoke(query)
+    result = await timetable_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True

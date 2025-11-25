@@ -1,6 +1,5 @@
 import logging
 
-from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.agents.utils.llm_router import get_llm
@@ -26,53 +25,31 @@ You must route to one of the following 5 agents based on their responsibilities:
 Respond *only* with the JSON object matching the requested schema.
 """
 
-# 2. Get the "fast" LLM, as recommended for routing
+# 2. Get the "fast" LLM
 llm = get_llm("fast")
 
 # 3. Create the prompt
 prompt = ChatPromptTemplate.from_messages([("system", SYSTEM_PROMPT), ("human", "{query}")])
 
-# 4. Bind the structured output schema to the LLM
-# This forces the LLM to *always* return a valid CoreCurriculumRoute JSON
-# llm_with_output = llm.with_structured_output(CoreCurriculumRoute)
-# model_with_tool = llm.bind_tools(
-#     [CoreCurriculumRoute],
-#     tool_choice="CoreCurriculumRoute"  # Force the LLM to call this tool
-# )
+# 4. FIX: Bind the structured output schema directly to the LLM.
+llm_with_output = llm.with_structured_output(CoreCurriculumRoute)
 
-# 5. Create the final routing chain
-parser = PydanticToolsParser(tools=[CoreCurriculumRoute])
-
-# Create the final routing chain
-# router_chain = prompt | model_with_tool | parser
-# router_chain = prompt | llm_with_output
+# 5. Create the final, simple routing chain
+router_chain = prompt | llm_with_output
 
 
 async def invoke_core_curriculum_router(query: str) -> CoreCurriculumRoute:
     """
     Invokes the Core Curriculum router to get a routing decision.
-
-    Args:
-        query: The user's input query.
-
-    Returns:
-        A CoreCurriculumRoute object with the agent_name to route to.
     """
     logger.info(f"Routing query in CoreCurriculumRouter: '{query[:100]}...'")
     try:
-        messages = await prompt.ainvoke({"query": query})
-        response = await llm.ainvoke(messages, tools=[CoreCurriculumRoute], tool_choice="CoreCurriculumRoute")  # Force the LLM to call our schema
-        if not hasattr(response, "tool_calls") or not response.tool_calls:
-            raise ValueError("Router LLM failed to produce a tool call.")
-        parsed_tool_calls = parser.invoke(response)
-        # parsed_tool_calls = await router_chain.ainvoke({"query": query})
-        if not parsed_tool_calls:
-            raise ValueError("Router LLM failed to produce valid tool call.")
+        # 6. FIX: Use the new, simpler chain.
+        route = await router_chain.ainvoke({"query": query})
 
-        route = parsed_tool_calls[0]
-        # route = await router_chain.ainvoke({"query": query})
         logger.info(f"Routing decision: {route.agent_name}")
         return route
+
     except Exception as e:
         logger.error(f"Error in CoreCurriculumRouter: {e}", exc_info=True)
         # Fallback in case of a routing error

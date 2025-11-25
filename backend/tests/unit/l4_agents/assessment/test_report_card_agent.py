@@ -50,7 +50,7 @@ async def test_happy_path_get_student_report_card(mock_report_card_llm_invoke, m
     mock_report_card_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = report_card_agent_instance.invoke(query)
+    result = await report_card_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -83,7 +83,7 @@ async def test_happy_path_download_pdf(mock_report_card_llm_invoke, mock_report_
     # The tool constructs the URL itself using the mocked _get_auth_headers
 
     # 3. Invoke Agent
-    result = report_card_agent_instance.invoke(query)
+    result = await report_card_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -107,7 +107,7 @@ async def test_guardrail_deflects_marks_query(mock_report_card_llm_invoke, mock_
     mock_report_card_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = report_card_agent_instance.invoke(query)
+    result = await report_card_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True
@@ -128,7 +128,7 @@ async def test_guardrail_asks_for_id(mock_report_card_llm_invoke, mock_report_ca
     mock_report_card_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = report_card_agent_instance.invoke(query)
+    result = await report_card_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True

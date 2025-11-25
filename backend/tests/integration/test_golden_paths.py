@@ -95,7 +95,7 @@ async def test_e2e_marks_query_golden_path(full_e2e_mocks):
     full_e2e_mocks["l1_llm"].side_effect = l1_mock_callable
 
     # --- 2. Invoke the L1 Root Orchestrator ---
-    result = root_orchestrator_instance.invoke(query)
+    result = await root_orchestrator_instance.ainvoke(query)
 
     # --- 3. Assertions ---
     assert result["success"] is True, f"Agent hit exception: {result.get('error')}"

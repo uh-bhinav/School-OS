@@ -111,7 +111,9 @@ class AgentHTTPClient:
         """Context manager exit - closes the HTTP client only if we created it."""
         # Only close the client if this class created it
         if self._client and not self._is_external_client:
+            logger.debug("🔴 Closing HTTP client (created by AgentHTTPClient)")
             await self._client.aclose()
+            logger.debug("✅ HTTP client closed")
 
     def _get_auth_headers(self) -> dict[str, str]:
         """

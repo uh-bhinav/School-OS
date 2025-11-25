@@ -51,7 +51,7 @@ async def test_happy_path_list_exam_types(mock_exam_type_llm_invoke, mock_exam_t
     mock_exam_type_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = exam_type_agent_instance.invoke(query)
+    result = await exam_type_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -80,7 +80,7 @@ async def test_happy_path_create_exam_type(mock_exam_type_llm_invoke, mock_exam_
     mock_exam_type_http_client.post.return_value = mock_response
 
     # 3. Invoke Agent
-    result = exam_type_agent_instance.invoke(query)
+    result = await exam_type_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -104,7 +104,7 @@ async def test_guardrail_deflects_exam_schedule_query(mock_exam_type_llm_invoke,
     mock_exam_type_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = exam_type_agent_instance.invoke(query)
+    result = await exam_type_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True
@@ -144,7 +144,7 @@ async def test_edge_case_handles_tool_api_error_gracefully(mock_exam_type_llm_in
     mock_exam_type_http_client.get.side_effect = Exception("500 Internal Server Error")
 
     # 3. Invoke Agent
-    result = exam_type_agent_instance.invoke(query)
+    result = await exam_type_agent_instance.ainvoke(query)
 
     # 4. Assertions
     # FIX: The agent's invoke method *succeeds* because the graph handled the error.
@@ -171,7 +171,7 @@ async def test_edge_case_handles_llm_failure_gracefully(mock_exam_type_llm_invok
     mock_exam_type_llm_invoke.side_effect = Exception("Catastrophic LLM Failure")
 
     # 2. Invoke Agent
-    result = exam_type_agent_instance.invoke(query)
+    result = await exam_type_agent_instance.ainvoke(query)
 
     # 4. Assertions
     # FIX: The agent's own invoke() method succeeds...

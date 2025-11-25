@@ -39,7 +39,7 @@ class SubjectAgent(BaseAgent):
         super().__init__(tools=subject_agent_tools, llm_tier=llm_tier)
         logger.info(f"SubjectAgent initialized with {len(subject_agent_tools)} tools " f"and '{llm_tier}' tier LLM")
 
-    def invoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
+    async def ainvoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
         """
         Invokes the agent with a user query, automatically applying the system prompt.
 
@@ -70,7 +70,7 @@ class SubjectAgent(BaseAgent):
             messages.append(HumanMessage(content=query))
 
             # Invoke the base agent's graph
-            result = super().invoke(messages)
+            result = await super().ainvoke(messages)
 
             # Extract the final response
             final_message = result["messages"][-1]
@@ -109,11 +109,11 @@ subject_agent_app = subject_agent_instance
 
 
 # Convenience function for direct invocation
-def invoke_subject_agent(query: str) -> str:
+async def invoke_subject_agent(query: str) -> str:
     """
     Convenience function to invoke the SubjectAgent and return just the response string.
     """
-    result = subject_agent_instance.invoke(query)
+    result = await subject_agent_instance.ainvoke(query)
     return result.get("response", "I couldn't process that request.")
 
 

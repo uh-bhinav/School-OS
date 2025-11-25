@@ -51,7 +51,7 @@ async def test_happy_path_list_club_members(mock_club_llm_invoke, mock_club_http
     mock_club_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = club_agent_instance.invoke(query)
+    result = await club_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -79,7 +79,7 @@ async def test_guardrail_deflects_marks_query(mock_club_llm_invoke, mock_club_ht
     mock_club_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = club_agent_instance.invoke(query)
+    result = await club_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True
@@ -99,7 +99,7 @@ async def test_guardrail_deflects_schedule_query(mock_club_llm_invoke, mock_club
     mock_club_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = club_agent_instance.invoke(query)
+    result = await club_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True

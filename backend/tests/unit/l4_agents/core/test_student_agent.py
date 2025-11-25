@@ -18,7 +18,7 @@ def test_student_agent_initialization():
 
 def test_student_agent_loads_tools():
     """Tests that the agent is configured with the correct 12 tools."""
-    assert len(student_agent_tools) == 12
+    assert len(student_agent_tools) == 13
     tool_names = [tool.name for tool in student_agent_tools]
     assert "search_students" in tool_names
     assert "admit_new_student" in tool_names
@@ -53,7 +53,7 @@ async def test_happy_path_get_parent_contacts(mock_student_llm_invoke, mock_stud
     mock_student_http_client.get.side_effect = [search_response, contacts_response]
 
     # 3. Invoke Agent
-    result = student_agent_instance.invoke(query)
+    result = await student_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -79,7 +79,7 @@ async def test_guardrail_deflects_marks_query(mock_student_llm_invoke, mock_stud
     mock_student_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = student_agent_instance.invoke(query)
+    result = await student_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True
@@ -114,7 +114,7 @@ async def test_edge_case_handles_empty_search_result(mock_student_llm_invoke, mo
     mock_student_http_client.get.return_value = search_response
 
     # 3. Invoke Agent
-    result = student_agent_instance.invoke(query)
+    result = await student_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True

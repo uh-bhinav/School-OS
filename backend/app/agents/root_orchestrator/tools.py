@@ -1,8 +1,7 @@
 import logging
-from typing import Any
 
 from langchain_core.tools import tool
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 # Import the L2 orchestrator we just built
 from app.agents.modules.academics.module_agent import academics_module_orchestrator_instance
@@ -27,26 +26,26 @@ class L1ToolInputSchema(BaseModel):
 # --- L1 Tool Definitions ---
 
 
-@tool("academics_tool", args_schema=L1ToolInputSchema)
-async def academics_tool(query: str) -> dict[str, Any]:
-    """
-    Use this tool for any query related to academics, including:
-    - Students, Classes, Subjects, Teachers
-    - Exams, Marks, Grades, Report Cards
-    - Attendance, Timetables, Schedules
-    - Clubs, Achievements, Leaderboards
-    """
-    logger.info("L1 Root: Routing to AcademicsModuleOrchestrator")
+@tool("academics_tool")
+async def academics_tool(query: str) -> str:
+    """Routes query to the Academics Module Orchestrator."""
+    try:
+        logger.info("L1 Root: Routing to AcademicsModuleOrchestrator")
+        # ainvoke returns {"messages": [...]} - extract the response
+        result = await academics_module_orchestrator_instance.ainvoke(query)
 
-    # We don't need to route again. This tool *is* the router.
-    # We will invoke the L2 agent directly.
-    # This tool's 'description' is what the L1's *BaseAgent* LLM will use
-    # to decide which tool to call.
-
-    # We are calling the L2 agent's invoke method directly
-    # Note: We must use .invoke() not await invoke() because
-    # the BaseAgent's _run_coroutine handles the async call.
-    return academics_module_orchestrator_instance.invoke(query)
+        # The nested agent returns a dict with keys like "response" or "messages"
+        # Extract the final response string
+        if isinstance(result, dict):
+            response = result.get("response") or result.get("messages", "")
+            if isinstance(response, list):
+                # If it's a list of messages, extract the last one
+                response = response[-1].content if response else ""
+            return str(response)
+        return str(result)
+    except Exception as e:
+        logger.error(f"Error in academics_tool: {e}", exc_info=True)
+        return f"Error: {str(e)}"
 
 
 # --- Export the list of tools ---

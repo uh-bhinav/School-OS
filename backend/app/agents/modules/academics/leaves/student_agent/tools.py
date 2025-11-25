@@ -1,4 +1,5 @@
 import logging
+import secrets  # ← ADD THIS
 from datetime import date
 from typing import Any, Optional
 
@@ -10,20 +11,6 @@ from app.agents.http_client import (
     AgentHTTPClientError,
     AgentResourceNotFoundError,
     AgentValidationError,
-)
-
-from .schemas import (
-    AdmitNewStudentSchema,
-    AssignParentSchema,
-    DeleteStudentSchema,
-    GetParentContactsSchema,
-    GetStudentDetailsSchema,
-    GetStudentSummarySchema,
-    PromoteStudentsSchema,
-    RemoveParentContactSchema,
-    SearchStudentsSchema,
-    UpdateParentContactSchema,
-    UpdateStudentSchema,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,7 +50,7 @@ async def list_all_students() -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("search_students", args_schema=SearchStudentsSchema)
+@tool("search_students")
 async def search_students(name: str) -> dict[str, Any]:
     """
     Search for students by name.
@@ -84,7 +71,7 @@ async def search_students(name: str) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_student_details", args_schema=GetStudentDetailsSchema)
+@tool("get_student_details")
 async def get_student_details(student_id: int) -> dict[str, Any]:
     """
     Get detailed information for a single student by their ID.
@@ -105,7 +92,7 @@ async def get_student_details(student_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("admit_new_student", args_schema=AdmitNewStudentSchema)
+@tool("admit_new_student")
 async def admit_new_student(
     email: str,
     school_id: int,
@@ -147,7 +134,7 @@ async def admit_new_student(
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("update_student", args_schema=UpdateStudentSchema)
+@tool("update_student")
 async def update_student(student_id: int, **updates: Any) -> dict[str, Any]:
     """
     (Admin Only) Update an existing student's details.
@@ -171,7 +158,7 @@ async def update_student(student_id: int, **updates: Any) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("delete_student", args_schema=DeleteStudentSchema)
+@tool("delete_student")
 async def delete_student(student_id: int) -> dict[str, Any]:
     """
     (Admin Only) Soft-delete a student.
@@ -190,7 +177,7 @@ async def delete_student(student_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("promote_students", args_schema=PromoteStudentsSchema)
+@tool("promote_students")
 async def promote_students(student_ids: list[int], new_class_id: int) -> dict[str, Any]:
     """
     (Admin Only) Promote a list of students to a new class.
@@ -212,7 +199,7 @@ async def promote_students(student_ids: list[int], new_class_id: int) -> dict[st
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_student_academic_summary", args_schema=GetStudentSummarySchema)
+@tool("get_student_academic_summary")
 async def get_student_academic_summary(student_id: int, academic_year_id: Optional[int] = None) -> dict[str, Any]:
     """
     (Admin Only) Get a consolidated academic summary (attendance/marks) for a student.
@@ -237,7 +224,7 @@ async def get_student_academic_summary(student_id: int, academic_year_id: Option
 # --- Student Contact Tools (from student_contacts.py) ---
 
 
-@tool("assign_parent_to_student", args_schema=AssignParentSchema)
+@tool("assign_parent_to_student")
 async def assign_parent_to_student(
     student_id: int,
     profile_user_id: str,
@@ -274,7 +261,7 @@ async def assign_parent_to_student(
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_parent_contacts_for_student", args_schema=GetParentContactsSchema)
+@tool("get_parent_contacts_for_student")
 async def get_parent_contacts_for_student(student_id: int) -> dict[str, Any]:
     """
     (Admin/Teacher Only) Get all parent/contact links for a specific student.
@@ -292,7 +279,7 @@ async def get_parent_contacts_for_student(student_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("update_parent_contact", args_schema=UpdateParentContactSchema)
+@tool("update_parent_contact")
 async def update_parent_contact(contact_id: int, **updates: Any) -> dict[str, Any]:
     """
     (Admin Only) Update a student's contact's information.
@@ -315,7 +302,7 @@ async def update_parent_contact(contact_id: int, **updates: Any) -> dict[str, An
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("remove_parent_contact", args_schema=RemoveParentContactSchema)
+@tool("remove_parent_contact")
 async def remove_parent_contact(contact_id: int) -> dict[str, Any]:
     """
     (Admin Only) Soft-delete a student contact link.
@@ -334,6 +321,96 @@ async def remove_parent_contact(contact_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
+@tool("create_student_account")
+async def create_student_account(
+    first_name: str,
+    last_name: str,
+    class_name: str,
+    email: Optional[str] = None,
+    password: Optional[str] = None,
+) -> dict[str, Any]:
+    """
+    Creates a new student account and enrolls them in a class.
+
+    If email/password not provided, auto-generates them:
+    - Email: firstname.lastname@school.edu
+    - Password: Random 12-char string
+
+    Args:
+        first_name: Student's first name
+        last_name: Student's last name
+        class_name: Class name (e.g., "10A", "Class 10A")
+        email: Optional email (auto-generated if not provided)
+        password: Optional password (auto-generated if not provided)
+    """
+    try:
+        # Auto-generate email if not provided
+        if not email:
+            email = f"{first_name.lower()}.{last_name.lower()}@school.edu"
+
+        # Auto-generate password if not provided
+        if not password:
+            password = secrets.token_urlsafe(9)  # 12-char random string
+
+        async with AgentHTTPClient() as client:
+            logger.info(f"Creating student account for {first_name} {last_name}")
+
+            # 1. Get school_id and class_id from class lookup
+            logger.info(f"Searching for class: {class_name}")
+            class_response = await client.get(f"/classes/search?name={class_name}")
+
+            # ✅ FIX: class_response is a LIST, not a dict
+            if not class_response or not isinstance(class_response, list) or len(class_response) == 0:
+                return {"success": False, "error": f"Class '{class_name}' not found"}
+
+            # Get first class from list
+            class_data = class_response[0]
+            class_id = class_data.get("class_id") or class_data.get("id")
+            school_id = class_data.get("school_id")
+
+            if not class_id or not school_id:
+                return {"success": False, "error": f"Invalid class data for '{class_name}'"}
+
+            logger.info(f"Found class: ID={class_id}, School={school_id}")
+
+            # 2. Create student via POST /students/
+            payload = {
+                "email": email,
+                "password": password,
+                "first_name": first_name,
+                "last_name": last_name,
+                "school_id": school_id,
+                "current_class_id": class_id,
+                "enrollment_date": date.today().isoformat(),
+            }
+
+            logger.info(f"Creating student with payload: {payload}")
+            student_response = await client.post("/students/", json=payload)
+
+            # Extract student_id from response
+            student_id = student_response.get("student_id") or student_response.get("id")
+
+            if student_id:
+                return {
+                    "success": True,
+                    "student_id": student_id,
+                    "name": f"{first_name} {last_name}",
+                    "class": class_name,
+                    "email": email,
+                    "password": password,
+                    "message": f"✅ Successfully enrolled {first_name} {last_name} in {class_name}!\n\nLogin Credentials:\nEmail: {email}\nPassword: {password}",
+                }
+            else:
+                return {"success": False, "error": f"Failed to create student. Response: {student_response}"}
+
+    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+        logger.error(f"Error creating student: {e.message}", exc_info=True)
+        return {"success": False, "error": f"API Error: {e.message}"}
+    except Exception as e:
+        logger.exception(f"Unexpected error in create_student_account: {e}")
+        return {"success": False, "error": f"Unexpected error: {str(e)}"}
+
+
 # --- Export the list of tools ---
 
 student_agent_tools = [
@@ -349,6 +426,7 @@ student_agent_tools = [
     get_parent_contacts_for_student,
     update_parent_contact,
     remove_parent_contact,
+    create_student_account,
 ]
 
 __all__ = ["student_agent_tools"]

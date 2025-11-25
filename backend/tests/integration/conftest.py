@@ -22,12 +22,12 @@ def mock_l1_llm_invoke():
     from app.agents.root_orchestrator.main import root_orchestrator_instance
 
     mock_model = MagicMock()
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default L1 mock"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default L1 mock"))
 
     original_model = root_orchestrator_instance.model
     root_orchestrator_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     root_orchestrator_instance.model = original_model
 
@@ -41,12 +41,12 @@ def mock_l2_llm_invoke():
     from app.agents.modules.academics.module_agent import academics_module_orchestrator_instance
 
     mock_model = MagicMock()
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default L2 mock"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default L2 mock"))
 
     original_model = academics_module_orchestrator_instance.model
     academics_module_orchestrator_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     academics_module_orchestrator_instance.model = original_model
 
@@ -78,12 +78,12 @@ def mock_l4_mark_llm_invoke():
     from app.agents.modules.academics.leaves.mark_agent.main import mark_agent_instance
 
     mock_model = MagicMock()
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default L4 mock"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default L4 mock"))
 
     original_model = mark_agent_instance.model
     mark_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     mark_agent_instance.model = original_model
 

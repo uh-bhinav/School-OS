@@ -1,7 +1,8 @@
+import logging
 from datetime import date
-from typing import Optional
+from typing import Any, Optional
 
-from sqlalchemy import case, cast, func, literal, select
+from sqlalchemy import and_, case, cast, func, literal, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,33 +12,155 @@ from app.models.class_model import Class
 from app.models.profile import Profile
 from app.models.student import Student
 from app.schemas.attendance_record_schema import (
-    AgentAttendanceSheet,
     AgentTakeAttendanceRequest,
     AttendanceRecordBulkCreate,
     AttendanceRecordCreate,
     AttendanceRecordOut,
     AttendanceRecordUpdate,
-    AttendanceSheetStudent,
     AttendanceStatus,
     DailyAbsenteeRecord,
     LowAttendanceStudent,
 )
 
+logger = logging.getLogger(__name__)
 # --- Helper Functions ---
 
 
-async def _get_student_by_name(db: AsyncSession, full_name: str, school_id: int) -> Student | None:
-    """Finds a student by their full name within the school."""
-    stmt = select(Student).join(Profile).where(Profile.full_name.ilike(f"%{full_name}%"), Profile.school_id == school_id)
-    result = await db.execute(stmt)
-    return result.scalars().first()
-
-
 async def _get_class_by_name(db: AsyncSession, class_name: str, school_id: int) -> Class | None:
-    """Finds a class by its name (e.g., '10A') within the school."""
-    stmt = select(Class).where(Class.name.ilike(class_name), Class.school_id == school_id)
+    """
+    Finds a class by its name (e.g., 'Grade 1 Section A' or '1A') within the school.
+    Handles both formats: "Grade X Section Y" and "XY"
+    """
+    import re
+
+    class_name_clean = class_name.strip()
+
+    # Pattern 1: "Grade 2 Section A" format
+    grade_match = re.search(r"Grade\s+(\d+)\s+Section\s+([A-Z])", class_name_clean, re.IGNORECASE)
+    if grade_match:
+        grade = int(grade_match.group(1))
+        section = grade_match.group(2).upper()
+        stmt = select(Class).where(Class.grade_level == grade, Class.section == section, Class.school_id == school_id)
+        result = await db.execute(stmt)
+        return result.scalars().first()
+
+    # Pattern 2: "1A" format (digit + section)
+    digit_match = re.match(r"^(\d+)([A-Z])$", class_name_clean)
+    if digit_match:
+        grade = int(digit_match.group(1))
+        section = digit_match.group(2).upper()
+        stmt = select(Class).where(Class.grade_level == grade, Class.section == section, Class.school_id == school_id)
+        result = await db.execute(stmt)
+        return result.scalars().first()
+
+    return None
+
+
+# REPLACE the _get_student_by_name function
+async def _get_student_by_name(db: AsyncSession, full_name: str, class_id: int, school_id: int) -> Student | None:
+    """
+    Finds a student by name within a specific class.
+    Searches using first_name or last_name for exact/partial match.
+    """
+    name_clean = full_name.strip().lower()
+
+    # Try to match first_name or last_name
+    stmt = (
+        select(Student)
+        .join(Profile, Student.user_id == Profile.user_id)
+        .where(
+            Student.current_class_id == class_id,
+            Profile.school_id == school_id,
+            Student.is_active,
+            (func.lower(Profile.first_name).ilike(f"%{name_clean}%") | func.lower(Profile.last_name).ilike(f"%{name_clean}%") | func.lower(func.concat(Profile.first_name, " ", Profile.last_name)).ilike(f"%{name_clean}%")),
+        )
+    )
     result = await db.execute(stmt)
     return result.scalars().first()
+
+
+# ADD this new function for the agent to parse the query
+async def agent_parse_and_take_attendance(db: AsyncSession, *, class_name: str, target_date: date, absent_student_names: list[str], teacher_id: int, school_id: int) -> dict[str, Any]:
+    """
+    (AGENT HELPER) Parses natural language attendance query and creates records.
+
+    Example: class_name="Class 1A", absent_student_names=["Aarav"]
+    Returns: List of created attendance records + summary
+    """
+    try:
+        # Step 1: Find the class
+        logger.info(f"Finding class: {class_name}")
+        target_class = await _get_class_by_name(db, class_name, school_id)
+        if not target_class:
+            return {"success": False, "error": f"Class '{class_name}' not found in school {school_id}"}
+
+        class_id = target_class.class_id
+        logger.info(f"Found class_id={class_id} for {class_name}")
+
+        # Step 2: Get all students in the class
+        logger.info(f"Fetching students for class_id={class_id}")
+        student_name_expr = func.concat(Profile.first_name, " ", Profile.last_name)
+        stmt = (
+            select(Student.student_id, student_name_expr.label("full_name")).join(Profile, Student.user_id == Profile.user_id).where(Student.current_class_id == class_id, Profile.school_id == school_id, Student.is_active).order_by(Student.student_id)
+        )
+        result = await db.execute(stmt)
+        all_students = {row.student_id: row.full_name for row in result.mappings()}
+
+        if not all_students:
+            return {"success": False, "error": f"No active students found in class '{class_name}'"}
+
+        logger.info(f"Found {len(all_students)} students in class")
+
+        # Step 3: Parse absent student names
+        absent_student_ids = []
+        for absent_name in absent_student_names:
+            student = await _get_student_by_name(db, absent_name, class_id, school_id)
+            if student:
+                absent_student_ids.append(student.student_id)
+                logger.info(f"Marked as absent: {absent_name} (student_id={student.student_id})")
+            else:
+                logger.warning(f"Could not find student: {absent_name}")
+
+        # Step 4: Determine present students (all - absent)
+        present_student_ids = [sid for sid in all_students.keys() if sid not in absent_student_ids]
+
+        logger.info(f"Present: {len(present_student_ids)}, Absent: {len(absent_student_ids)}")
+
+        # Step 5: Create attendance records
+        records_to_create = []
+
+        for student_id in present_student_ids:
+            records_to_create.append(AttendanceRecord(student_id=student_id, class_id=class_id, date=target_date, status="Present", teacher_id=teacher_id, school_id=school_id))
+
+        for student_id in absent_student_ids:
+            records_to_create.append(AttendanceRecord(student_id=student_id, class_id=class_id, date=target_date, status="Absent", teacher_id=teacher_id, school_id=school_id))
+
+        # Step 6: Bulk insert
+        db.add_all(records_to_create)
+        try:
+            await db.commit()
+            for record in records_to_create:
+                await db.refresh(record)
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Failed to create attendance records: {str(e)}")
+            return {"success": False, "error": f"Failed to create attendance records: {str(e)}"}
+
+        return {
+            "success": True,
+            "class_name": class_name,
+            "class_id": class_id,
+            "date": target_date,
+            "total_students": len(all_students),
+            "present_count": len(present_student_ids),
+            "absent_count": len(absent_student_ids),
+            "absent_students": [all_students[sid] for sid in absent_student_ids],
+            "records_created": len(records_to_create),
+        }
+
+    except Exception as e:
+        logger.exception(f"Error in agent_parse_and_take_attendance: {e}")
+        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
 # --- Secured CRUD Functions ---
@@ -96,27 +219,45 @@ async def update_attendance_record(db: AsyncSession, *, db_obj: AttendanceRecord
 # --- ROBUST "Power Tool" Functions ---
 
 
-async def get_class_attendance_sheet(db: AsyncSession, *, class_id: int, target_date: date, school_id: int) -> AgentAttendanceSheet:
-    """
-    (ROBUST TOOL) Gets the 'to-do' list of students for a class.
-    This is called *before* taking attendance.
-    """
-    target_class = await db.get(Class, class_id)
-    if not target_class or target_class.school_id != school_id:
-        raise ValueError("Class not found in this school.")
+# Find the get_class_attendance_sheet function and replace it:
 
-    # Get all students in this class
-    student_name_expr = Profile.first_name + literal(" ") + Profile.last_name
-    stmt = (
-        select(Student.student_id, student_name_expr.label("full_name"), Student.roll_number)
-        .join(Profile, Student.user_id == Profile.user_id)
-        .where(Student.current_class_id == class_id, Profile.school_id == school_id)
-        .order_by(Student.roll_number, "full_name")
-    )
-    result = await db.execute(stmt)
-    students = [AttendanceSheetStudent(student_id=row.student_id, full_name=row.full_name, roll_number=row.roll_number) for row in result.mappings()]
 
-    return AgentAttendanceSheet(class_id=class_id, class_name=target_class.name, date=target_date, students=students)
+async def get_class_attendance_sheet(db: AsyncSession, *, class_id: int, target_date: date, school_id: int) -> dict[str, Any]:
+    """
+    Gets attendance sheet for a class on a specific date.
+    Used by agent to display current attendance status.
+    """
+    try:
+        # Step 1: Get the class
+        stmt = select(Class).where(Class.class_id == class_id, Class.school_id == school_id)
+        result = await db.execute(stmt)
+        target_class = result.scalars().first()
+
+        if not target_class:
+            raise ValueError(f"Class {class_id} not found")
+
+        # ✅ FIX: Build class_name from grade_level + section
+        class_name = f"Grade {target_class.grade_level} Section {target_class.section}"
+
+        # Step 2: Get all students in the class with their attendance for the day
+        stmt = (
+            select(Student.student_id, func.concat(Profile.first_name, " ", Profile.last_name).label("full_name"), AttendanceRecord.status, AttendanceRecord.id.label("attendance_id"))
+            .join(Profile, Student.user_id == Profile.user_id)
+            .outerjoin(AttendanceRecord, and_(AttendanceRecord.student_id == Student.student_id, AttendanceRecord.class_id == class_id, AttendanceRecord.date == target_date))
+            .where(Student.current_class_id == class_id, Profile.school_id == school_id, Student.is_active)
+            .order_by(Student.student_id)
+        )
+
+        result = await db.execute(stmt)
+        students_data = []
+        for row in result.mappings():
+            students_data.append({"student_id": row.student_id, "full_name": row.full_name, "status": row.status or "Not Marked", "attendance_id": row.attendance_id})  # If no attendance record, mark as "Not Marked"
+
+        return {"class_id": class_id, "class_name": class_name, "date": target_date, "total_students": len(students_data), "students": students_data}  # ✅ Now built correctly
+
+    except Exception as e:
+        logger.exception(f"Error getting attendance sheet: {e}")
+        raise
 
 
 async def agent_bulk_create_attendance(db: AsyncSession, *, data: AgentTakeAttendanceRequest, teacher_id: int, school_id: int) -> list[AttendanceRecordOut]:
@@ -131,19 +272,22 @@ async def agent_bulk_create_attendance(db: AsyncSession, *, data: AgentTakeAtten
 
     # Process Present list
     for student_id in data.present_student_ids:
-        records_to_create.append(AttendanceRecordCreate(student_id=student_id, class_id=target_class.class_id, status=AttendanceStatus.present, teacher_id=teacher_id, date=data.date, school_id=school_id))
+        records_to_create.append(
+            AttendanceRecord(  # ✅ Create AttendanceRecord directly, not AttendanceRecordCreate
+                student_id=student_id, class_id=target_class.class_id, status=AttendanceStatus.present, teacher_id=teacher_id, date=data.date, school_id=school_id  # ✅ school_id is set
+            )
+        )
 
     # Process Absent list
     for student_id in data.absent_student_ids:
-        records_to_create.append(AttendanceRecordCreate(student_id=student_id, class_id=target_class.class_id, status=AttendanceStatus.absent, teacher_id=teacher_id, date=data.date, school_id=school_id))
+        records_to_create.append(AttendanceRecord(student_id=student_id, class_id=target_class.class_id, status=AttendanceStatus.absent, teacher_id=teacher_id, date=data.date, school_id=school_id))  # ✅ school_id is set
 
     # Process Late list
     for student_id in data.late_student_ids:
-        records_to_create.append(AttendanceRecordCreate(student_id=student_id, class_id=target_class.class_id, status=AttendanceStatus.late, teacher_id=teacher_id, date=data.date, school_id=school_id))
+        records_to_create.append(AttendanceRecord(student_id=student_id, class_id=target_class.class_id, status=AttendanceStatus.late, teacher_id=teacher_id, date=data.date, school_id=school_id))  # ✅ school_id is set
 
-    # Use your existing bulk create logic
-    db_records = [AttendanceRecord(**record.model_dump()) for record in records_to_create]
-    db.add_all(db_records)
+    # ✅ No need to convert - records_to_create already has AttendanceRecord objects
+    db.add_all(records_to_create)
 
     try:
         await db.commit()
@@ -151,10 +295,10 @@ async def agent_bulk_create_attendance(db: AsyncSession, *, data: AgentTakeAtten
         await db.rollback()
         raise
 
-    for record in db_records:
+    for record in records_to_create:
         await db.refresh(record)
 
-    return [AttendanceRecordOut.model_validate(rec) for rec in db_records]
+    return [AttendanceRecordOut.model_validate(rec) for rec in records_to_create]
 
 
 async def get_absentees_for_today(db: AsyncSession, *, school_id: int) -> list[DailyAbsenteeRecord]:

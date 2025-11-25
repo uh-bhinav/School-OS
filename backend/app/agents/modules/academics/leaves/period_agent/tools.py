@@ -13,7 +13,7 @@ from app.agents.http_client import (
     AgentValidationError,
 )
 
-from .schemas import CreatePeriodStructureSchema, ListPeriodsSchema, PeriodDefinition, UpdatePeriodTimingSchema
+from .schemas import CreatePeriodStructureSchema
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def _format_error_response(error: AgentHTTPClientError) -> dict[str, Any]:
 # --- Tool Definitions ---
 
 
-@tool("list_periods", args_schema=ListPeriodsSchema)
+@tool("list_periods")
 async def list_periods(school_id: Optional[int] = None) -> dict[str, Any]:
     """
     Fetches the defined period structure (e.g., Period 1, Period 2, Lunch)
@@ -54,16 +54,22 @@ async def list_periods(school_id: Optional[int] = None) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("create_period_structure", args_schema=CreatePeriodStructureSchema)
-async def create_period_structure(periods: list[PeriodDefinition]) -> dict[str, Any]:
+@tool("create_period_structure")
+async def create_period_structure(periods: list[dict]) -> dict[str, Any]:
     """
     (Admin Only) Creates or entirely replaces the period structure for the school.
     Takes a list of period definitions.
     """
     try:
+        try:
+            validated_data = CreatePeriodStructureSchema(periods=periods)
+        except Exception as e:
+            # This validation error goes back to the LLM
+            return {"success": False, "error": f"Invalid input: {str(e)}", "status_code": 400}
+
         async with AgentHTTPClient() as client:
             # Convert Pydantic models to dicts for the JSON payload
-            payload = {"periods": [p.dict() for p in periods]}
+            payload = {"periods": [p.model_dump() for p in validated_data.periods]}
             logger.info(f"Calling API: POST /periods/bulk with {len(periods)} periods")
             response = await client.post("/periods/bulk", json=payload)
             return {"success": True, "created_structure": response}
@@ -75,7 +81,7 @@ async def create_period_structure(periods: list[PeriodDefinition]) -> dict[str, 
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("update_period_timing", args_schema=UpdatePeriodTimingSchema)
+@tool("update_period_timing")
 async def update_period_timing(period_number: int, start_time: str, end_time: str, name: Optional[str] = None) -> dict[str, Any]:
     """
     (Admin Only) Updates the timing or name of a single existing period,

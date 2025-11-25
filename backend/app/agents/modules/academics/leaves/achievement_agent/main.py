@@ -37,7 +37,7 @@ class AchievementAgent(BaseAgent):
         super().__init__(tools=achievement_agent_tools, llm_tier=llm_tier)
         logger.info(f"AchievementAgent initialized with {len(achievement_agent_tools)} tools " f"and '{llm_tier}' tier LLM")
 
-    def invoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
+    async def ainvoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
         """
         Invokes the agent with a user query, automatically applying the system prompt.
 
@@ -63,7 +63,7 @@ class AchievementAgent(BaseAgent):
             messages.append(HumanMessage(content=query))
 
             # Invoke the base agent's graph
-            result = super().invoke(messages)
+            result = await super().ainvoke(messages)
 
             # Extract the final response
             final_message = result["messages"][-1]
@@ -98,11 +98,11 @@ achievement_agent_app = achievement_agent_instance
 
 
 # Convenience function for direct invocation
-def invoke_achievement_agent(query: str) -> str:
+async def invoke_achievement_agent(query: str) -> str:
     """
     Convenience function to invoke the AchievementAgent and return just the response string.
     """
-    result = achievement_agent_instance.invoke(query)
+    result = await achievement_agent_instance.ainvoke(query)
     return result.get("response", "I couldn't process that request.")
 
 

@@ -41,6 +41,11 @@ class Class(Base):
     school = relationship("School")
     class_teacher = relationship("Teacher")
     academic_year = relationship("AcademicYear")
+    exam_mappings = relationship(
+        "ExamClassMapping",
+        back_populates="class_model",
+        cascade="all, delete-orphan",
+    )
 
     # NEW: Many-to-many relationship to subjects
     subjects = relationship("Subject", secondary=class_subjects_association)

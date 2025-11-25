@@ -11,16 +11,6 @@ from app.agents.http_client import (
     AgentValidationError,
 )
 
-from .schemas import (
-    CreateSubjectSchema,
-    DeleteSubjectSchema,
-    GetSubjectDetailsSchema,
-    GetSubjectTeachersSchema,
-    ListAllSubjectsSchema,
-    SearchSubjectsSchema,
-    UpdateSubjectSchema,
-)
-
 logger = logging.getLogger(__name__)
 
 
@@ -37,7 +27,7 @@ def _format_error_response(error: AgentHTTPClientError) -> dict[str, Any]:
 # --- Tool Definitions ---
 
 
-@tool("list_all_subjects", args_schema=ListAllSubjectsSchema)
+@tool("list_all_subjects")
 async def list_all_subjects() -> dict[str, Any]:
     """
     Retrieves all active subjects for the user's school.
@@ -57,7 +47,7 @@ async def list_all_subjects() -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("search_subjects", args_schema=SearchSubjectsSchema)
+@tool("search_subjects")
 async def search_subjects(
     name: Optional[str] = None,
     code: Optional[str] = None,
@@ -88,7 +78,7 @@ async def search_subjects(
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_subject_details", args_schema=GetSubjectDetailsSchema)
+@tool("get_subject_details")
 async def get_subject_details(subject_id: int) -> dict[str, Any]:
     """
     (Admin/Teacher Only) Get detailed information for a single subject by its ID.
@@ -109,7 +99,7 @@ async def get_subject_details(subject_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_teachers_for_subject", args_schema=GetSubjectTeachersSchema)
+@tool("get_teachers_for_subject")
 async def get_teachers_for_subject(subject_id: int) -> dict[str, Any]:
     """
     (Admin Only) Finds all teachers in the admin's school qualified for a subject.
@@ -128,7 +118,7 @@ async def get_teachers_for_subject(subject_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("create_subject", args_schema=CreateSubjectSchema)
+@tool("create_subject")
 async def create_subject(
     school_id: int,
     name: str,
@@ -159,7 +149,7 @@ async def create_subject(
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("update_subject", args_schema=UpdateSubjectSchema)
+@tool("update_subject")
 async def update_subject(subject_id: int, **updates: Any) -> dict[str, Any]:
     """
     (Admin Only) Updates an existing subject's details.
@@ -183,7 +173,7 @@ async def update_subject(subject_id: int, **updates: Any) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("delete_subject", args_schema=DeleteSubjectSchema)
+@tool("delete_subject")
 async def delete_subject(subject_id: int) -> dict[str, Any]:
     """
     (Admin Only) Soft-deletes a subject.

@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Optional
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 from app.agents.base_agent import BaseAgent
 from app.agents.root_orchestrator.prompts import (
@@ -40,16 +40,9 @@ class RootOrchestrator(BaseAgent):
         super().__init__(tools=root_orchestrator_tools, llm_tier=llm_tier)
         logger.info(f"RootOrchestrator initialized with " f"{len(root_orchestrator_tools)} tools and '{llm_tier}' tier LLM")
 
-    def invoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
+    async def ainvoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
         """
         Invokes the agent with a user query, automatically applying the system prompt.
-
-        Args:
-            query (str): The user's question or command.
-            conversation_history (Optional[list]): Previous conversation messages for context.
-
-        Returns:
-            dict[str, Any]: A dictionary containing the final response.
         """
         try:
             logger.info(f"RootOrchestrator invoked with query: '{query[:100]}...'")
@@ -64,48 +57,45 @@ class RootOrchestrator(BaseAgent):
             messages.append(HumanMessage(content=query))
 
             # Invoke the base agent's graph
-            result = super().invoke(messages)
+            result = await super().ainvoke(messages)
 
             # Extract the final response
-            final_message = result["messages"][-1]
+            final_messages = result.get("messages", [])
             response_content = ""
 
-            if isinstance(final_message, AIMessage):
-                if getattr(final_message, "tool_calls", None):
-                    response_content = "I'm sorry, I encountered an issue decomposing the task. Please try rephrasing."
-                    logger.error("L1 invoke finished with pending tool calls.")
-                else:
-                    response_content = final_message.content
-            else:
-                # This will be a ToolMessage from the last tool call (the L2 agent)
-                # We need to extract the 'response' field from *within* that tool message.
-                tool_output = result.get("messages", [])[-1].content
-                if isinstance(tool_output, str):
-                    try:
-                        import json
+            if final_messages:
+                # Work backwards through messages to find the actual response
+                for message in reversed(final_messages):
+                    logger.debug(f"Checking message type: {type(message).__name__}, has content: {hasattr(message, 'content')}")
 
-                        tool_output = json.loads(tool_output)
-                    except json.JSONDecodeError:
-                        response_content = tool_output
+                    if isinstance(message, AIMessage):
+                        # If it has content and no pending tool calls, this is the final answer
+                        if message.content and not getattr(message, "tool_calls", None):
+                            response_content = message.content
+                            logger.info(f"Found final AIMessage response: {message.content[:100]}...")
+                            break
+                    elif isinstance(message, ToolMessage):
+                        # ToolMessage from nested agent - contains the actual response
+                        if message.content and len(message.content) > 50:
+                            response_content = message.content
+                            logger.info(f"Found final ToolMessage response: {message.content[:100]}...")
+                            break
 
-                if isinstance(tool_output, dict):
-                    # The L2 agent returns a dict: {"response": "...", "success": True}
-                    response_content = tool_output.get("response", str(tool_output))
-                else:
-                    response_content = str(tool_output)
+            if not response_content:
+                response_content = "I processed your request but couldn't generate a response. Please try again."
 
-            logger.info("RootOrchestrator invocation completed successfully")
+            logger.info(f"RootOrchestrator final response: {response_content[:100]}...")
 
             return {
                 "response": response_content,
-                "messages": result["messages"],
+                "messages": final_messages,
                 "success": True,
             }
 
         except Exception as e:
             logger.error(f"RootOrchestrator invocation failed: {e}", exc_info=True)
             return {
-                "response": "I apologize, but I encountered a system-level error. " "Please try again.",
+                "response": "I apologize, but I encountered a system-level error. Please try again.",
                 "messages": [],
                 "success": False,
                 "error": str(e),
@@ -121,11 +111,11 @@ root_orchestrator_app = root_orchestrator_instance
 
 
 # Convenience function for direct invocation
-def invoke_root_orchestrator(query: str) -> str:
+async def invoke_root_orchestrator(query: str) -> str:
     """
     Convenience function to invoke the RootOrchestrator.
     """
-    result = root_orchestrator_instance.invoke(query)
+    result = await root_orchestrator_instance.ainvoke(query)
     return result.get("response", "I couldn't process that request.")
 
 

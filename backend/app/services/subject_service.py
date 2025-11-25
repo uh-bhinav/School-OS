@@ -11,6 +11,7 @@ from app.models.class_model import class_subjects_association
 from app.models.profile import Profile
 from app.models.subject import Subject
 from app.models.teacher import Teacher
+from app.models.teacher_subject import TeacherSubject
 from app.schemas.subject_schema import SubjectCreate, SubjectUpdate
 
 
@@ -88,7 +89,7 @@ async def get_subjects_for_class(db: AsyncSession, class_id: int) -> list[Subjec
 
 async def get_teachers_for_subject(db: AsyncSession, *, school_id: int, subject_id: int) -> list[Teacher]:
     """
-    Finds all active teachers in a school whose specialization matches a given subject.
+    Finds all active teachers assigned to a subject via the teacher_subjects junction table.
     """
     subject = await get_subject(db, subject_id=subject_id)
     if not subject:
@@ -96,12 +97,15 @@ async def get_teachers_for_subject(db: AsyncSession, *, school_id: int, subject_
 
     stmt = (
         select(Teacher)
+        .options(selectinload(Teacher.profile))  # ← ADD THIS
         .join(Teacher.profile)
+        .join(TeacherSubject, Teacher.teacher_id == TeacherSubject.teacher_id)
         .where(
             Profile.school_id == school_id,
             Teacher.is_active,
-            Teacher.subject_specialization.ilike(f"%{subject.name}%"),
+            TeacherSubject.subject_id == subject_id,
         )
+        .distinct()
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())

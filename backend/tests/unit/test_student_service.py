@@ -42,13 +42,13 @@ async def test_create_student_happy_path():
     mock_db = AsyncMock()
     # FIX: Configure 'add' as a synchronous MagicMock to resolve RuntimeWarning
     mock_db.add = MagicMock()
-    mock_supabase = MagicMock()
+    mock_supabase = AsyncMock()
     mock_user = MagicMock(id=uuid4())
 
     mock_supabase.auth.admin.list_users = AsyncMock(return_value=MagicMock(users=[mock_user]))
 
     # Simulate that the profile doesn't exist, so it gets created
-    mock_db.get.return_value = None
+    mock_db.get = AsyncMock(return_value=None)
 
     student_in = StudentCreate(
         email="test.student@example.com",

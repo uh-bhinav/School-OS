@@ -25,10 +25,13 @@ def test_exam_agent_loads_tools():
     """
     Tests that the agent is configured with the correct tools.
     """
-    assert len(exam_agent_tools) == 6
+    assert len(exam_agent_tools) == 9
     tool_names = [tool.name for tool in exam_agent_tools]
     assert "list_all_exams" in tool_names
     assert "search_exams" in tool_names
+    assert "search_exam_type" in tool_names
+    assert "search_exam_by_name_and_class" in tool_names
+    assert "delete_exam_from_class" in tool_names
     assert "get_exam_details" in tool_names
     assert "create_exam" in tool_names
     assert "update_exam" in tool_names
@@ -54,7 +57,7 @@ async def test_routes_to_list_all_exams(mock_llm_invoke, mock_http_client: Async
     mock_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = exam_agent_instance.invoke(query)
+    result = await exam_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -79,7 +82,7 @@ async def test_routes_to_search_exams(mock_llm_invoke, mock_http_client: AsyncMo
     mock_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = exam_agent_instance.invoke(query)
+    result = await exam_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -103,7 +106,7 @@ async def test_routes_to_get_exam_details(mock_llm_invoke, mock_http_client: Asy
     mock_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
-    result = exam_agent_instance.invoke(query)
+    result = await exam_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -127,7 +130,7 @@ async def test_routes_to_create_exam(mock_llm_invoke, mock_http_client: AsyncMoc
     mock_http_client.post.return_value = mock_response
 
     # 3. Invoke Agent
-    result = exam_agent_instance.invoke(query)
+    result = await exam_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -157,7 +160,7 @@ async def test_routes_to_update_exam(mock_llm_invoke, mock_http_client: AsyncMoc
     mock_http_client.put.return_value = mock_response
 
     # 3. Invoke Agent
-    result = exam_agent_instance.invoke(query)
+    result = await exam_agent_instance.ainvoke(query)
 
     # 4. Assertions
     assert result["success"] is True
@@ -182,7 +185,7 @@ async def test_routes_to_delete_exam(mock_llm_invoke, mock_http_client):
     mock_http_client.delete.return_value = None  # Simulates 204 No Content
 
     # 3. Invoke Agent
-    result = exam_agent_instance.invoke(query)
+    result = await exam_agent_instance.ainvoke(query)
 
     # 4. Debug: Print what happened
     print(f"\nResult: {result}")
@@ -219,7 +222,7 @@ async def test_guardrail_deflects_marks_query(mock_llm_invoke):
     mock_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = exam_agent_instance.invoke(query)
+    result = await exam_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True
@@ -238,7 +241,7 @@ async def test_guardrail_deflects_exam_type_query(mock_llm_invoke):
     mock_llm_invoke.return_value = AIMessage(content=mock_response_text)
 
     # 2. Invoke Agent
-    result = exam_agent_instance.invoke(query)
+    result = await exam_agent_instance.ainvoke(query)
 
     # 3. Assertions
     assert result["success"] is True

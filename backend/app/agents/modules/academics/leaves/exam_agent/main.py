@@ -38,7 +38,7 @@ class ExamAgent(BaseAgent):
         super().__init__(tools=exam_agent_tools, llm_tier=llm_tier)
         logger.info(f"ExamAgent initialized with {len(exam_agent_tools)} tools " f"and '{llm_tier}' tier LLM")
 
-    def invoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
+    async def ainvoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
         """
         Invokes the agent with a user query, automatically applying the system prompt.
 
@@ -69,7 +69,7 @@ class ExamAgent(BaseAgent):
             messages.append(HumanMessage(content=query))
 
             # Invoke the base agent's graph
-            result = super().invoke(messages)
+            result = await super().ainvoke(messages)
 
             # Extract the final response
             final_message = result["messages"][-1]
@@ -108,11 +108,11 @@ exam_agent_app = exam_agent_instance
 
 
 # Convenience function for direct invocation
-def invoke_exam_agent(query: str) -> str:
+async def invoke_exam_agent(query: str) -> str:
     """
     Convenience function to invoke the ExamAgent and return just the response string.
     """
-    result = exam_agent_instance.invoke(query)
+    result = await exam_agent_instance.ainvoke(query)
     return result.get("response", "I couldn't process that request.")
 
 

@@ -43,12 +43,12 @@ def mock_class_llm_invoke():
     from app.agents.modules.academics.leaves.class_agent.main import class_agent_instance
 
     mock_model = MagicMock()
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default ClassAgent mock response"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default ClassAgent mock response"))
 
     original_model = class_agent_instance.model
     class_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     class_agent_instance.model = original_model
 
@@ -80,12 +80,12 @@ def mock_student_llm_invoke():
     from app.agents.modules.academics.leaves.student_agent.main import student_agent_instance
 
     mock_model = MagicMock()
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default StudentAgent mock response"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default StudentAgent mock response"))
 
     original_model = student_agent_instance.model
     student_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     student_agent_instance.model = original_model
 
@@ -116,13 +116,13 @@ def mock_academic_year_llm_invoke():
 
     mock_model = MagicMock()
     # Set a default return value for safety
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default AcademicYearAgent mock response"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default AcademicYearAgent mock response"))
 
     # The key fix: replace the entire .model object
     original_model = academic_year_agent_instance.model
     academic_year_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     # Restore the original model after the test
     academic_year_agent_instance.model = original_model
@@ -157,13 +157,13 @@ def mock_subject_llm_invoke():
 
     mock_model = MagicMock()
     # Set a default return value for safety
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default SubjectAgent mock response"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default SubjectAgent mock response"))
 
     # The key fix: replace the entire .model object
     original_model = subject_agent_instance.model
     subject_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     # Restore the original model after the test
     subject_agent_instance.model = original_model
@@ -196,11 +196,11 @@ def mock_teacher_llm_invoke():
     from app.agents.modules.academics.leaves.teacher_agent.main import teacher_agent_instance
 
     mock_model = MagicMock()
-    mock_model.invoke = MagicMock(return_value=AIMessage(content="Default TeacherAgent mock response"))
+    mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default TeacherAgent mock response"))
 
     original_model = teacher_agent_instance.model
     teacher_agent_instance.model = mock_model
 
-    yield mock_model.invoke
+    yield mock_model.ainvoke
 
     teacher_agent_instance.model = original_model

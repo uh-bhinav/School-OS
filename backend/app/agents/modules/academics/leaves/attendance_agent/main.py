@@ -33,7 +33,7 @@ class AttendanceAgent(BaseAgent):
         super().__init__(tools=attendance_agent_tools, llm_tier=llm_tier)  # Uses new tools
         logger.info(f"AttendanceAgent initialized with {len(attendance_agent_tools)} tools and '{llm_tier}' tier LLM")
 
-    def invoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
+    async def ainvoke(self, query: str, conversation_history: Optional[list] = None) -> dict[str, Any]:
         """
         Invokes the agent with a user query, automatically applying the system prompt.
         """
@@ -49,7 +49,7 @@ class AttendanceAgent(BaseAgent):
 
             messages.append(HumanMessage(content=query))
 
-            result = super().invoke(messages)
+            result = await super().ainvoke(messages)
 
             final_message = result["messages"][-1]
             if isinstance(final_message, AIMessage):
@@ -74,7 +74,7 @@ class AttendanceAgent(BaseAgent):
                 "error": str(e),
             }
 
-    def invoke_with_retry(self, query: str, max_retries: int = 1) -> dict[str, Any]:
+    async def ainvoke_with_retry(self, query: str, max_retries: int = 1) -> dict[str, Any]:
         """
         Invokes the agent with automatic retry logic for failed attempts.
 
@@ -93,7 +93,7 @@ class AttendanceAgent(BaseAgent):
 
         while attempt <= max_retries:
             logger.info(f"AttendanceAgent attempt {attempt + 1}/{max_retries + 1}")
-            result = self.invoke(query)
+            result = await self.ainvoke(query)
 
             if result["success"]:
                 return result
@@ -113,7 +113,7 @@ class AttendanceAgent(BaseAgent):
             "error": f"Failed after {max_retries + 1} attempts. Last error: {last_error}",
         }
 
-    def test_tool_selection(self, test_queries: list[str]) -> list[dict[str, Any]]:
+    async def test_tool_selection(self, test_queries: list[str]) -> list[dict[str, Any]]:
         """
         Tests the agent's tool selection logic with a list of queries.
         Useful for verification checklist item #3 (Tool Selection Logic).
@@ -128,7 +128,7 @@ class AttendanceAgent(BaseAgent):
 
         for query in test_queries:
             logger.info(f"Testing tool selection for: '{query}'")
-            result = self.invoke(query)
+            result = await self.ainvoke(query)
 
             # Analyze which tools were called
             tools_called = []
@@ -156,7 +156,7 @@ attendance_agent_instance = AttendanceAgent()
 
 
 # Convenience function for direct invocation
-def invoke_attendance_agent(query: str) -> str:
+async def invoke_attendance_agent(query: str) -> str:
     """
     Convenience function to invoke the AttendanceAgent and return just the response string.
 
@@ -166,7 +166,7 @@ def invoke_attendance_agent(query: str) -> str:
     Returns:
         str: The agent's response
     """
-    result = attendance_agent_instance.invoke(query)
+    result = await attendance_agent_instance.ainvoke(query)
     return result.get("response", "I couldn't process that request.")
 
 

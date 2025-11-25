@@ -11,14 +11,6 @@ from app.agents.http_client import (
     AgentValidationError,
 )
 
-from .schemas import (
-    CreateExamTypeSchema,
-    DeleteExamTypeSchema,
-    GetExamTypeSchema,
-    ListExamTypesSchema,
-    UpdateExamTypeSchema,
-)
-
 logger = logging.getLogger(__name__)
 
 
@@ -35,7 +27,7 @@ def _format_error_response(error: AgentHTTPClientError) -> dict[str, Any]:
 # --- Tool Definitions ---
 
 
-@tool("list_exam_types", args_schema=ListExamTypesSchema)
+@tool("list_exam_types")
 async def list_exam_types() -> dict[str, Any]:
     """
     (Admin Only) Retrieves all exam type categories for the admin's school.
@@ -55,7 +47,7 @@ async def list_exam_types() -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("get_exam_type_details", args_schema=GetExamTypeSchema)
+@tool("get_exam_type_details")
 async def get_exam_type_details(exam_type_id: int) -> dict[str, Any]:
     """
     (Admin Only) Get detailed information for a single exam type by its ID.
@@ -76,7 +68,7 @@ async def get_exam_type_details(exam_type_id: int) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("create_exam_type", args_schema=CreateExamTypeSchema)
+@tool("create_exam_type")
 async def create_exam_type(school_id: int, type_name: str) -> dict[str, Any]:
     """
     (Admin Only) Creates a new exam type (e.g., 'Midterm', 'Final Exam').
@@ -98,7 +90,7 @@ async def create_exam_type(school_id: int, type_name: str) -> dict[str, Any]:
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("update_exam_type", args_schema=UpdateExamTypeSchema)
+@tool("update_exam_type")
 async def update_exam_type(exam_type_id: int, type_name: Optional[str] = None) -> dict[str, Any]:
     """
     (Admin Only) Updates an existing exam type's name.
@@ -121,7 +113,7 @@ async def update_exam_type(exam_type_id: int, type_name: Optional[str] = None) -
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
-@tool("delete_exam_type", args_schema=DeleteExamTypeSchema)
+@tool("delete_exam_type")
 async def delete_exam_type(exam_type_id: int) -> dict[str, Any]:
     """
     (Admin Only) Deletes an exam type.

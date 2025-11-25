@@ -180,6 +180,32 @@ async def search_classes(db: AsyncSession, *, school_id: int, filters: dict) -> 
     )
 
     # Dynamically apply filters from the dictionary
+    if filters.get("name"):
+        name = filters["name"].strip()
+        # Try to parse "Grade 2 Section A" or "11A" into grade_level and section
+        import re
+
+        # Pattern 1: "Grade 2 Section A" format
+        grade_match = re.search(r"Grade\s+(\d+)\s+Section\s+([A-Z])", name, re.IGNORECASE)
+        if grade_match:
+            grade = int(grade_match.group(1))
+            section = grade_match.group(2)
+            stmt = stmt.where(Class.grade_level == grade, Class.section == section)
+        else:
+            # Pattern 2: "11A" format
+            digit_match = re.match(r"^(\d+)([A-Z])$", name)
+            if digit_match:
+                grade = int(digit_match.group(1))
+                section = digit_match.group(2)
+                stmt = stmt.where(Class.grade_level == grade, Class.section == section)
+            else:
+                # Pattern 3: Just section letter "A", "B", etc.
+                if len(name) == 1 and name.isalpha():
+                    stmt = stmt.where(Class.section == name.upper())
+                # If no pattern matches, return empty result
+                else:
+                    return []
+
     if filters.get("grade_level"):
         stmt = stmt.where(Class.grade_level == filters["grade_level"])
 
