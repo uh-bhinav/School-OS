@@ -75,12 +75,14 @@ export const useChatStore = create<ChatState>()(
           createdAt: Date.now(),
           messages: [],
         };
-        set({ sessions: [newSession, ...get().sessions], activeId: id });
+        // Reset isLoading when creating new session to prevent blocking
+        set({ sessions: [newSession, ...get().sessions], activeId: id, isLoading: false });
         return id;
       },
 
       setActive(id) {
-        set({ activeId: id });
+        // Reset isLoading when switching sessions to prevent blocking
+        set({ activeId: id, isLoading: false });
       },
 
       pushMessage(id, m) {

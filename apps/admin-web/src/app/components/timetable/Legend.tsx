@@ -1,4 +1,5 @@
 import { Box, Chip, Typography, Paper } from "@mui/material";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 
 /**
  * Legend component explaining cell color meanings
@@ -28,6 +29,13 @@ export default function Legend() {
         <Chip label="Scheduled" color="primary" variant="outlined" size="small" />
         <Chip label="Conflict" color="error" variant="filled" size="small" />
         <Chip label="Published" color="success" variant="filled" size="small" />
+        <Chip
+          icon={<PersonAddIcon sx={{ fontSize: 14 }} />}
+          label="Substitute Assigned"
+          color="info"
+          variant="filled"
+          size="small"
+        />
       </Box>
     </Paper>
   );

@@ -25,3 +25,40 @@
     @apply bg-gray-400 dark:bg-gray-500;
   }
 }
+
+/* Ensure all MUI Dialogs and Modals appear above the chat (z-index: 9999)
+   Chat backdrop is at 9998, chat container at 9999, so dialogs need to be above */
+.MuiDialog-root {
+  z-index: 10001 !important;
+}
+
+.MuiBackdrop-root {
+  z-index: 10000 !important;
+}
+
+.MuiModal-root {
+  z-index: 10001 !important;
+}
+
+/* Popover and Popper elements */
+.MuiPopover-root {
+  z-index: 10001 !important;
+}
+
+.MuiPopper-root {
+  z-index: 10001 !important;
+}
+
+/* Menu components */
+.MuiMenu-root {
+  z-index: 10001 !important;
+}
+
+.MuiMenuItem-root {
+  z-index: 10001 !important;
+}
+
+/* Tooltip */
+.MuiTooltip-popper {
+  z-index: 10001 !important;
+}

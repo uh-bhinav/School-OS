@@ -23,6 +23,9 @@ export { mockFinanceProvider } from "./mockFinance";
 export { mockMediaProvider } from "./mockMedia";
 export { mockStudentDetailsProvider } from "./mockStudentDetails";
 export { mockReportCardProvider } from "./mockStudentReportCard";
+export { mockProxyProvider } from "./mockProxy";
+export { mockLeaveManagementProvider } from "./mockLeaveManagement";
+export { mockTasksProvider } from "./mockTasks";
 
 // ============================================================================
 // DEMO MODE UTILITIES

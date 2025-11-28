@@ -17,8 +17,12 @@ import ExportDialog from "../../../components/timetable/ExportDialog";
 import GenerateDialog from "../../../components/timetable/GenerateDialog";
 import HowToUsePopover from "../../../components/timetable/HowToUsePopover";
 import TimetableErrorBoundary from "../../../components/timetable/TimetableErrorBoundary";
+import TeacherAbsenceBanner from "../../../components/timetable/TeacherAbsenceBanner";
+import TeacherAbsentModal from "../../../components/timetable/TeacherAbsentModal";
 
 import { useTimetableGrid, useTimetableKPIs, useGenerateTimetable } from "../../../services/timetable.hooks";
+import { useAbsentTeachers } from "../../../services/proxy.hooks";
+import type { AbsentTeacher } from "../../../services/proxy.api";
 
 /**
  * Normalizes any date to the Monday of its week (ISO format YYYY-MM-DD)
@@ -67,6 +71,32 @@ export default function TimetablePage() {
   const [showSwapDialog, setShowSwapDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [showAbsentModal, setShowAbsentModal] = useState(false);
+  const [selectedAbsence, setSelectedAbsence] = useState<AbsentTeacher | null>(null);
+  const [dismissedBanner, setDismissedBanner] = useState(false);
+
+  // Get today's date for absence check
+  const today = new Date().toISOString().split("T")[0];
+
+  // Fetch absent teachers for current class/section
+  const { data: absentTeachers = [] } = useAbsentTeachers({
+    classId: filters.class_id,
+    section: filters.section,
+    date: today,
+    weekStart: filters.week_start,
+  });
+
+  // Handle opening the absent teacher modal
+  const handleAssignSubstitute = (absence: AbsentTeacher) => {
+    setSelectedAbsence(absence);
+    setShowAbsentModal(true);
+  };
+
+  // Handle closing the modal
+  const handleCloseAbsentModal = () => {
+    setShowAbsentModal(false);
+    setSelectedAbsence(null);
+  };
 
   const {
     data: grid,
@@ -165,6 +195,15 @@ export default function TimetablePage() {
           <Alert severity="error" onClose={() => refetch()}>
             Failed to load timetable. Click Refresh or try again.
           </Alert>
+        )}
+
+        {/* Teacher Absence Banner */}
+        {!dismissedBanner && absentTeachers.length > 0 && (
+          <TeacherAbsenceBanner
+            absentTeachers={absentTeachers}
+            onAssignSubstitute={handleAssignSubstitute}
+            onDismiss={() => setDismissedBanner(true)}
+          />
         )}
 
         {/* Publish Status */}
@@ -286,6 +325,11 @@ export default function TimetablePage() {
           onClose={() => setShowGenerateDialog(false)}
           onConfirm={handleGenerate}
           filters={filters}
+        />
+        <TeacherAbsentModal
+          open={showAbsentModal}
+          onClose={handleCloseAbsentModal}
+          absence={selectedAbsence}
         />
 
         {/* Floating Help Button */}

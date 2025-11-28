@@ -20,7 +20,8 @@
 // TOKEN REFRESH STRATEGY:
 // - Supabase autoRefreshToken handles most refreshes automatically
 // - AuthProvider monitors token expiry and proactively refreshes 5 min before
-// - On TOKEN_REFRESHED event: NO profile refetch (transparent to user)
+// - On TOKEN_REFRESHED event: Update Zustand session (NO profile refetch)
+// - On ALL auth events: Sync session to Zustand store via setSession()
 // - axios interceptor handles reactive refresh on 401 errors
 // - Multi-tab sync via localStorage events
 // ============================================================================
@@ -30,7 +31,7 @@ import { supabase } from "../services/supabase";
 import { useAuthStore } from "../stores/useAuthStore";
 
 export function AuthRoot({ children }: PropsWithChildren) {
-  const { clear, fetchProfile } = useAuthStore();
+  const { clear, fetchProfile, setSession } = useAuthStore();
   const hasBootstrapped = useRef(false);
   const refreshTimerRef = useRef<number | null>(null);
 
@@ -111,6 +112,10 @@ export function AuthRoot({ children }: PropsWithChildren) {
         return;
       }
 
+      // CRITICAL: Always sync session to Zustand store
+      // This ensures accessToken is available for API calls immediately
+      setSession(session);
+
       if (session) {
         console.log("[AUTH PROVIDER] 📦 Restoring session from storage");
 
@@ -132,6 +137,13 @@ export function AuthRoot({ children }: PropsWithChildren) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log(`[AUTH PROVIDER] 📡 Auth event: ${event}`, session ? "✅ Session exists" : "❌ No session");
+
+      // ======================================================================
+      // CRITICAL: Always sync session to Zustand store
+      // This ensures accessToken is updated on EVERY auth event
+      // Including TOKEN_REFRESHED which gives us the new rotated token
+      // ======================================================================
+      setSession(session);
 
       // ======================================================================
       // SIGNED OUT - Clear everything
@@ -170,11 +182,12 @@ export function AuthRoot({ children }: PropsWithChildren) {
       }
 
       // ======================================================================
-      // TOKEN_REFRESHED - Do NOT fetch profile again (CRITICAL)
+      // TOKEN_REFRESHED - Session already synced above, NO profile refetch
       // ======================================================================
       if (event === "TOKEN_REFRESHED") {
-        console.log("[AUTH PROVIDER] 🔄 Token refreshed - keeping cached profile (NO API CALL)");
-        // CRITICAL: DO NOT call fetchProfile() here
+        console.log("[AUTH PROVIDER] 🔄 Token refreshed - session synced to Zustand (NO profile refetch)");
+        // CRITICAL: Session is already synced via setSession() above
+        // DO NOT call fetchProfile() here
         // Token refresh should be completely transparent to user
         // Profile data doesn't change when token refreshes
         // This prevents /profiles/me spam that exhausts Supabase Auth pool
@@ -185,8 +198,9 @@ export function AuthRoot({ children }: PropsWithChildren) {
       // INITIAL_SESSION - Use cached profile
       // ======================================================================
       if (event === "INITIAL_SESSION") {
-        console.log("[AUTH PROVIDER] 🔄 Initial session - using cached profile");
-        // CRITICAL: DO NOT call fetchProfile() here
+        console.log("[AUTH PROVIDER] 🔄 Initial session - session synced, using cached profile");
+        // CRITICAL: Session is already synced via setSession() above
+        // DO NOT call fetchProfile() here
         // This event fires on page load when session exists
         // We already loaded cached profile in getSession() above
         return;
@@ -195,7 +209,7 @@ export function AuthRoot({ children }: PropsWithChildren) {
       // ======================================================================
       // USER_UPDATED, PASSWORD_RECOVERY, etc. - Keep cached profile
       // ======================================================================
-      console.log(`[AUTH PROVIDER] ℹ️ Event ${event} - no action needed`);
+      console.log(`[AUTH PROVIDER] ℹ️ Event ${event} - session synced, no additional action needed`);
     });
 
     return () => {

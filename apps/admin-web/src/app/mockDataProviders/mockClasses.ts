@@ -2,6 +2,12 @@
 // MOCK CLASSES DATA PROVIDER
 // ============================================================================
 
+import type {
+  Class,
+  ClassDetail,
+  ClassKpi,
+} from "../services/classes.schema";
+
 export interface ClassData {
   class_id: number;
   school_id: number;
@@ -15,6 +21,9 @@ export interface ClassData {
   class_teacher_name?: string;
   created_at: string;
 }
+
+// In-memory cache for assignments
+const classTeacherAssignments = new Map<number, number>();
 
 const MOCK_CLASSES: ClassData[] = [
   {
@@ -308,7 +317,140 @@ export async function getClassById(classId: number): Promise<ClassData | null> {
   return found || null;
 }
 
+// Initialize assignments from mock data
+MOCK_CLASSES.forEach((cls) => {
+  if (cls.class_teacher_id) {
+    classTeacherAssignments.set(cls.class_id, cls.class_teacher_id);
+  }
+});
+
+/**
+ * Convert ClassData to Class schema
+ */
+function convertToClass(classData: ClassData): Class {
+  const teacherId = classTeacherAssignments.get(classData.class_id) || classData.class_teacher_id || null;
+  const teacherName = teacherId ? classData.class_teacher_name || `Teacher ${teacherId}` : null;
+
+  return {
+    class_id: classData.class_id,
+    school_id: classData.school_id,
+    class_name: classData.class_name,
+    section: classData.section,
+    grade: classData.grade_level,
+    class_teacher_id: teacherId,
+    class_teacher_name: teacherName,
+    total_students: classData.current_students,
+    total_subjects: 7 + Math.floor(Math.random() * 3), // 7-9 subjects
+    average_performance: 65 + Math.floor(Math.random() * 25), // 65-90%
+    academic_year_id: classData.academic_year_id,
+    academic_year: "2024-2025",
+    room_id: classData.class_id <= 8 ? classData.class_id : undefined,
+    room_name: classData.class_id <= 8 ? `Room ${100 + classData.class_id}` : undefined,
+    is_active: true,
+    created_at: classData.created_at,
+  };
+}
+
+/**
+ * Convert ClassData to ClassDetail schema
+ */
+function convertToClassDetail(classData: ClassData): ClassDetail {
+  const basicClass = convertToClass(classData);
+  const teacherId = basicClass.class_teacher_id;
+
+  return {
+    ...basicClass,
+    class_teacher_email: teacherId ? `teacher${teacherId}@school.com` : undefined,
+    class_teacher_phone: teacherId ? `+91-9876543${String(teacherId).padStart(3, '0')}` : undefined,
+    attendance_percentage: 85 + Math.floor(Math.random() * 12), // 85-97%
+    floor: basicClass.room_id ? Math.floor((basicClass.room_id - 1) / 2) + 1 : undefined,
+    capacity: 40,
+  };
+}
+
+/**
+ * Get all classes (enhanced)
+ */
+export async function getAllClasses(schoolId: number = 1): Promise<Class[]> {
+  await simulateDelay();
+
+  const filtered = MOCK_CLASSES.filter((c) => c.school_id === schoolId);
+  const classes = filtered.map(convertToClass);
+
+  console.log(`[MOCK CLASSES] getAllClasses → ${classes.length} classes`);
+  return classes;
+}
+
+/**
+ * Get class detail by ID
+ */
+export async function getClassDetailById(classId: number): Promise<ClassDetail | null> {
+  await simulateDelay(200);
+
+  const classData = MOCK_CLASSES.find((c) => c.class_id === classId);
+  if (!classData) {
+    console.log(`[MOCK CLASSES] getClassDetailById(${classId}) → not found`);
+    return null;
+  }
+
+  const classDetail = convertToClassDetail(classData);
+  console.log(`[MOCK CLASSES] getClassDetailById(${classId}) → found`);
+  return classDetail;
+}
+
+/**
+ * Assign class teacher
+ */
+export async function assignClassTeacher(
+  classId: number,
+  teacherId: number
+): Promise<{ success: boolean; message: string }> {
+  await simulateDelay(300);
+
+  const classData = MOCK_CLASSES.find((c) => c.class_id === classId);
+  if (!classData) {
+    return { success: false, message: "Class not found" };
+  }
+
+  // Update in-memory assignment
+  classTeacherAssignments.set(classId, teacherId);
+
+  // Update the class data
+  classData.class_teacher_id = teacherId;
+  // Teacher name will be updated via the conversion function
+
+  console.log(`[MOCK CLASSES] assignClassTeacher → class ${classId} assigned to teacher ${teacherId}`);
+  return { success: true, message: "Class teacher assigned successfully" };
+}
+
+/**
+ * Get class KPIs
+ */
+export async function getClassKpi(schoolId: number = 1): Promise<ClassKpi> {
+  await simulateDelay(200);
+
+  const classes = await getAllClasses(schoolId);
+  const activeClasses = classes.filter((c) => c.is_active);
+  const classesWithTeacher = classes.filter((c) => c.class_teacher_id !== null);
+  const classesWithoutTeacher = classes.filter((c) => c.class_teacher_id === null);
+  const totalStudents = classes.reduce((sum, c) => sum + c.total_students, 0);
+  const avgStudents = Math.round(totalStudents / classes.length);
+
+  return {
+    total_classes: classes.length,
+    active_classes: activeClasses.length,
+    classes_with_teacher: classesWithTeacher.length,
+    classes_without_teacher: classesWithoutTeacher.length,
+    average_students_per_class: avgStudents,
+    total_students: totalStudents,
+  };
+}
+
 export const mockClassesProvider = {
   getClasses,
   getClassById,
+  getAllClasses,
+  getClassDetailById,
+  assignClassTeacher,
+  getClassKpi,
 };

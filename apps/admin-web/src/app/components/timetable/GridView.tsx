@@ -4,11 +4,13 @@ import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import WarningIcon from "@mui/icons-material/Warning";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import PeriodFormDialog from "./PeriodFormDialog";
 import { useDeleteEntry } from "../../services/timetable.hooks";
-import type { TimetableEntry, Period } from "../../services/timetable.schema";
+import { useProxyStore, type ProxyAssignment } from "../../stores/useProxyStore";
+import type { TimetableEntry, Period, DayOfWeek } from "../../services/timetable.schema";
 
-const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const DAYS: DayOfWeek[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 interface CellProps {
   cell: TimetableEntry | undefined;
@@ -16,13 +18,15 @@ interface CellProps {
   onDelete: (id: number) => void;
   isPublished: boolean;
   hasConflict: boolean;
+  proxyAssignment?: ProxyAssignment;
 }
 
 /**
  * Memoized cell component for performance optimization
  */
-const GridCell = memo(({ cell, onEdit, onDelete, isPublished, hasConflict }: CellProps) => {
+const GridCell = memo(({ cell, onEdit, onDelete, isPublished, hasConflict, proxyAssignment }: CellProps) => {
   const isEditable = !isPublished || cell?.is_editable !== false;
+  const hasSubstitute = !!proxyAssignment;
 
   return (
     <Box
@@ -34,24 +38,32 @@ const GridCell = memo(({ cell, onEdit, onDelete, isPublished, hasConflict }: Cel
         minHeight: 80,
         position: "relative",
         bgcolor: cell
-          ? hasConflict
-            ? alpha("#f44336", 0.08)
-            : isPublished
-              ? alpha("#4caf50", 0.04)
-              : "action.hover"
+          ? hasSubstitute
+            ? alpha("#2196f3", 0.08) // Blue tint for substitute assigned
+            : hasConflict
+              ? alpha("#f44336", 0.08)
+              : isPublished
+                ? alpha("#4caf50", 0.04)
+                : "action.hover"
           : "transparent",
         transition: "all 0.2s ease",
         "&:hover": {
           bgcolor: cell
-            ? hasConflict
-              ? alpha("#f44336", 0.12)
-              : isPublished
-                ? alpha("#4caf50", 0.08)
-                : "action.selected"
+            ? hasSubstitute
+              ? alpha("#2196f3", 0.12)
+              : hasConflict
+                ? alpha("#f44336", 0.12)
+                : isPublished
+                  ? alpha("#4caf50", 0.08)
+                  : "action.selected"
             : "action.hover",
         },
         ...(hasConflict && {
           outline: (theme) => `2px solid ${theme.palette.error.main}`,
+          outlineOffset: -2,
+        }),
+        ...(hasSubstitute && {
+          outline: (theme) => `2px solid ${theme.palette.info.main}`,
           outlineOffset: -2,
         }),
         ...(!cell && {
@@ -76,7 +88,26 @@ const GridCell = memo(({ cell, onEdit, onDelete, isPublished, hasConflict }: Cel
             },
           }}
         >
-          {hasConflict && (
+          {/* Substitute Teacher Badge - Top Priority */}
+          {hasSubstitute && (
+            <Chip
+              icon={<PersonAddIcon sx={{ fontSize: 14 }} />}
+              label={`Sub: ${proxyAssignment.substituteTeacherName.split(" ")[0]}`}
+              color="info"
+              size="small"
+              sx={{
+                position: "absolute",
+                top: 4,
+                right: 4,
+                height: 22,
+                fontSize: "0.65rem",
+                fontWeight: 600,
+                "& .MuiChip-icon": { marginLeft: "4px" },
+              }}
+            />
+          )}
+          {/* Conflict Badge */}
+          {hasConflict && !hasSubstitute && (
             <Chip
               icon={<WarningIcon />}
               label="Conflict"
@@ -85,7 +116,8 @@ const GridCell = memo(({ cell, onEdit, onDelete, isPublished, hasConflict }: Cel
               sx={{ position: "absolute", top: 4, right: 4, height: 20, fontSize: "0.7rem" }}
             />
           )}
-          {isPublished && !hasConflict && (
+          {/* Published Badge */}
+          {isPublished && !hasConflict && !hasSubstitute && (
             <Chip
               label="✓"
               color="success"
@@ -93,12 +125,35 @@ const GridCell = memo(({ cell, onEdit, onDelete, isPublished, hasConflict }: Cel
               sx={{ position: "absolute", top: 4, right: 4, height: 18, width: 18, fontSize: "0.7rem" }}
             />
           )}
-          <Typography variant="subtitle2" fontWeight={600} noWrap sx={{ pr: isPublished || hasConflict ? 5 : 0 }}>
+          <Typography
+            variant="subtitle2"
+            fontWeight={600}
+            noWrap
+            sx={{ pr: isPublished || hasConflict || hasSubstitute ? 5 : 0 }}
+          >
             {cell.subject_name}
           </Typography>
-          <Typography variant="caption" color="text.secondary" display="block" noWrap>
+          <Typography
+            variant="caption"
+            color={hasSubstitute ? "text.disabled" : "text.secondary"}
+            display="block"
+            noWrap
+            sx={hasSubstitute ? { textDecoration: "line-through" } : undefined}
+          >
             {cell.teacher_name}
           </Typography>
+          {/* Show substitute teacher name below original if assigned */}
+          {hasSubstitute && (
+            <Typography
+              variant="caption"
+              color="info.main"
+              fontWeight={600}
+              display="block"
+              noWrap
+            >
+              → {proxyAssignment.substituteTeacherName}
+            </Typography>
+          )}
           {cell.room_name && (
             <Typography variant="caption" color="text.disabled" display="block" noWrap>
               📍 {cell.room_name}
@@ -169,6 +224,12 @@ export default function GridView({
     open: false,
   });
 
+  // Get proxy assignments from store
+  const { assignments } = useProxyStore();
+
+  // Get today's date for checking assignments
+  const today = new Date().toISOString().split("T")[0];
+
   const isPublished = useMemo(() => Boolean(entries[0]?.is_published), [entries]);
 
   const conflictIds = useMemo(() => new Set(conflicts.flatMap((c) => c.entry_ids)), [conflicts]);
@@ -184,8 +245,29 @@ export default function GridView({
     return map;
   }, [entries]);
 
+  // Create a lookup for proxy assignments by entry ID and date
+  const proxyLookup = useMemo(() => {
+    const map = new Map<string, ProxyAssignment>();
+    assignments.forEach((assignment) => {
+      // Key by entryId and date for precise matching
+      map.set(`${assignment.entryId}-${assignment.date}`, assignment);
+      // Also key by day and period for matching with current view
+      map.set(`${assignment.day}-${assignment.periodNo}-${assignment.date}`, assignment);
+    });
+    return map;
+  }, [assignments]);
+
   function getCell(day: string, period_no: number) {
     return cellLookup.get(`${day}-${period_no}`);
+  }
+
+  function getProxyAssignment(cell: TimetableEntry | undefined, day: string, periodNo: number): ProxyAssignment | undefined {
+    if (!cell) return undefined;
+    // First try to match by entryId and date
+    const byEntry = proxyLookup.get(`${cell.id}-${today}`);
+    if (byEntry) return byEntry;
+    // Fallback to match by day, period, and date
+    return proxyLookup.get(`${day}-${periodNo}-${today}`);
   }
 
   function handleEdit(cell?: TimetableEntry, day?: string, periodNo?: number) {
@@ -239,6 +321,7 @@ export default function GridView({
             {DAYS.map((day) => {
               const cell = getCell(day, p.period_no);
               const hasConflict = cell ? conflictIds.has(cell.id) : false;
+              const proxyAssignment = getProxyAssignment(cell, day, p.period_no);
               return (
                 <GridCell
                   key={`c-${day}-${p.period_no}`}
@@ -247,6 +330,7 @@ export default function GridView({
                   onDelete={(id) => delMut.mutate(id)}
                   isPublished={isPublished}
                   hasConflict={hasConflict}
+                  proxyAssignment={proxyAssignment}
                 />
               );
             })}

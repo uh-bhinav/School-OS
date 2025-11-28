@@ -9,6 +9,28 @@ import "@/app/components/chatbot/styles.css";
 export default function ChatProvider() {
   const { open, pushChip, setOpen, setInputFocused } = useChatStore();
   const [shiftHeld, setShiftHeld] = useState(false);
+  const [isAuthPage, setIsAuthPage] = useState(false);
+
+  // Check if on auth page using native browser location (not React Router)
+  useEffect(() => {
+    const checkAuthPage = () => {
+      setIsAuthPage(window.location.pathname.startsWith("/auth/"));
+    };
+
+    // Check on mount
+    checkAuthPage();
+
+    // Listen for URL changes
+    window.addEventListener("popstate", checkAuthPage);
+
+    // Also check periodically for programmatic navigation
+    const interval = setInterval(checkAuthPage, 500);
+
+    return () => {
+      window.removeEventListener("popstate", checkAuthPage);
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     // Esc key to close chat
@@ -110,6 +132,11 @@ export default function ChatProvider() {
     }
     return chatRoot;
   };
+
+  // Don't render chat on auth pages
+  if (isAuthPage) {
+    return null;
+  }
 
   return createPortal(
     <AnimatePresence mode="wait">

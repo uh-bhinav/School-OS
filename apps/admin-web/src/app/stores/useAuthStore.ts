@@ -6,11 +6,17 @@
 // - fetchProfile(force = false) respects cache
 // - Only calls /profiles/me when cache expired OR force=true
 // - Prevents repeated /profiles/me spam that exhausts Supabase Auth pool
+//
+// SESSION REFRESH SUPPORT:
+// - setSession(session) allows AuthProvider to sync Supabase session with Zustand
+// - accessToken getter returns the latest JWT for API calls
+// - Session version tracking to trigger re-fetches when tokens rotate
 // ============================================================================
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getMyProfile, getPrimaryRole, type Profile } from "../services/profile.api";
+import type { Session } from "@supabase/supabase-js";
 
 type Role = "admin" | "teacher" | "student" | "parent";
 
@@ -27,6 +33,11 @@ interface AuthState {
   cachedProfile?: Profile;
   profileCachedAt?: number;
 
+  // Session tracking for token refresh (NEW)
+  sessionVersion: number; // Incremented when session changes (for triggering re-renders/refetches)
+  accessToken?: string; // Current access token from Supabase session
+  sessionExpiresAt?: number; // Token expiry timestamp (Unix seconds)
+
   // Actions
   setAuth: (payload: {
     userId: string;
@@ -38,6 +49,11 @@ interface AuthState {
   clear: () => void;
   reset: () => void;
   logout: () => void;
+
+  // NEW: Session management for token refresh
+  setSession: (session: Session | null) => void;
+  getAccessToken: () => string | undefined;
+  isSessionValid: () => boolean;
 
   // NEW: Smart profile fetching with cache
   fetchProfile: (force?: boolean) => Promise<Profile>;
@@ -56,6 +72,9 @@ export const useAuthStore = create<AuthState>()(
       currentAcademicYearId: undefined,
       cachedProfile: undefined,
       profileCachedAt: undefined,
+      sessionVersion: 0,
+      accessToken: undefined,
+      sessionExpiresAt: undefined,
 
       setAuth: (payload) => {
         console.log("[AUTH STORE] Setting auth:", {
@@ -72,6 +91,80 @@ export const useAuthStore = create<AuthState>()(
         set({ currentAcademicYearId: academicYearId });
       },
 
+      // ========================================================================
+      // SESSION MANAGEMENT - CRITICAL FOR TOKEN REFRESH
+      // ========================================================================
+
+      /**
+       * Update session from Supabase auth state change
+       * Called by AuthProvider when onAuthStateChange fires
+       * Ensures Zustand always has the latest access_token
+       */
+      setSession: (session) => {
+        if (!session) {
+          console.log("[AUTH STORE] 🔄 Session cleared (signed out)");
+          set({
+            accessToken: undefined,
+            sessionExpiresAt: undefined,
+            sessionVersion: get().sessionVersion + 1,
+          });
+          return;
+        }
+
+        const newToken = session.access_token;
+        const expiresAt = session.expires_at; // Unix timestamp in seconds
+        const currentToken = get().accessToken;
+
+        // Only update and log if token actually changed
+        if (newToken !== currentToken) {
+          console.log("[AUTH STORE] 🔄 Session updated:", {
+            tokenChanged: true,
+            expiresAt: expiresAt ? new Date(expiresAt * 1000).toLocaleTimeString() : 'unknown',
+            expiresIn: expiresAt ? `${Math.round((expiresAt - Date.now() / 1000) / 60)} minutes` : 'unknown',
+          });
+
+          set({
+            accessToken: newToken,
+            sessionExpiresAt: expiresAt,
+            sessionVersion: get().sessionVersion + 1,
+          });
+        }
+      },
+
+      /**
+       * Get current access token
+       * Used by HTTP interceptor for API calls
+       */
+      getAccessToken: () => {
+        return get().accessToken;
+      },
+
+      /**
+       * Check if current session is valid (not expired)
+       */
+      isSessionValid: () => {
+        const { accessToken, sessionExpiresAt } = get();
+
+        if (!accessToken) {
+          return false;
+        }
+
+        if (!sessionExpiresAt) {
+          // If we have token but no expiry, assume valid (Supabase will handle refresh)
+          return true;
+        }
+
+        // Check if token expires in less than 60 seconds
+        const now = Math.floor(Date.now() / 1000);
+        const isValid = sessionExpiresAt > now + 60; // 60 second buffer
+
+        if (!isValid) {
+          console.log("[AUTH STORE] ⚠️ Session expired or expiring soon");
+        }
+
+        return isValid;
+      },
+
       clear: () => {
         console.log("[AUTH STORE] Clearing auth state (soft)");
         set({
@@ -81,6 +174,9 @@ export const useAuthStore = create<AuthState>()(
           currentAcademicYearId: undefined,
           cachedProfile: undefined,
           profileCachedAt: undefined,
+          accessToken: undefined,
+          sessionExpiresAt: undefined,
+          // Don't reset sessionVersion - keep it for tracking
         });
       },
 
@@ -93,6 +189,9 @@ export const useAuthStore = create<AuthState>()(
           currentAcademicYearId: undefined,
           cachedProfile: undefined,
           profileCachedAt: undefined,
+          accessToken: undefined,
+          sessionExpiresAt: undefined,
+          sessionVersion: 0,
         });
         // Clear persisted storage
         localStorage.removeItem("auth-storage");
@@ -109,6 +208,9 @@ export const useAuthStore = create<AuthState>()(
           currentAcademicYearId: undefined,
           cachedProfile: undefined,
           profileCachedAt: undefined,
+          accessToken: undefined,
+          sessionExpiresAt: undefined,
+          sessionVersion: 0,
         });
 
         // Clear all localStorage keys

@@ -10,7 +10,22 @@ import { motion } from "framer-motion";
 import { useEffect } from "react";
 
 export default function ChatDock() {
-  const { setOpen, sidebarOpen, setInputFocused } = useChatStore();
+  const { setOpen, sidebarOpen, setInputFocused, activeId, sessions, createSession } = useChatStore();
+
+  // Ensure there's always an active session when chat opens
+  useEffect(() => {
+    if (!activeId) {
+      // No active session - check if there are any sessions to activate
+      const activeSessions = sessions.filter(s => !s.archived);
+      if (activeSessions.length > 0) {
+        // Activate the most recent session
+        useChatStore.getState().setActive(activeSessions[0].id);
+      } else {
+        // No sessions at all - create a new one
+        createSession();
+      }
+    }
+  }, [activeId, sessions, createSession]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";

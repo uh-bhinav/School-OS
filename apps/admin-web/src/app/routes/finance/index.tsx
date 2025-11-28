@@ -1,9 +1,10 @@
 // ============================================================================
 // FILE: src/app/routes/finance/index.tsx
-// PURPOSE: Fee Management page - Simplified for backend compatibility
+// PURPOSE: Finance Module Hub - Navigation to all finance pages
 // ============================================================================
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -35,6 +36,12 @@ import {
   Payment as PaymentIcon,
   Receipt as ReceiptIcon,
   AccountBalance as AccountBalanceIcon,
+  CategoryOutlined,
+  AssignmentOutlined,
+  LocalOfferOutlined,
+  SettingsOutlined,
+  SchoolOutlined,
+  DiscountOutlined,
 } from "@mui/icons-material";
 import {
   useInvoicesList,
@@ -339,17 +346,107 @@ export default function FeeManagementPage() {
   // MAIN RENDER
   // ============================================================================
 
+  const navigate = useNavigate();
+
+  const financeModules = [
+    {
+      title: 'Fee Components',
+      description: 'Manage individual fee components (Tuition, Transport, Lab fees, etc.)',
+      icon: <CategoryOutlined fontSize="large" />,
+      path: '/finance/fee-components',
+      color: '#1976d2',
+    },
+    {
+      title: 'Fee Templates',
+      description: 'Create and manage fee templates by combining components',
+      icon: <AssignmentOutlined fontSize="large" />,
+      path: '/finance/fee-templates',
+      color: '#2e7d32',
+    },
+    {
+      title: 'Class Mapping',
+      description: 'Assign fee templates to classes and manage student assignments',
+      icon: <SchoolOutlined fontSize="large" />,
+      path: '/finance/class-mapping',
+      color: '#ed6c02',
+    },
+    {
+      title: 'Discount Rules',
+      description: 'Create and manage discount rules (Merit, Sibling, EWS, etc.)',
+      icon: <LocalOfferOutlined fontSize="large" />,
+      path: '/finance/discounts',
+      color: '#9c27b0',
+    },
+    {
+      title: 'Student Discounts',
+      description: 'Assign discount rules to individual students',
+      icon: <DiscountOutlined fontSize="large" />,
+      path: '/finance/student-discounts',
+      color: '#d32f2f',
+    },
+    {
+      title: 'Student Overrides',
+      description: 'Override specific fee components for individual students',
+      icon: <SettingsOutlined fontSize="large" />,
+      path: '/finance/overrides',
+      color: '#0288d1',
+    },
+  ];
+
   return (
     <Box>
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Box>
           <Typography variant="h4" fontWeight={700} gutterBottom>
-            Fee Management
+            Finance Module
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Manage invoices, payments, and fee components
+            Complete fee management system with templates, discounts, overrides, and invoices
           </Typography>
+        </Box>
+      </Box>
+
+      {/* Quick Links to Finance Sub-Modules */}
+      <Box mb={5}>
+        <Typography variant="h6" fontWeight={600} gutterBottom>
+          Quick Links
+        </Typography>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: 3,
+          }}
+        >
+          {financeModules.map((module) => (
+            <Card
+              key={module.path}
+              sx={{
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 4,
+                },
+              }}
+              onClick={() => navigate(module.path)}
+            >
+              <CardContent>
+                <Stack spacing={2}>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Box sx={{ color: module.color }}>{module.icon}</Box>
+                    <Typography variant="h6" fontWeight={600}>
+                      {module.title}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {module.description}
+                  </Typography>
+                </Stack>
+              </CardContent>
+            </Card>
+          ))}
         </Box>
       </Box>
 
@@ -358,7 +455,7 @@ export default function FeeManagementPage() {
         <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
           <Tab icon={<ReceiptIcon />} label="Invoices" iconPosition="start" />
           <Tab icon={<PaymentIcon />} label="Payments" iconPosition="start" />
-          <Tab icon={<AccountBalanceIcon />} label="Fee Components" iconPosition="start" />
+          <Tab icon={<AccountBalanceIcon />} label="Legacy Fee Components" iconPosition="start" />
         </Tabs>
       </Box>
 

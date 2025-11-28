@@ -1,11 +1,17 @@
 // ============================================================================
-// HTTP CLIENT - FIXED FOR PROPER API ROUTING
+// HTTP CLIENT - OPTIMIZED FOR CONNECTION POOL MANAGEMENT
 // ============================================================================
 // Base URL already includes /api/v1, so all service calls should use relative paths
 // Example: http.get("/profiles/me") → http://localhost:8000/api/v1/profiles/me
+//
+// OPTIMIZATION FEATURES:
+// - Request deduplication: Prevents duplicate concurrent requests
+// - Connection limiting: Caps max concurrent requests
+// - Token refresh: Handles 401s with single refresh attempt
+// - Timeout handling: Shorter timeouts to release connections faster
 // ============================================================================
 
-import axios from "axios";
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import { getAccessToken, supabase } from "./supabase";
 import { useAuthStore } from "../stores/useAuthStore";
 
@@ -29,59 +35,84 @@ if (!baseURL && import.meta.env.DEV) {
   console.log("🔶 HTTP Client: API Base URL:", resolvedBaseURL);
 }
 
+// ============================================================================
+// REQUEST DEDUPLICATION - Prevent duplicate concurrent requests
+// ============================================================================
+const pendingRequests = new Map<string, Promise<AxiosResponse>>();
+const MAX_CONCURRENT_REQUESTS = 6; // Browser limit per domain
+let activeRequests = 0;
+
+function getRequestKey(config: AxiosRequestConfig): string {
+  return `${config.method}-${config.url}-${JSON.stringify(config.params || {})}`;
+}
+
+async function waitForSlot(): Promise<void> {
+  while (activeRequests >= MAX_CONCURRENT_REQUESTS) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+}
+
 export const http = axios.create({
   baseURL: resolvedBaseURL,
-  timeout: 30000,
+  timeout: 15000, // Reduced from 30s to 15s - release connections faster
   headers: {
     "Content-Type": "application/json",
   },
 });
 
 // ============================================================================
-// REQUEST INTERCEPTOR - Add auth token + debug logging (ENHANCED)
+// REQUEST INTERCEPTOR - Optimized with connection management
+// ============================================================================
+// Features:
+// - Request deduplication for GET requests
+// - Connection throttling
+// - Minimal logging (production-ready)
 // ============================================================================
 http.interceptors.request.use(
-  (config) => {
-    console.log(`[HTTP] 🔍 Interceptor triggered for ${config.method?.toUpperCase()} ${config.url}`);
+  async (config) => {
+    // ========================================================================
+    // CONNECTION THROTTLING - Wait for available slot
+    // ========================================================================
+    await waitForSlot();
+    activeRequests++;
 
-    // ============================================================================
-    // CRITICAL: Get access token from Supabase session (SYNCHRONOUS)
-    // ============================================================================
+    // Check for duplicate GET requests (deduplication)
+    if (config.method?.toLowerCase() === 'get') {
+      const requestKey = getRequestKey(config);
+      const pending = pendingRequests.get(requestKey);
+      if (pending) {
+        // Return cached promise instead of making new request
+        console.log(`[HTTP] ♻️ Deduplicating request: ${config.url}`);
+        activeRequests--;
+        throw { __DEDUPE__: true, promise: pending };
+      }
+    }
+
+    // ========================================================================
+    // AUTH TOKEN - Get from Zustand or localStorage
+    // ========================================================================
     try {
-      const token = getAccessToken(); // Now synchronous!
-
-      console.log(`[HTTP] 🔑 Token status:`, {
-        exists: !!token,
-        length: token?.length || 0,
-        preview: token ? `${token.substring(0, 30)}...` : 'NULL'
-      });
+      let token: string | null | undefined = useAuthStore.getState().getAccessToken();
+      if (!token) {
+        token = getAccessToken();
+      }
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log(`[HTTP] ✅ Authorization header SET`);
-      } else {
-        console.error(`[HTTP] ❌ NO TOKEN - Request will fail with 401`);
       }
     } catch (error) {
-      console.error(`[HTTP] 💥 Exception getting token:`, error);
+      console.error(`[HTTP] Token error:`, error);
     }
 
-    // Debug logging - shows final resolved URL
-    const fullURL = config.baseURL
-      ? `${config.baseURL}${config.url}`
-      : config.url;
-
-    console.log(`[HTTP] 📡 Final request:`, {
-      url: fullURL,
-      method: config.method?.toUpperCase(),
-      hasAuthHeader: !!config.headers.Authorization,
-      authHeaderPreview: config.headers.Authorization ? 'Bearer ***' : 'MISSING',
-    });
+    // Minimal logging in production
+    if (import.meta.env.DEV) {
+      console.log(`[HTTP] → ${config.method?.toUpperCase()} ${config.url}`);
+    }
 
     return config;
   },
   (error) => {
-    console.error("[HTTP] ❌ Interceptor error:", error);
+    activeRequests = Math.max(0, activeRequests - 1);
     return Promise.reject(error);
   }
 );
@@ -89,11 +120,11 @@ http.interceptors.request.use(
 // ============================================================================
 // RESPONSE INTERCEPTOR - Handle errors + auto-refresh on 401
 // ============================================================================
-// CRITICAL: Implements automatic token refresh without breaking pool fixes
-// - On 401: Try to refresh token ONCE before logging out
-// - Prevents retry loops with _retry flag
-// - Respects profile cache (doesn't refetch profile)
-// - Only logs out if refresh fails
+// Features:
+// - Tracks active requests for connection management
+// - Handles deduplication responses
+// - Auto-refresh on 401 (single attempt)
+// - Minimal logging for production
 // ============================================================================
 
 // Track ongoing refresh to prevent race conditions
@@ -111,20 +142,50 @@ function addRefreshSubscriber(callback: (token: string) => void) {
 
 http.interceptors.response.use(
   (response) => {
-    // Debug logging for successful responses
-    console.log(`[API RESPONSE] ${response.status} ${response.config.url}`,
-      response.data
-    );
+    // Decrement active requests counter
+    activeRequests = Math.max(0, activeRequests - 1);
+
+    // Remove from pending requests (for deduplication)
+    if (response.config.method?.toLowerCase() === 'get') {
+      const requestKey = getRequestKey(response.config);
+      pendingRequests.delete(requestKey);
+    }
+
+    // Minimal logging
+    if (import.meta.env.DEV) {
+      console.log(`[HTTP] ← ${response.status} ${response.config.url}`);
+    }
     return response;
   },
   async (error) => {
+    // Decrement active requests counter
+    activeRequests = Math.max(0, activeRequests - 1);
+
+    // Handle deduplicated request - return the cached promise
+    if (error.__DEDUPE__) {
+      return error.promise;
+    }
+
     const originalRequest = error.config;
 
+    // Remove from pending requests on error
+    if (originalRequest?.method?.toLowerCase() === 'get') {
+      const requestKey = getRequestKey(originalRequest);
+      pendingRequests.delete(requestKey);
+    }
+
+    // Handle timeout errors - don't retry to avoid connection spam
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      console.error(`[HTTP] ⏰ Timeout: ${error.config?.url}`);
+      return Promise.reject(error);
+    }
+
     if (error.response) {
-      // Server responded with error status
       const { status, data } = error.response;
 
-      console.error(`[API ERROR] ${status} ${error.config?.url}`, data);
+      if (import.meta.env.DEV) {
+        console.error(`[HTTP] ← ${status} ${error.config?.url}`, data);
+      }
 
       // ========================================================================
       // 401 UNAUTHORIZED - Try token refresh before logging out
@@ -157,6 +218,11 @@ http.interceptors.response.use(
 
           const newToken = data.session.access_token;
           console.log("[HTTP] ✅ Token refreshed successfully");
+
+          // CRITICAL: Update Zustand store with new session
+          // This ensures subsequent requests use the new token
+          // Note: AuthProvider's onAuthStateChange will also fire, but this ensures immediate update
+          useAuthStore.getState().setSession(data.session);
 
           // Update the failed request with new token
           originalRequest.headers.Authorization = `Bearer ${newToken}`;

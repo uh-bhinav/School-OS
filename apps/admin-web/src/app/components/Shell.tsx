@@ -42,6 +42,12 @@ import {
   PhotoLibrary,
   ShoppingBag,
   PersonOutline,
+  EventBusy,
+  Business,
+  Badge,
+  HowToReg,
+  WorkHistory,
+  AccountBalance,
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../stores/useAuthStore";
@@ -136,9 +142,25 @@ const navigationItems: NavItem[] = [
       { key: 'marks', label: 'Marks', icon: <Assignment fontSize="small" />, path: '/academics/marks', module: 'marks' },
       { key: 'leaderboards', label: 'Leaderboards', icon: <EmojiEvents fontSize="small" />, path: '/academics/leaderboards' },
       { key: 'teachers', label: 'Teachers', icon: <People fontSize="small" />, path: '/academics/teachers' },
+      { key: 'classes', label: 'Classes', icon: <SchoolIcon fontSize="small" />, path: '/academics/classes' },
       { key: 'students', label: 'Students', icon: <PersonOutline fontSize="small" />, path: '/academics/students' },
       { key: 'clubs', label: 'Clubs & Activities', icon: <Groups fontSize="small" />, path: '/academics/clubs' },
       { key: 'achievements', label: 'Achievements', icon: <Star fontSize="small" />, path: '/academics/achievements' },
+      { key: 'leave-management', label: 'Leave Management', icon: <EventBusy fontSize="small" />, path: '/academics/leave-management' },
+      { key: 'tasks', label: 'Task Manager', icon: <Assignment fontSize="small" />, path: '/academics/tasks' },
+    ],
+  },
+  {
+    key: 'hr',
+    label: 'HR Module',
+    icon: <Badge />,
+    path: '/hr',
+    children: [
+      { key: 'hr-dashboard', label: 'Dashboard', icon: <DashboardIcon fontSize="small" />, path: '/hr' },
+      { key: 'staff', label: 'Staff Management', icon: <People fontSize="small" />, path: '/hr/staff' },
+      { key: 'departments', label: 'Departments', icon: <Business fontSize="small" />, path: '/hr/departments' },
+      { key: 'staff-wall', label: 'Staff Wall', icon: <WorkHistory fontSize="small" />, path: '/hr/staff-wall' },
+      { key: 'staff-attendance', label: 'Staff Attendance', icon: <HowToReg fontSize="small" />, path: '/hr/attendance' },
     ],
   },
   {
@@ -166,7 +188,15 @@ const navigationItems: NavItem[] = [
       { key: 'payments', label: 'Payments', icon: <Payment fontSize="small" />, path: '/finance/payments' },
       { key: 'discounts', label: 'Discounts', icon: <LocalOffer fontSize="small" />, path: '/finance/discounts' },
       { key: 'refunds', label: 'Refunds', icon: <Undo fontSize="small" />, path: '/finance/refunds' },
+      { key: 'budgets', label: 'Budgets', icon: <AccountBalance fontSize="small" />, path: '/finance/budgets' },
     ],
+  },
+  {
+    key: 'events',
+    label: 'Events',
+    icon: <CalendarToday />,
+    path: '/events',
+    module: 'events',
   },
   {
     key: 'media',
@@ -212,6 +242,9 @@ export function Shell() {
 
   const isModuleSubscribed = (module?: string) => {
     if (!module) return true;
+    // Events module should always be visible even if not in subscribed list
+    if (module === 'events') return true;
+    console.log('[SHELL] Checking module:', module, 'in', subscribedModules);
     return subscribedModules.includes(module);
   };
 
@@ -363,6 +396,7 @@ export function Shell() {
         sx={{
           flexGrow: 1,
           p: 3,
+          pb: 12, // Extra padding at bottom for chat input overlay
           width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
           mt: 8,
         }}

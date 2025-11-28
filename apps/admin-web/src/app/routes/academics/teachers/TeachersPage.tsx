@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -18,23 +18,88 @@ import {
   TextField,
   InputAdornment,
   Button,
+  Tooltip,
 } from '@mui/material';
-import { Search, Edit, Delete, Add, Phone, Email, Visibility } from '@mui/icons-material';
+import { Search, Edit, Delete, Add, Phone, Email, Visibility, School } from '@mui/icons-material';
 import { getTeachers, getTeacherKPI } from '@/app/services/teachers.api';
 import type { Teacher } from '@/app/services/teacher.schema';
+import TeacherFilters, {
+  defaultTeacherFilters,
+  type TeacherFilterState,
+} from '@/app/components/teachers/TeacherFilters';
+import {
+  useClassTeacherIds,
+  useTeacherIdsBySubjects,
+} from '@/app/services/teachersFilters.hooks';
+
+// Extended teacher type with class teacher info
+interface TeacherWithInfo extends Teacher {
+  isClassTeacher: boolean;
+}
 
 export default function TeachersPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<TeacherFilterState>(defaultTeacherFilters);
+
+  // Get base teacher data
   const teachers = getTeachers();
   const kpi = getTeacherKPI();
 
-  const filteredTeachers = teachers.filter(
-    (teacher: Teacher) =>
-      teacher.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      teacher.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (teacher.subjects && teacher.subjects.some((s: string) => s.toLowerCase().includes(searchQuery.toLowerCase())))
+  // Fetch filter data
+  const { data: classTeacherIds = [], isLoading: classTeacherIdsLoading } = useClassTeacherIds();
+  const { data: teacherIdsBySubject = [], isLoading: subjectTeachersLoading } = useTeacherIdsBySubjects(
+    filters.subjectIds
   );
+
+  // Enrich teachers with class teacher info
+  const teachersWithInfo: TeacherWithInfo[] = useMemo(() => {
+    return teachers.map((teacher) => ({
+      ...teacher,
+      isClassTeacher: classTeacherIds.includes(teacher.teacher_id),
+    }));
+  }, [teachers, classTeacherIds]);
+
+  // Apply all filters
+  const filteredTeachers = useMemo(() => {
+    let result = [...teachersWithInfo];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (teacher) =>
+          teacher.full_name.toLowerCase().includes(query) ||
+          teacher.email?.toLowerCase().includes(query) ||
+          (teacher.subjects && teacher.subjects.some((s: string) => s.toLowerCase().includes(query)))
+      );
+    }
+
+    // Apply class teachers only filter
+    if (filters.classTeachersOnly) {
+      result = result.filter((teacher) => teacher.isClassTeacher);
+    }
+
+    // Apply subject filter
+    if (filters.subjectIds.length > 0 && !subjectTeachersLoading) {
+      result = result.filter((teacher) => teacherIdsBySubject.includes(teacher.teacher_id));
+    }
+
+    return result;
+  }, [teachersWithInfo, searchQuery, filters, teacherIdsBySubject, subjectTeachersLoading]);
+
+  // Handle filter changes
+  const handleFiltersChange = (newFilters: TeacherFilterState) => {
+    setFilters(newFilters);
+  };
+
+  // Reset filters
+  const handleResetFilters = () => {
+    setFilters(defaultTeacherFilters);
+    setSearchQuery('');
+  };
+
+  const isFilterLoading = classTeacherIdsLoading || (filters.subjectIds.length > 0 && subjectTeachersLoading);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -101,6 +166,24 @@ export default function TeachersPage() {
         />
       </Box>
 
+      {/* Advanced Filters */}
+      <TeacherFilters
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        onReset={handleResetFilters}
+        disabled={isFilterLoading}
+      />
+
+      {/* Results count */}
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          Showing {filteredTeachers.length} of {teachers.length} teachers
+          {(filters.classTeachersOnly || filters.subjectIds.length > 0) && (
+            <Chip label="Filtered" size="small" color="primary" sx={{ ml: 1 }} />
+          )}
+        </Typography>
+      </Box>
+
       {/* Teachers Table */}
       <TableContainer component={Paper}>
         <Table>
@@ -116,7 +199,7 @@ export default function TeachersPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredTeachers.map((teacher: Teacher) => (
+            {filteredTeachers.map((teacher: TeacherWithInfo) => (
               <TableRow
                 key={teacher.teacher_id}
                 hover
@@ -127,7 +210,20 @@ export default function TeachersPage() {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Avatar>{teacher.full_name.charAt(0)}</Avatar>
                     <Box>
-                      <Typography fontWeight="medium">{teacher.full_name}</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography fontWeight="medium">{teacher.full_name}</Typography>
+                        {teacher.isClassTeacher && (
+                          <Tooltip title="Class Teacher">
+                            <Chip
+                              icon={<School fontSize="small" />}
+                              label="Class Teacher"
+                              size="small"
+                              color="secondary"
+                              variant="outlined"
+                            />
+                          </Tooltip>
+                        )}
+                      </Box>
                       <Typography variant="body2" color="text.secondary">
                         {teacher.employee_code}
                       </Typography>
@@ -206,7 +302,11 @@ export default function TeachersPage() {
 
       {filteredTeachers.length === 0 && (
         <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography color="text.secondary">No teachers found matching "{searchQuery}"</Typography>
+          <Typography color="text.secondary">
+            {searchQuery || filters.classTeachersOnly || filters.subjectIds.length > 0
+              ? 'No teachers found matching the current filters'
+              : 'No teachers found'}
+          </Typography>
         </Box>
       )}
     </Box>
