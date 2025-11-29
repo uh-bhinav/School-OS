@@ -179,6 +179,11 @@ export function ThemeRoot({ children }: PropsWithChildren) {
         '0px 46px 92px rgba(0,0,0,0.5)',
         '0px 48px 96px rgba(0,0,0,0.52)',
       ],
+      zIndex: {
+        modal: 10000,
+        snackbar: 10100,
+        tooltip: 10200,
+      },
       components: {
         MuiButton: {
           styleOverrides: {

@@ -32,9 +32,8 @@
   z-index: 10001 !important;
 }
 
-.MuiBackdrop-root {
-  z-index: 10000 !important;
-}
+/* The backdrop should NOT have a separate z-index - it's a child of Dialog/Modal */
+/* Removing explicit z-index lets MUI handle stacking correctly */
 
 .MuiModal-root {
   z-index: 10001 !important;
