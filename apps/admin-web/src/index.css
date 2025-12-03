@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/* Global base styles */
+@layer base {
+  body {
+    @apply bg-gray-50 dark:bg-neutral-900 text-gray-900 dark:text-gray-100;
+  }
+}
+
+/* Custom utilities */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-500;
+  }
+}
+
+/* Ensure all MUI Dialogs and Modals appear above the chat (z-index: 9999)
+   Chat backdrop is at 9998, chat container at 9999, so dialogs need to be above */
+.MuiDialog-root {
+  z-index: 10001 !important;
+}
+
+/* The backdrop should NOT have a separate z-index - it's a child of Dialog/Modal */
+/* Removing explicit z-index lets MUI handle stacking correctly */
+
+.MuiModal-root {
+  z-index: 10001 !important;
+}
+
+/* Popover and Popper elements */
+.MuiPopover-root {
+  z-index: 10001 !important;
+}
+
+.MuiPopper-root {
+  z-index: 10001 !important;
+}
+
+/* Menu components */
+.MuiMenu-root {
+  z-index: 10001 !important;
+}
+
+.MuiMenuItem-root {
+  z-index: 10001 !important;
+}
+
+/* Tooltip */
+.MuiTooltip-popper {
+  z-index: 10001 !important;
+}

@@ -1,0 +1,16 @@
+# SchoolOS Multi-Agent System Requirements
+# =========================================
+
+# Core API Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Google AI
+google-generativeai>=0.8.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+
+# Email (built-in, no extra package needed)
+# smtplib is part of Python standard library
