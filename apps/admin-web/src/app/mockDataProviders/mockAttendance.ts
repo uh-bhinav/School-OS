@@ -205,6 +205,9 @@ export async function getMockClassRange(
   const end = new Date(endDate);
   const series: ClassRange["series"] = [];
 
+  // Expected students per class (approx 70)
+  const expectedStudents = 70;
+
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     // Skip weekends
     if (d.getDay() === 0 || d.getDay() === 6) continue;
@@ -214,12 +217,28 @@ export async function getMockClassRange(
       (r) => r.class_id === classId && r.date === dateStr
     );
 
-    series.push({
-      date: dateStr,
-      present_count: dayRecords.filter((r) => r.status === "PRESENT").length,
-      absent_count: dayRecords.filter((r) => r.status === "ABSENT").length,
-      late_count: dayRecords.filter((r) => r.status === "LATE").length,
-    });
+    if (dayRecords.length > 0) {
+      series.push({
+        date: dateStr,
+        present_count: dayRecords.filter((r) => r.status === "PRESENT").length,
+        absent_count: dayRecords.filter((r) => r.status === "ABSENT").length,
+        late_count: dayRecords.filter((r) => r.status === "LATE").length,
+      });
+    } else {
+      // Generate realistic mock data if no records exist for this day
+      const presentPct = 0.85 + Math.random() * 0.10; // 85-95%
+      const latePct = 0.03 + Math.random() * 0.04;    // 3-7%
+      const presentCount = Math.floor(expectedStudents * presentPct);
+      const lateCount = Math.floor(expectedStudents * latePct);
+      const absentCount = expectedStudents - presentCount - lateCount;
+
+      series.push({
+        date: dateStr,
+        present_count: presentCount,
+        absent_count: Math.max(0, absentCount),
+        late_count: lateCount,
+      });
+    }
   }
 
   console.log(`[MOCK ATTENDANCE] getClassRange(${classId}, ${startDate}, ${endDate}) → ${series.length} days`);
@@ -249,19 +268,26 @@ export async function getMockWeeklySummary(
     return rDate >= weekStart && rDate <= weekEnd;
   });
 
-  // Group by section (mock sections A, B, C)
-  const sections = ["Section A", "Section B", "Section C"];
+  // Group by section (mock sections A, B, C, D) with realistic percentages
+  const sections = ["Section A", "Section B", "Section C", "Section D"];
   const buckets = sections.map((sectionLabel, idx) => {
-    // Distribute students across sections
+    // Filter students for this section (based on student_id ranges)
+    const startStudentId = (classId - 1) * 70 + 1 + (idx * 17); // ~17 students per section
+    const endStudentId = startStudentId + 17;
+
     const sectionRecords = weekRecords.filter((r) => {
-      const studentNum = r.student_id % 1000;
-      return Math.floor((studentNum - 1) / 13) === idx; // ~13 students per section
+      return r.student_id >= startStudentId && r.student_id < endStudentId;
     });
 
-    const presentCount = sectionRecords.filter((r) => r.status === "PRESENT").length;
-    const presentPct = sectionRecords.length > 0
-      ? Math.round((presentCount / sectionRecords.length) * 100)
-      : 0;
+    let presentPct: number;
+    if (sectionRecords.length > 0) {
+      const presentCount = sectionRecords.filter((r) => r.status === "PRESENT" || r.status === "LATE").length;
+      presentPct = Math.round((presentCount / sectionRecords.length) * 100);
+    } else {
+      // Fallback: Generate realistic mock percentages if no records exist
+      const basePct = 85 + Math.random() * 12; // 85-97%
+      presentPct = Math.round(basePct * 10) / 10;
+    }
 
     return {
       grade_label: sectionLabel,

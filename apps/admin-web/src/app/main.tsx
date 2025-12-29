@@ -13,6 +13,7 @@ import AttendanceRoute from "./routes/academics/attendance/AttendanceRoute";
 import TimetableRoute from "./routes/academics/timetable/TimetableRoute";
 import ProxyAssignmentPage from "./routes/academics/timetable/ProxyAssignmentPage";
 import ExamsRoute from "./routes/academics/exams/ExamsRoute";
+import { ExamSubjectsPage, QuestionCOMappingPage, QuestionMarksEntryPage } from "./routes/academics/exams/subjects";
 import MarksRoute from "./routes/academics/marks/MarksRoute";
 import MarksPage from "./routes/academics/marks/MarksPage";
 import LeaderboardsPage from "./routes/academics/leaderboards/LeaderboardsPage";
@@ -26,6 +27,8 @@ import ClubsPage from "./routes/academics/clubs/ClubsPage";
 import AchievementsPage from "./routes/academics/achievements/AchievementsPage";
 import { LeaveManagementRoute, LeaveProxyAssignmentPage } from "./routes/academics/leaveManagement";
 import TasksPage from "./routes/academics/tasks/TasksPage";
+import { SubjectsPage, SubjectDetailPage } from "./routes/academics/subjects";
+import { COAttainmentPage } from "./routes/academics/obe";
 import AnnouncementsPage from "./routes/announcements";
 import CommunicationsPage from "./routes/communications";
 import FeeManagementPage from "./routes/finance";
@@ -158,6 +161,18 @@ const router = createBrowserRouter([
         element: <ExamsRoute />,
       },
       {
+        path: "academics/exams/:examId/subjects",
+        element: <ExamSubjectsPage />,
+      },
+      {
+        path: "academics/exams/:examId/subjects/:subjectExamId/questions",
+        element: <QuestionCOMappingPage />,
+      },
+      {
+        path: "academics/exams/:examId/subjects/:subjectExamId/marks",
+        element: <QuestionMarksEntryPage />,
+      },
+      {
         path: "academics/marks",
         element: <MarksRoute />,
         children: [
@@ -198,6 +213,18 @@ const router = createBrowserRouter([
       {
         path: "academics/clubs",
         element: <ClubsPage />,
+      },
+      {
+        path: "academics/subjects",
+        element: <SubjectsPage />,
+      },
+      {
+        path: "academics/subjects/:subjectId",
+        element: <SubjectDetailPage />,
+      },
+      {
+        path: "academics/co-attainment",
+        element: <COAttainmentPage />,
       },
       {
         path: "academics/achievements",
@@ -367,27 +394,49 @@ const router = createBrowserRouter([
 ]);
 
 // ============================================================================
-// START THE APP - MSW COMPLETELY REMOVED
+// START THE APP - HYBRID MODE
 // ============================================================================
-// ✅ No more MSW initialization
-// ✅ Direct app startup - no async wrapper needed
-// ✅ Clean bootstrap sequence
+// ✅ Real Backend: Auth, Session, School Config, School Identity
+// ✅ MSW Mocks: Subjects, Exams, Marks, COs, Attainment (academic data)
+// ✅ This allows stable auth while demoing academic features
 // ============================================================================
 
-console.log("🚀 Starting SchoolOS Admin Panel...");
-console.log("� Mode:", import.meta.env.DEV ? "Development" : "Production");
-console.log("� API Base:", import.meta.env.VITE_API_BASE_URL || "No base URL (will use relative paths)");
+async function startApp() {
+  console.log("🚀 Starting SchoolOS Admin Panel...");
+  console.log("🔧 Mode:", import.meta.env.DEV ? "Development" : "Production");
+  console.log("🌐 API Base:", import.meta.env.VITE_API_BASE_URL || "No base URL (will use relative paths)");
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthRoot>
-        <ThemeRoot>
-          <RouterProvider router={router} />
-        </ThemeRoot>
-      </AuthRoot>
-      {/* ✅ ChatProvider at the end for global chatbot overlay */}
-      <ChatProvider />
-    </QueryClientProvider>
-  </React.StrictMode>
-);
+  // Start MSW in browser for ACADEMIC DATA ONLY (subjects, exams, marks, COs)
+  // Auth, session, and config use real backend
+  if (typeof window !== "undefined" && import.meta.env.DEV) {
+    try {
+      console.log("🔄 Initializing Mock Service Worker for academic data...");
+      const { worker } = await import("./mocks/browser");
+      await worker.start({
+        onUnhandledRequest: "bypass", // Unhandled requests go to real backend
+        serviceWorker: {
+          url: "/mockServiceWorker.js",
+        },
+      });
+      console.log("✅ MSW Ready - Academic data uses mocks, Auth/Config use real backend");
+    } catch (error) {
+      console.warn("⚠️ MSW failed to start, all requests will use real backend:", error);
+    }
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <AuthRoot>
+          <ThemeRoot>
+            <RouterProvider router={router} />
+          </ThemeRoot>
+        </AuthRoot>
+        {/* ✅ ChatProvider at the end for global chatbot overlay */}
+        <ChatProvider />
+      </QueryClientProvider>
+    </React.StrictMode>
+  );
+}
+
+startApp();

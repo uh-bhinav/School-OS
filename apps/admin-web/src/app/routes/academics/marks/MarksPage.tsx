@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Box, Typography, Button, Snackbar, Alert } from "@mui/material";
-import { Add as AddIcon, Upload as UploadIcon } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import { Box, Typography, Button, Snackbar, Alert, Card, CardContent, CardActions } from "@mui/material";
+import { Add as AddIcon, Upload as UploadIcon, TrendingUp as TrendingUpIcon, Assignment as AssignmentIcon } from "@mui/icons-material";
 import { MarksFilterBar } from "@/app/components/marks/MarksFilterBar";
 import { KPICards } from "@/app/components/marks/KPICards";
 import { MarksTable } from "@/app/components/marks/MarksTable";
@@ -50,6 +51,7 @@ import { Mark } from "@/app/services/marks.schema";
  * - No component changes needed for backend integration
  */
 export default function MarksPage() {
+  const navigate = useNavigate();
   const { classId, section, examId, subjectId } = useMarksStore();
 
   // Build filters object
@@ -227,6 +229,57 @@ export default function MarksPage() {
           </Button>
         </Box>
       </Box>
+
+      {/* ===================================================================== */}
+      {/* RECOMMENDED WORKFLOW BANNER */}
+      {/* ===================================================================== */}
+      <Card
+        sx={{
+          mb: 3,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+        }}
+      >
+        <CardContent sx={{ pb: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <TrendingUpIcon sx={{ fontSize: 40 }} />
+            <Box>
+              <Typography variant="h6" fontWeight="bold" gutterBottom>
+                📚 Recommended: Question-wise Marks Entry with CO Mapping
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.95 }}>
+                For outcome-based evaluation (OBE), enter marks per question with automatic CO attainment calculation.
+                This is the modern approach for comprehensive assessment and attainment tracking.
+              </Typography>
+            </Box>
+          </Box>
+        </CardContent>
+        <CardActions sx={{ pt: 0, pb: 2, px: 2 }}>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<AssignmentIcon />}
+            onClick={() => navigate('/academics/exams')}
+            sx={{
+              bgcolor: 'white',
+              color: '#667eea',
+              fontWeight: 'bold',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.9)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.2)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Go to Exams → Subjects → Question-wise Entry
+          </Button>
+          <Typography variant="caption" sx={{ ml: 2, opacity: 0.9 }}>
+            Current view below is for legacy total marks entry
+          </Typography>
+        </CardActions>
+      </Card>
 
       {/* Filters */}
       <Box sx={{ mb: 3 }}>

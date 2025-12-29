@@ -10,7 +10,7 @@
  * - Smooth animations
  */
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../services/supabase";
 import {
   Box,
@@ -37,6 +37,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { InlineLoader } from "../../components/AppLoader";
 import { useConfigStore } from "../../stores/useConfigStore";
+import { useAuthStore } from "../../stores/useAuthStore";
 
 // Validation schema using Yup
 const loginSchema = Yup.object({
@@ -51,14 +52,26 @@ const loginSchema = Yup.object({
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const cfg = useConfigStore((s) => s.config);
+  const { fetchProfile, setSession } = useAuthStore();
+  const authListenerCleanup = useRef<(() => void) | null>(null);
 
   const logo = cfg?.branding.logo.primary_url;
   const schoolName = cfg?.identity?.display_name ?? "School OS";
   const primaryColor = cfg?.branding.colors.primary ?? "#E87722";
+
+  // Cleanup auth listener on unmount
+  useEffect(() => {
+    return () => {
+      if (authListenerCleanup.current) {
+        authListenerCleanup.current();
+      }
+    };
+  }, []);
 
   // Formik configuration
   const formik = useFormik({
@@ -69,21 +82,76 @@ export default function Login() {
     validationSchema: loginSchema,
     onSubmit: async (values) => {
       setError(null);
+      setIsLoggingIn(true);
 
       try {
+        // Set up a one-time listener for SIGNED_IN event
+        // This ensures we wait for the auth state to be fully processed
+        const authPromise = new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error("Login timeout - auth state not received"));
+          }, 10000); // 10 second timeout
+
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+              if (event === "SIGNED_IN" && session) {
+                clearTimeout(timeout);
+                subscription.unsubscribe();
+
+                try {
+                  // Update session in store
+                  setSession(session);
+
+                  // Fetch profile before navigating
+                  console.log("[LOGIN] Fetching profile before navigation...");
+                  await fetchProfile(true);
+                  console.log("[LOGIN] Profile loaded, navigating to home...");
+                  resolve();
+                } catch (profileError) {
+                  console.error("[LOGIN] Profile fetch failed:", profileError);
+                  reject(profileError);
+                }
+              }
+            }
+          );
+
+          authListenerCleanup.current = () => {
+            clearTimeout(timeout);
+            subscription.unsubscribe();
+          };
+        });
+
+        // Attempt sign in
         const { error: authError } = await supabase.auth.signInWithPassword({
           email: values.email,
           password: values.password,
         });
 
         if (authError) {
+          // Clean up listener if sign-in failed
+          if (authListenerCleanup.current) {
+            authListenerCleanup.current();
+            authListenerCleanup.current = null;
+          }
           setError(authError.message);
-        } else {
-          navigate("/", { replace: true });
+          setIsLoggingIn(false);
+          return;
         }
-      } catch (err) {
-        setError("An unexpected error occurred");
+
+        // Wait for auth state to be fully processed
+        await authPromise;
+
+        // Now safe to navigate
+        navigate("/", { replace: true });
+      } catch (err: any) {
+        setError(err.message || "An unexpected error occurred");
         console.error("Login error:", err);
+      } finally {
+        setIsLoggingIn(false);
+        if (authListenerCleanup.current) {
+          authListenerCleanup.current();
+          authListenerCleanup.current = null;
+        }
       }
     },
   });
@@ -332,8 +400,8 @@ export default function Login() {
               fullWidth
               variant="contained"
               size="large"
-              disabled={formik.isSubmitting}
-              startIcon={formik.isSubmitting && <InlineLoader />}
+              disabled={formik.isSubmitting || isLoggingIn}
+              startIcon={(formik.isSubmitting || isLoggingIn) && <InlineLoader />}
               sx={{
                 py: 1.5,
                 fontSize: "1.1rem",
@@ -344,7 +412,7 @@ export default function Login() {
                 },
               }}
             >
-              {formik.isSubmitting ? "Signing in..." : "Sign In"}
+              {formik.isSubmitting || isLoggingIn ? "Signing in..." : "Sign In"}
             </Button>
           </form>
 

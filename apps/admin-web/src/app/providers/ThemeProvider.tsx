@@ -33,6 +33,13 @@ export function ThemeRoot({ children }: PropsWithChildren) {
       success:"#2e7d32", warning:"#ed6c02"
     };
 
+    // VS Code-inspired dark mode colors
+    const darkBackground = '#1e1e1e';      // VS Code editor background
+    const darkSurface = '#252526';          // VS Code sidebar background
+    const darkSurfaceVariant = '#2d2d2d';   // Slightly lighter surface
+    const darkBorder = '#3c3c3c';           // VS Code border color
+    const darkHover = '#2a2d2e';            // Hover state
+
     return createTheme({
       palette: {
         mode,
@@ -68,14 +75,21 @@ export function ThemeRoot({ children }: PropsWithChildren) {
           dark: '#01579b',
         },
         background: {
-          default: mode === 'dark' ? '#0a1929' : '#fafafa',
-          paper: mode === 'dark' ? '#132f4c' : '#ffffff',
+          default: mode === 'dark' ? darkBackground : '#fafafa',
+          paper: mode === 'dark' ? darkSurface : '#ffffff',
         },
         text: {
-          primary: mode === 'dark' ? '#fff' : 'rgba(0, 0, 0, 0.87)',
-          secondary: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+          primary: mode === 'dark' ? '#cccccc' : 'rgba(0, 0, 0, 0.87)',
+          secondary: mode === 'dark' ? '#9d9d9d' : 'rgba(0, 0, 0, 0.6)',
         },
-        divider: mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+        divider: mode === 'dark' ? darkBorder : 'rgba(0, 0, 0, 0.12)',
+        action: {
+          active: mode === 'dark' ? '#cccccc' : 'rgba(0, 0, 0, 0.54)',
+          hover: mode === 'dark' ? darkHover : 'rgba(0, 0, 0, 0.04)',
+          selected: mode === 'dark' ? '#37373d' : 'rgba(0, 0, 0, 0.08)',
+          disabled: mode === 'dark' ? '#5d5d5d' : 'rgba(0, 0, 0, 0.26)',
+          disabledBackground: mode === 'dark' ? '#3c3c3c' : 'rgba(0, 0, 0, 0.12)',
+        },
       },
       typography: {
         fontFamily: '"Ubuntu", "Roboto", "Helvetica", "Arial", sans-serif',
@@ -185,6 +199,45 @@ export function ThemeRoot({ children }: PropsWithChildren) {
         tooltip: 10200,
       },
       components: {
+        MuiCssBaseline: {
+          styleOverrides: {
+            body: {
+              backgroundColor: mode === 'dark' ? '#1e1e1e' : '#fafafa',
+              scrollbarColor: mode === 'dark' ? '#424242 #1e1e1e' : undefined,
+              '&::-webkit-scrollbar': {
+                width: '8px',
+                height: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: mode === 'dark' ? '#1e1e1e' : '#f1f1f1',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: mode === 'dark' ? '#424242' : '#c1c1c1',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb:hover': {
+                background: mode === 'dark' ? '#555555' : '#a1a1a1',
+              },
+            },
+          },
+        },
+        MuiAppBar: {
+          styleOverrides: {
+            root: {
+              backgroundColor: mode === 'dark' ? '#323233' : undefined,
+              backgroundImage: 'none',
+            },
+          },
+        },
+        MuiDrawer: {
+          styleOverrides: {
+            paper: {
+              backgroundColor: mode === 'dark' ? '#252526' : '#ffffff',
+              backgroundImage: 'none',
+              borderRight: mode === 'dark' ? '1px solid #3c3c3c' : '1px solid rgba(0, 0, 0, 0.12)',
+            },
+          },
+        },
         MuiButton: {
           styleOverrides: {
             root: {
@@ -208,6 +261,13 @@ export function ThemeRoot({ children }: PropsWithChildren) {
             root: {
               '& .MuiOutlinedInput-root': {
                 borderRadius: 12,
+                backgroundColor: mode === 'dark' ? '#3c3c3c' : undefined,
+                '& fieldset': {
+                  borderColor: mode === 'dark' ? '#3c3c3c' : undefined,
+                },
+                '&:hover fieldset': {
+                  borderColor: mode === 'dark' ? '#505050' : undefined,
+                },
               },
             },
           },
@@ -217,6 +277,8 @@ export function ThemeRoot({ children }: PropsWithChildren) {
             root: {
               borderRadius: 12,
               backgroundImage: 'none',
+              backgroundColor: mode === 'dark' ? '#252526' : '#ffffff',
+              border: mode === 'dark' ? '1px solid #3c3c3c' : undefined,
             },
           },
         },
@@ -224,6 +286,7 @@ export function ThemeRoot({ children }: PropsWithChildren) {
           styleOverrides: {
             root: {
               backgroundImage: 'none',
+              backgroundColor: mode === 'dark' ? '#252526' : '#ffffff',
             },
             rounded: {
               borderRadius: 12,
@@ -235,6 +298,115 @@ export function ThemeRoot({ children }: PropsWithChildren) {
             root: {
               borderRadius: 8,
               fontWeight: 500,
+            },
+          },
+        },
+        MuiTableCell: {
+          styleOverrides: {
+            root: {
+              borderBottom: mode === 'dark' ? '1px solid #3c3c3c' : '1px solid rgba(224, 224, 224, 1)',
+            },
+            head: {
+              backgroundColor: mode === 'dark' ? '#2d2d2d' : '#fafafa',
+              fontWeight: 600,
+            },
+          },
+        },
+        MuiTableRow: {
+          styleOverrides: {
+            root: {
+              '&:hover': {
+                backgroundColor: mode === 'dark' ? '#2a2d2e' : 'rgba(0, 0, 0, 0.04)',
+              },
+            },
+          },
+        },
+        MuiListItemButton: {
+          styleOverrides: {
+            root: {
+              '&:hover': {
+                backgroundColor: mode === 'dark' ? '#2a2d2e' : 'rgba(0, 0, 0, 0.04)',
+              },
+              '&.Mui-selected': {
+                backgroundColor: mode === 'dark' ? '#37373d' : 'rgba(25, 118, 210, 0.12)',
+                '&:hover': {
+                  backgroundColor: mode === 'dark' ? '#404040' : 'rgba(25, 118, 210, 0.18)',
+                },
+              },
+            },
+          },
+        },
+        MuiMenu: {
+          styleOverrides: {
+            paper: {
+              backgroundColor: mode === 'dark' ? '#252526' : '#ffffff',
+              border: mode === 'dark' ? '1px solid #3c3c3c' : undefined,
+            },
+          },
+        },
+        MuiMenuItem: {
+          styleOverrides: {
+            root: {
+              '&:hover': {
+                backgroundColor: mode === 'dark' ? '#2a2d2e' : 'rgba(0, 0, 0, 0.04)',
+              },
+            },
+          },
+        },
+        MuiDialog: {
+          styleOverrides: {
+            paper: {
+              backgroundColor: mode === 'dark' ? '#252526' : '#ffffff',
+              backgroundImage: 'none',
+            },
+          },
+        },
+        MuiAlert: {
+          styleOverrides: {
+            root: {
+              backgroundImage: 'none',
+            },
+            standardSuccess: {
+              backgroundColor: mode === 'dark' ? '#1e3a29' : undefined,
+            },
+            standardError: {
+              backgroundColor: mode === 'dark' ? '#3a1e1e' : undefined,
+            },
+            standardWarning: {
+              backgroundColor: mode === 'dark' ? '#3a321e' : undefined,
+            },
+            standardInfo: {
+              backgroundColor: mode === 'dark' ? '#1e2a3a' : undefined,
+            },
+          },
+        },
+        MuiTooltip: {
+          styleOverrides: {
+            tooltip: {
+              backgroundColor: mode === 'dark' ? '#3c3c3c' : 'rgba(97, 97, 97, 0.92)',
+            },
+          },
+        },
+        MuiDivider: {
+          styleOverrides: {
+            root: {
+              borderColor: mode === 'dark' ? '#3c3c3c' : 'rgba(0, 0, 0, 0.12)',
+            },
+          },
+        },
+        MuiSelect: {
+          styleOverrides: {
+            root: {
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: mode === 'dark' ? '#3c3c3c' : undefined,
+              },
+            },
+          },
+        },
+        MuiInputBase: {
+          styleOverrides: {
+            root: {
+              backgroundColor: mode === 'dark' ? '#3c3c3c' : undefined,
             },
           },
         },
