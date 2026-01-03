@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeRoot } from "./providers/ThemeProvider";
 import { AuthRoot } from "./providers/AuthProvider";
@@ -46,7 +46,7 @@ import AlbumDetailPage from "./routes/albums/AlbumDetailPage";
 import ProductsPage from "./routes/media/products/ProductsPage";
 import EventsPage from "./routes/events";
 import EventDetailPage from "./routes/events/EventDetailPage";
-import { Shell, Protected } from "./components/Shell";
+import { Shell, Protected, SuperAdminProtected } from "./components/Shell";
 import { runAuthMigration } from "./utils/authCleanup";
 import { logDemoModeStatus } from "./mockDataProviders";
 
@@ -71,6 +71,26 @@ import BudgetPettyCashPage from "./routes/finance/budgets/BudgetPettyCashPage";
 import BudgetReportsPage from "./routes/finance/budgets/BudgetReportsPage";
 import BudgetSettingsPage from "./routes/finance/budgets/BudgetSettingsPage";
 import BudgetAuditLogPage from "./routes/finance/budgets/BudgetAuditLogPage";
+
+// ROLE-AWARE LOGIN: Super Admin landing page
+import GroupOverview from "./routes/group-overview/GroupOverview";
+import GroupOverviewPage from "./routes/group-overview/GroupOverviewPage";
+import { SuperAdminShell } from "./components/SuperAdminShell";
+
+// Super Admin Schools pages
+import { SchoolsPage, SchoolDetailPage } from "./routes/schools";
+
+// Super Admin Academics pages (Group Level)
+import { AttendanceHealthPage, CurriculumPacingPage } from "./routes/group-overview/academics";
+
+// Super Admin Financial Health pages (Group Level)
+import { FeeCollectionPage, DuesAgingPage, CapacityForecastPage } from "./routes/group-overview/financial";
+
+// Super Admin Compliance & Risk pages (Group Level)
+import { ComplianceOverviewPage, CertificatesRenewalsPage, RegulatoryAlertsPage } from "./routes/group-overview/compliance";
+
+// Super Admin Communication pages (Group Level)
+import { ParentEngagementPage, EffectivenessSummaryPage } from "./routes/group-overview/communication";
 
 // ============================================================================
 // AUTH MIGRATION - Clean up stale auth state from previous sessions
@@ -131,6 +151,93 @@ const router = createBrowserRouter([
   {
     path: "/auth/signup",
     element: <SignupPrincipal />,
+  },
+  // ========================================================================
+  // ROLE-AWARE LOGIN: Super Admin Routes with SuperAdminShell
+  // Protected by SuperAdminProtected - only super_admin role can access
+  // Uses separate shell, fully isolated from principal dashboard
+  // ========================================================================
+  {
+    path: "/group-overview",
+    element: (
+      <SuperAdminProtected>
+        <SuperAdminShell />
+      </SuperAdminProtected>
+    ),
+    children: [
+      {
+        index: true,
+        element: <GroupOverviewPage />,
+      },
+      {
+        path: "schools",
+        element: <SchoolsPage />,
+      },
+      {
+        path: "schools/:schoolId",
+        element: <SchoolDetailPage />,
+      },
+      {
+        path: "academics",
+        element: <Navigate to="/group-overview/academics/attendance" replace />,
+      },
+      {
+        path: "academics/attendance",
+        element: <AttendanceHealthPage />,
+      },
+      {
+        path: "academics/curriculum-pacing",
+        element: <CurriculumPacingPage />,
+      },
+      {
+        path: "financial",
+        element: <Navigate to="/group-overview/financial/fee-collection" replace />,
+      },
+      {
+        path: "financial/fee-collection",
+        element: <FeeCollectionPage />,
+      },
+      {
+        path: "financial/dues-aging",
+        element: <DuesAgingPage />,
+      },
+      {
+        path: "financial/capacity-forecast",
+        element: <CapacityForecastPage />,
+      },
+      {
+        path: "compliance",
+        element: <ComplianceOverviewPage />,
+      },
+      {
+        path: "compliance/certificates",
+        element: <CertificatesRenewalsPage />,
+      },
+      {
+        path: "compliance/alerts",
+        element: <RegulatoryAlertsPage />,
+      },
+      {
+        path: "compliance-risk",
+        element: <Navigate to="/group-overview/compliance" replace />,
+      },
+      {
+        path: "communication",
+        element: <Navigate to="/group-overview/communication/parent-engagement" replace />,
+      },
+      {
+        path: "communication/parent-engagement",
+        element: <ParentEngagementPage />,
+      },
+      {
+        path: "communication/effectiveness",
+        element: <EffectivenessSummaryPage />,
+      },
+      {
+        path: "settings",
+        element: <GroupOverview />, // Placeholder - will be GroupSettingsPage
+      },
+    ],
   },
   {
     path: "/",

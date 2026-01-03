@@ -4,10 +4,14 @@
  * This service handles communication with the FastAPI backend running
  * the Google ADK multi-agent orchestration system.
  *
- * Backend URL: http://localhost:8000
+ * Backend URL: http://localhost:8004
  * Endpoints:
- *   - POST /api/chat/new_session - Create new session
- *   - POST /api/chat/send - Send message to agents
+ *   - POST /api/chat/new_session - Create new session (with role)
+ *   - POST /api/chat/send - Send message to agents (with role)
+ *
+ * ROLE-BASED ROUTING:
+ *   - role="principal" → Principal/Admin agents (attendance, marks, fees, etc.)
+ *   - role="super_admin" → Super Admin agents (group overview, compliance, etc.)
  */
 
 const API_BASE_URL = import.meta.env.VITE_ADK_API_URL || "http://localhost:8004";
@@ -15,6 +19,11 @@ const API_BASE_URL = import.meta.env.VITE_ADK_API_URL || "http://localhost:8004"
 // Debug: Log the API URL being used
 console.log("🔍 ADK API URL:", API_BASE_URL);
 console.log("🔍 Environment variable VITE_ADK_API_URL:", import.meta.env.VITE_ADK_API_URL);
+
+/**
+ * User role type for routing to appropriate agents
+ */
+export type ChatRole = "principal" | "super_admin";
 
 /**
  * Response from the ADK backend
@@ -28,29 +37,55 @@ export interface AgentResponse {
 
 /**
  * Session management - maps frontend session IDs to backend session IDs
- * This allows us to maintain separate sessions for multi-session support
+ * Sessions are stored per role to prevent cross-pollution
  */
-const sessionMap = new Map<string, string>();
+const sessionMap = new Map<string, { backendSessionId: string; role: ChatRole }>();
+
+/**
+ * Get the current chat role based on URL path
+ * This allows automatic role detection for the chat service
+ */
+export const getChatRoleFromPath = (): ChatRole => {
+  if (typeof window !== "undefined") {
+    const path = window.location.pathname;
+    if (path.startsWith("/group-overview")) {
+      return "super_admin";
+    }
+  }
+  return "principal";
+};
 
 /**
  * Send a message to the ADK backend and get a response
  *
  * @param frontendSessionId - The frontend session ID from useChatStore
  * @param message - The user's message
+ * @param role - The user role (principal or super_admin), auto-detected if not provided
  * @returns Promise<AgentResponse> - The agent's response
  * @throws Error if the request fails
  */
 export const sendMessageToBackend = async (
   frontendSessionId: string,
-  message: string
+  message: string,
+  role?: ChatRole
 ): Promise<AgentResponse> => {
-  try {
-    // Get or create backend session ID
-    let backendSessionId = sessionMap.get(frontendSessionId);
+  // Auto-detect role from current path if not provided
+  const effectiveRole = role || getChatRoleFromPath();
 
-    // If no backend session exists for this frontend session, create one
-    if (!backendSessionId) {
-      console.log("📝 Creating new backend session...");
+  console.log("🎭 Chat role:", effectiveRole);
+
+  try {
+    // Get existing session info
+    const sessionInfo = sessionMap.get(frontendSessionId);
+    let backendSessionId = sessionInfo?.backendSessionId;
+
+    // Create new session if:
+    // 1. No session exists
+    // 2. Role changed (need new session for different agent set)
+    const needsNewSession = !backendSessionId || (sessionInfo && sessionInfo.role !== effectiveRole);
+
+    if (needsNewSession) {
+      console.log("📝 Creating new backend session for role:", effectiveRole);
       console.log("📡 Calling:", `${API_BASE_URL}/api/chat/new_session`);
 
       const newSessionResponse = await fetch(
@@ -60,6 +95,7 @@ export const sendMessageToBackend = async (
           headers: {
             "Content-Type": "application/json",
           },
+          body: JSON.stringify({ role: effectiveRole }),
         }
       );
 
@@ -78,14 +114,15 @@ export const sendMessageToBackend = async (
         throw new Error("Backend did not return a valid session_id");
       }
 
-      sessionMap.set(frontendSessionId, backendSessionId);
-      console.log("✅ Backend session created:", backendSessionId);
+      sessionMap.set(frontendSessionId, { backendSessionId, role: effectiveRole });
+      console.log("✅ Backend session created:", backendSessionId, "for role:", effectiveRole);
     }
 
-    // Send message to backend with session ID
+    // Send message to backend with session ID AND role
     console.log("📤 Sending message to:", `${API_BASE_URL}/api/chat/send`);
     console.log("📝 Message:", message);
     console.log("🔑 Session ID:", backendSessionId);
+    console.log("🎭 Role:", effectiveRole);
 
     const response = await fetch(`${API_BASE_URL}/api/chat/send`, {
       method: "POST",
@@ -95,6 +132,7 @@ export const sendMessageToBackend = async (
       body: JSON.stringify({
         message,
         session_id: backendSessionId,
+        role: effectiveRole,  // CRITICAL: Pass role to route to correct agents
       }),
     });
 

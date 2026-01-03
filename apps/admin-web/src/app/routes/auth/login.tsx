@@ -84,6 +84,9 @@ export default function Login() {
       setError(null);
       setIsLoggingIn(true);
 
+      // Variable to store resolved role for navigation decision
+      let resolvedRole: string | undefined;
+
       try {
         // Set up a one-time listener for SIGNED_IN event
         // This ensures we wait for the auth state to be fully processed
@@ -103,12 +106,33 @@ export default function Login() {
                   setSession(session);
 
                   // Fetch profile before navigating
-                  console.log("[LOGIN] Fetching profile before navigation...");
-                  await fetchProfile(true);
-                  console.log("[LOGIN] Profile loaded, navigating to home...");
+                  console.log("[LOGIN] 📥 Fetching profile before navigation...");
+                  const profile = await fetchProfile(true);
+
+                  // ROLE-AWARE LOGIN: Log profile and extract role for routing decision
+                  console.log("[LOGIN] 📋 Profile object:", {
+                    user_id: profile.user_id,
+                    school_id: profile.school_id,
+                    first_name: profile.first_name,
+                    last_name: profile.last_name,
+                    roles: profile.roles.map(r => r.role_definition.role_name),
+                  });
+
+                  // Get resolved role from auth store (set by fetchProfile)
+                  resolvedRole = useAuthStore.getState().role;
+                  console.log("[LOGIN] 🎯 Resolved role:", resolvedRole);
+
+                  // Validate role exists
+                  if (!resolvedRole) {
+                    console.error("[LOGIN] ❌ No role found in profile");
+                    reject(new Error("Your account does not have a valid role assigned. Please contact your administrator."));
+                    return;
+                  }
+
+                  console.log("[LOGIN] ✅ Profile loaded successfully");
                   resolve();
                 } catch (profileError) {
-                  console.error("[LOGIN] Profile fetch failed:", profileError);
+                  console.error("[LOGIN] ❌ Profile fetch failed:", profileError);
                   reject(profileError);
                 }
               }
@@ -141,11 +165,38 @@ export default function Login() {
         // Wait for auth state to be fully processed
         await authPromise;
 
-        // Now safe to navigate
-        navigate("/", { replace: true });
+        // ========================================================================
+        // ROLE-AWARE NAVIGATION: Route based on user role
+        // ========================================================================
+        let navigationTarget: string;
+
+        if (resolvedRole === "super_admin") {
+          navigationTarget = "/group-overview";
+          console.log("[LOGIN] 🚀 Navigation target: /group-overview (super_admin)");
+        } else if (resolvedRole === "admin") {
+          navigationTarget = "/";
+          console.log("[LOGIN] 🚀 Navigation target: / (admin/principal dashboard)");
+        } else {
+          // Unknown or unsupported role for this admin panel
+          console.warn("[LOGIN] ⚠️ Unsupported role for admin panel:", resolvedRole);
+          setError(`Access denied. Role '${resolvedRole}' is not authorized to access this admin panel.`);
+          // Sign out the user
+          await supabase.auth.signOut();
+          setIsLoggingIn(false);
+          return;
+        }
+
+        // Navigate to role-appropriate destination
+        navigate(navigationTarget, { replace: true });
       } catch (err: any) {
         setError(err.message || "An unexpected error occurred");
-        console.error("Login error:", err);
+        console.error("[LOGIN] ❌ Login error:", err);
+        // Ensure user is signed out on error to prevent stuck state
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error("[LOGIN] ❌ Sign out after error failed:", signOutError);
+        }
       } finally {
         setIsLoggingIn(false);
         if (authListenerCleanup.current) {

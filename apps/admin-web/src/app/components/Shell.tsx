@@ -101,8 +101,10 @@ export function Protected({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Check admin privileges
-  if (role !== "admin") {
+  // ROLE-AWARE LOGIN: Allow both admin and super_admin to access principal dashboard
+  // super_admin should be routed to /group-overview by login, but if they somehow
+  // reach here, allow access (they have higher privileges)
+  if (role !== "admin" && role !== "super_admin") {
     return (
       <Box
         sx={{
@@ -114,6 +116,81 @@ export function Protected({ children }: { children: React.ReactNode }) {
       >
         <Typography variant="h6" color="error">
           Access Denied: Admin privileges required
+        </Typography>
+      </Box>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+// ============================================================================
+// SUPER ADMIN PROTECTED - Route guard for /group-overview
+// ============================================================================
+// Only allows super_admin role to access the group overview page.
+// Redirects admin/principal to their dashboard, others to login.
+// ============================================================================
+export function SuperAdminProtected({ children }: { children: React.ReactNode }) {
+  const { role, schoolId, userId } = useAuthStore();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check for authentication
+    if (!role || !schoolId || !userId) {
+      console.log("[SUPERADMIN PROTECTED] ❌ No auth data - redirecting to login");
+      navigate("/auth/login", { replace: true });
+      return;
+    }
+
+    // Check for super_admin role
+    if (role !== "super_admin") {
+      console.log("[SUPERADMIN PROTECTED] ⚠️ Not super_admin (role:", role, ") - redirecting to principal dashboard");
+      navigate("/", { replace: true });
+      return;
+    }
+
+    console.log("[SUPERADMIN PROTECTED] ✅ Super admin access verified");
+  }, [role, schoolId, userId, navigate]);
+
+  // If no auth, show loading (will redirect)
+  if (!role || !schoolId || !userId) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
+        <CircularProgress />
+        <Typography variant="body2" color="text.secondary">
+          Checking authentication...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // If not super_admin, show access denied (will redirect)
+  if (role !== "super_admin") {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
+        <Typography variant="h6" color="error">
+          Access Denied: Super Admin privileges required
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Redirecting to your dashboard...
         </Typography>
       </Box>
     );

@@ -4,23 +4,44 @@ import MicIcon from "@mui/icons-material/Mic";
 import StopIcon from "@mui/icons-material/Stop";
 import CloseIcon from "@mui/icons-material/Close";
 import { useChatStore } from "@/app/stores/useChatStore";
-import { sendMessageToBackend } from "@/app/services/chatService";
+import { sendMessageToBackend, getChatRoleFromPath } from "@/app/services/chatService";
 import { useWhisperTranscription } from "@/app/hooks";
 import AudioWaveform from "./AudioWaveform";
 
-const quickReplies = [
+// Principal quick replies
+const principalQuickReplies = [
   "Show today's attendance",
   "Upcoming exams",
   "Class 8A marks",
   "Generate timetable",
 ];
 
+// Super Admin quick replies
+const superAdminQuickReplies = [
+  "Group financial summary",
+  "Schools needing attention",
+  "Compliance status",
+  "Regional performance",
+];
+
 const MAX_CHARS = 2000;
+
+/**
+ * Format seconds into mm:ss display
+ */
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
 
 export default function InputBar() {
   const [input, setInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const {
     activeId,
     pushMessage,
@@ -29,6 +50,20 @@ export default function InputBar() {
     isLoading,
     setInputFocused,
   } = useChatStore();
+
+  // Get the correct quick replies based on role
+  const quickReplies = isSuperAdmin ? superAdminQuickReplies : principalQuickReplies;
+
+  // Check role on mount and when path changes
+  useEffect(() => {
+    const checkRole = () => {
+      const role = getChatRoleFromPath();
+      setIsSuperAdmin(role === "super_admin");
+    };
+    checkRole();
+    window.addEventListener("popstate", checkRole);
+    return () => window.removeEventListener("popstate", checkRole);
+  }, []);
 
   /**
    * Speech-to-text using LOCAL Whisper backend.
@@ -69,6 +104,30 @@ export default function InputBar() {
       setInput(transcript);
     }
   }, [transcript]);
+
+  /**
+   * Recording duration timer
+   * Starts counting when recording begins, resets when it stops
+   */
+  useEffect(() => {
+    if (isListening) {
+      setRecordingDuration(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      setRecordingDuration(0);
+    }
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, [isListening]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -222,22 +281,34 @@ export default function InputBar() {
         </div>
       )}
 
-      {/* Voice input mode indicator */}
+      {/* Voice input mode indicator - Professional design */}
       {(isListening || isProcessing) && (
-        <div className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-800">
-          <p className="text-xs text-blue-700 dark:text-blue-400 flex items-center gap-2">
+        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
             {isProcessing ? (
               <>
-                <span className="animate-spin">⏳</span>
-                <span>Transcribing with Whisper...</span>
+                <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  Transcribing audio...
+                </span>
               </>
             ) : (
               <>
-                <span className="animate-pulse">🎤</span>
-                <span>Recording... Click stop when done speaking.</span>
+                {/* Small pulsing red dot */}
+                <div className="recording-dot" />
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  Recording
+                </span>
+                {/* Duration timer */}
+                <span className="recording-timer ml-1">
+                  {formatDuration(recordingDuration)}
+                </span>
+                <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">
+                  Click stop when done
+                </span>
               </>
             )}
-          </p>
+          </div>
         </div>
       )}
 
@@ -311,22 +382,21 @@ export default function InputBar() {
         </div>
 
         {/*
-          Voice Input Button - ChatGPT-style UX
+          Voice Input Button - Professional UX
 
           STATE 1 (Idle): Gray mic icon - "Click to speak"
-          STATE 2 (Listening): Red stop button (⏹) with pulsing ring - "Click to stop"
+          STATE 2 (Listening): Subtle red stop button - "Click to stop"
           STATE 3 (Review): After stop, text stays in input for user to review/edit
           STATE 4 (Send): User manually clicks Send button
 
-          This is the ChatGPT pattern: record → stop → review → send
-          NO auto-submit - gives users confidence to check what was heard.
+          Professional look: No large pulsing animations, clean transitions.
         */}
         <button
           onClick={handleMicClick}
           disabled={!isSpeechSupported || isLoading}
-          className={`p-3 rounded-full transition-all duration-200 relative ${
+          className={`p-3 rounded-full transition-all duration-200 ${
             isListening
-              ? 'bg-red-500 text-white hover:bg-red-600 scale-110'
+              ? 'bg-red-500 text-white hover:bg-red-600'
               : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
           } ${!isSpeechSupported ? 'opacity-40 cursor-not-allowed' : ''}`}
           title={
@@ -341,15 +411,11 @@ export default function InputBar() {
           aria-label={isListening ? 'Stop recording' : 'Start voice input'}
         >
           {isListening ? (
-            // Stop button (square inside circle) - ChatGPT style
+            // Stop button (square inside circle) - Professional style
             <StopIcon sx={{ fontSize: 20 }} />
           ) : (
             // Mic icon when idle
             <MicIcon sx={{ fontSize: 20 }} />
-          )}
-          {/* Pulsing ring animation while listening */}
-          {isListening && (
-            <span className="absolute inset-0 rounded-full border-2 border-red-300 animate-ping opacity-75" />
           )}
         </button>
 

@@ -18,7 +18,8 @@ import { persist } from "zustand/middleware";
 import { getMyProfile, getPrimaryRole, type Profile } from "../services/profile.api";
 import type { Session } from "@supabase/supabase-js";
 
-type Role = "admin" | "teacher" | "student" | "parent";
+// ROLE-AWARE LOGIN: Added super_admin role for group-level admin routing
+type Role = "super_admin" | "admin" | "teacher" | "student" | "parent";
 
 // Profile cache TTL: 10 minutes (in milliseconds)
 const PROFILE_CACHE_TTL = 10 * 60 * 1000;
