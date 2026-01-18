@@ -65,11 +65,22 @@ import { ConfigRoot } from "../providers/ConfigProvider"; // ✅ Import ConfigPr
 // School logo - fallback if not available from config
 import schoolLogoFallback from "../public/toch_logo_-removebg-preview.png";
 
+// Check if demo mode is enabled
+function isDemoMode(): boolean {
+  return import.meta.env.VITE_DEMO_MODE === 'true';
+}
+
 export function Protected({ children }: { children: React.ReactNode }) {
   const { role, schoolId, userId } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
+    // DEMO MODE: Skip authentication check entirely
+    if (isDemoMode()) {
+      console.log("[PROTECTED] 🎭 DEMO MODE: Bypassing auth check");
+      return;
+    }
+
     // Simple check - if no auth data, redirect to login
     // AuthProvider handles all the session restoration logic
     if (!role || !schoolId || !userId) {
@@ -79,6 +90,11 @@ export function Protected({ children }: { children: React.ReactNode }) {
       console.log("[PROTECTED] ✅ Auth verified:", { role, schoolId });
     }
   }, [role, schoolId, userId, navigate]);
+
+  // DEMO MODE: Allow access without auth
+  if (isDemoMode()) {
+    return <>{children}</>;
+  }
 
   // If no auth, don't render (will redirect)
   if (!role || !schoolId || !userId) {
@@ -129,12 +145,19 @@ export function Protected({ children }: { children: React.ReactNode }) {
 // ============================================================================
 // Only allows super_admin role to access the group overview page.
 // Redirects admin/principal to their dashboard, others to login.
+// DEMO MODE: Allows access without authentication
 // ============================================================================
 export function SuperAdminProtected({ children }: { children: React.ReactNode }) {
   const { role, schoolId, userId } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
+    // DEMO MODE: Skip authentication check entirely
+    if (isDemoMode()) {
+      console.log("[SUPERADMIN PROTECTED] 🎭 DEMO MODE: Bypassing auth check");
+      return;
+    }
+
     // Check for authentication
     if (!role || !schoolId || !userId) {
       console.log("[SUPERADMIN PROTECTED] ❌ No auth data - redirecting to login");
@@ -151,6 +174,11 @@ export function SuperAdminProtected({ children }: { children: React.ReactNode })
 
     console.log("[SUPERADMIN PROTECTED] ✅ Super admin access verified");
   }, [role, schoolId, userId, navigate]);
+
+  // DEMO MODE: Allow access without auth
+  if (isDemoMode()) {
+    return <>{children}</>;
+  }
 
   // If no auth, show loading (will redirect)
   if (!role || !schoolId || !userId) {
