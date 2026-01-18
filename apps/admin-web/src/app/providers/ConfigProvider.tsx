@@ -70,8 +70,25 @@ export function ConfigRoot({ children }: PropsWithChildren) {
 
     console.log(`[CONFIG PROVIDER] 🔧 Loading config for school_id: ${schoolId}`);
 
+    // Check if demo mode is enabled
+    const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
+
     const loadConfig = async () => {
       try {
+        // ============================================================================
+        // DEMO MODE: Skip session validation
+        // ============================================================================
+        if (isDemoMode) {
+          console.log("[CONFIG PROVIDER] 🎭 DEMO MODE: Skipping session validation");
+          const cfg = await fetchSchoolConfig(schoolId);
+          setConfig(cfg);
+          setError(null);
+          setAutoRetryCount(0);
+          lastFetchedSchoolId.current = schoolId;
+          console.log(`[CONFIG PROVIDER] ✅ Config loaded (demo mode):`, cfg.identity?.display_name);
+          return;
+        }
+
         // ============================================================================
         // GUARD: Verify we have a valid session before making API call
         // ============================================================================
