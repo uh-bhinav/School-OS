@@ -43,15 +43,28 @@ def get_llm(tier: LLMTier = "power") -> BaseChatModel:
     if not openrouter_api_key:
         raise ValueError("LLM_PROVIDER_STRATEGY='cloud' but OPENROUTER_API_KEY is not set in .env")
 
-    model_map = {"fast": "openai/gpt-4o-mini", "medium": "openai/gpt-4o", "power": "anthropic/claude-3.5-sonnet"}
+    model_map = {
+        "fast": "openai/gpt-4o-mini",
+        "medium": "openai/gpt-4o",
+        "power": "anthropic/claude-3.5-sonnet",
+    }
 
     model_name = model_map.get(tier, model_map["power"])
 
     try:
         logger.info(f"Initializing model: {model_name} via OpenRouter")
-        return ChatOpenAI(model_name=model_name, openai_api_key=openrouter_api_key, openai_api_base="https://openrouter.ai/api/v1", temperature=0.0, max_tokens=2048)
+        return ChatOpenAI(
+            model_name=model_name,
+            openai_api_key=openrouter_api_key,
+            openai_api_base="https://openrouter.ai/api/v1",
+            temperature=0.0,
+            max_tokens=2048,
+        )
     except Exception as e:
-        logger.error(f"CRITICAL: Failed to initialize OpenRouter model {model_name}: {e}", exc_info=True)
+        logger.error(
+            f"CRITICAL: Failed to initialize OpenRouter model {model_name}: {e}",
+            exc_info=True,
+        )
         raise
 
 
@@ -127,4 +140,10 @@ def test_llm_connection(tier: LLMTier = "power"):
         return False
 
 
-__all__ = ["get_llm", "get_llm_with_fallback", "get_available_tiers", "test_llm_connection", "LLMTier"]
+__all__ = [
+    "get_llm",
+    "get_llm_with_fallback",
+    "get_available_tiers",
+    "test_llm_connection",
+    "LLMTier",
+]

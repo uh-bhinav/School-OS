@@ -15,7 +15,10 @@ class SearchTeachersSchema(BaseModel):
     """Input schema for the search_teachers tool. All fields are optional."""
 
     name: Optional[str] = Field(default=None, description="Optional: Filter by teacher's full or partial name.")
-    department: Optional[str] = Field(default=None, description="Optional: Filter by department (e.g., 'Science', 'Math').")
+    department: Optional[str] = Field(
+        default=None,
+        description="Optional: Filter by department (e.g., 'Science', 'Math').",
+    )
 
 
 class GetTeacherDetailsSchema(BaseModel):
@@ -58,4 +61,11 @@ class DeactivateTeacherSchema(BaseModel):
 # rather than a simple L4 leaf agent tool.
 
 # Export all schemas
-__all__ = ["ListAllTeachersSchema", "SearchTeachersSchema", "GetTeacherDetailsSchema", "GetTeacherQualificationsSchema", "UpdateTeacherSchema", "DeactivateTeacherSchema"]
+__all__ = [
+    "ListAllTeachersSchema",
+    "SearchTeachersSchema",
+    "GetTeacherDetailsSchema",
+    "GetTeacherQualificationsSchema",
+    "UpdateTeacherSchema",
+    "DeactivateTeacherSchema",
+]

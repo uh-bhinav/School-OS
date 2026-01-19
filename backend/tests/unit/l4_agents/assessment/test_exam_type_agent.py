@@ -2,8 +2,13 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.exam_type_agent.main import ExamTypeAgent, exam_type_agent_instance
-from app.agents.modules.academics.leaves.exam_type_agent.tools import exam_type_agent_tools
+from app.agents.modules.academics.leaves.exam_type_agent.main import (
+    ExamTypeAgent,
+    exam_type_agent_instance,
+)
+from app.agents.modules.academics.leaves.exam_type_agent.tools import (
+    exam_type_agent_tools,
+)
 
 # This marks all tests in this file as async
 pytestmark = pytest.mark.asyncio
@@ -44,10 +49,16 @@ async def test_happy_path_list_exam_types(mock_exam_type_llm_invoke, mock_exam_t
     query = "List all our exam types."
     tool_call = ToolCall(name="list_exam_types", args={}, id="tool_123")
 
-    mock_exam_type_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Here are the types: Midterm, Final.")]  # 1. LLM calls tool  # 2. LLM gives final answer
+    mock_exam_type_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Here are the types: Midterm, Final."),
+    ]  # 1. LLM calls tool  # 2. LLM gives final answer
 
     # 2. Setup Mock API
-    mock_response = [{"exam_type_id": 1, "type_name": "Midterm"}, {"exam_type_id": 2, "type_name": "Final"}]
+    mock_response = [
+        {"exam_type_id": 1, "type_name": "Midterm"},
+        {"exam_type_id": 2, "type_name": "Final"},
+    ]
     mock_exam_type_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent
@@ -73,7 +84,10 @@ async def test_happy_path_create_exam_type(mock_exam_type_llm_invoke, mock_exam_
     tool_args = {"school_id": 1, "type_name": "Quiz"}
     tool_call = ToolCall(name="create_exam_type", args=tool_args, id="tool_456")
 
-    mock_exam_type_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="The 'Quiz' exam type was created.")]
+    mock_exam_type_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="The 'Quiz' exam type was created."),
+    ]
 
     # 2. Setup Mock API
     mock_response = {"exam_type_id": 3, "school_id": 1, "type_name": "Quiz"}

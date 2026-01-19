@@ -47,10 +47,25 @@ async def create_report_card_pdf(report_data: schemas.ReportCard) -> bytes:
         table.setStyle(
             TableStyle(
                 [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.grey),  # Header row background
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),  # Header row text
+                    (
+                        "BACKGROUND",
+                        (0, 0),
+                        (-1, 0),
+                        colors.grey,
+                    ),  # Header row background
+                    (
+                        "TEXTCOLOR",
+                        (0, 0),
+                        (-1, 0),
+                        colors.whitesmoke,
+                    ),  # Header row text
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),  # Header row font
-                    ("BACKGROUND", (0, -1), (-1, -1), colors.lightgrey),  # Total row background
+                    (
+                        "BACKGROUND",
+                        (0, -1),
+                        (-1, -1),
+                        colors.lightgrey,
+                    ),  # Total row background
                     ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),  # Total row font
                     ("GRID", (0, 0), (-1, -1), 1, colors.black),  # Grid for all cells
                     ("ALIGN", (1, 1), (-1, -1), "CENTER"),  # Center-align numbers
@@ -71,7 +86,11 @@ async def create_report_card_pdf(report_data: schemas.ReportCard) -> bytes:
     # Format percentage string, handling None
     overall_perc_str = f"{report_data.overall_percentage:.2f}%" if report_data.overall_percentage is not None else "N/A"
 
-    summary_data = [["Grand Total Obtained", f"{report_data.grand_total_obtained}"], ["Grand Total Max Marks", f"{report_data.grand_total_max_marks}"], ["Overall Percentage", overall_perc_str]]
+    summary_data = [
+        ["Grand Total Obtained", f"{report_data.grand_total_obtained}"],
+        ["Grand Total Max Marks", f"{report_data.grand_total_max_marks}"],
+        ["Overall Percentage", overall_perc_str],
+    ]
 
     summary_table = Table(summary_data)
     summary_table.setStyle(

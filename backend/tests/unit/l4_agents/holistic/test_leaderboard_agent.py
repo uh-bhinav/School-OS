@@ -2,8 +2,13 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.leaderboard_agent.main import LeaderboardAgent, leaderboard_agent_instance
-from app.agents.modules.academics.leaves.leaderboard_agent.tools import leaderboard_agent_tools
+from app.agents.modules.academics.leaves.leaderboard_agent.main import (
+    LeaderboardAgent,
+    leaderboard_agent_instance,
+)
+from app.agents.modules.academics.leaves.leaderboard_agent.tools import (
+    leaderboard_agent_tools,
+)
 
 # This marks all tests in this file as async
 pytestmark = pytest.mark.asyncio
@@ -44,10 +49,16 @@ async def test_happy_path_get_school_leaderboard(mock_leaderboard_llm_invoke, mo
     tool_args = {"category": "academic", "top_n": 5}
     tool_call = ToolCall(name="get_school_leaderboard", args=tool_args, id="tool_123")
 
-    mock_leaderboard_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="The top 5 are: 1. Rohan, 2. Priya.")]
+    mock_leaderboard_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="The top 5 are: 1. Rohan, 2. Priya."),
+    ]
 
     # 2. Setup Mock API
-    mock_response = [{"student_id": 101, "full_name": "Rohan Sharma", "rank": 1, "points": 980}, {"student_id": 102, "full_name": "Priya Singh", "rank": 2, "points": 975}]
+    mock_response = [
+        {"student_id": 101, "full_name": "Rohan Sharma", "rank": 1, "points": 980},
+        {"student_id": 102, "full_name": "Priya Singh", "rank": 2, "points": 975},
+    ]
     mock_leaderboard_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent

@@ -42,7 +42,11 @@ async def search_student_by_name(student_name: str) -> dict[str, Any]:
             students = response.get("data", []) if isinstance(response, dict) else response
 
             if not students or len(students) == 0:
-                return {"success": False, "error": f"No student found with name '{student_name}'", "suggestion": "Check the spelling and try again."}
+                return {
+                    "success": False,
+                    "error": f"No student found with name '{student_name}'",
+                    "suggestion": "Check the spelling and try again.",
+                }
 
             student = students[0]
             return {
@@ -78,9 +82,20 @@ async def get_student_clubs(student_id: int) -> dict[str, Any]:
             logger.info(f"Fetching clubs for student ID: {student_id}")
             response = await client.get(f"/clubs/agent/student-clubs/{student_id}")
 
-            return {"success": response.get("success", True), "student_id": student_id, "count": response.get("count", 0), "clubs": response.get("data", []), "message": response.get("message", "")}
+            return {
+                "success": response.get("success", True),
+                "student_id": student_id,
+                "count": response.get("count", 0),
+                "clubs": response.get("data", []),
+                "message": response.get("message", ""),
+            }
 
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting student clubs: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -117,7 +132,12 @@ async def get_club_details(club_name: str) -> dict[str, Any]:
             logger.info(f"Calling API: GET /clubs/details/{club_name}")
             response = await client.get(f"/clubs/details/{club_name}")
             return {"success": True, "club_details": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting club details: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -132,7 +152,11 @@ async def create_club(club_name: str, teacher_coordinator_name: str, description
     """
     try:
         async with AgentHTTPClient() as client:
-            payload = {"name": club_name, "coordinator_name": teacher_coordinator_name, "description": description}
+            payload = {
+                "name": club_name,
+                "coordinator_name": teacher_coordinator_name,
+                "description": description,
+            }
             logger.info(f"Calling API: POST /clubs/ with payload: {payload}")
             response = await client.post("/clubs/", json=payload)
             return {"success": True, "created_club": response}
@@ -165,12 +189,25 @@ async def add_student_to_club(student_name: str, club_name: str) -> dict[str, An
 
             if response.get("success") or "id" in response:
                 logger.info(f"✅ Successfully added {student_name} to {club_name}")
-                return {"success": True, "message": f"Student {student_name} has been added to {club_name}", "membership_id": response.get("id"), "role": response.get("role", "member"), "status": response.get("status", "active")}
+                return {
+                    "success": True,
+                    "message": f"Student {student_name} has been added to {club_name}",
+                    "membership_id": response.get("id"),
+                    "role": response.get("role", "member"),
+                    "status": response.get("status", "active"),
+                }
             else:
                 logger.warning(f"❌ Failed to add student: {response}")
-                return {"success": False, "error": response.get("detail", "Could not add student to club")}
+                return {
+                    "success": False,
+                    "error": response.get("detail", "Could not add student to club"),
+                }
 
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+    ) as e:
         logger.error(f"❌ Agent Error: {e.message}", exc_info=True)
         return _format_error_response(e)
     except AgentHTTPClientError as e:
@@ -190,8 +227,18 @@ async def list_club_members(club_name: str) -> dict[str, Any]:
         async with AgentHTTPClient() as client:
             logger.info(f"Calling API: GET /clubs/agent/club-members/{club_name}")
             response = await client.get(f"/clubs/agent/club-members/{club_name}")
-            return {"success": True, "club_name": club_name, "count": len(response), "members": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+            return {
+                "success": True,
+                "club_name": club_name,
+                "count": len(response),
+                "members": response,
+            }
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error listing club members: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -223,7 +270,12 @@ async def get_club_members_student_ids(club_name: str) -> dict[str, Any]:
                 "error": response.get("error"),
             }
 
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting club members: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -255,12 +307,23 @@ async def remove_student_from_club(student_name: str, club_name: str) -> dict[st
 
             if response.get("success"):
                 logger.info(f"✅ Successfully removed {student_name} from {club_name}")
-                return {"success": True, "message": f"Student {student_name} has been removed from {club_name}", "status": response.get("status", "removed")}
+                return {
+                    "success": True,
+                    "message": f"Student {student_name} has been removed from {club_name}",
+                    "status": response.get("status", "removed"),
+                }
             else:
                 logger.warning(f"❌ Failed to remove student: {response}")
-                return {"success": False, "error": response.get("detail", "Could not remove student from club")}
+                return {
+                    "success": False,
+                    "error": response.get("detail", "Could not remove student from club"),
+                }
 
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+    ) as e:
         logger.error(f"❌ Agent Error: {e.message}", exc_info=True)
         return _format_error_response(e)
     except AgentHTTPClientError as e:
@@ -268,7 +331,10 @@ async def remove_student_from_club(student_name: str, club_name: str) -> dict[st
         return _format_error_response(e)
     except Exception as e:
         logger.error(f"❌ Unexpected error removing student from club: {e}", exc_info=True)
-        return {"success": False, "error": f"Error removing student from club: {str(e)}"}
+        return {
+            "success": False,
+            "error": f"Error removing student from club: {str(e)}",
+        }
 
 
 # --- Export the list of tools ---

@@ -17,7 +17,10 @@ class SearchExamsSchema(BaseModel):
 
     name: Optional[str] = Field(default=None, description="Optional: Filter by exam name (e.g., 'Midterm').")
     exam_type_id: Optional[int] = Field(default=None, description="Optional: Filter by the unique ID of an exam type.")
-    academic_year_id: Optional[int] = Field(default=None, description="Optional: Filter by the unique ID of an academic year.")
+    academic_year_id: Optional[int] = Field(
+        default=None,
+        description="Optional: Filter by the unique ID of an academic year.",
+    )
 
 
 class GetExamDetailsSchema(BaseModel):
@@ -56,4 +59,11 @@ class DeleteExamSchema(BaseModel):
 
 
 # Export all schemas
-__all__ = ["ListAllExamsSchema", "SearchExamsSchema", "GetExamDetailsSchema", "CreateExamSchema", "UpdateExamSchema", "DeleteExamSchema"]
+__all__ = [
+    "ListAllExamsSchema",
+    "SearchExamsSchema",
+    "GetExamDetailsSchema",
+    "CreateExamSchema",
+    "UpdateExamSchema",
+    "DeleteExamSchema",
+]

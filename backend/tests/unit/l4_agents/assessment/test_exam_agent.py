@@ -4,7 +4,10 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent and its prompt
-from app.agents.modules.academics.leaves.exam_agent.main import ExamAgent, exam_agent_instance
+from app.agents.modules.academics.leaves.exam_agent.main import (
+    ExamAgent,
+    exam_agent_instance,
+)
 from app.agents.modules.academics.leaves.exam_agent.tools import exam_agent_tools
 
 # This marks all tests in this file as async
@@ -50,7 +53,10 @@ async def test_routes_to_list_all_exams(mock_llm_invoke, mock_http_client: Async
     tool_call = ToolCall(name="list_all_exams", args={}, id="tool_123")
 
     # The graph loops: first call makes tool call, second call after tool execution
-    mock_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Here are all the exams in your school...")]
+    mock_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Here are all the exams in your school..."),
+    ]
 
     # 2. Setup Mock API: Define what the API will return
     mock_response = [{"exam_id": 1, "exam_name": "Midterm 2025"}]
@@ -75,7 +81,10 @@ async def test_routes_to_search_exams(mock_llm_invoke, mock_http_client: AsyncMo
     tool_args = {"name": "Midterm"}
     tool_call = ToolCall(name="search_exams", args=tool_args, id="tool_123")
 
-    mock_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="The Midterm exam is scheduled for...")]
+    mock_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="The Midterm exam is scheduled for..."),
+    ]
 
     # 2. Setup Mock API
     mock_response = [{"exam_id": 22, "exam_name": "Class 10 Midterm"}]
@@ -99,7 +108,10 @@ async def test_routes_to_get_exam_details(mock_llm_invoke, mock_http_client: Asy
     tool_args = {"exam_id": 45}
     tool_call = ToolCall(name="get_exam_details", args=tool_args, id="tool_123")
 
-    mock_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Here are the details for exam 45...")]
+    mock_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Here are the details for exam 45..."),
+    ]
 
     # 2. Setup Mock API
     mock_response = {"exam_id": 45, "exam_name": "Physics Unit Test"}
@@ -120,10 +132,21 @@ async def test_routes_to_create_exam(mock_llm_invoke, mock_http_client: AsyncMoc
     """
     # 1. Setup Mock LLM
     query = "Create a new exam"
-    tool_args = {"school_id": 1, "exam_name": "New Final", "exam_type_id": 2, "start_date": "2025-12-01", "end_date": "2025-12-05", "total_marks": 100.0, "academic_year_id": 3}
+    tool_args = {
+        "school_id": 1,
+        "exam_name": "New Final",
+        "exam_type_id": 2,
+        "start_date": "2025-12-01",
+        "end_date": "2025-12-05",
+        "total_marks": 100.0,
+        "academic_year_id": 3,
+    }
     tool_call = ToolCall(name="create_exam", args=tool_args, id="tool_123")
 
-    mock_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Successfully created the exam!")]
+    mock_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Successfully created the exam!"),
+    ]
 
     # 2. Setup Mock API
     mock_response = {"exam_id": 101, **tool_args}
@@ -153,7 +176,10 @@ async def test_routes_to_update_exam(mock_llm_invoke, mock_http_client: AsyncMoc
     tool_args = {"exam_id": 10, "start_date": "2025-11-02"}
     tool_call = ToolCall(name="update_exam", args=tool_args, id="tool_123")
 
-    mock_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Successfully updated exam 10!")]
+    mock_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Successfully updated exam 10!"),
+    ]
 
     # 2. Setup Mock API
     mock_response = {"exam_id": 10, "start_date": "2025-11-02"}
@@ -179,7 +205,10 @@ async def test_routes_to_delete_exam(mock_llm_invoke, mock_http_client):
     tool_args = {"exam_id": 12}
     tool_call = ToolCall(name="delete_exam", args=tool_args, id="tool_123")
 
-    mock_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Successfully deleted exam 12!")]
+    mock_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Successfully deleted exam 12!"),
+    ]
 
     # 2. Setup Mock API
     mock_http_client.delete.return_value = None  # Simulates 204 No Content

@@ -25,7 +25,10 @@ class AdmitNewStudentSchema(BaseModel):
     """Input schema for the admit_new_student tool."""
 
     email: str = Field(..., description="The student's new email address.")
-    password: Optional[str] = Field(None, description="Optional: A temporary password. If not provided, one will be generated.")
+    password: Optional[str] = Field(
+        None,
+        description="Optional: A temporary password. If not provided, one will be generated.",
+    )
     school_id: int = Field(..., description="The school ID. Must match the Admin's school.")
     first_name: str = Field(..., description="The student's first name.")
     last_name: str = Field(..., description="The student's last name.")
@@ -66,7 +69,10 @@ class GetStudentSummarySchema(BaseModel):
     """Input schema for the get_student_academic_summary tool."""
 
     student_id: int = Field(..., description="The unique ID of the student.")
-    academic_year_id: Optional[int] = Field(None, description="Optional: The ID of the academic year for the summary. Defaults to the active year if not provided.")
+    academic_year_id: Optional[int] = Field(
+        None,
+        description="Optional: The ID of the academic year for the summary. Defaults to the active year if not provided.",
+    )
 
 
 # --- Schemas for Student Contact Tools (from student_contacts.py) ---

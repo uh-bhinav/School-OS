@@ -134,18 +134,29 @@ async def get_timetable_by_class_name(
     match = re.match(r"^(\d+)([A-Z])$", class_identifier.upper())
 
     if not match:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid class identifier. Use format like '11A', '10B', etc.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid class identifier. Use format like '11A', '10B', etc.",
+        )
 
     grade_level = int(match.group(1))
     section = match.group(2)
 
     # Find the class by grade and section in user's school
-    stmt = select(Class).where(Class.school_id == current_profile.school_id, Class.grade_level == grade_level, Class.section == section, Class.is_active)
+    stmt = select(Class).where(
+        Class.school_id == current_profile.school_id,
+        Class.grade_level == grade_level,
+        Class.section == section,
+        Class.is_active,
+    )
     result = await db.execute(stmt)
     target_class = result.scalar_one_or_none()
 
     if not target_class:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Class {class_identifier} not found in your school.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Class {class_identifier} not found in your school.",
+        )
 
     # Get timetable for this class
     timetable = await timetable_service.get_class_timetable(db=db, class_id=target_class.class_id)
@@ -201,7 +212,10 @@ def _parse_day(day: str) -> int:
     except ValueError:
         pass
 
-    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid day: {day}. Use day names (Monday-Sunday) or numbers (1-7).")
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Invalid day: {day}. Use day names (Monday-Sunday) or numbers (1-7).",
+    )
 
 
 # Teacher only: Get personalized timetable
@@ -327,7 +341,13 @@ async def get_schedule(
     )
 
 
-@router.get("/teacher/{teacher_id}/free-slots", response_model=TeacherFreeSlotResponse, dependencies=[Depends(require_role("Admin", "Teacher"))], tags=["Timetable"], summary="Find all free slots for a teacher on a given day")
+@router.get(
+    "/teacher/{teacher_id}/free-slots",
+    response_model=TeacherFreeSlotResponse,
+    dependencies=[Depends(require_role("Admin", "Teacher"))],
+    tags=["Timetable"],
+    summary="Find all free slots for a teacher on a given day",
+)
 async def get_teacher_free_slots(
     teacher_id: int,
     target_date: date = Query(..., description="The date to check in YYYY-MM-DD format"),
@@ -345,4 +365,9 @@ async def get_teacher_free_slots(
             detail="Teacher not found in your school.",
         )
 
-    return await timetable_service.find_teacher_free_slots(db=db, teacher_id=teacher_id, school_id=current_profile.school_id, target_date=target_date)
+    return await timetable_service.find_teacher_free_slots(
+        db=db,
+        teacher_id=teacher_id,
+        school_id=current_profile.school_id,
+        target_date=target_date,
+    )

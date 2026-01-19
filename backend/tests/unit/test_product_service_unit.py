@@ -30,7 +30,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.product import Product
 from app.models.product_category import ProductCategory
 from app.models.profile import Profile
-from app.schemas.product_schema import ProductCreate, ProductStockAdjustment, ProductUpdate
+from app.schemas.product_schema import (
+    ProductCreate,
+    ProductStockAdjustment,
+    ProductUpdate,
+)
 from app.services.product_service import ProductService
 
 # ============================================================================
@@ -655,8 +659,24 @@ async def test_bulk_update_category_success(mock_db_session, sample_category):
     Unit Test: Bulk category update updates all products.
     """
     # Arrange
-    product1 = Product(product_id=1, school_id=1, category_id=1, name="Product 1", price=Decimal("100.00"), stock_quantity=10, is_active=True)
-    product2 = Product(product_id=2, school_id=1, category_id=1, name="Product 2", price=Decimal("200.00"), stock_quantity=20, is_active=True)
+    product1 = Product(
+        product_id=1,
+        school_id=1,
+        category_id=1,
+        name="Product 1",
+        price=Decimal("100.00"),
+        stock_quantity=10,
+        is_active=True,
+    )
+    product2 = Product(
+        product_id=2,
+        school_id=1,
+        category_id=1,
+        name="Product 2",
+        price=Decimal("200.00"),
+        stock_quantity=20,
+        is_active=True,
+    )
 
     # Mock category validation
     category_result = MagicMock()
@@ -710,7 +730,15 @@ async def test_bulk_update_category_missing_products_fails(mock_db_session, samp
     Business Rule: All products must exist (atomic operation).
     """
     # Arrange
-    product1 = Product(product_id=1, school_id=1, category_id=1, name="Product 1", price=Decimal("100.00"), stock_quantity=10, is_active=True)
+    product1 = Product(
+        product_id=1,
+        school_id=1,
+        category_id=1,
+        name="Product 1",
+        price=Decimal("100.00"),
+        stock_quantity=10,
+        is_active=True,
+    )
 
     # Mock category validation
     category_result = MagicMock()

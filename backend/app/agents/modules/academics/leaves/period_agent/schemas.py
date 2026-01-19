@@ -10,7 +10,10 @@ from pydantic import BaseModel, Field
 class ListPeriodsSchema(BaseModel):
     """Input schema for the list_periods tool."""
 
-    school_id: Optional[int] = Field(default=None, description="Optional ID of the school. If not provided, it will be inferred from the user's context.")
+    school_id: Optional[int] = Field(
+        default=None,
+        description="Optional ID of the school. If not provided, it will be inferred from the user's context.",
+    )
 
 
 class PeriodDefinition(BaseModel):
@@ -25,7 +28,10 @@ class PeriodDefinition(BaseModel):
 class CreatePeriodStructureSchema(BaseModel):
     """Input schema for the create_period_structure tool."""
 
-    periods: list[PeriodDefinition] = Field(..., description="A list of period definitions that will replace the school's existing structure.")
+    periods: list[PeriodDefinition] = Field(
+        ...,
+        description="A list of period definitions that will replace the school's existing structure.",
+    )
 
 
 class UpdatePeriodTimingSchema(BaseModel):
@@ -39,4 +45,9 @@ class UpdatePeriodTimingSchema(BaseModel):
 
 # --- Exports ---
 
-__all__ = ["ListPeriodsSchema", "CreatePeriodStructureSchema", "UpdatePeriodTimingSchema", "PeriodDefinition"]
+__all__ = [
+    "ListPeriodsSchema",
+    "CreatePeriodStructureSchema",
+    "UpdatePeriodTimingSchema",
+    "PeriodDefinition",
+]

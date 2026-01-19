@@ -38,4 +38,10 @@ class DeleteExamTypeSchema(BaseModel):
 
 
 # Export all schemas
-__all__ = ["ListExamTypesSchema", "GetExamTypeSchema", "CreateExamTypeSchema", "UpdateExamTypeSchema", "DeleteExamTypeSchema"]
+__all__ = [
+    "ListExamTypesSchema",
+    "GetExamTypeSchema",
+    "CreateExamTypeSchema",
+    "UpdateExamTypeSchema",
+    "DeleteExamTypeSchema",
+]

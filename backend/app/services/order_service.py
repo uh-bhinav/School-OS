@@ -39,7 +39,12 @@ from app.models.profile import Profile
 from app.models.student import Student
 from app.models.student_contact import StudentContact
 from app.schemas.enums import OrderStatus
-from app.schemas.order_schema import OrderCancel, OrderCreateFromCart, OrderCreateManual, OrderUpdate
+from app.schemas.order_schema import (
+    OrderCancel,
+    OrderCreateFromCart,
+    OrderCreateManual,
+    OrderUpdate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -188,7 +193,16 @@ class OrderService:
 
             # Create product lookup dict and extract ALL data NOW to avoid lazy loads
             products_dict = {p.product_id: p for p in locked_products}
-            product_data = {p.product_id: {"name": p.name, "is_active": p.is_active, "stock_quantity": p.stock_quantity, "price": p.price, "product_id": p.product_id} for p in locked_products}
+            product_data = {
+                p.product_id: {
+                    "name": p.name,
+                    "is_active": p.is_active,
+                    "stock_quantity": p.stock_quantity,
+                    "price": p.price,
+                    "product_id": p.product_id,
+                }
+                for p in locked_products
+            }
 
             # Step 4: CRITICAL VALIDATION - Re-validate BOTH is_active AND stock
             validation_errors = []
@@ -347,7 +361,14 @@ class OrderService:
         # Transform to dict for Pydantic validation
         return self._transform_order_to_dict(db_order)
 
-    async def cancel_order(self, order_id: int, user_id: UUID, is_admin: bool, cancel_data: OrderCancel, cancelled_by_user_id: UUID) -> dict:
+    async def cancel_order(
+        self,
+        order_id: int,
+        user_id: UUID,
+        is_admin: bool,
+        cancel_data: OrderCancel,
+        cancelled_by_user_id: UUID,
+    ) -> dict:
         """
         Cancel an order (Admin or Parent).
 
@@ -580,10 +601,16 @@ class OrderService:
             parent_profile = result.scalars().first()
 
             if not parent_profile:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Parent with ID {order_data.parent_user_id} not found")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Parent with ID {order_data.parent_user_id} not found",
+                )
 
             if parent_profile.school_id != admin_school_id:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot create orders for parents in other schools")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Cannot create orders for parents in other schools",
+                )
 
             # Step 2: Validate student exists and belongs to parent
             stmt = select(Student).where(Student.student_id == order_data.student_id)
@@ -591,21 +618,35 @@ class OrderService:
             student = result.scalars().first()
 
             if not student:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Student with ID {order_data.student_id} not found")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Student with ID {order_data.student_id} not found",
+                )
 
             # Validate parent-student relationship
-            stmt = select(StudentContact).where(and_(StudentContact.student_id == order_data.student_id, StudentContact.profile_user_id == order_data.parent_user_id))
+            stmt = select(StudentContact).where(
+                and_(
+                    StudentContact.student_id == order_data.student_id,
+                    StudentContact.profile_user_id == order_data.parent_user_id,
+                )
+            )
             result = await self.db.execute(stmt)
             parent_link = result.scalars().first()
 
             if not parent_link:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Student does not belong to the specified parent")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Student does not belong to the specified parent",
+                )
 
             # Step 3: Lock all products
             product_ids = [item.product_id for item in order_data.items if item.product_id]
 
             if not product_ids:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order must contain at least one product")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Order must contain at least one product",
+                )
 
             stmt = select(Product).where(Product.product_id.in_(product_ids)).with_for_update()
             result = await self.db.execute(stmt)
@@ -613,7 +654,16 @@ class OrderService:
 
             # Create product lookup
             products_dict = {p.product_id: p for p in locked_products}
-            product_data = {p.product_id: {"name": p.name, "is_active": p.is_active, "stock_quantity": p.stock_quantity, "price": p.price, "product_id": p.product_id} for p in locked_products}
+            product_data = {
+                p.product_id: {
+                    "name": p.name,
+                    "is_active": p.is_active,
+                    "stock_quantity": p.stock_quantity,
+                    "price": p.price,
+                    "product_id": p.product_id,
+                }
+                for p in locked_products
+            }
 
             # Step 4: Validate all products
             validation_errors = []
@@ -635,7 +685,10 @@ class OrderService:
                     validation_errors.append(f"Insufficient stock for '{pdata['name']}'. " f"Requested: {item.quantity}, Available: {pdata['stock_quantity']}")
 
             if validation_errors:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order validation failed: " + "; ".join(validation_errors))
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Order validation failed: " + "; ".join(validation_errors),
+                )
 
             # Step 5: Calculate total amount
             total_amount = Decimal("0.00")
@@ -669,7 +722,13 @@ class OrderService:
                 if item.product_id:
                     pdata = product_data[item.product_id]
 
-                    order_item = OrderItem(order_id=db_order.order_id, product_id=item.product_id, quantity=item.quantity, price_at_time_of_order=pdata["price"], status="pending")
+                    order_item = OrderItem(
+                        order_id=db_order.order_id,
+                        product_id=item.product_id,
+                        quantity=item.quantity,
+                        price_at_time_of_order=pdata["price"],
+                        status="pending",
+                    )
                     self.db.add(order_item)
 
             # Step 8: Decrement stock
@@ -694,9 +753,17 @@ class OrderService:
         except HTTPException:
             raise
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Manual order creation failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Manual order creation failed: {str(e)}",
+            )
 
-    async def get_user_orders(self, user_id: UUID, student_id: Optional[int] = None, status: Optional[OrderStatus] = None) -> list[dict]:
+    async def get_user_orders(
+        self,
+        user_id: UUID,
+        student_id: Optional[int] = None,
+        status: Optional[OrderStatus] = None,
+    ) -> list[dict]:
         """
         Get all orders for a specific user (parent).
 
@@ -723,7 +790,12 @@ class OrderService:
 
         return [self._transform_order_to_dict(order) for order in orders]
 
-    async def get_school_orders(self, school_id: int, student_id: Optional[int] = None, status: Optional[OrderStatus] = None) -> list[dict]:
+    async def get_school_orders(
+        self,
+        school_id: int,
+        student_id: Optional[int] = None,
+        status: Optional[OrderStatus] = None,
+    ) -> list[dict]:
         """
         Get all orders for a school (Admin only).
 

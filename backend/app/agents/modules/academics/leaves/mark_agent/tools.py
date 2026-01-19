@@ -47,7 +47,11 @@ async def search_student_by_name(student_name: str) -> dict[str, Any]:
             students = response.get("data", []) if isinstance(response, dict) else response
 
             if not students or len(students) == 0:
-                return {"success": False, "error": f"No student found with name '{student_name}'", "suggestion": "Check the spelling and try again."}
+                return {
+                    "success": False,
+                    "error": f"No student found with name '{student_name}'",
+                    "suggestion": "Check the spelling and try again.",
+                }
 
             student = students[0]
             return {
@@ -175,7 +179,12 @@ async def update_mark(mark_id: int, marks_obtained: Optional[float] = None, rema
                 json=payload.model_dump(exclude_none=True),
             )
             return response
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error updating mark: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -192,7 +201,12 @@ async def delete_mark(mark_id: int) -> dict[str, Any]:
         async with AgentHTTPClient() as client:
             response = await client.delete(f"/marks/{mark_id}")
             return response
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error deleting mark: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -209,7 +223,12 @@ async def get_class_performance(class_id: int, exam_id: int) -> dict[str, Any]:
         async with AgentHTTPClient() as client:
             response = await client.get(f"/marks/class/{class_id}/exam/{exam_id}/performance")
             return response
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting class performance: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -227,7 +246,12 @@ async def get_report_card(student_id: int, academic_year_id: int) -> dict[str, A
         async with AgentHTTPClient() as client:
             response = await client.get(f"/marks/student/{student_id}/year/{academic_year_id}/report-card")
             return response
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting report card: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -245,7 +269,12 @@ async def get_grade_progression(student_id: int, subject_id: int) -> dict[str, A
         async with AgentHTTPClient() as client:
             response = await client.get(f"/marks/student/{student_id}/subject/{subject_id}/progression")
             return response
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting grade progression: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:

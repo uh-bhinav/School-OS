@@ -42,7 +42,9 @@ def mock_timetable_http_client():
 def mock_timetable_llm_invoke():
     """Mock the LLM for the TimetableAgent by replacing the entire model object."""
     # We must import the instance *inside* the fixture
-    from app.agents.modules.academics.leaves.timetable_agent.main import timetable_agent_instance
+    from app.agents.modules.academics.leaves.timetable_agent.main import (
+        timetable_agent_instance,
+    )
 
     mock_model = MagicMock()
     # Set a default return value for safety
@@ -84,7 +86,9 @@ def mock_attendance_http_client():
 def mock_attendance_llm_invoke():
     """Mock the LLM for the AttendanceAgent by replacing the entire model object."""
     # We must import the instance *inside* the fixture
-    from app.agents.modules.academics.leaves.attendance_agent.main import attendance_agent_instance
+    from app.agents.modules.academics.leaves.attendance_agent.main import (
+        attendance_agent_instance,
+    )
 
     mock_model = MagicMock()
     # Set a default return value for safety
@@ -126,7 +130,9 @@ def mock_period_http_client():
 def mock_period_llm_invoke():
     """Mock the LLM for the PeriodAgent by replacing the entire model object."""
     # We must import the instance *inside* the fixture
-    from app.agents.modules.academics.leaves.period_agent.main import period_agent_instance
+    from app.agents.modules.academics.leaves.period_agent.main import (
+        period_agent_instance,
+    )
 
     mock_model = MagicMock()
     # Set a default return value for safety

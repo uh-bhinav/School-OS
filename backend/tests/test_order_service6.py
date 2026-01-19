@@ -56,7 +56,10 @@ async def test_cancel_order_success_and_restores_stock(db_session: AsyncSession,
 
     # Step 3: Create cart and add item
     cart_service = CartService(db_session)
-    await cart_service.add_item_to_cart(user_id=parent_user_id, item_in=CartItemIn(product_id=16, quantity=order_quantity))
+    await cart_service.add_item_to_cart(
+        user_id=parent_user_id,
+        item_in=CartItemIn(product_id=16, quantity=order_quantity),
+    )
 
     # Step 4: Create order from cart
     order_service = OrderService(db_session)
@@ -74,7 +77,13 @@ async def test_cancel_order_success_and_restores_stock(db_session: AsyncSession,
 
     # Step 7: Cancel the order
     # FIXED: Use order_id, user_id, is_admin instead of db_order
-    cancelled_order_dict = await order_service.cancel_order(order_id=order.order_id, user_id=parent_user_id, is_admin=False, cancel_data=cancel_data, cancelled_by_user_id=parent_user_id)
+    cancelled_order_dict = await order_service.cancel_order(
+        order_id=order.order_id,
+        user_id=parent_user_id,
+        is_admin=False,
+        cancel_data=cancel_data,
+        cancelled_by_user_id=parent_user_id,
+    )
 
     # Step 8: Verify cancellation - result is now a dict
     await db_session.refresh(product)
@@ -101,7 +110,14 @@ async def test_cancel_order_fails_if_shipped(db_session: AsyncSession, parent_pr
     student_id = student_22.student_id  # ✅ Extract early
 
     # Step 2: Create a shipped order directly
-    order = Order(student_id=student_id, parent_user_id=parent_user_id, school_id=parent_profile.school_id, order_number="ORD-TEST-SHIPPED", total_amount=Decimal("100.00"), status=OrderStatus.SHIPPED)
+    order = Order(
+        student_id=student_id,
+        parent_user_id=parent_user_id,
+        school_id=parent_profile.school_id,
+        order_number="ORD-TEST-SHIPPED",
+        total_amount=Decimal("100.00"),
+        status=OrderStatus.SHIPPED,
+    )
     db_session.add(order)
     await db_session.commit()
     await db_session.refresh(order)
@@ -114,7 +130,13 @@ async def test_cancel_order_fails_if_shipped(db_session: AsyncSession, parent_pr
     # Step 4: Should fail
     # FIXED: Use order_id, user_id, is_admin instead of db_order
     with pytest.raises(HTTPException) as exc_info:
-        await order_service.cancel_order(order_id=order.order_id, user_id=parent_user_id, is_admin=False, cancel_data=cancel_data, cancelled_by_user_id=parent_user_id)
+        await order_service.cancel_order(
+            order_id=order.order_id,
+            user_id=parent_user_id,
+            is_admin=False,
+            cancel_data=cancel_data,
+            cancelled_by_user_id=parent_user_id,
+        )
 
     assert exc_info.value.status_code == 400
     assert "cannot cancel" in exc_info.value.detail.lower()
@@ -132,7 +154,14 @@ async def test_update_order_status_fails_invalid_transition(db_session: AsyncSes
     print("\n--- Test 4.3: Fail on Invalid Status Transition ---")
 
     # Step 1: Create a delivered order
-    order = Order(student_id=22, parent_user_id=parent_profile.user_id, school_id=mock_admin_profile.school_id, order_number="ORD-TEST-DELIVERED", total_amount=Decimal("100.00"), status=OrderStatus.DELIVERED)
+    order = Order(
+        student_id=22,
+        parent_user_id=parent_profile.user_id,
+        school_id=mock_admin_profile.school_id,
+        order_number="ORD-TEST-DELIVERED",
+        total_amount=Decimal("100.00"),
+        status=OrderStatus.DELIVERED,
+    )
     db_session.add(order)
     await db_session.commit()
     await db_session.refresh(order)
@@ -145,7 +174,12 @@ async def test_update_order_status_fails_invalid_transition(db_session: AsyncSes
     # Step 3: Should fail
     # FIXED: Use order_id, user_id, is_admin instead of db_order
     with pytest.raises(HTTPException) as exc_info:
-        await order_service.update_order(order_id=order.order_id, user_id=mock_admin_profile.user_id, is_admin=True, order_update=update_data)
+        await order_service.update_order(
+            order_id=order.order_id,
+            user_id=mock_admin_profile.user_id,
+            is_admin=True,
+            order_update=update_data,
+        )
 
     assert exc_info.value.status_code == 400
     assert "invalid status transition" in exc_info.value.detail.lower()

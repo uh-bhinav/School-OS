@@ -11,7 +11,10 @@ from pydantic import BaseModel, Field
 class ListYearsSchema(BaseModel):
     """Input schema for the list_academic_years tool."""
 
-    include_inactive: Optional[bool] = Field(default=False, description="Set to true to include inactive academic years. (Admin Only)")
+    include_inactive: Optional[bool] = Field(
+        default=False,
+        description="Set to true to include inactive academic years. (Admin Only)",
+    )
 
 
 class CreateYearSchema(BaseModel):
@@ -52,4 +55,10 @@ class DeleteYearSchema(BaseModel):
 
 
 # Export all schemas
-__all__ = ["ListYearsSchema", "CreateYearSchema", "UpdateYearSchema", "SetActiveYearSchema", "DeleteYearSchema"]
+__all__ = [
+    "ListYearsSchema",
+    "CreateYearSchema",
+    "UpdateYearSchema",
+    "SetActiveYearSchema",
+    "DeleteYearSchema",
+]

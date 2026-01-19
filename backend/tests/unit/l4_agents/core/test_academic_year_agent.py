@@ -5,8 +5,13 @@ from langchain_core.messages import AIMessage, ToolCall
 from app.agents.http_client import AgentAuthenticationError
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.academic_year_agent.main import AcademicYearAgent, academic_year_agent_instance
-from app.agents.modules.academics.leaves.academic_year_agent.tools import academic_year_agent_tools
+from app.agents.modules.academics.leaves.academic_year_agent.main import (
+    AcademicYearAgent,
+    academic_year_agent_instance,
+)
+from app.agents.modules.academics.leaves.academic_year_agent.tools import (
+    academic_year_agent_tools,
+)
 
 # This marks all tests in this file as async
 pytestmark = pytest.mark.asyncio
@@ -46,7 +51,10 @@ async def test_happy_path_get_active_year(mock_academic_year_llm_invoke, mock_ac
     query = "What's the current academic year?"
     tool_call = ToolCall(name="get_active_academic_year", args={}, id="tool_123")
 
-    mock_academic_year_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="The current active year is 2025-2026.")]  # 1. LLM calls tool  # 2. LLM gives final answer
+    mock_academic_year_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="The current active year is 2025-2026."),
+    ]  # 1. LLM calls tool  # 2. LLM gives final answer
 
     # 2. Setup Mock API
     mock_response = {"id": 1, "name": "2025-2026", "is_active": True}
@@ -105,13 +113,21 @@ async def test_edge_case_handles_auth_error_403(mock_academic_year_llm_invoke, m
     """
     # 1. Setup Mock LLM: Force the LLM to call 'create_academic_year'
     query = "Create a new year '2026-2027' for school 1"
-    tool_args = {"school_id": 1, "name": "2026-2027", "start_date": "2026-06-01", "end_date": "2027-05-31"}
+    tool_args = {
+        "school_id": 1,
+        "name": "2026-2027",
+        "start_date": "2026-06-01",
+        "end_date": "2027-05-31",
+    }
     tool_call = ToolCall(name="create_academic_year", args=tool_args, id="tool_456")
 
     # The LLM's second call will be to synthesize the 403 error
     final_error_response = "I'm sorry, but you do not have 'Admin' permissions to perform this action."
 
-    mock_academic_year_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content=final_error_response)]  # 1. LLM calls tool  # 2. LLM synthesizes the error
+    mock_academic_year_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content=final_error_response),
+    ]  # 1. LLM calls tool  # 2. LLM synthesizes the error
 
     # 2. Setup Mock API: Force the 'post' call to raise a 403 error
     mock_academic_year_http_client.post.side_effect = AgentAuthenticationError("Insufficient permissions", status_code=403)

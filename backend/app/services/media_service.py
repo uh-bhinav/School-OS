@@ -9,7 +9,10 @@ from sqlalchemy.orm import selectinload
 from app.core.storage import storage_client
 from app.models.album import Album
 from app.models.media_item import MediaItem
-from app.services.album_target_service import UnauthorizedAccessError, album_target_service
+from app.services.album_target_service import (
+    UnauthorizedAccessError,
+    album_target_service,
+)
 
 # A mapping from album type to the corresponding storage bucket name
 BUCKET_MAP = {
@@ -113,7 +116,10 @@ class MediaService:
 
         album = media_item.album
         if album is None:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Media item has no album association")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Media item has no album association",
+            )
 
         is_public = album.access_scope == "public"
         has_targeted_access = await album_target_service.validate_user_access(
@@ -153,7 +159,10 @@ class MediaService:
             requester_uuid = user_id if isinstance(user_id, uuid.UUID) else uuid.UUID(str(user_id))
             uploader_uuid = uuid.UUID(str(media_item.uploaded_by_id))
         except (TypeError, ValueError) as exc:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user identifier") from exc
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid user identifier",
+            ) from exc
 
         if requester_uuid != uploader_uuid:
             raise UnauthorizedAccessError("You can only delete your own media.")

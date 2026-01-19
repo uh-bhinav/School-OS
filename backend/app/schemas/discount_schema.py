@@ -16,8 +16,15 @@ class DiscountCreate(BaseModel):
     name: str = Field(..., description="e.g., '10% Sibling Discount'")
     description: Optional[str] = None
     type: DiscountType
-    value: float = Field(..., gt=0, description="The value, like 10.0 for percentage or 500 for fixed amount")
-    rules: Optional[dict[str, Any]] = Field(None, description="JSON rules for applicability, e.g., {'applicable_to_component_ids': [1]}")
+    value: float = Field(
+        ...,
+        gt=0,
+        description="The value, like 10.0 for percentage or 500 for fixed amount",
+    )
+    rules: Optional[dict[str, Any]] = Field(
+        None,
+        description="JSON rules for applicability, e.g., {'applicable_to_component_ids': [1]}",
+    )
 
 
 class DiscountOut(DiscountCreate):

@@ -39,7 +39,12 @@ class ProductCategoryCreate(BaseModel):
     Used by: POST /api/v1/admin/product-categories
     """
 
-    category_name: str = Field(..., min_length=1, max_length=100, description="Category name (e.g., 'Uniforms', 'Textbooks')")
+    category_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Category name (e.g., 'Uniforms', 'Textbooks')",
+    )
 
     description: Optional[str] = Field(None, max_length=500, description="Optional category description")
 
@@ -72,7 +77,14 @@ class ProductCategoryCreate(BaseModel):
         return v.title()
 
     class Config:
-        json_schema_extra = {"example": {"category_name": "School Uniforms", "description": "Complete range of school uniforms including shirts, pants, and ties", "display_order": 1, "icon_url": "https://cdn.schoolos.io/icons/uniform.svg"}}
+        json_schema_extra = {
+            "example": {
+                "category_name": "School Uniforms",
+                "description": "Complete range of school uniforms including shirts, pants, and ties",
+                "display_order": 1,
+                "icon_url": "https://cdn.schoolos.io/icons/uniform.svg",
+            }
+        }
 
 
 class ProductCategoryUpdate(BaseModel):
@@ -95,7 +107,10 @@ class ProductCategoryUpdate(BaseModel):
 
     icon_url: Optional[str] = Field(None, max_length=500)
 
-    is_active: Optional[bool] = Field(None, description="Set to false to soft-delete category (hides from parents, preserves data)")
+    is_active: Optional[bool] = Field(
+        None,
+        description="Set to false to soft-delete category (hides from parents, preserves data)",
+    )
 
     @field_validator("category_name")
     @classmethod
@@ -226,11 +241,21 @@ class ProductCategoryListOut(BaseModel):
     category_id: int
     category_name: str
     icon_url: Optional[str] = None
-    product_count: int = Field(default=0, description="Number of active products (for 'empty category' UI handling)")
+    product_count: int = Field(
+        default=0,
+        description="Number of active products (for 'empty category' UI handling)",
+    )
 
     class Config:
         from_attributes = True
-        json_schema_extra = {"example": {"category_id": 1, "category_name": "School Uniforms", "icon_url": "https://cdn.schoolos.io/icons/uniform.svg", "product_count": 23}}
+        json_schema_extra = {
+            "example": {
+                "category_id": 1,
+                "category_name": "School Uniforms",
+                "icon_url": "https://cdn.schoolos.io/icons/uniform.svg",
+                "product_count": 23,
+            }
+        }
 
 
 class ProductCategoryWithProducts(BaseModel):
@@ -256,7 +281,10 @@ class ProductCategoryWithProducts(BaseModel):
     # Hydrated product list (using lightweight schema)
     # NOTE: Type hint uses string to avoid circular import at module level
     # Actual import handled in service layer
-    products: list = Field(default_factory=list, description="List of products in this category (ProductListOut schema)")
+    products: list = Field(
+        default_factory=list,
+        description="List of products in this category (ProductListOut schema)",
+    )
 
     product_count: int = Field(..., description="Total number of products returned")
 
@@ -269,7 +297,15 @@ class ProductCategoryWithProducts(BaseModel):
                 "category_name": "School Uniforms",
                 "description": "Complete range of school uniforms",
                 "icon_url": "https://cdn.schoolos.io/icons/uniform.svg",
-                "products": [{"product_id": 42, "name": "House T-Shirt (Blue)", "price": "750.00", "stock_quantity": 45, "availability": "in_stock"}],
+                "products": [
+                    {
+                        "product_id": 42,
+                        "name": "House T-Shirt (Blue)",
+                        "price": "750.00",
+                        "stock_quantity": 45,
+                        "availability": "in_stock",
+                    }
+                ],
                 "product_count": 1,
             }
         }
@@ -295,7 +331,15 @@ class ProductCategoryBulkReorder(BaseModel):
     category_orders: list[dict[str, int]] = Field(..., description="List of {category_id: int, display_order: int} mappings")
 
     class Config:
-        json_schema_extra = {"example": {"category_orders": [{"category_id": 1, "display_order": 1}, {"category_id": 3, "display_order": 2}, {"category_id": 2, "display_order": 3}]}}
+        json_schema_extra = {
+            "example": {
+                "category_orders": [
+                    {"category_id": 1, "display_order": 1},
+                    {"category_id": 3, "display_order": 2},
+                    {"category_id": 2, "display_order": 3},
+                ]
+            }
+        }
 
 
 class ProductCategoryBulkActivate(BaseModel):

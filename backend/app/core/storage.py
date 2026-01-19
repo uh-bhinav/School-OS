@@ -32,7 +32,11 @@ class StorageClient:
         """
         try:
             # The upsert=True option will overwrite the file if it already exists.
-            self.client.storage.from_(bucket).upload(path=path, file=file, file_options={"content-type": mime_type, "upsert": "true"})  # Fixed: F841 - Removed unused variable
+            self.client.storage.from_(bucket).upload(
+                path=path,
+                file=file,
+                file_options={"content-type": mime_type, "upsert": "true"},
+            )  # Fixed: F841 - Removed unused variable
             # It's good practice to return the path, which is the key to accessing the file.
             return path
         except Exception as e:

@@ -25,12 +25,18 @@ class DiscountService:
         Creates a new reusable discount template in the master 'discounts' table.
         """
         # --- FIX: Convert to async query pattern ---
-        stmt = select(Discount).where(Discount.school_id == discount_data.school_id, Discount.name == discount_data.name)
+        stmt = select(Discount).where(
+            Discount.school_id == discount_data.school_id,
+            Discount.name == discount_data.name,
+        )
         result = await self.db.execute(stmt)
         existing = result.scalars().first()
 
         if existing:
-            raise HTTPException(status_code=409, detail="A discount with this name already exists for this school.")
+            raise HTTPException(
+                status_code=409,
+                detail="A discount with this name already exists for this school.",
+            )
 
         new_discount = Discount(**discount_data.model_dump())
         self.db.add(new_discount)
@@ -45,7 +51,10 @@ class DiscountService:
         """Fetches a single discount template by its ID."""
         discount = self.db.query(Discount).filter(Discount.id == discount_id).first()
         if not discount:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Discount template not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Discount template not found",
+            )
         return discount
 
     async def get_discounts_by_school(self, school_id: int) -> list[Discount]:
@@ -60,12 +69,18 @@ class DiscountService:
         in the 'student_fee_discounts' link table and logs the action.
         """
         # --- Step 1: Check if discount is already applied ---
-        stmt = select(StudentFeeDiscount).where(StudentFeeDiscount.student_id == application_data.student_id, StudentFeeDiscount.discount_id == application_data.discount_id)
+        stmt = select(StudentFeeDiscount).where(
+            StudentFeeDiscount.student_id == application_data.student_id,
+            StudentFeeDiscount.discount_id == application_data.discount_id,
+        )
         result = await self.db.execute(stmt)
         existing_link = result.scalars().first()
 
         if existing_link:
-            raise HTTPException(status_code=409, detail="This discount is already applied to this student.")
+            raise HTTPException(
+                status_code=409,
+                detail="This discount is already applied to this student.",
+            )
 
         # --- Step 2: Create new discount link ---
         new_application = StudentFeeDiscount(**application_data.model_dump(), applied_by_user_id=user_id)  # Set the required field from the function argument

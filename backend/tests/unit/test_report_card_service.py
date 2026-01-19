@@ -9,7 +9,10 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.report_card_schema import ReportCard
-from app.services.report_card_service import get_percentage, get_student_report_card_data
+from app.services.report_card_service import (
+    get_percentage,
+    get_student_report_card_data,
+)
 
 
 class TestGetPercentage:

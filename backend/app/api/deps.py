@@ -89,6 +89,8 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-async def get_current_user(current_user: Profile = Depends(get_current_active_user)) -> Profile:
+async def get_current_user(
+    current_user: Profile = Depends(get_current_active_user),
+) -> Profile:
     """Alias for get_current_active_user expected by older endpoint modules."""
     return current_user

@@ -61,7 +61,9 @@ def mock_mark_llm_invoke():
 @pytest.fixture
 def mock_exam_type_llm_invoke():
     """Mock the LLM for ExamTypeAgent - ainvoke version"""
-    from app.agents.modules.academics.leaves.exam_type_agent.main import exam_type_agent_instance
+    from app.agents.modules.academics.leaves.exam_type_agent.main import (
+        exam_type_agent_instance,
+    )
 
     mock_model = MagicMock()
     mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default ExamTypeAgent mock response"))
@@ -77,7 +79,9 @@ def mock_exam_type_llm_invoke():
 @pytest.fixture
 def mock_report_card_llm_invoke():
     """Mock the LLM for ReportCardAgent - ainvoke version"""
-    from app.agents.modules.academics.leaves.report_card_agent.main import report_card_agent_instance
+    from app.agents.modules.academics.leaves.report_card_agent.main import (
+        report_card_agent_instance,
+    )
 
     mock_model = MagicMock()
     mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default ReportCardAgent mock response"))

@@ -2,8 +2,13 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.achievement_agent.main import AchievementAgent, achievement_agent_instance
-from app.agents.modules.academics.leaves.achievement_agent.tools import achievement_agent_tools
+from app.agents.modules.academics.leaves.achievement_agent.main import (
+    AchievementAgent,
+    achievement_agent_instance,
+)
+from app.agents.modules.academics.leaves.achievement_agent.tools import (
+    achievement_agent_tools,
+)
 
 # This marks all tests in this file as async
 pytestmark = pytest.mark.asyncio
@@ -42,7 +47,10 @@ async def test_happy_path_get_unverified_list(mock_achievement_llm_invoke, mock_
     query = "Show me all achievements I need to approve."
     tool_call = ToolCall(name="get_unverified_achievements_list", args={}, id="tool_123")
 
-    mock_achievement_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="You have 1 item to review: 'State Debate Win' (ID 42).")]
+    mock_achievement_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="You have 1 item to review: 'State Debate Win' (ID 42)."),
+    ]
 
     # 2. Setup Mock API
     mock_response = [{"achievement_id": 42, "title": "State Debate Win", "student_name": "Rohan"}]
@@ -72,10 +80,17 @@ async def test_happy_path_verify_achievement(mock_achievement_llm_invoke, mock_a
     tool_args = {"achievement_id": 42}
     tool_call = ToolCall(name="verify_achievement", args=tool_args, id="tool_456")
 
-    mock_achievement_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Achievement 42 has been verified.")]
+    mock_achievement_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Achievement 42 has been verified."),
+    ]
 
     # 2. Setup Mock API
-    mock_response = {"achievement_id": 42, "verified": True, "title": "State Debate Win"}
+    mock_response = {
+        "achievement_id": 42,
+        "verified": True,
+        "title": "State Debate Win",
+    }
     mock_achievement_http_client.post.return_value = mock_response
 
     # 3. Invoke Agent

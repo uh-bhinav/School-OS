@@ -45,7 +45,12 @@ from app.models.product import Product
 from app.models.product_category import ProductCategory
 from app.models.profile import Profile
 from app.schemas.enums import ProductAvailability
-from app.schemas.product_schema import ProductCreate, ProductOut, ProductStockAdjustment, ProductUpdate
+from app.schemas.product_schema import (
+    ProductCreate,
+    ProductOut,
+    ProductStockAdjustment,
+    ProductUpdate,
+)
 from app.services.product_service import ProductService
 
 # ===========================================================================
@@ -66,7 +71,12 @@ async def test_price_precision_maximum_decimals(db_session: AsyncSession, mock_a
     print("\n--- Test 5.1: Price Precision - Max Decimals ---")
 
     # Step 1: Create product with max decimal price
-    product_data = ProductCreate(name="Max Decimal Product", price=Decimal("999.99"), stock_quantity=10, category_id=1)
+    product_data = ProductCreate(
+        name="Max Decimal Product",
+        price=Decimal("999.99"),
+        stock_quantity=10,
+        category_id=1,
+    )
 
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -102,7 +112,12 @@ async def test_price_precision_excessive_decimals(db_session: AsyncSession, mock
 
     # Step 1: Attempt to create product with invalid price
     with pytest.raises(ValidationError) as exc_info:
-        ProductCreate(name="Excessive Decimal Product", price=Decimal("750.123"), stock_quantity=10, category_id=1)  # 3 decimal places
+        ProductCreate(
+            name="Excessive Decimal Product",
+            price=Decimal("750.123"),
+            stock_quantity=10,
+            category_id=1,
+        )  # 3 decimal places
 
     # Step 2: Verify validation error (Pydantic V2 format)
     error_str = str(exc_info.value)
@@ -129,7 +144,13 @@ async def test_sku_normalization_lowercase_input(db_session: AsyncSession, mock_
     print("\n--- Test 5.3: SKU Normalization - Lowercase Input ---")
 
     # Step 1: Create product with lowercase SKU
-    product_data = ProductCreate(name="Lowercase SKU Product", price=Decimal("100.00"), stock_quantity=10, category_id=1, sku="uniform-tshirt-001")
+    product_data = ProductCreate(
+        name="Lowercase SKU Product",
+        price=Decimal("100.00"),
+        stock_quantity=10,
+        category_id=1,
+        sku="uniform-tshirt-001",
+    )
 
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -158,7 +179,13 @@ async def test_sku_with_valid_special_chars(db_session: AsyncSession, mock_admin
     print("\n--- Test 5.4: SKU with Valid Special Chars ---")
 
     # Step 1: Create product with valid special chars in SKU
-    product_data = ProductCreate(name="Valid SKU Chars Product", price=Decimal("100.00"), stock_quantity=10, category_id=1, sku="UNIFORM_TSHIRT-BLUE_M")
+    product_data = ProductCreate(
+        name="Valid SKU Chars Product",
+        price=Decimal("100.00"),
+        stock_quantity=10,
+        category_id=1,
+        sku="UNIFORM_TSHIRT-BLUE_M",
+    )
 
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -188,7 +215,12 @@ async def test_product_with_null_optional_fields(db_session: AsyncSession, mock_
     print("\n--- Test 5.5: Product with Null Optional Fields ---")
 
     # Step 1: Create product with only required fields
-    product_data = ProductCreate(name="Minimal Product", description="Only required fields provided.", price=Decimal("50.00"), category_id=1)
+    product_data = ProductCreate(
+        name="Minimal Product",
+        description="Only required fields provided.",
+        price=Decimal("50.00"),
+        category_id=1,
+    )
 
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -237,7 +269,14 @@ async def test_update_product_partial_data(db_session: AsyncSession, mock_admin_
     admin_school_id = mock_admin_profile.school_id
 
     # Step 1: Create initial product
-    product_data = ProductCreate(name="Partial Update Test", description="Initial description", price=Decimal("200.00"), stock_quantity=20, category_id=1, sku="PARTIAL-001")
+    product_data = ProductCreate(
+        name="Partial Update Test",
+        description="Initial description",
+        price=Decimal("200.00"),
+        stock_quantity=20,
+        category_id=1,
+        sku="PARTIAL-001",
+    )
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
     product_id = created_product.product_id
@@ -292,7 +331,12 @@ async def test_reactivate_discontinued_product(db_session: AsyncSession, mock_ad
     admin_school_id = mock_admin_profile.school_id
 
     # Step 1: Create and immediately deactivate product
-    product_data = ProductCreate(name="Reactivation Test Product", price=Decimal("300.00"), stock_quantity=15, category_id=1)
+    product_data = ProductCreate(
+        name="Reactivation Test Product",
+        price=Decimal("300.00"),
+        stock_quantity=15,
+        category_id=1,
+    )
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
     product_id = created_product.product_id
@@ -343,7 +387,13 @@ async def test_computed_availability_no_reorder_level(db_session: AsyncSession, 
     print("\n--- Test 5.8: Availability - No Reorder Level ---")
 
     # Step 1: Create product with stock=5 and reorder_level=None
-    product_data = ProductCreate(name="No Reorder Level Product", price=Decimal("50.00"), stock_quantity=5, category_id=1, reorder_level=None)
+    product_data = ProductCreate(
+        name="No Reorder Level Product",
+        price=Decimal("50.00"),
+        stock_quantity=5,
+        category_id=1,
+        reorder_level=None,
+    )
     product_service = ProductService(db_session)
     created_product_orm = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
     await db_session.refresh(created_product_orm)
@@ -379,7 +429,15 @@ async def test_computed_availability_no_reorder_level(db_session: AsyncSession, 
     ],
     ids=["Discontinued", "OutOfStock", "LowStock", "InStock", "InStock_NoReorder"],
 )
-async def test_computed_stock_status_messages(db_session: AsyncSession, mock_admin_profile: Profile, is_active: bool, stock_quantity: int, reorder_level: Optional[int], expected_status: ProductAvailability, expected_message_part: str):
+async def test_computed_stock_status_messages(
+    db_session: AsyncSession,
+    mock_admin_profile: Profile,
+    is_active: bool,
+    stock_quantity: int,
+    reorder_level: Optional[int],
+    expected_status: ProductAvailability,
+    expected_message_part: str,
+):
     """
     Test 5.9: Verify all 4 stock status message variants based on state.
     Uses ProductOut schema for validation.
@@ -389,7 +447,14 @@ async def test_computed_stock_status_messages(db_session: AsyncSession, mock_adm
 
     # Step 1: Create product with specific state
     product_name = f"Status Test {test_id}"
-    product_data = ProductCreate(name=product_name, price=Decimal("10.00"), stock_quantity=stock_quantity, category_id=1, reorder_level=reorder_level, is_active=is_active)
+    product_data = ProductCreate(
+        name=product_name,
+        price=Decimal("10.00"),
+        stock_quantity=stock_quantity,
+        category_id=1,
+        reorder_level=reorder_level,
+        is_active=is_active,
+    )
     product_service = ProductService(db_session)
     created_product_orm = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
 
@@ -464,7 +529,12 @@ async def test_product_with_maximum_stock(db_session: AsyncSession, mock_admin_p
     max_stock = 999999
 
     # Step 1: Create product with high stock
-    product_data = ProductCreate(name="Max Stock Product", price=Decimal("1.00"), stock_quantity=max_stock, category_id=1)
+    product_data = ProductCreate(
+        name="Max Stock Product",
+        price=Decimal("1.00"),
+        stock_quantity=max_stock,
+        category_id=1,
+    )
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
     await db_session.refresh(created_product)
@@ -499,7 +569,13 @@ async def test_product_name_with_special_chars(db_session: AsyncSession, mock_ad
     special_name = 'Men\'s "Premium" T-Shirt (Blue & Grêy!)'
 
     # Step 1: Create product with special name
-    product_data = ProductCreate(name=special_name, description="Testing special chars like ' \" & ê !", price=Decimal("800.00"), stock_quantity=10, category_id=1)
+    product_data = ProductCreate(
+        name=special_name,
+        description="Testing special chars like ' \" & ê !",
+        price=Decimal("800.00"),
+        stock_quantity=10,
+        category_id=1,
+    )
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
     product_id = created_product.product_id
@@ -540,7 +616,12 @@ async def test_case_insensitive_duplicate_detection(db_session: AsyncSession, mo
 
     # Step 2: Attempt to create with different case
     duplicate_name_lower = initial_name.lower()
-    duplicate_data = ProductCreate(name=duplicate_name_lower, price=Decimal("500.00"), stock_quantity=10, category_id=1)
+    duplicate_data = ProductCreate(
+        name=duplicate_name_lower,
+        price=Decimal("500.00"),
+        stock_quantity=10,
+        category_id=1,
+    )
 
     with pytest.raises(HTTPException) as exc_info:
         await product_service.create_product(product_in=duplicate_data, current_profile=mock_admin_profile)
@@ -628,7 +709,12 @@ async def test_product_long_description(db_session: AsyncSession, mock_admin_pro
 
     # Step 1: Test Pydantic validation (should pass)
     try:
-        product_data = ProductCreate(name="Long Description Product", description=long_desc, price=Decimal("10.00"), category_id=1)
+        product_data = ProductCreate(
+            name="Long Description Product",
+            description=long_desc,
+            price=Decimal("10.00"),
+            category_id=1,
+        )
         print("✅ Pydantic schema accepts max length description")
     except ValidationError as e:
         assert False, f"Pydantic validation failed for max length description: {e}"
@@ -778,7 +864,10 @@ async def test_concurrent_product_creation_same_name(db_session: AsyncSession, m
     print(f"✅ Second creation attempt failed as expected: {exc_info.value.detail}")
 
     # Step 4: Verify only one product exists in DB
-    stmt = select(func.count(Product.product_id)).where(Product.school_id == mock_admin_profile.school_id, func.lower(Product.name) == func.lower(product_name))
+    stmt = select(func.count(Product.product_id)).where(
+        Product.school_id == mock_admin_profile.school_id,
+        func.lower(Product.name) == func.lower(product_name),
+    )
     result = await db_session.execute(stmt)
     count = result.scalar_one()
     assert count == 1
@@ -808,7 +897,12 @@ async def test_sequential_stock_adjustments_simulate_concurrency(db_session: Asy
 
     # Step 1: Create product with initial stock
     initial_stock = 50
-    product_data = ProductCreate(name="Concurrent Stock Test Product", price=Decimal("10.00"), stock_quantity=initial_stock, category_id=1)
+    product_data = ProductCreate(
+        name="Concurrent Stock Test Product",
+        price=Decimal("10.00"),
+        stock_quantity=initial_stock,
+        category_id=1,
+    )
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
     product_id = created_product.product_id

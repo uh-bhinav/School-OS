@@ -79,7 +79,13 @@ async def test_create_album_with_targets_success(
     mock_album_target_service.create_targets = AsyncMock()
 
     # --- Act ---
-    created_album = await service.create_album_with_targets(db=mock_db, album_data=album_data, targets=targets_input, published_by_id=publisher_id, school_id=school_id_input)
+    created_album = await service.create_album_with_targets(
+        db=mock_db,
+        album_data=album_data,
+        targets=targets_input,
+        published_by_id=publisher_id,
+        school_id=school_id_input,
+    )
 
     # --- Assert ---
     # 1. Check if the DB session methods were called as expected
@@ -129,7 +135,12 @@ async def test_get_accessible_albums_student_sees_public_and_targeted() -> None:
     mock_db = AsyncMock(spec=AsyncSession)
     service = AlbumService()
 
-    user_context = {"school_id": 1, "grade_level": 7, "current_class_id": 101, "user_id": uuid.uuid4()}  # Mock student user ID
+    user_context = {
+        "school_id": 1,
+        "grade_level": 7,
+        "current_class_id": 101,
+        "user_id": uuid.uuid4(),
+    }  # Mock student user ID
     mock_student_id = 50  # Mock student_id corresponding to user_id
 
     # Mock Albums expected to be returned

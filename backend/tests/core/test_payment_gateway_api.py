@@ -18,7 +18,11 @@ async def test_configure_gateway_credentials_as_parent_fails(
     Tests that an authenticated parent receives a 403 Forbidden error
     when trying to configure payment gateway credentials.
     """
-    credentials_data = {"razorpay_key_id": "rzp_test_fakekey", "razorpay_key_secret": "fake_secret", "razorpay_webhook_secret": "fake_webhook_secret"}
+    credentials_data = {
+        "razorpay_key_id": "rzp_test_fakekey",
+        "razorpay_key_secret": "fake_secret",
+        "razorpay_webhook_secret": "fake_webhook_secret",
+    }
 
     # Use the client provided by the fixture
     client = test_client_authenticated_parent
@@ -43,7 +47,11 @@ async def test_configure_gateway_encrypts_secrets(test_client_authenticated_admi
     plain_text_key_secret = f"Secret_{uuid.uuid4()}"
     plain_text_webhook_secret = f"WebhookSecret_{uuid.uuid4()}"
 
-    credentials_data = {"razorpay_key_id": plain_text_key_id, "razorpay_key_secret": plain_text_key_secret, "razorpay_webhook_secret": plain_text_webhook_secret}
+    credentials_data = {
+        "razorpay_key_id": plain_text_key_id,
+        "razorpay_key_secret": plain_text_key_secret,
+        "razorpay_webhook_secret": plain_text_webhook_secret,
+    }
 
     client = test_client_authenticated_admin
 
@@ -83,12 +91,20 @@ async def test_configure_gateway_idempotent(test_client_authenticated_admin: Asy
     school_id = mock_admin_profile.school_id
 
     # Arrange 1: Configure the gateway for the first time
-    first_credentials = {"razorpay_key_id": f"rzp_test_first_{uuid.uuid4()}", "razorpay_key_secret": f"first_secret_{uuid.uuid4()}", "razorpay_webhook_secret": f"first_webhook_{uuid.uuid4()}"}
+    first_credentials = {
+        "razorpay_key_id": f"rzp_test_first_{uuid.uuid4()}",
+        "razorpay_key_secret": f"first_secret_{uuid.uuid4()}",
+        "razorpay_webhook_secret": f"first_webhook_{uuid.uuid4()}",
+    }
     response1 = await client.post("/api/v1/finance/gateway/configure", json=first_credentials)
     assert response1.status_code == 200
 
     # Act: Configure the gateway again with different credentials
-    second_credentials = {"razorpay_key_id": f"rzp_test_second_{uuid.uuid4()}", "razorpay_key_secret": f"second_secret_{uuid.uuid4()}", "razorpay_webhook_secret": f"second_webhook_{uuid.uuid4()}"}
+    second_credentials = {
+        "razorpay_key_id": f"rzp_test_second_{uuid.uuid4()}",
+        "razorpay_key_secret": f"second_secret_{uuid.uuid4()}",
+        "razorpay_webhook_secret": f"second_webhook_{uuid.uuid4()}",
+    }
     response2 = await client.post("/api/v1/finance/gateway/configure", json=second_credentials)
     assert response2.status_code == 200
 

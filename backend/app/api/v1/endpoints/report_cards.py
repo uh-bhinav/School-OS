@@ -39,7 +39,10 @@ async def get_student_report_card(
 
     report_data = await get_student_report_card_data(db, student_id, academic_year_id)
     if not report_data:
-        raise HTTPException(status_code=404, detail="Report card data not found for this student and academic year.")
+        raise HTTPException(
+            status_code=404,
+            detail="Report card data not found for this student and academic year.",
+        )
     return report_data
 
 
@@ -104,10 +107,17 @@ async def download_student_report_card_pdf(
 
     report_data = await get_student_report_card_data(db, student_id, academic_year_id)
     if not report_data:
-        raise HTTPException(status_code=404, detail="Report card data not found for this student and academic year.")
+        raise HTTPException(
+            status_code=404,
+            detail="Report card data not found for this student and academic year.",
+        )
 
     # --- This part is NOW ACTIVE ---
     pdf_bytes = await create_report_card_pdf(report_data)
 
-    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=report_card_{student_id}.pdf"})
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=report_card_{student_id}.pdf"},
+    )
     # --- End of Active block ---

@@ -231,7 +231,11 @@ async def test_create_order_from_cart_success(
     sample_cart.items = [sample_cart_item]
 
     # Create order instance using helper function
-    created_order = create_order_instance(sample_parent_profile.user_id, sample_parent_profile.school_id, sample_student.student_id)
+    created_order = create_order_instance(
+        sample_parent_profile.user_id,
+        sample_parent_profile.school_id,
+        sample_student.student_id,
+    )
 
     # Mock query chain
     student_query = create_mock_query_result(sample_student)
@@ -287,7 +291,11 @@ async def test_create_order_preserves_price_at_time_of_order(
     product_lock_query = create_mock_query_result([sample_product], method="all")
 
     # Create order with preserved price
-    order = create_order_instance(sample_parent_profile.user_id, sample_parent_profile.school_id, sample_student.student_id)
+    order = create_order_instance(
+        sample_parent_profile.user_id,
+        sample_parent_profile.school_id,
+        sample_student.student_id,
+    )
     order_item = OrderItem(
         id=1,
         order_id=order.order_id,
@@ -340,7 +348,11 @@ async def test_create_order_generates_unique_order_number(
     checkout_data = OrderCreateFromCart(student_id=22)
 
     # Create order with generated order number
-    created_order = create_order_instance(sample_parent_profile.user_id, sample_parent_profile.school_id, sample_student.student_id)
+    created_order = create_order_instance(
+        sample_parent_profile.user_id,
+        sample_parent_profile.school_id,
+        sample_student.student_id,
+    )
 
     # Mock queries
     student_query = create_mock_query_result(sample_student)
@@ -405,7 +417,13 @@ async def test_cancel_order_with_refund_flag(
     service = OrderService(mock_db_session)
 
     # Act
-    result = await service.cancel_order(order_id=sample_order.order_id, user_id=sample_order.parent_user_id, is_admin=False, cancel_data=cancel_data, cancelled_by_user_id=UUID("da134162-0d5d-4215-b93b-aefb747ffa17"))
+    result = await service.cancel_order(
+        order_id=sample_order.order_id,
+        user_id=sample_order.parent_user_id,
+        is_admin=False,
+        cancel_data=cancel_data,
+        cancelled_by_user_id=UUID("da134162-0d5d-4215-b93b-aefb747ffa17"),
+    )
 
     # Assert - result is now a dict
     assert result["status"] == OrderStatus.CANCELLED
@@ -434,7 +452,11 @@ async def test_create_order_uses_pessimistic_locking(
     sample_cart.items = [sample_cart_item]
     checkout_data = OrderCreateFromCart(student_id=22)
 
-    created_order = create_order_instance(sample_parent_profile.user_id, sample_parent_profile.school_id, sample_student.student_id)
+    created_order = create_order_instance(
+        sample_parent_profile.user_id,
+        sample_parent_profile.school_id,
+        sample_student.student_id,
+    )
 
     # Mock queries
     student_query = create_mock_query_result(sample_student)
@@ -537,7 +559,13 @@ async def test_cancel_order_uses_pessimistic_locking_for_stock(
     service = OrderService(mock_db_session)
 
     # Act
-    await service.cancel_order(order_id=sample_order.order_id, user_id=sample_order.parent_user_id, is_admin=False, cancel_data=cancel_data, cancelled_by_user_id=UUID("da134162-0d5d-4215-b93b-aefb747ffa17"))
+    await service.cancel_order(
+        order_id=sample_order.order_id,
+        user_id=sample_order.parent_user_id,
+        is_admin=False,
+        cancel_data=cancel_data,
+        cancelled_by_user_id=UUID("da134162-0d5d-4215-b93b-aefb747ffa17"),
+    )
 
     # Assert - 4 execute calls: fetch order, get items, lock product, reload order
     assert mock_db_session.execute.call_count == 4
@@ -627,7 +655,13 @@ async def test_cancel_order_handles_commit_failure(
 
     # Act & Assert
     with pytest.raises(HTTPException) as exc_info:
-        await service.cancel_order(order_id=sample_order.order_id, user_id=sample_order.parent_user_id, is_admin=False, cancel_data=cancel_data, cancelled_by_user_id=UUID("da134162-0d5d-4215-b93b-aefb747ffa17"))
+        await service.cancel_order(
+            order_id=sample_order.order_id,
+            user_id=sample_order.parent_user_id,
+            is_admin=False,
+            cancel_data=cancel_data,
+            cancelled_by_user_id=UUID("da134162-0d5d-4215-b93b-aefb747ffa17"),
+        )
 
     assert exc_info.value.status_code == 500
     assert "cancellation failed" in exc_info.value.detail.lower()
@@ -655,7 +689,12 @@ async def test_update_order_handles_invalid_enum_value(
 
     # Act & Assert
     with pytest.raises(HTTPException) as exc_info:
-        await service.update_order(order_id=sample_order.order_id, user_id=sample_order.parent_user_id, is_admin=False, order_update=order_update)
+        await service.update_order(
+            order_id=sample_order.order_id,
+            user_id=sample_order.parent_user_id,
+            is_admin=False,
+            order_update=order_update,
+        )
 
     assert exc_info.value.status_code == 400
 
@@ -713,7 +752,11 @@ async def test_order_total_calculated_correctly(
     cart_query = create_mock_query_result(sample_cart)
     product_lock_query = create_mock_query_result([sample_product, product_2], method="all")
 
-    order = create_order_instance(sample_parent_profile.user_id, sample_parent_profile.school_id, sample_student.student_id)
+    order = create_order_instance(
+        sample_parent_profile.user_id,
+        sample_parent_profile.school_id,
+        sample_student.student_id,
+    )
     order.total_amount = Decimal("2400.00")
     final_order_query = create_mock_query_result(order)
 
@@ -759,7 +802,11 @@ async def test_order_status_starts_as_pending_payment(
     cart_query = create_mock_query_result(sample_cart)
     product_lock_query = create_mock_query_result([sample_product], method="all")
 
-    order = create_order_instance(sample_parent_profile.user_id, sample_parent_profile.school_id, sample_student.student_id)
+    order = create_order_instance(
+        sample_parent_profile.user_id,
+        sample_parent_profile.school_id,
+        sample_student.student_id,
+    )
     order.status = OrderStatus.PENDING_PAYMENT
     final_order_query = create_mock_query_result(order)
 
@@ -799,7 +846,11 @@ async def test_cart_cleared_only_after_successful_order(
     sample_cart.items = [sample_cart_item]
     checkout_data = OrderCreateFromCart(student_id=22)
 
-    created_order = create_order_instance(sample_parent_profile.user_id, sample_parent_profile.school_id, sample_student.student_id)
+    created_order = create_order_instance(
+        sample_parent_profile.user_id,
+        sample_parent_profile.school_id,
+        sample_student.student_id,
+    )
 
     # Mock queries
     student_query = create_mock_query_result(sample_student)
@@ -928,7 +979,11 @@ async def test_order_response_compatible_with_orderout_schema(
     service = OrderService(mock_db_session)
 
     # Act
-    result = await service.get_order_by_id_for_user(order_id=sample_order.order_id, user_id=sample_order.parent_user_id, is_admin=False)
+    result = await service.get_order_by_id_for_user(
+        order_id=sample_order.order_id,
+        user_id=sample_order.parent_user_id,
+        is_admin=False,
+    )
 
     # Assert - result is now a dict with all required fields
     assert isinstance(result, dict)

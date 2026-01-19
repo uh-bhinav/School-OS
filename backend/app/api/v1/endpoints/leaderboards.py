@@ -21,7 +21,10 @@ def get_achievement_service(db: AsyncSession = Depends(get_db)) -> AchievementSe
     # dependencies=[Depends(get_current_active_user)],
     summary="[AGENT] Get school leaderboard for active year",
 )
-async def agent_get_school_leaderboard(service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user)):
+async def agent_get_school_leaderboard(
+    service: AchievementService = Depends(get_achievement_service),
+    current_user: Profile = Depends(get_current_active_user),
+):
     """
     (ROBUST) Agent endpoint to get the school leaderboard.
     Automatically uses the active academic year.
@@ -43,7 +46,11 @@ async def agent_get_school_leaderboard(service: AchievementService = Depends(get
     # dependencies=[Depends(get_current_active_user)],
     summary="[AGENT] Get class leaderboard by name for active year",
 )
-async def agent_get_class_leaderboard_by_name(class_name: str, service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user)):
+async def agent_get_class_leaderboard_by_name(
+    class_name: str,
+    service: AchievementService = Depends(get_achievement_service),
+    current_user: Profile = Depends(get_current_active_user),
+):
     """
     (ROBUST) Agent endpoint to get a class leaderboard using the class name.
     Automatically uses the active academic year.
@@ -61,7 +68,11 @@ async def agent_get_class_leaderboard_by_name(class_name: str, service: Achievem
         raise HTTPException(status_code=404, detail=f"Class '{class_name}' not found.")
 
     # 3. Call the original, secure service
-    return await service.get_class_leaderboard(class_id=target_class.class_id, school_id=school_id, academic_year_id=active_year_id)
+    return await service.get_class_leaderboard(
+        class_id=target_class.class_id,
+        school_id=school_id,
+        academic_year_id=active_year_id,
+    )
 
 
 @router.get(
@@ -70,7 +81,10 @@ async def agent_get_class_leaderboard_by_name(class_name: str, service: Achievem
     # dependencies=[Depends(get_current_active_user)],
     summary="[AGENT] Get club leaderboard for active year",
 )
-async def agent_get_club_leaderboard(service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user)):
+async def agent_get_club_leaderboard(
+    service: AchievementService = Depends(get_achievement_service),
+    current_user: Profile = Depends(get_current_active_user),
+):
     """
     (ROBUST) Agent endpoint to get the club leaderboard.
     Automatically uses the active academic year.
@@ -91,7 +105,11 @@ async def agent_get_club_leaderboard(service: AchievementService = Depends(get_a
     response_model=list[LeaderboardStudent]
     # dependencies=[Depends(get_current_active_user)]
 )
-async def get_school_leaderboard(academic_year_id: int, service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user)):
+async def get_school_leaderboard(
+    academic_year_id: int,
+    service: AchievementService = Depends(get_achievement_service),
+    current_user: Profile = Depends(get_current_active_user),
+):
     """
     Get the school-wide student leaderboard for an academic year.
     (Requires authenticated user)
@@ -105,7 +123,13 @@ async def get_school_leaderboard(academic_year_id: int, service: AchievementServ
     response_model=list[LeaderboardStudent]
     # dependencies=[Depends(get_current_active_user)]
 )
-async def get_class_leaderboard(class_id: int, academic_year_id: int, service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def get_class_leaderboard(
+    class_id: int,
+    academic_year_id: int,
+    service: AchievementService = Depends(get_achievement_service),
+    current_user: Profile = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Get the leaderboard for a specific class for an academic year.
     (Requires authenticated user)
@@ -114,7 +138,10 @@ async def get_class_leaderboard(class_id: int, academic_year_id: int, service: A
 
     target_class = await db.get(Class, class_id)
     if not target_class or target_class.school_id != school_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Class not found in your school.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Class not found in your school.",
+        )
 
     return await service.get_class_leaderboard(class_id=class_id, school_id=school_id, academic_year_id=academic_year_id)
 
@@ -124,7 +151,11 @@ async def get_class_leaderboard(class_id: int, academic_year_id: int, service: A
     response_model=list[LeaderboardClub]
     # dependencies=[Depends(get_current_active_user)]
 )
-async def get_club_leaderboard(academic_year_id: int, service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user)):
+async def get_club_leaderboard(
+    academic_year_id: int,
+    service: AchievementService = Depends(get_achievement_service),
+    current_user: Profile = Depends(get_current_active_user),
+):
     """
     Get the club leaderboard for an academic year.
     (Requires authenticated user)
@@ -133,8 +164,16 @@ async def get_club_leaderboard(academic_year_id: int, service: AchievementServic
     return await service.get_club_leaderboard(school_id=school_id, academic_year_id=academic_year_id)
 
 
-@router.post("/agent/compute", response_model=dict, dependencies=[Depends(require_role("Admin"))], summary="[AGENT] Trigger leaderboard computation")
-async def agent_run_leaderboard_computation(service: AchievementService = Depends(get_achievement_service), current_user: Profile = Depends(get_current_active_user)):
+@router.post(
+    "/agent/compute",
+    response_model=dict,
+    dependencies=[Depends(require_role("Admin"))],
+    summary="[AGENT] Trigger leaderboard computation",
+)
+async def agent_run_leaderboard_computation(
+    service: AchievementService = Depends(get_achievement_service),
+    current_user: Profile = Depends(get_current_active_user),
+):
     """
     (ROBUST) Agent endpoint for Admins to trigger a full
     recalculation of all leaderboards.

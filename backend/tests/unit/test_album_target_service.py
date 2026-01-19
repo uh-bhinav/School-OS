@@ -153,7 +153,12 @@ async def test_validate_user_access_success_grade_match():
     service = AlbumTargetService()
 
     album_id_to_check = 40
-    user_context = {"school_id": 1, "grade_level": 9, "current_class_id": 301, "user_id": uuid.uuid4()}  # User is in Grade 9
+    user_context = {
+        "school_id": 1,
+        "grade_level": 9,
+        "current_class_id": 301,
+        "user_id": uuid.uuid4(),
+    }  # User is in Grade 9
 
     # Mock targets returned by get_targets_for_album (called internally)
     mock_targets = [
@@ -184,7 +189,12 @@ async def test_validate_user_access_success_class_match():
     mock_db = AsyncMock(spec=AsyncSession)
     service = AlbumTargetService()
     album_id_to_check = 41
-    user_context = {"school_id": 1, "grade_level": 10, "current_class_id": 402, "user_id": uuid.uuid4()}  # User is in Class 402
+    user_context = {
+        "school_id": 1,
+        "grade_level": 10,
+        "current_class_id": 402,
+        "user_id": uuid.uuid4(),
+    }  # User is in Class 402
     mock_targets = [
         AlbumTarget(id=3, album_id=album_id_to_check, target_type="grade", target_id=11),  # Non-matching
         AlbumTarget(id=4, album_id=album_id_to_check, target_type="class", target_id=402),  # Matching target
@@ -212,7 +222,12 @@ async def test_validate_user_access_success_individual_student_match():
         "user_id": uuid.uuid4(),
     }
     mock_targets = [
-        AlbumTarget(id=7, album_id=album_id_to_check, target_type="individual_student", target_id=1234),
+        AlbumTarget(
+            id=7,
+            album_id=album_id_to_check,
+            target_type="individual_student",
+            target_id=1234,
+        ),
         AlbumTarget(id=8, album_id=album_id_to_check, target_type="class", target_id=999),
     ]
 
@@ -237,7 +252,12 @@ async def test_validate_user_access_failure_no_match():
     mock_db = AsyncMock(spec=AsyncSession)
     service = AlbumTargetService()
     album_id_to_check = 42
-    user_context = {"school_id": 1, "grade_level": 5, "current_class_id": 105, "user_id": uuid.uuid4()}
+    user_context = {
+        "school_id": 1,
+        "grade_level": 5,
+        "current_class_id": 105,
+        "user_id": uuid.uuid4(),
+    }
     # Targets that do NOT match the user_context
     mock_targets = [
         AlbumTarget(id=5, album_id=album_id_to_check, target_type="grade", target_id=6),

@@ -67,7 +67,12 @@ async def get_class_schedule(class_name: str, day: Optional[str] = None) -> dict
             logger.info(f"Calling API: GET /timetable/class/{class_name} with params={params}")
             response = await client.get(f"/timetable/class/{class_name}", params=params)
             return {"success": True, "class_schedule": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting class schedule: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -92,7 +97,12 @@ async def search_timetable_entry(class_name: str, day: str, period_number: int) 
             logger.info(f"Calling API: GET /timetable/class/{class_name}/entry with params={params}")
             response = await client.get(f"/timetable/class/{class_name}/entry", params=params)
             return {"success": True, "entry": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error searching timetable entry: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -117,7 +127,12 @@ async def swap_timetable_entries(entry_id_1: int, entry_id_2: int) -> dict[str, 
             logger.info(f"Calling API: POST /timetable/swap with payload={payload}")
             response = await client.post("/timetable/swap", json=payload)
             return {"success": True, "swapped": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error swapping timetable entries: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -136,7 +151,12 @@ async def generate_timetable_for_class(class_name: str) -> dict[str, Any]:
             logger.info(f"Calling API: POST /timetable/class/{class_name}/generate")
             response = await client.post(f"/timetable/class/{class_name}/generate")
             return {"success": True, "generation_job": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error generating timetable: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -160,7 +180,12 @@ async def manually_update_timetable_slot(class_name: str, day: str, period_numbe
             logger.info(f"Calling API: PUT /timetable/class/{class_name}/update-slot with payload={payload}")
             response = await client.put(f"/timetable/class/{class_name}/update-slot", json=payload)
             return {"success": True, "updated_slot": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error updating timetable slot: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -178,7 +203,12 @@ async def check_timetable_conflicts_for_teacher(teacher_name: str) -> dict[str, 
             logger.info(f"Calling API: GET /timetable/teacher/{teacher_name}/conflicts")
             response = await client.get(f"/timetable/teacher/{teacher_name}/conflicts")
             return {"success": True, "conflicts": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error checking teacher conflicts: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -200,7 +230,12 @@ async def find_free_slot_for_teacher(teacher_name: str, day: Optional[str] = Non
             logger.info(f"Calling API: GET /timetable/teacher/{teacher_name}/free-slots with params={params}")
             response = await client.get(f"/timetable/teacher/{teacher_name}/free-slots", params=params)
             return {"success": True, "free_slots": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error finding free slots: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:

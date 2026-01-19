@@ -102,12 +102,20 @@ async def upload_profile_picture(db: AsyncSession, *, user_id: UUID, file: Uploa
 
     contents = await file.read()
     if len(contents) > MAX_PROFILE_PICTURE_BYTES:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File size cannot exceed 5MB.")
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File size cannot exceed 5MB.",
+        )
 
     file_extension = (file.filename or "avatar").split(".")[-1]
     storage_path = f"{user_id}/avatar.{file_extension}"
 
-    storage_client.upload_file(bucket="profile-pictures", path=storage_path, file=contents, mime_type=file.content_type)
+    storage_client.upload_file(
+        bucket="profile-pictures",
+        path=storage_path,
+        file=contents,
+        mime_type=file.content_type,
+    )
 
     profile.profile_picture_url = storage_path
     db.add(profile)
@@ -130,6 +138,9 @@ async def get_profile_picture_url(db: AsyncSession, *, user_id: UUID, requesting
     is_admin = "School Admin" in role_names or "Admin" in role_names
 
     if not (is_owner or is_admin):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to view this profile picture.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to view this profile picture.",
+        )
 
     return storage_client.generate_signed_url(bucket="profile-pictures", path=profile.profile_picture_url, expires_in=3600)

@@ -25,7 +25,12 @@ from app.models.student import Student
 from app.models.student_contact import StudentContact
 from app.schemas.cart_schema import CartItemIn
 from app.schemas.enums import OrderStatus
-from app.schemas.order_schema import OrderCreateFromCart, OrderCreateManual, OrderItemCreate, OrderUpdate
+from app.schemas.order_schema import (
+    OrderCreateFromCart,
+    OrderCreateManual,
+    OrderItemCreate,
+    OrderUpdate,
+)
 from app.services.cart_service import CartService
 from app.services.order_service import OrderService
 
@@ -54,7 +59,14 @@ async def test_update_order_status_fails_invalid_transition(db_session: AsyncSes
     school_id = parent_profile.school_id
 
     # Step 2: Create a delivered order directly
-    order = Order(student_id=student_id, parent_user_id=parent_user_id, school_id=school_id, order_number="ORD-TEST-DELIVERED-001", total_amount=Decimal("1500.00"), status=OrderStatus.DELIVERED)
+    order = Order(
+        student_id=student_id,
+        parent_user_id=parent_user_id,
+        school_id=school_id,
+        order_number="ORD-TEST-DELIVERED-001",
+        total_amount=Decimal("1500.00"),
+        status=OrderStatus.DELIVERED,
+    )
     db_session.add(order)
     await db_session.commit()
     await db_session.refresh(order)
@@ -70,7 +82,12 @@ async def test_update_order_status_fails_invalid_transition(db_session: AsyncSes
     # Step 4: Should fail with 400
     with pytest.raises(HTTPException) as exc_info:
         # FIX: Use new signature with order_id, user_id, is_admin
-        await order_service.update_order(order_id=order_id, user_id=parent_user_id, is_admin=True, order_update=update_data)  # Use admin to bypass authorization check
+        await order_service.update_order(
+            order_id=order_id,
+            user_id=parent_user_id,
+            is_admin=True,
+            order_update=update_data,
+        )  # Use admin to bypass authorization check
 
     # Verify error details
     assert exc_info.value.status_code == 400
@@ -89,7 +106,13 @@ async def test_update_order_status_fails_invalid_transition(db_session: AsyncSes
 
 
 @pytest.mark.asyncio
-async def test_parent_cannot_get_another_parents_order(db_session: AsyncSession, parent_profile_1: Profile, parent_profile_2: Profile, student_22: Student, student_23: Student):
+async def test_parent_cannot_get_another_parents_order(
+    db_session: AsyncSession,
+    parent_profile_1: Profile,
+    parent_profile_2: Profile,
+    student_22: Student,
+    student_23: Student,
+):
     """
     Test 5.2: Parent cannot access another parent's order.
 
@@ -166,7 +189,10 @@ async def test_parent_cannot_order_for_unlinked_student(db_session: AsyncSession
     parent_user_id = parent_profile.user_id
     student_23_id = student_23.student_id
 
-    stmt = select(StudentContact).where(StudentContact.student_id == student_23_id, StudentContact.profile_user_id == parent_user_id)
+    stmt = select(StudentContact).where(
+        StudentContact.student_id == student_23_id,
+        StudentContact.profile_user_id == parent_user_id,
+    )
     result = await db_session.execute(stmt)
     link = result.scalars().first()
 
@@ -217,7 +243,12 @@ async def test_parent_cannot_order_for_unlinked_student(db_session: AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_admin_can_create_manual_order(db_session: AsyncSession, mock_admin_profile: Profile, parent_profile: Profile, student_22: Student):
+async def test_admin_can_create_manual_order(
+    db_session: AsyncSession,
+    mock_admin_profile: Profile,
+    parent_profile: Profile,
+    student_22: Student,
+):
     """
     Test 5.4: Admin can create manual order on behalf of parent.
 
@@ -259,7 +290,13 @@ async def test_admin_can_create_manual_order(db_session: AsyncSession, mock_admi
 
     if not admin_in_session:
         # FIX: Create admin with SAME school_id as parent
-        admin_in_session = Profile(user_id=admin_user_id, school_id=parent_school_id, first_name=admin_first_name, last_name=admin_last_name, is_active=True)  # Use extracted parent_school_id
+        admin_in_session = Profile(
+            user_id=admin_user_id,
+            school_id=parent_school_id,
+            first_name=admin_first_name,
+            last_name=admin_last_name,
+            is_active=True,
+        )  # Use extracted parent_school_id
         db_session.add(admin_in_session)
         await db_session.commit()
         await db_session.refresh(admin_in_session)
@@ -358,7 +395,14 @@ async def test_get_order_statistics_for_school(db_session: AsyncSession, parent_
 
     created_orders = []
     for idx, data in enumerate(orders_data):
-        order = Order(student_id=student_id, parent_user_id=parent_user_id, school_id=school_id, order_number=f"ORD-STATS-TEST55-{idx+1}", total_amount=data["amount"], status=data["status"])
+        order = Order(
+            student_id=student_id,
+            parent_user_id=parent_user_id,
+            school_id=school_id,
+            order_number=f"ORD-STATS-TEST55-{idx+1}",
+            total_amount=data["amount"],
+            status=data["status"],
+        )
         db_session.add(order)
         # Commit each order individually to avoid batch insert enum issues
         await db_session.commit()
@@ -404,7 +448,12 @@ async def test_get_order_statistics_for_school(db_session: AsyncSession, parent_
 
 
 @pytest.mark.asyncio
-async def test_admin_cannot_create_order_cross_school(db_session: AsyncSession, mock_admin_profile: Profile, parent_profile_2: Profile, student_23: Student):
+async def test_admin_cannot_create_order_cross_school(
+    db_session: AsyncSession,
+    mock_admin_profile: Profile,
+    parent_profile_2: Profile,
+    student_23: Student,
+):
     """
     Test 5.6: Admin cannot create orders for parents in other schools.
 
@@ -438,7 +487,13 @@ async def test_admin_cannot_create_order_cross_school(db_session: AsyncSession, 
     admin_in_session = result.scalars().first()
 
     if not admin_in_session:
-        admin_in_session = Profile(user_id=admin_user_id, school_id=1, first_name=admin_first_name, last_name=admin_last_name, is_active=True)  # Admin in school 1
+        admin_in_session = Profile(
+            user_id=admin_user_id,
+            school_id=1,
+            first_name=admin_first_name,
+            last_name=admin_last_name,
+            is_active=True,
+        )  # Admin in school 1
         db_session.add(admin_in_session)
         await db_session.commit()
         await db_session.refresh(admin_in_session)
@@ -530,7 +585,14 @@ async def test_update_order_status_success_valid_transition(db_session: AsyncSes
     school_id = parent_profile.school_id
 
     # Step 2: Create a pending_payment order
-    order = Order(student_id=student_id, parent_user_id=parent_user_id, school_id=school_id, order_number="ORD-TEST-TRANSITIONS-001", total_amount=Decimal("1500.00"), status=OrderStatus.PENDING_PAYMENT)
+    order = Order(
+        student_id=student_id,
+        parent_user_id=parent_user_id,
+        school_id=school_id,
+        order_number="ORD-TEST-TRANSITIONS-001",
+        total_amount=Decimal("1500.00"),
+        status=OrderStatus.PENDING_PAYMENT,
+    )
     db_session.add(order)
     await db_session.commit()
     await db_session.refresh(order)
@@ -544,7 +606,12 @@ async def test_update_order_status_success_valid_transition(db_session: AsyncSes
     # Step 3: Transition 1 - pending_payment → processing
     # FIX: Use new signature with order_id, user_id, is_admin
     update_data = OrderUpdate(status=OrderStatus.PROCESSING)
-    updated_order = await order_service.update_order(order_id=order_id, user_id=parent_user_id, is_admin=True, order_update=update_data)  # Use admin to bypass authorization
+    updated_order = await order_service.update_order(
+        order_id=order_id,
+        user_id=parent_user_id,
+        is_admin=True,
+        order_update=update_data,
+    )  # Use admin to bypass authorization
 
     # FIX: Returns dict, not Order object
     assert updated_order["status"] == OrderStatus.PROCESSING
@@ -552,7 +619,12 @@ async def test_update_order_status_success_valid_transition(db_session: AsyncSes
 
     # Step 4: Transition 2 - processing → shipped (with tracking number)
     update_data = OrderUpdate(status=OrderStatus.SHIPPED, tracking_number="TRK-123456789")
-    updated_order = await order_service.update_order(order_id=order_id, user_id=parent_user_id, is_admin=True, order_update=update_data)
+    updated_order = await order_service.update_order(
+        order_id=order_id,
+        user_id=parent_user_id,
+        is_admin=True,
+        order_update=update_data,
+    )
 
     assert updated_order["status"] == OrderStatus.SHIPPED
     assert updated_order["tracking_number"] == "TRK-123456789"
@@ -560,7 +632,12 @@ async def test_update_order_status_success_valid_transition(db_session: AsyncSes
 
     # Step 5: Transition 3 - shipped → delivered
     update_data = OrderUpdate(status=OrderStatus.DELIVERED)
-    updated_order = await order_service.update_order(order_id=order_id, user_id=parent_user_id, is_admin=True, order_update=update_data)
+    updated_order = await order_service.update_order(
+        order_id=order_id,
+        user_id=parent_user_id,
+        is_admin=True,
+        order_update=update_data,
+    )
 
     assert updated_order["status"] == OrderStatus.DELIVERED
     print("✓ Transition 3: shipped → delivered (final state)")

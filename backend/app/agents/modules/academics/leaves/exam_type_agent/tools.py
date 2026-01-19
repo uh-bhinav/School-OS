@@ -59,7 +59,10 @@ async def get_exam_type_details(exam_type_id: int) -> dict[str, Any]:
             return {"success": True, "exam_type_details": response}
     except AgentResourceNotFoundError as e:
         logger.warn(f"Exam type not found for id={exam_type_id}: {e.message}")
-        return {"success": False, "error": f"No exam type found with ID {exam_type_id}."}
+        return {
+            "success": False,
+            "error": f"No exam type found with ID {exam_type_id}.",
+        }
     except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
         logger.error(f"Error getting exam type details: {e.message}", exc_info=True)
         return _format_error_response(e)
@@ -98,14 +101,22 @@ async def update_exam_type(exam_type_id: int, type_name: Optional[str] = None) -
     try:
         async with AgentHTTPClient() as client:
             if type_name is None:
-                return {"success": False, "error": "No new name provided for the update."}
+                return {
+                    "success": False,
+                    "error": "No new name provided for the update.",
+                }
 
             payload = {"type_name": type_name}
 
             logger.info(f"Calling API: PUT /exam-types/{exam_type_id} with payload")
             response = await client.put(f"/exam-types/{exam_type_id}", json=payload)
             return {"success": True, "updated_exam_type": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error updating exam type: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -123,8 +134,16 @@ async def delete_exam_type(exam_type_id: int) -> dict[str, Any]:
             logger.info(f"Calling API: DELETE /exam-types/{exam_type_id}")
             # DELETE returns 204 No Content
             await client.delete(f"/exam-types/{exam_type_id}")
-            return {"success": True, "message": f"Exam type {exam_type_id} deleted successfully."}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+            return {
+                "success": True,
+                "message": f"Exam type {exam_type_id} deleted successfully.",
+            }
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error deleting exam type: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:

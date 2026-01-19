@@ -14,7 +14,12 @@ def get_refund_service(db: AsyncSession = Depends(get_db)) -> RefundService:
     return RefundService(db)
 
 
-@router.post("/", response_model=RefundOut, status_code=201, dependencies=[Depends(require_role("Admin"))])
+@router.post(
+    "/",
+    response_model=RefundOut,
+    status_code=201,
+    dependencies=[Depends(require_role("Admin"))],
+)
 async def create_refund(
     refund_in: RefundCreate,
     service: RefundService = Depends(get_refund_service),

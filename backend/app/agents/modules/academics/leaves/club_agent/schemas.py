@@ -42,4 +42,10 @@ class ListClubMembersSchema(BaseModel):
 
 # --- Exports ---
 
-__all__ = ["ListAllClubsSchema", "GetClubDetailsSchema", "CreateClubSchema", "AddStudentToClubSchema", "ListClubMembersSchema"]
+__all__ = [
+    "ListAllClubsSchema",
+    "GetClubDetailsSchema",
+    "CreateClubSchema",
+    "AddStudentToClubSchema",
+    "ListClubMembersSchema",
+]

@@ -23,11 +23,12 @@ from app.agents.api import router as agents_router
 from app.api.v1.api import api_router
 from app.api.v1.api import api_router as v1_api_router
 from app.core.config import settings
+from app.core.supabase import close_supabase_client, init_supabase_client
 
 # CRITICAL: Import base BEFORE init_engine to register all SQLAlchemy models
 # This ensures all models are registered before any database operations
 from app.db import base  # noqa: F401
-from app.db.session import close_db, init_engine
+from app.db.session import init_engine
 from app.dependencies import limiter
 from app.middleware import RawBodyMiddleware
 
@@ -58,38 +59,81 @@ else:
     print("⚠️ SENTRY_DSN not found. Sentry integration is disabled.")
 
 
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     """
+#     Lifespan manager for the FastAPI application.
+#     This function will be called once when the application starts.
+#     """
+#     logger.info("=" * 80)
+#     logger.info(f"Starting {settings.PROJECT_NAME}")
+#     logger.info(f"API Version: {settings.API_V1_STR}")
+#     logger.info("Docs available at: /docs")
+#     logger.info("Agent testing available at: POST /agents/chat")
+#     logger.info("=" * 80)
+
+#     init_engine()
+#     logger.info("✅ Database engine initialized")
+
+#     yield
+
+#     logger.info("=" * 80)
+#     logger.info("Shutting down SchoolOS API...")
+
+#     # Any cleanup code would go here, after the yield.
+#     print("🔴 Shutting down database connections...")
+#     await close_db()
+#     print("✅ All database connections closed")
+
+
+#     logger.info("=" * 80)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Lifespan manager for the FastAPI application.
-    This function will be called once when the application starts.
+    Application lifespan manager.
+
+    CRITICAL: This ensures proper initialization and cleanup of global resources.
+    All singleton initialization (database engine, Supabase client) happens here.
     """
-    logger.info("=" * 80)
-    logger.info(f"Starting {settings.PROJECT_NAME}")
-    logger.info(f"API Version: {settings.API_V1_STR}")
-    logger.info("Docs available at: /docs")
-    logger.info("Agent testing available at: POST /agents/chat")
-    logger.info("=" * 80)
+    # === STARTUP ===
+    print("🚀 Application starting...")
 
-    init_engine()
-    logger.info("✅ Database engine initialized")
+    # Initialize database engine (existing)
+    engine = init_engine()
+    print("✅ Database engine initialized")
 
-    yield
+    # Initialize Supabase client (NEW)
+    await init_supabase_client()
+    print("✅ Supabase client initialized")
 
-    logger.info("=" * 80)
-    logger.info("Shutting down SchoolOS API...")
+    print("✅ Application startup complete")
+
+    yield  # Application runs here
+
+    # === SHUTDOWN ===
+    print("🛑 Application shutting down...")
+
+    # Close Supabase client (NEW)
+    await close_supabase_client()
+    print("✅ Supabase client closed")
 
     # Any cleanup code would go here, after the yield.
-    print("🔴 Shutting down database connections...")
-    await close_db()
-    print("✅ All database connections closed")
+    if engine:
+        await engine.dispose()
+        print("✅ Database engine disposed")
 
-    logger.info("=" * 80)
+    print("✅ Application shutdown complete")
 
 
 # Initialize FastAPI application
 app = FastAPI(
-    title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json", description="SchoolOS - Comprehensive School Management ERP System with AI Agents", version="1.0.0", docs_url="/docs", redoc_url="/redoc", lifespan=lifespan
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    description="SchoolOS - Comprehensive School Management ERP System with AI Agents",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

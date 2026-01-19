@@ -76,17 +76,34 @@ async def test_generate_timetable_dry_run_success(test_client: AsyncClient, db_s
 
     # Step 1: Create test data
     # Academic Year
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
     # Class
-    test_class = Class(grade_level=10, section=f"Test-{uuid.uuid4().hex[:4]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=10,
+        section=f"Test-{uuid.uuid4().hex[:4]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
     # Subjects (FIXED: Use 'name' not 'subject_name')
-    subject_math = Subject(name=f"Mathematics-{uuid.uuid4().hex[:4]}", school_id=SCHOOL_ID_1, is_active=True)  # ✅ CORRECT
+    subject_math = Subject(
+        name=f"Mathematics-{uuid.uuid4().hex[:4]}",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )  # ✅ CORRECT
     subject_science = Subject(name=f"Science-{uuid.uuid4().hex[:4]}", school_id=SCHOOL_ID_1, is_active=True)  # ✅ CORRECT
     db_session.add_all([subject_math, subject_science])
     await db_session.flush()
@@ -94,7 +111,16 @@ async def test_generate_timetable_dry_run_success(test_client: AsyncClient, db_s
     # Periods (Day-agnostic model for School 1)
     periods = []
     for i in range(1, 7):
-        period = Period(school_id=SCHOOL_ID_1, period_name=f"Period {i}", period_number=i, start_time=f"{8 + i}:00:00", end_time=f"{9 + i}:00:00", is_recess=False, is_active=True, day_of_week=None)  # Day-agnostic
+        period = Period(
+            school_id=SCHOOL_ID_1,
+            period_name=f"Period {i}",
+            period_number=i,
+            start_time=f"{8 + i}:00:00",
+            end_time=f"{9 + i}:00:00",
+            is_recess=False,
+            is_active=True,
+            day_of_week=None,
+        )  # Day-agnostic
         periods.append(period)
         db_session.add(period)
     await db_session.flush()
@@ -115,8 +141,22 @@ async def test_generate_timetable_dry_run_success(test_client: AsyncClient, db_s
         "academic_year_id": academic_year_id,  # Use extracted ID
         "working_days": [1, 2, 3, 4, 5, 6],  # Mon-Sat
         "subject_requirements": [
-            {"subject_id": subject_math_id, "teacher_id": 11, "periods_per_week": 5, "is_core": True, "requires_consecutive": False, "min_gap_days": 1},  # Use extracted ID
-            {"subject_id": subject_science_id, "teacher_id": 12, "periods_per_week": 4, "is_core": True, "requires_consecutive": False, "min_gap_days": 1},  # Use extracted ID
+            {
+                "subject_id": subject_math_id,
+                "teacher_id": 11,
+                "periods_per_week": 5,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 1,
+            },  # Use extracted ID
+            {
+                "subject_id": subject_science_id,
+                "teacher_id": 12,
+                "periods_per_week": 4,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 1,
+            },  # Use extracted ID
         ],
         "constraints": [],
         "dry_run": True,
@@ -175,11 +215,24 @@ async def test_generate_timetable_with_persistence(test_client: AsyncClient, db_
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create test data
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
-    test_class = Class(grade_level=9, section=f"Test-{uuid.uuid4().hex[:4]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=9,
+        section=f"Test-{uuid.uuid4().hex[:4]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
@@ -190,7 +243,16 @@ async def test_generate_timetable_with_persistence(test_client: AsyncClient, db_
     # Create periods
     periods = []
     for i in range(1, 5):
-        period = Period(school_id=SCHOOL_ID_1, period_name=f"Period {i}", period_number=i, start_time=f"{8 + i}:00:00", end_time=f"{9 + i}:00:00", is_recess=False, is_active=True, day_of_week=None)
+        period = Period(
+            school_id=SCHOOL_ID_1,
+            period_name=f"Period {i}",
+            period_number=i,
+            start_time=f"{8 + i}:00:00",
+            end_time=f"{9 + i}:00:00",
+            is_recess=False,
+            is_active=True,
+            day_of_week=None,
+        )
         periods.append(period)
         db_session.add(period)
     await db_session.flush()
@@ -207,7 +269,16 @@ async def test_generate_timetable_with_persistence(test_client: AsyncClient, db_
         "class_id": test_class_id,
         "academic_year_id": academic_year_id,
         "working_days": [1, 2, 3, 4, 5],  # Mon-Fri
-        "subject_requirements": [{"subject_id": subject_id, "teacher_id": 11, "periods_per_week": 3, "is_core": True, "requires_consecutive": False, "min_gap_days": 1}],
+        "subject_requirements": [
+            {
+                "subject_id": subject_id,
+                "teacher_id": 11,
+                "periods_per_week": 3,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 1,
+            }
+        ],
         "constraints": [],
         "dry_run": False,  # Persist to database
     }
@@ -294,11 +365,24 @@ async def test_check_teacher_conflict_endpoint(test_client: AsyncClient, db_sess
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create test data with existing timetable entry
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
-    test_class = Class(grade_level=8, section=f"Test-{uuid.uuid4().hex[:4]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=8,
+        section=f"Test-{uuid.uuid4().hex[:4]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
@@ -306,7 +390,16 @@ async def test_check_teacher_conflict_endpoint(test_client: AsyncClient, db_sess
     db_session.add(subject)
     await db_session.flush()
 
-    period = Period(school_id=SCHOOL_ID_1, period_name="Period 1", period_number=1, start_time="09:00:00", end_time="10:00:00", is_recess=False, is_active=True, day_of_week=None)
+    period = Period(
+        school_id=SCHOOL_ID_1,
+        period_name="Period 1",
+        period_number=1,
+        start_time="09:00:00",
+        end_time="10:00:00",
+        is_recess=False,
+        is_active=True,
+        day_of_week=None,
+    )
     db_session.add(period)
     await db_session.flush()
 
@@ -317,14 +410,28 @@ async def test_check_teacher_conflict_endpoint(test_client: AsyncClient, db_sess
     period_id = period.id
 
     # Create existing timetable entry
-    existing_entry = Timetable(school_id=SCHOOL_ID_1, class_id=test_class_id, subject_id=subject_id, teacher_id=11, period_id=period_id, day_of_week=1, academic_year_id=academic_year_id, is_active=True)  # Monday
+    existing_entry = Timetable(
+        school_id=SCHOOL_ID_1,
+        class_id=test_class_id,
+        subject_id=subject_id,
+        teacher_id=11,
+        period_id=period_id,
+        day_of_week=1,
+        academic_year_id=academic_year_id,
+        is_active=True,
+    )  # Monday
     db_session.add(existing_entry)
     await db_session.commit()
 
     print(f"✓ Created existing entry: Teacher 11, Monday, Period {period_id}")
 
     # Step 2: Check for conflict (same teacher, same day, same period)
-    conflict_check_payload = {"teacher_id": 11, "class_id": test_class_id, "day_of_week": 1, "period_id": period_id}  # Monday
+    conflict_check_payload = {
+        "teacher_id": 11,
+        "class_id": test_class_id,
+        "day_of_week": 1,
+        "period_id": period_id,
+    }  # Monday
 
     response = await test_client.post("/api/v1/timetable-generate/check-conflict", json=conflict_check_payload)
 
@@ -335,7 +442,12 @@ async def test_check_teacher_conflict_endpoint(test_client: AsyncClient, db_sess
     print("✓ Conflict detected correctly for existing assignment")
 
     # Step 3: Check no conflict for different day
-    no_conflict_payload = {"teacher_id": 11, "class_id": test_class_id, "day_of_week": 2, "period_id": period_id}  # Tuesday (different day)
+    no_conflict_payload = {
+        "teacher_id": 11,
+        "class_id": test_class_id,
+        "day_of_week": 2,
+        "period_id": period_id,
+    }  # Tuesday (different day)
 
     response = await test_client.post("/api/v1/timetable-generate/check-conflict", json=no_conflict_payload)
 
@@ -367,11 +479,24 @@ async def test_clear_class_timetable(test_client: AsyncClient, db_session: Async
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create test data with timetable entries
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
-    test_class = Class(grade_level=7, section=f"Test-{uuid.uuid4().hex[:4]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=7,
+        section=f"Test-{uuid.uuid4().hex[:4]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
@@ -379,7 +504,16 @@ async def test_clear_class_timetable(test_client: AsyncClient, db_session: Async
     db_session.add(subject)
     await db_session.flush()
 
-    period = Period(school_id=SCHOOL_ID_1, period_name="Period 1", period_number=1, start_time="09:00:00", end_time="10:00:00", is_recess=False, is_active=True, day_of_week=None)
+    period = Period(
+        school_id=SCHOOL_ID_1,
+        period_name="Period 1",
+        period_number=1,
+        start_time="09:00:00",
+        end_time="10:00:00",
+        is_recess=False,
+        is_active=True,
+        day_of_week=None,
+    )
     db_session.add(period)
     await db_session.flush()
 
@@ -392,7 +526,16 @@ async def test_clear_class_timetable(test_client: AsyncClient, db_session: Async
     # Create 3 timetable entries
     entries = []
     for day in [1, 2, 3]:
-        entry = Timetable(school_id=SCHOOL_ID_1, class_id=test_class_id, subject_id=subject_id, teacher_id=11, period_id=period_id, day_of_week=day, academic_year_id=academic_year_id, is_active=True)
+        entry = Timetable(
+            school_id=SCHOOL_ID_1,
+            class_id=test_class_id,
+            subject_id=subject_id,
+            teacher_id=11,
+            period_id=period_id,
+            day_of_week=day,
+            academic_year_id=academic_year_id,
+            is_active=True,
+        )
         entries.append(entry)
         db_session.add(entry)
 
@@ -441,11 +584,24 @@ async def test_cannot_generate_timetable_for_other_school(test_client: AsyncClie
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create class in School 2
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_2, is_active=True)  # Different school
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_2,
+        is_active=True,
+    )  # Different school
     db_session.add(academic_year)
     await db_session.flush()
 
-    other_school_class = Class(grade_level=10, section=f"Test-{uuid.uuid4().hex[:4]}", class_teacher_id=13, academic_year_id=academic_year.id, school_id=SCHOOL_ID_2, is_active=True)  # Different school
+    other_school_class = Class(
+        grade_level=10,
+        section=f"Test-{uuid.uuid4().hex[:4]}",
+        class_teacher_id=13,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_2,
+        is_active=True,
+    )  # Different school
     db_session.add(other_school_class)
     await db_session.flush()
 
@@ -460,7 +616,16 @@ async def test_cannot_generate_timetable_for_other_school(test_client: AsyncClie
         "class_id": other_school_class_id,
         "academic_year_id": academic_year_id,
         "working_days": [1, 2, 3, 4, 5],
-        "subject_requirements": [{"subject_id": 1, "teacher_id": 13, "periods_per_week": 3, "is_core": True, "requires_consecutive": False, "min_gap_days": 1}],
+        "subject_requirements": [
+            {
+                "subject_id": 1,
+                "teacher_id": 13,
+                "periods_per_week": 3,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 1,
+            }
+        ],
         "constraints": [],
         "dry_run": True,
     }
@@ -495,11 +660,24 @@ async def test_timetable_generation_service_directly(db_session: AsyncSession):
     print("\n--- Test 6: Direct Service Layer Testing ---")
 
     # Step 1: Create test data
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
-    test_class = Class(grade_level=6, section=f"Test-{uuid.uuid4().hex[:4]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=6,
+        section=f"Test-{uuid.uuid4().hex[:4]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
@@ -510,7 +688,16 @@ async def test_timetable_generation_service_directly(db_session: AsyncSession):
     # Create periods
     periods = []
     for i in range(1, 4):
-        period = Period(school_id=SCHOOL_ID_1, period_name=f"Period {i}", period_number=i, start_time=f"{8 + i}:00:00", end_time=f"{9 + i}:00:00", is_recess=False, is_active=True, day_of_week=None)
+        period = Period(
+            school_id=SCHOOL_ID_1,
+            period_name=f"Period {i}",
+            period_number=i,
+            start_time=f"{8 + i}:00:00",
+            end_time=f"{9 + i}:00:00",
+            is_recess=False,
+            is_active=True,
+            day_of_week=None,
+        )
         periods.append(period)
         db_session.add(period)
     await db_session.flush()
@@ -533,7 +720,16 @@ async def test_timetable_generation_service_directly(db_session: AsyncSession):
         class_id=test_class_id,
         academic_year_id=academic_year_id,
         working_days=[1, 2, 3],
-        subject_requirements=[SubjectRequirement(subject_id=subject_id, teacher_id=11, periods_per_week=2, is_core=False, requires_consecutive=False, min_gap_days=1)],
+        subject_requirements=[
+            SubjectRequirement(
+                subject_id=subject_id,
+                teacher_id=11,
+                periods_per_week=2,
+                is_core=False,
+                requires_consecutive=False,
+                min_gap_days=1,
+            )
+        ],
         constraints=[],
         dry_run=True,
     )
@@ -572,7 +768,16 @@ async def test_generate_timetable_invalid_class(test_client: AsyncClient, db_ses
         "class_id": 999999,  # Non-existent
         "academic_year_id": 1,
         "working_days": [1, 2, 3, 4, 5],
-        "subject_requirements": [{"subject_id": 1, "teacher_id": 11, "periods_per_week": 3, "is_core": True, "requires_consecutive": False, "min_gap_days": 1}],
+        "subject_requirements": [
+            {
+                "subject_id": 1,
+                "teacher_id": 11,
+                "periods_per_week": 3,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 1,
+            }
+        ],
         "constraints": [],
         "dry_run": True,
     }
@@ -615,11 +820,24 @@ async def test_teacher_daily_load_limits(test_client: AsyncClient, db_session: A
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create test data
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
-    test_class = Class(grade_level=10, section=f"LT{uuid.uuid4().hex[:2]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=10,
+        section=f"LT{uuid.uuid4().hex[:2]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
@@ -634,7 +852,13 @@ async def test_teacher_daily_load_limits(test_client: AsyncClient, db_session: A
     # Create 8 periods per day for 6 days
     periods = []
     for i in range(1, 9):
-        period = Period(period_number=i, start_time=f"{8 + i}:00:00", end_time=f"{9 + i}:00:00", school_id=SCHOOL_ID_1, is_active=True)
+        period = Period(
+            period_number=i,
+            start_time=f"{8 + i}:00:00",
+            end_time=f"{9 + i}:00:00",
+            school_id=SCHOOL_ID_1,
+            is_active=True,
+        )
         periods.append(period)
         db_session.add(period)
     await db_session.flush()
@@ -654,11 +878,37 @@ async def test_teacher_daily_load_limits(test_client: AsyncClient, db_session: A
         "academic_year_id": academic_year_id,
         "working_days": [1, 2, 3, 4, 5, 6],
         "subject_requirements": [
-            {"subject_id": subject_ids[0], "teacher_id": 13, "periods_per_week": 5, "is_core": True, "requires_consecutive": False, "min_gap_days": 0},  # Same teacher for all
-            {"subject_id": subject_ids[1], "teacher_id": 13, "periods_per_week": 4, "is_core": True, "requires_consecutive": False, "min_gap_days": 0},  # Same teacher
-            {"subject_id": subject_ids[2], "teacher_id": 13, "periods_per_week": 3, "is_core": False, "requires_consecutive": False, "min_gap_days": 0},  # Same teacher
+            {
+                "subject_id": subject_ids[0],
+                "teacher_id": 13,
+                "periods_per_week": 5,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            },  # Same teacher for all
+            {
+                "subject_id": subject_ids[1],
+                "teacher_id": 13,
+                "periods_per_week": 4,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            },  # Same teacher
+            {
+                "subject_id": subject_ids[2],
+                "teacher_id": 13,
+                "periods_per_week": 3,
+                "is_core": False,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            },  # Same teacher
         ],
-        "teacher_constraints": {"min_classes_per_day": 2, "max_classes_per_day": 5, "max_classes_per_week": 30, "prioritize_core_subjects": True},
+        "teacher_constraints": {
+            "min_classes_per_day": 2,
+            "max_classes_per_day": 5,
+            "max_classes_per_week": 30,
+            "prioritize_core_subjects": True,
+        },
         "dry_run": False,
     }
 
@@ -725,11 +975,24 @@ async def test_teacher_weekly_load_limits(test_client: AsyncClient, db_session: 
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create test data
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
-    test_class = Class(grade_level=11, section=f"WT{uuid.uuid4().hex[:2]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=11,
+        section=f"WT{uuid.uuid4().hex[:2]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
@@ -744,7 +1007,13 @@ async def test_teacher_weekly_load_limits(test_client: AsyncClient, db_session: 
     # Create 7 periods
     periods = []
     for i in range(1, 8):
-        period = Period(period_number=i, start_time=f"{8 + i}:00:00", end_time=f"{9 + i}:00:00", school_id=SCHOOL_ID_1, is_active=True)
+        period = Period(
+            period_number=i,
+            start_time=f"{8 + i}:00:00",
+            end_time=f"{9 + i}:00:00",
+            school_id=SCHOOL_ID_1,
+            is_active=True,
+        )
         periods.append(period)
         db_session.add(period)
     await db_session.flush()
@@ -764,9 +1033,30 @@ async def test_teacher_weekly_load_limits(test_client: AsyncClient, db_session: 
         "academic_year_id": academic_year_id,
         "working_days": [1, 2, 3, 4, 5, 6],
         "subject_requirements": [
-            {"subject_id": subject_ids[0], "teacher_id": 14, "periods_per_week": 10, "is_core": True, "requires_consecutive": False, "min_gap_days": 0},
-            {"subject_id": subject_ids[1], "teacher_id": 14, "periods_per_week": 10, "is_core": True, "requires_consecutive": False, "min_gap_days": 0},
-            {"subject_id": subject_ids[2], "teacher_id": 14, "periods_per_week": 8, "is_core": False, "requires_consecutive": False, "min_gap_days": 0},
+            {
+                "subject_id": subject_ids[0],
+                "teacher_id": 14,
+                "periods_per_week": 10,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            },
+            {
+                "subject_id": subject_ids[1],
+                "teacher_id": 14,
+                "periods_per_week": 10,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            },
+            {
+                "subject_id": subject_ids[2],
+                "teacher_id": 14,
+                "periods_per_week": 8,
+                "is_core": False,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            },
         ],
         "teacher_constraints": {"max_classes_per_day": 6, "max_classes_per_week": 28},
         "dry_run": False,
@@ -779,7 +1069,11 @@ async def test_teacher_weekly_load_limits(test_client: AsyncClient, db_session: 
     assert data["success"] is True
 
     # Step 3: Verify weekly load in database
-    query = select(Timetable).where(Timetable.class_id == test_class_id, Timetable.teacher_id == 14, Timetable.is_active.is_(True))
+    query = select(Timetable).where(
+        Timetable.class_id == test_class_id,
+        Timetable.teacher_id == 14,
+        Timetable.is_active.is_(True),
+    )
     result = await db_session.execute(query)
     entries = result.scalars().all()
 
@@ -816,11 +1110,24 @@ async def test_core_subject_prioritization(test_client: AsyncClient, db_session:
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create test data
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
-    test_class = Class(grade_level=8, section=f"CT{uuid.uuid4().hex[:2]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=8,
+        section=f"CT{uuid.uuid4().hex[:2]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
@@ -838,7 +1145,13 @@ async def test_core_subject_prioritization(test_client: AsyncClient, db_session:
     # Create 6 periods
     periods = []
     for i in range(1, 7):
-        period = Period(period_number=i, start_time=f"{8 + i}:00:00", end_time=f"{9 + i}:00:00", school_id=SCHOOL_ID_1, is_active=True)
+        period = Period(
+            period_number=i,
+            start_time=f"{8 + i}:00:00",
+            end_time=f"{9 + i}:00:00",
+            school_id=SCHOOL_ID_1,
+            is_active=True,
+        )
         periods.append(period)
         db_session.add(period)
     await db_session.flush()
@@ -862,12 +1175,43 @@ async def test_core_subject_prioritization(test_client: AsyncClient, db_session:
         "academic_year_id": academic_year_id,
         "working_days": [1, 2, 3, 4, 5],
         "subject_requirements": [
-            {"subject_id": math_id, "teacher_id": 11, "periods_per_week": 5, "is_core": True, "requires_consecutive": False, "min_gap_days": 1},
-            {"subject_id": science_id, "teacher_id": 12, "periods_per_week": 5, "is_core": True, "requires_consecutive": False, "min_gap_days": 1},
-            {"subject_id": art_id, "teacher_id": 13, "periods_per_week": 3, "is_core": False, "requires_consecutive": False, "min_gap_days": 0},
-            {"subject_id": music_id, "teacher_id": 14, "periods_per_week": 2, "is_core": False, "requires_consecutive": False, "min_gap_days": 0},
+            {
+                "subject_id": math_id,
+                "teacher_id": 11,
+                "periods_per_week": 5,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 1,
+            },
+            {
+                "subject_id": science_id,
+                "teacher_id": 12,
+                "periods_per_week": 5,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 1,
+            },
+            {
+                "subject_id": art_id,
+                "teacher_id": 13,
+                "periods_per_week": 3,
+                "is_core": False,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            },
+            {
+                "subject_id": music_id,
+                "teacher_id": 14,
+                "periods_per_week": 2,
+                "is_core": False,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            },
         ],
-        "teacher_constraints": {"prioritize_core_subjects": True, "core_subject_names": ["Mathematics", "Science"]},
+        "teacher_constraints": {
+            "prioritize_core_subjects": True,
+            "core_subject_names": ["Mathematics", "Science"],
+        },
         "dry_run": False,
     }
 
@@ -930,11 +1274,24 @@ async def test_impossible_constraints_graceful_handling(test_client: AsyncClient
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create minimal test data
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
-    test_class = Class(grade_level=9, section=f"IT{uuid.uuid4().hex[:2]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=9,
+        section=f"IT{uuid.uuid4().hex[:2]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
@@ -944,7 +1301,13 @@ async def test_impossible_constraints_graceful_handling(test_client: AsyncClient
 
     # Create periods
     for i in range(1, 7):
-        period = Period(period_number=i, start_time=f"{8 + i}:00:00", end_time=f"{9 + i}:00:00", school_id=SCHOOL_ID_1, is_active=True)
+        period = Period(
+            period_number=i,
+            start_time=f"{8 + i}:00:00",
+            end_time=f"{9 + i}:00:00",
+            school_id=SCHOOL_ID_1,
+            is_active=True,
+        )
         db_session.add(period)
     await db_session.flush()
 
@@ -960,8 +1323,20 @@ async def test_impossible_constraints_graceful_handling(test_client: AsyncClient
         "class_id": test_class_id,
         "academic_year_id": academic_year_id,
         "working_days": [1, 2, 3, 4, 5, 6],
-        "subject_requirements": [{"subject_id": subject_id, "teacher_id": 11, "periods_per_week": 5, "is_core": True, "requires_consecutive": False, "min_gap_days": 0}],
-        "teacher_constraints": {"min_classes_per_day": 6, "max_classes_per_week": 10},  # Impossible: 6*6=36 > 10
+        "subject_requirements": [
+            {
+                "subject_id": subject_id,
+                "teacher_id": 11,
+                "periods_per_week": 5,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            }
+        ],
+        "teacher_constraints": {
+            "min_classes_per_day": 6,
+            "max_classes_per_week": 10,
+        },  # Impossible: 6*6=36 > 10
         "dry_run": True,
     }
 
@@ -1007,11 +1382,24 @@ async def test_swap_timetable_entries_success(test_client: AsyncClient, db_sessi
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create test data
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
-    test_class = Class(grade_level=10, section=f"ST{uuid.uuid4().hex[:2]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=10,
+        section=f"ST{uuid.uuid4().hex[:2]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
@@ -1022,14 +1410,46 @@ async def test_swap_timetable_entries_success(test_client: AsyncClient, db_sessi
     await db_session.flush()
 
     # Create 2 periods
-    period_1 = Period(period_number=1, start_time="09:00:00", end_time="10:00:00", school_id=SCHOOL_ID_1, is_active=True)
-    period_2 = Period(period_number=2, start_time="10:00:00", end_time="11:00:00", school_id=SCHOOL_ID_1, is_active=True)
+    period_1 = Period(
+        period_number=1,
+        start_time="09:00:00",
+        end_time="10:00:00",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
+    period_2 = Period(
+        period_number=2,
+        start_time="10:00:00",
+        end_time="11:00:00",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add_all([period_1, period_2])
     await db_session.flush()
 
     # Create 2 timetable entries
-    entry_1 = Timetable(school_id=SCHOOL_ID_1, class_id=test_class.class_id, subject_id=subject_1.subject_id, teacher_id=11, period_id=period_1.id, day_of_week=1, academic_year_id=academic_year.id, is_active=True, is_editable=True)  # Monday
-    entry_2 = Timetable(school_id=SCHOOL_ID_1, class_id=test_class.class_id, subject_id=subject_2.subject_id, teacher_id=12, period_id=period_2.id, day_of_week=1, academic_year_id=academic_year.id, is_active=True, is_editable=True)  # Monday
+    entry_1 = Timetable(
+        school_id=SCHOOL_ID_1,
+        class_id=test_class.class_id,
+        subject_id=subject_1.subject_id,
+        teacher_id=11,
+        period_id=period_1.id,
+        day_of_week=1,
+        academic_year_id=academic_year.id,
+        is_active=True,
+        is_editable=True,
+    )  # Monday
+    entry_2 = Timetable(
+        school_id=SCHOOL_ID_1,
+        class_id=test_class.class_id,
+        subject_id=subject_2.subject_id,
+        teacher_id=12,
+        period_id=period_2.id,
+        day_of_week=1,
+        academic_year_id=academic_year.id,
+        is_active=True,
+        is_editable=True,
+    )  # Monday
     db_session.add_all([entry_1, entry_2])
     await db_session.flush()
 
@@ -1045,7 +1465,11 @@ async def test_swap_timetable_entries_success(test_client: AsyncClient, db_sessi
     print(f"✓ Created entries: {entry_1_id} (teacher {original_entry_1_teacher}), {entry_2_id} (teacher {original_entry_2_teacher})")
 
     # Step 2: Swap entries (user_id is automatically extracted from JWT token)
-    swap_payload = {"class_id": test_class_id, "entry_1_id": entry_1_id, "entry_2_id": entry_2_id}
+    swap_payload = {
+        "class_id": test_class_id,
+        "entry_1_id": entry_1_id,
+        "entry_2_id": entry_2_id,
+    }
 
     response = await test_client.post("/api/v1/timetable-generate/swap", json=swap_payload)
 
@@ -1104,13 +1528,33 @@ async def test_swap_timetable_entries_conflict(test_client: AsyncClient, db_sess
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create test data
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
     # Create 2 classes
-    class_1 = Class(grade_level=10, section=f"CA{uuid.uuid4().hex[:2]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
-    class_2 = Class(grade_level=10, section=f"CB{uuid.uuid4().hex[:2]}", class_teacher_id=12, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    class_1 = Class(
+        grade_level=10,
+        section=f"CA{uuid.uuid4().hex[:2]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
+    class_2 = Class(
+        grade_level=10,
+        section=f"CB{uuid.uuid4().hex[:2]}",
+        class_teacher_id=12,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add_all([class_1, class_2])
     await db_session.flush()
 
@@ -1121,19 +1565,59 @@ async def test_swap_timetable_entries_conflict(test_client: AsyncClient, db_sess
     await db_session.flush()
 
     # Create 2 periods
-    period_1 = Period(period_number=1, start_time="09:00:00", end_time="10:00:00", school_id=SCHOOL_ID_1, is_active=True)
-    period_2 = Period(period_number=2, start_time="10:00:00", end_time="11:00:00", school_id=SCHOOL_ID_1, is_active=True)
+    period_1 = Period(
+        period_number=1,
+        start_time="09:00:00",
+        end_time="10:00:00",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
+    period_2 = Period(
+        period_number=2,
+        start_time="10:00:00",
+        end_time="11:00:00",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add_all([period_1, period_2])
     await db_session.flush()
 
     # Create entries that will cause conflict
     # Entry 1: Class 1, Period 1, Teacher 13
-    entry_1 = Timetable(school_id=SCHOOL_ID_1, class_id=class_1.class_id, subject_id=subject_1.subject_id, teacher_id=13, period_id=period_1.id, day_of_week=1, academic_year_id=academic_year.id, is_active=True, is_editable=True)
+    entry_1 = Timetable(
+        school_id=SCHOOL_ID_1,
+        class_id=class_1.class_id,
+        subject_id=subject_1.subject_id,
+        teacher_id=13,
+        period_id=period_1.id,
+        day_of_week=1,
+        academic_year_id=academic_year.id,
+        is_active=True,
+        is_editable=True,
+    )
     # Entry 2: Class 1, Period 2, Teacher 14
-    entry_2 = Timetable(school_id=SCHOOL_ID_1, class_id=class_1.class_id, subject_id=subject_2.subject_id, teacher_id=14, period_id=period_2.id, day_of_week=1, academic_year_id=academic_year.id, is_active=True, is_editable=True)
+    entry_2 = Timetable(
+        school_id=SCHOOL_ID_1,
+        class_id=class_1.class_id,
+        subject_id=subject_2.subject_id,
+        teacher_id=14,
+        period_id=period_2.id,
+        day_of_week=1,
+        academic_year_id=academic_year.id,
+        is_active=True,
+        is_editable=True,
+    )
     # Entry 3: Class 2, Period 2, Teacher 13 (CONFLICT: same teacher as entry_1, same time as entry_2)
     entry_3 = Timetable(
-        school_id=SCHOOL_ID_1, class_id=class_2.class_id, subject_id=subject_1.subject_id, teacher_id=13, period_id=period_2.id, day_of_week=1, academic_year_id=academic_year.id, is_active=True, is_editable=True  # Same as entry_1  # Same as entry_2
+        school_id=SCHOOL_ID_1,
+        class_id=class_2.class_id,
+        subject_id=subject_1.subject_id,
+        teacher_id=13,
+        period_id=period_2.id,
+        day_of_week=1,
+        academic_year_id=academic_year.id,
+        is_active=True,
+        is_editable=True,  # Same as entry_1  # Same as entry_2
     )
     db_session.add_all([entry_1, entry_2, entry_3])
     await db_session.flush()
@@ -1151,12 +1635,20 @@ async def test_swap_timetable_entries_conflict(test_client: AsyncClient, db_sess
     # If we swap entry_1 and entry_2, entry_1 would move to period_2 with teacher_13
     # But entry_3 already has teacher_13 at period_2 → CONFLICT
 
-    swap_payload = {"class_id": class_1_id, "entry_1_id": entry_1_id, "entry_2_id": entry_2_id}
+    swap_payload = {
+        "class_id": class_1_id,
+        "entry_1_id": entry_1_id,
+        "entry_2_id": entry_2_id,
+    }
 
     response = await test_client.post("/api/v1/timetable-generate/swap", json=swap_payload)
 
     # Expect rejection (either 200 with success=false, or 409, or 400)
-    assert response.status_code in [200, 400, 409], f"Expected 200/400/409, got {response.status_code}"
+    assert response.status_code in [
+        200,
+        400,
+        409,
+    ], f"Expected 200/400/409, got {response.status_code}"
 
     data = response.json()
 
@@ -1204,11 +1696,24 @@ async def test_generate_timetable_without_constraints(test_client: AsyncClient, 
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create minimal test data
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
-    test_class = Class(grade_level=7, section=f"LG{uuid.uuid4().hex[:2]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=7,
+        section=f"LG{uuid.uuid4().hex[:2]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
@@ -1217,7 +1722,13 @@ async def test_generate_timetable_without_constraints(test_client: AsyncClient, 
     await db_session.flush()
 
     for i in range(1, 5):
-        period = Period(period_number=i, start_time=f"{8 + i}:00:00", end_time=f"{9 + i}:00:00", school_id=SCHOOL_ID_1, is_active=True)
+        period = Period(
+            period_number=i,
+            start_time=f"{8 + i}:00:00",
+            end_time=f"{9 + i}:00:00",
+            school_id=SCHOOL_ID_1,
+            is_active=True,
+        )
         db_session.add(period)
     await db_session.flush()
 
@@ -1232,7 +1743,16 @@ async def test_generate_timetable_without_constraints(test_client: AsyncClient, 
         "class_id": test_class_id,
         "academic_year_id": academic_year_id,
         "working_days": [1, 2, 3, 4, 5],
-        "subject_requirements": [{"subject_id": subject_id, "teacher_id": 11, "periods_per_week": 4, "is_core": True, "requires_consecutive": False, "min_gap_days": 0}],
+        "subject_requirements": [
+            {
+                "subject_id": subject_id,
+                "teacher_id": 11,
+                "periods_per_week": 4,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            }
+        ],
         "constraints": [],  # Empty legacy constraints
         # NO teacher_constraints field
         "dry_run": False,
@@ -1289,11 +1809,24 @@ async def test_database_integrity_after_generation(test_client: AsyncClient, db_
     app.dependency_overrides[get_current_user_profile] = lambda: mock_admin_profile
 
     # Step 1: Create test data
-    academic_year = AcademicYear(name=f"AY {uuid.uuid4().hex[:8]}", start_date="2025-01-01", end_date="2025-12-31", school_id=SCHOOL_ID_1, is_active=True)
+    academic_year = AcademicYear(
+        name=f"AY {uuid.uuid4().hex[:8]}",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(academic_year)
     await db_session.flush()
 
-    test_class = Class(grade_level=12, section=f"IG{uuid.uuid4().hex[:2]}", class_teacher_id=11, academic_year_id=academic_year.id, school_id=SCHOOL_ID_1, is_active=True)
+    test_class = Class(
+        grade_level=12,
+        section=f"IG{uuid.uuid4().hex[:2]}",
+        class_teacher_id=11,
+        academic_year_id=academic_year.id,
+        school_id=SCHOOL_ID_1,
+        is_active=True,
+    )
     db_session.add(test_class)
     await db_session.flush()
 
@@ -1304,7 +1837,13 @@ async def test_database_integrity_after_generation(test_client: AsyncClient, db_
     await db_session.flush()
 
     for i in range(1, 6):
-        period = Period(period_number=i, start_time=f"{8 + i}:00:00", end_time=f"{9 + i}:00:00", school_id=SCHOOL_ID_1, is_active=True)
+        period = Period(
+            period_number=i,
+            start_time=f"{8 + i}:00:00",
+            end_time=f"{9 + i}:00:00",
+            school_id=SCHOOL_ID_1,
+            is_active=True,
+        )
         db_session.add(period)
     await db_session.flush()
 
@@ -1321,8 +1860,22 @@ async def test_database_integrity_after_generation(test_client: AsyncClient, db_
         "academic_year_id": academic_year_id,
         "working_days": [1, 2, 3],
         "subject_requirements": [
-            {"subject_id": subject_1_id, "teacher_id": 15, "periods_per_week": 3, "is_core": True, "requires_consecutive": False, "min_gap_days": 0},  # Same teacher
-            {"subject_id": subject_2_id, "teacher_id": 15, "periods_per_week": 3, "is_core": True, "requires_consecutive": False, "min_gap_days": 0},  # Same teacher
+            {
+                "subject_id": subject_1_id,
+                "teacher_id": 15,
+                "periods_per_week": 3,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            },  # Same teacher
+            {
+                "subject_id": subject_2_id,
+                "teacher_id": 15,
+                "periods_per_week": 3,
+                "is_core": True,
+                "requires_consecutive": False,
+                "min_gap_days": 0,
+            },  # Same teacher
         ],
         "teacher_constraints": {"max_classes_per_day": 4},
         "dry_run": False,

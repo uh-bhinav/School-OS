@@ -109,8 +109,18 @@ async def get_teachers_for_subject(subject_id: int) -> dict[str, Any]:
             logger.info(f"Calling API: GET /subjects/{subject_id}/teachers")
             # This calls the refactored GET /{subject_id}/teachers endpoint
             response = await client.get(f"/subjects/{subject_id}/teachers")
-            return {"success": True, "subject_id": subject_id, "teacher_count": len(response), "teachers": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+            return {
+                "success": True,
+                "subject_id": subject_id,
+                "teacher_count": len(response),
+                "teachers": response,
+            }
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting teachers for subject: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -165,7 +175,12 @@ async def update_subject(subject_id: int, **updates: Any) -> dict[str, Any]:
             logger.info(f"Calling API: PUT /subjects/{subject_id} with payload: {payload}")
             response = await client.put(f"/subjects/{subject_id}", json=payload)
             return {"success": True, "updated_subject": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error updating subject: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -183,8 +198,16 @@ async def delete_subject(subject_id: int) -> dict[str, Any]:
             logger.info(f"Calling API: DELETE /subjects/{subject_id}")
             # DELETE returns 204 No Content
             await client.delete(f"/subjects/{subject_id}")
-            return {"success": True, "message": f"Subject {subject_id} deleted successfully."}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+            return {
+                "success": True,
+                "message": f"Subject {subject_id} deleted successfully.",
+            }
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error deleting subject: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:

@@ -17,7 +17,10 @@ class RootRoute(BaseModel):
     main L1 Root Orchestrator.
     """
 
-    module_name: ModuleName = Field(..., description=("The name of the L2 module to route the query to. " "Use '__self__' for simple greetings or general questions."))
+    module_name: ModuleName = Field(
+        ...,
+        description=("The name of the L2 module to route the query to. " "Use '__self__' for simple greetings or general questions."),
+    )
 
 
 __all__ = ["RootRoute"]

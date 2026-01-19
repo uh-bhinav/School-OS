@@ -117,17 +117,26 @@ class TestForwardReconciliation:
         db.get = AsyncMock(return_value=mock_school)
 
         # Mock crypto service
-        mocker.patch("app.core.crypto_service.decrypt_value", side_effect=["rzp_key_12345", "rzp_secret_67890"])
+        mocker.patch(
+            "app.core.crypto_service.decrypt_value",
+            side_effect=["rzp_key_12345", "rzp_secret_67890"],
+        )
 
         # Mock Razorpay API responses
         # 1. Order status = "paid"
-        mock_razorpay_client.order.fetch.return_value = {"status": "paid", "id": "order_OLD_PENDING"}
+        mock_razorpay_client.order.fetch.return_value = {
+            "status": "paid",
+            "id": "order_OLD_PENDING",
+        }
 
         # 2. Order payments returns a captured payment
         mock_razorpay_client.order.payments.return_value = {"items": [{"id": "pay_CAPTURED_123", "status": "captured", "amount": 150000}]}
 
         # Mock invoice service allocation
-        with patch("app.services.invoice_service.allocate_payment_to_invoice_items", new_callable=AsyncMock) as mock_allocate:
+        with patch(
+            "app.services.invoice_service.allocate_payment_to_invoice_items",
+            new_callable=AsyncMock,
+        ) as mock_allocate:
             # --- ACT ---
             service = PaymentService(db)
             result = await service.reconcile_pending_payments(db)
@@ -175,7 +184,10 @@ class TestForwardReconciliation:
         db.execute = AsyncMock(return_value=mock_result)
         db.get = AsyncMock(return_value=mock_school)
 
-        mocker.patch("app.core.crypto_service.decrypt_value", side_effect=["rzp_key", "rzp_secret"])
+        mocker.patch(
+            "app.core.crypto_service.decrypt_value",
+            side_effect=["rzp_key", "rzp_secret"],
+        )
 
         mock_razorpay_client.order.fetch.return_value = {"status": "paid"}
         mock_razorpay_client.order.payments.return_value = {"items": [{"id": "pay_ORDER_CAPTURED", "status": "captured"}]}
@@ -219,7 +231,10 @@ class TestForwardReconciliation:
         mock_razorpay_client.order.payments.return_value = {"items": [{"id": "pay_CAPTURED", "status": "captured"}]}
 
         # Mock allocation to raise an exception
-        with patch("app.services.invoice_service.allocate_payment_to_invoice_items", new_callable=AsyncMock) as mock_allocate:
+        with patch(
+            "app.services.invoice_service.allocate_payment_to_invoice_items",
+            new_callable=AsyncMock,
+        ) as mock_allocate:
             mock_allocate.side_effect = Exception("Allocation service down")
 
             # --- ACT ---
@@ -432,7 +447,10 @@ class TestReverseReconciliation:
         mock_razorpay_client.order.payments.return_value = {
             "items": [
                 {"id": "pay_ATTEMPT_1", "status": "failed"},
-                {"id": "pay_ATTEMPT_2", "status": "authorized"},  # Still pending capture
+                {
+                    "id": "pay_ATTEMPT_2",
+                    "status": "authorized",
+                },  # Still pending capture
             ]
         }
 
@@ -492,7 +510,10 @@ class TestAuthorizedPaymentReconciliation:
         }
 
         # Mock invoice allocation
-        with patch("app.services.invoice_service.allocate_payment_to_invoice_items", new_callable=AsyncMock) as mock_allocate:
+        with patch(
+            "app.services.invoice_service.allocate_payment_to_invoice_items",
+            new_callable=AsyncMock,
+        ) as mock_allocate:
             # --- ACT ---
             service = PaymentService(db)
             result = await service.reconcile_authorized_payments(db)
@@ -684,10 +705,16 @@ class TestAuthorizedPaymentReconciliation:
         db.get = AsyncMock(return_value=mock_school)
 
         mocker.patch("app.core.crypto_service.decrypt_value", side_effect=["key", "secret"])
-        mock_razorpay_client.payment.capture.return_value = {"id": "pay_AUTH_ALLOC_FAIL", "status": "captured"}
+        mock_razorpay_client.payment.capture.return_value = {
+            "id": "pay_AUTH_ALLOC_FAIL",
+            "status": "captured",
+        }
 
         # Mock allocation to fail
-        with patch("app.services.invoice_service.allocate_payment_to_invoice_items", new_callable=AsyncMock) as mock_allocate:
+        with patch(
+            "app.services.invoice_service.allocate_payment_to_invoice_items",
+            new_callable=AsyncMock,
+        ) as mock_allocate:
             mock_allocate.side_effect = Exception("Allocation service error")
 
             # --- ACT ---
@@ -725,7 +752,10 @@ class TestAuthorizedPaymentReconciliation:
         db.get = AsyncMock(return_value=mock_school)
 
         mocker.patch("app.core.crypto_service.decrypt_value", side_effect=["key", "secret"])
-        mock_razorpay_client.payment.capture.return_value = {"id": "pay_AUTH_ORDER", "status": "captured"}
+        mock_razorpay_client.payment.capture.return_value = {
+            "id": "pay_AUTH_ORDER",
+            "status": "captured",
+        }
 
         # --- ACT ---
         service = PaymentService(db)
@@ -863,7 +893,11 @@ class TestReconciliationEdgeCases:
         mock_school = create_mock_school()
         db = AsyncMock(spec=AsyncSession)
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [mock_payment_1, mock_payment_2, mock_payment_3]
+        mock_result.scalars.return_value.all.return_value = [
+            mock_payment_1,
+            mock_payment_2,
+            mock_payment_3,
+        ]
         db.execute = AsyncMock(return_value=mock_result)
         db.get = AsyncMock(return_value=mock_school)
 
@@ -886,7 +920,10 @@ class TestReconciliationEdgeCases:
             {"items": [{"id": "pay_BATCH_3", "status": "failed"}]},  # For payment 3
         ]
 
-        with patch("app.services.invoice_service.allocate_payment_to_invoice_items", new_callable=AsyncMock):
+        with patch(
+            "app.services.invoice_service.allocate_payment_to_invoice_items",
+            new_callable=AsyncMock,
+        ):
             # --- ACT ---
             service = PaymentService(db)
             result = await service.reconcile_pending_payments(db)

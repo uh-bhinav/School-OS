@@ -110,8 +110,18 @@ async def get_students_in_class(class_id: int) -> dict[str, Any]:
         async with AgentHTTPClient() as client:
             logger.info(f"Calling API: GET /classes/{class_id}/students")
             response = await client.get(f"/classes/{class_id}/students")
-            return {"success": True, "class_id": class_id, "student_count": len(response), "students": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+            return {
+                "success": True,
+                "class_id": class_id,
+                "student_count": len(response),
+                "students": response,
+            }
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting students in class: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -168,7 +178,12 @@ async def update_class(class_id: int, **updates: Any) -> dict[str, Any]:
             logger.info(f"Calling API: PUT /classes/{class_id} with payload: {payload}")
             response = await client.put(f"/classes/{class_id}", json=payload)
             return {"success": True, "updated_class": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error updating class: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -186,8 +201,16 @@ async def delete_class(class_id: int) -> dict[str, Any]:
             logger.info(f"Calling API: DELETE /classes/{class_id}")
             # DELETE returns 204 No Content
             await client.delete(f"/classes/{class_id}")
-            return {"success": True, "message": f"Class {class_id} deleted successfully."}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+            return {
+                "success": True,
+                "message": f"Class {class_id} deleted successfully.",
+            }
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error deleting class: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -206,7 +229,12 @@ async def assign_subjects_to_class(class_id: int, subject_ids: list[int]) -> dic
             logger.info(f"Calling API: POST /classes/{class_id}/subjects with {len(subject_ids)} subjects")
             response = await client.post(f"/classes/{class_id}/subjects", json=payload)
             return {"success": True, "updated_class": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error assigning subjects to class: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -265,7 +293,11 @@ async def get_class_with_teachers_and_subjects(
         return {"success": False, "error": f"Class '{class_name}' not found"}
     except AgentHTTPClientError as e:
         logger.error(f"HTTP error fetching class info: {e.message}", exc_info=True)
-        return {"success": False, "error": f"Error fetching class information: {e.message}", "status_code": getattr(e, "status_code", 500)}
+        return {
+            "success": False,
+            "error": f"Error fetching class information: {e.message}",
+            "status_code": getattr(e, "status_code", 500),
+        }
     except Exception as e:
         logger.exception(f"Unexpected error in get_class_with_teachers_and_subjects: {e}")
         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}

@@ -250,7 +250,12 @@ async def allocate_payment_to_invoice_items(db: AsyncSession, *, payment_id: int
         # 4. Allocate the smaller of the two amounts: what's left of the payment, or what's needed for the item
         allocation_amount = min(amount_to_allocate, amount_needed)
 
-        allocation_data = PaymentAllocationCreate(payment_id=payment.id, invoice_item_id=item.id, amount_allocated=allocation_amount, allocated_by_user_id=user_id)
+        allocation_data = PaymentAllocationCreate(
+            payment_id=payment.id,
+            invoice_item_id=item.id,
+            amount_allocated=allocation_amount,
+            allocated_by_user_id=user_id,
+        )
         new_allocation = PaymentAllocation(**allocation_data.model_dump())
         allocations_to_create.append(new_allocation)
 
@@ -345,7 +350,10 @@ async def generate_invoices_for_class(db: AsyncSession, *, obj_in: BulkInvoiceCr
                     successful_invoices += 1
 
                 except Exception as e:
-                    logger.error(f"ERROR: Failed to create invoice for student {student.student_id}: {str(e)}", exc_info=True)
+                    logger.error(
+                        f"ERROR: Failed to create invoice for student {student.student_id}: {str(e)}",
+                        exc_info=True,
+                    )
                     raise
 
             # Flush to ensure all objects are written
@@ -360,7 +368,13 @@ async def generate_invoices_for_class(db: AsyncSession, *, obj_in: BulkInvoiceCr
         logger.error(f"CRITICAL: Bulk invoice generation failed: {str(e)}", exc_info=True)
 
         log_message = "Critical failure during bulk invoice generation. Operation rolled back."
-        log_details = {"class_id": obj_in.class_id, "fee_term_id": obj_in.fee_term_id, "total_students_affected": len(students), "error_type": type(e).__name__, "error_message": str(e)}
+        log_details = {
+            "class_id": obj_in.class_id,
+            "fee_term_id": obj_in.fee_term_id,
+            "total_students_affected": len(students),
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+        }
         log_entry = LogCreate(log_level="CRITICAL", message=log_message, details=log_details)
 
         try:
@@ -372,7 +386,11 @@ async def generate_invoices_for_class(db: AsyncSession, *, obj_in: BulkInvoiceCr
 
         raise ValueError(log_message)
 
-    return {"detail": "Bulk invoice generation complete.", "successful": successful_invoices, "failed": 0}
+    return {
+        "detail": "Bulk invoice generation complete.",
+        "successful": successful_invoices,
+        "failed": 0,
+    }
 
 
 async def _generate_invoice_for_student_core(db: AsyncSession, *, obj_in: InvoiceCreate) -> Invoice:
@@ -383,7 +401,12 @@ async def _generate_invoice_for_student_core(db: AsyncSession, *, obj_in: Invoic
 
     student_stmt = (
         select(Student)
-        .options(selectinload(Student.current_class), selectinload(Student.profile), selectinload(Student.fee_assignments), selectinload(Student.fee_discounts).selectinload(StudentFeeDiscount.discount))  # LOAD profile
+        .options(
+            selectinload(Student.current_class),
+            selectinload(Student.profile),
+            selectinload(Student.fee_assignments),
+            selectinload(Student.fee_discounts).selectinload(StudentFeeDiscount.discount),
+        )  # LOAD profile
         .where(Student.student_id == obj_in.student_id)
     )
     student_result = await db.execute(student_stmt)
@@ -441,7 +464,12 @@ async def _generate_invoice_for_student_core(db: AsyncSession, *, obj_in: Invoic
                     if discount_value > 0:
                         logger.info(f"DEBUG: Discount applied - component={components_map.get(component_id)}, discount={discount_value}")
                         total_discount_for_item += discount_value
-                        applied_discounts_to_log.append({"discount_id": discount_template.id, "amount_discounted": discount_value})
+                        applied_discounts_to_log.append(
+                            {
+                                "discount_id": discount_template.id,
+                                "amount_discounted": discount_value,
+                            }
+                        )
 
             final_item_amount = original_amount - total_discount_for_item
             if final_item_amount < 0:
@@ -484,7 +512,11 @@ async def _generate_invoice_for_student_core(db: AsyncSession, *, obj_in: Invoic
     logger.info(f"DEBUG: Invoice flushed - ID={db_obj.id}")
 
     for discount_log in applied_discounts_to_log:
-        audit_record = AppliedDiscount(invoice_id=db_obj.id, discount_id=discount_log["discount_id"], amount_discounted=discount_log["amount_discounted"])
+        audit_record = AppliedDiscount(
+            invoice_id=db_obj.id,
+            discount_id=discount_log["discount_id"],
+            amount_discounted=discount_log["amount_discounted"],
+        )
         db.add(audit_record)
 
     logger.info(f"DEBUG: _generate_invoice_for_student_core completed for student_id={obj_in.student_id}")

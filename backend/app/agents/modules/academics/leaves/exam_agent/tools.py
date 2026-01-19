@@ -162,7 +162,12 @@ async def update_exam(exam_id: int, **updates: Any) -> dict[str, Any]:
             logger.info(f"Calling API: PUT /exams/{exam_id} with payload: {payload}")
             response = await client.put(f"/exams/{exam_id}", json=payload)
             return {"success": True, "updated_exam": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error updating exam: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -181,7 +186,12 @@ async def delete_exam(exam_id: int) -> dict[str, Any]:
             # DELETE returns 204 No Content
             await client.delete(f"/exams/{exam_id}")
             return {"success": True, "message": f"Exam {exam_id} deleted successfully."}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error deleting exam: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -211,17 +221,28 @@ async def search_exam_type(exam_type_name: str) -> dict[str, Any]:
 
             if not exam_types:
                 logger.warning("❌ No exam types available")
-                return {"success": False, "error": "No exam types available in the system"}
+                return {
+                    "success": False,
+                    "error": "No exam types available in the system",
+                }
 
             # Search by partial match (case-insensitive)
             for exam_type in exam_types:
                 if exam_type_name.lower() in exam_type["type_name"].lower():
                     logger.info(f"✅ Found exam type: {exam_type['type_name']} (ID: {exam_type['exam_type_id']})")
-                    return {"success": True, "exam_type_id": exam_type["exam_type_id"], "exam_type_name": exam_type["type_name"], "school_id": exam_type["school_id"]}
+                    return {
+                        "success": True,
+                        "exam_type_id": exam_type["exam_type_id"],
+                        "exam_type_name": exam_type["type_name"],
+                        "school_id": exam_type["school_id"],
+                    }
 
             logger.warning(f"❌ Exam type not found: {exam_type_name}")
             available = ", ".join([et["type_name"] for et in exam_types[:5]])
-            return {"success": False, "error": f"No exam type matching '{exam_type_name}'. Available: {available}"}
+            return {
+                "success": False,
+                "error": f"No exam type matching '{exam_type_name}'. Available: {available}",
+            }
     except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
         logger.error(f"❌ API Error searching exam type: {e.message}", exc_info=True)
         return _format_error_response(e)
@@ -275,7 +296,14 @@ async def _search_exam_and_class(exam_name: str, class_name: str) -> dict[str, A
 
             logger.info(f"Found exam_id={exam_id}, class_id={class_id}, school_id={school_id}")
 
-            return {"success": True, "exam_id": exam_id, "exam_name": exam.get("exam_name"), "class_id": class_id, "class_name": class_name, "school_id": school_id}
+            return {
+                "success": True,
+                "exam_id": exam_id,
+                "exam_name": exam.get("exam_name"),
+                "class_id": class_id,
+                "class_name": class_name,
+                "school_id": school_id,
+            }
 
     except AgentResourceNotFoundError as e:
         logger.warn(f"Resource not found: {e.message}")
@@ -322,15 +350,26 @@ async def delete_exam_from_class(exam_name: str, class_name: str) -> dict[str, A
             # ✅ FIXED: Use correct endpoint path
             logger.info(f"Deleting mapping: exam_id={exam_id}, class_id={class_id}")
 
-            await client.delete("/exam-class-mappings/remove", params={"exam_id": exam_id, "class_id": class_id})  # ✅ Changed from /exams/classes/remove
+            await client.delete(
+                "/exam-class-mappings/remove",
+                params={"exam_id": exam_id, "class_id": class_id},
+            )  # ✅ Changed from /exams/classes/remove
 
             logger.info(f"Successfully deleted exam {exam_id} from class {class_id}")
 
-            return {"success": True, "message": f"Exam '{exam_name}' has been successfully removed from class '{class_name}'", "exam_id": exam_id, "class_id": class_id}
+            return {
+                "success": True,
+                "message": f"Exam '{exam_name}' has been successfully removed from class '{class_name}'",
+                "exam_id": exam_id,
+                "class_id": class_id,
+            }
 
     except AgentResourceNotFoundError as e:
         logger.warn(f"Exam-class mapping not found: {e.message}")
-        return {"success": False, "error": "Exam-class mapping not found. The exam may not be assigned to this class."}
+        return {
+            "success": False,
+            "error": "Exam-class mapping not found. The exam may not be assigned to this class.",
+        }
     except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
         logger.error(f"Error deleting exam from class: {e.message}", exc_info=True)
         return _format_error_response(e)

@@ -60,7 +60,12 @@ async def test_create_fee_component_duplicate_name_fails(db_session, mock_admin_
     )
     await service.create_fee_component(component_data=initial_component_data)
 
-    duplicate_component_data = FeeComponentCreate(school_id=mock_admin_profile.school_id, component_name="Duplicate Test Fee", component_type="Academic", base_amount=200.00)
+    duplicate_component_data = FeeComponentCreate(
+        school_id=mock_admin_profile.school_id,
+        component_name="Duplicate Test Fee",
+        component_type="Academic",
+        base_amount=200.00,
+    )
 
     with pytest.raises(HTTPException) as exc_info:
         await service.create_fee_component(component_data=duplicate_component_data)
@@ -75,8 +80,18 @@ async def test_create_fee_template_with_components_and_terms(db_session, mock_ad
     """
     # --- FIX: Manually create prerequisite data within the test's transaction ---
     # Arrange: Create and flush components to get their IDs without committing.
-    comp1 = FeeComponent(school_id=mock_admin_profile.school_id, component_name="Test Tuition Fee", component_type="Academic", base_amount=20000)
-    comp2 = FeeComponent(school_id=mock_admin_profile.school_id, component_name="Test Library Fee", component_type="Service", base_amount=500)
+    comp1 = FeeComponent(
+        school_id=mock_admin_profile.school_id,
+        component_name="Test Tuition Fee",
+        component_type="Academic",
+        base_amount=20000,
+    )
+    comp2 = FeeComponent(
+        school_id=mock_admin_profile.school_id,
+        component_name="Test Library Fee",
+        component_type="Service",
+        base_amount=500,
+    )
     db_session.add_all([comp1, comp2])
     await db_session.flush()  # This assigns comp1.id and comp2.id without ending the transaction
 
@@ -88,7 +103,10 @@ async def test_create_fee_template_with_components_and_terms(db_session, mock_ad
         academic_year_id=1,
         name="Grade 5 Annual Test Template",
         component_ids=[comp1.id, comp2.id],
-        terms=[FeeTermCreate(name="Term 1", due_date=date(2025, 4, 15), amount=10250), FeeTermCreate(name="Term 2", due_date=date(2025, 10, 15), amount=10250)],
+        terms=[
+            FeeTermCreate(name="Term 1", due_date=date(2025, 4, 15), amount=10250),
+            FeeTermCreate(name="Term 2", due_date=date(2025, 10, 15), amount=10250),
+        ],
     )
 
     # Act: Call the service function we are actually testing
@@ -116,14 +134,33 @@ async def test_assign_template_to_class_bulk(db_session, mock_admin_profile):
     all the necessary class_fee_structure records for each component.
     """
     # Arrange: Create all prerequisite data
-    comp1 = FeeComponent(school_id=mock_admin_profile.school_id, component_name="Bulk Assign Tuition", component_type="Academic", base_amount=50000)
-    comp2 = FeeComponent(school_id=mock_admin_profile.school_id, component_name="Bulk Assign Sports Fee", component_type="Service", base_amount=3000)
+    comp1 = FeeComponent(
+        school_id=mock_admin_profile.school_id,
+        component_name="Bulk Assign Tuition",
+        component_type="Academic",
+        base_amount=50000,
+    )
+    comp2 = FeeComponent(
+        school_id=mock_admin_profile.school_id,
+        component_name="Bulk Assign Sports Fee",
+        component_type="Service",
+        base_amount=3000,
+    )
     db_session.add_all([comp1, comp2])
 
-    template = FeeTemplate(school_id=mock_admin_profile.school_id, academic_year_id=1, name="Bulk Assign Template")
+    template = FeeTemplate(
+        school_id=mock_admin_profile.school_id,
+        academic_year_id=1,
+        name="Bulk Assign Template",
+    )
     db_session.add(template)
 
-    test_class = Class(school_id=mock_admin_profile.school_id, grade_level=6, section="C", academic_year_id=1)
+    test_class = Class(
+        school_id=mock_admin_profile.school_id,
+        grade_level=6,
+        section="C",
+        academic_year_id=1,
+    )
     db_session.add(test_class)
 
     await db_session.flush()  # Flush once to get all IDs

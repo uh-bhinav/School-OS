@@ -17,18 +17,33 @@ from app.services import invoice_service  # Import the service module
 router = APIRouter()
 
 
-@router.post("/invoices/generate", response_model=InvoiceOut, status_code=201, dependencies=[Depends(require_role("Admin"))])
-async def generate_new_invoice(invoice_in: InvoiceCreate, db: AsyncSession = Depends(get_db), current_user: Profile = Depends(get_current_user_profile)):
+@router.post(
+    "/invoices/generate",
+    response_model=InvoiceOut,
+    status_code=201,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def generate_new_invoice(
+    invoice_in: InvoiceCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Profile = Depends(get_current_user_profile),
+):
     """
     Generate a new invoice for a student.
     The service will automatically calculate the amount due based on fees and discounts.
     """
     target_student = await db.get(Student, invoice_in.student_id, options=[joinedload(Student.profile)])
     if not target_student or not target_student.profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student or student profile not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student or student profile not found",
+        )
 
     if target_student.profile.school_id != current_user.school_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin cannot generate invoices for students in other schools.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin cannot generate invoices for students in other schools.",
+        )
 
     try:
         return await invoice_service.generate_invoice_for_student(db=db, obj_in=invoice_in)
@@ -37,7 +52,11 @@ async def generate_new_invoice(invoice_in: InvoiceCreate, db: AsyncSession = Dep
 
 
 @router.get("/invoices/student/{student_id}", response_model=list[InvoiceOut])
-async def get_student_invoices(student_id: int, db: AsyncSession = Depends(get_db), current_user: Profile = Depends(get_current_user_profile)):
+async def get_student_invoices(
+    student_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: Profile = Depends(get_current_user_profile),
+):
     """
     Get all active invoices for a specific student.
     Applies application-level authorization check + relies on RLS (if applicable).
@@ -66,12 +85,18 @@ async def get_student_invoices(student_id: int, db: AsyncSession = Depends(get_d
     is_admin = any(role.role_definition.role_name == "Admin" for role in current_user.roles)
 
     if is_admin and target_student.profile.school_id != current_user.school_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin cannot view invoices for students in other schools.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin cannot view invoices for students in other schools.",
+        )
     # 5. Enforce the rule: Allow if self OR parent OR admin
     if not (is_self or is_parent or is_admin):
         # Using 403 Forbidden is appropriate here because the user is authenticated,
         # but not authorized for this specific student's data.
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to view invoices for this student.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view invoices for this student.",
+        )
     # --- END AUTHORIZATION CHECK ---
 
     # If the check passes, proceed to fetch invoices.
@@ -102,7 +127,10 @@ async def get_invoice(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
 
     if not invoice.student or not invoice.student.profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student or profile associated with invoice not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student or profile associated with invoice not found",
+        )
 
     target_student_user_id = invoice.student.user_id
 
@@ -116,21 +144,43 @@ async def get_invoice(
 
     # Allow if self OR parent OR admin
     if not (is_self or is_parent or is_admin):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to view this invoice.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view this invoice.",
+        )
     # --- END CHECK ---
 
     return invoice
 
 
-@router.post("/invoices/payments", response_model=PaymentOut, status_code=201, dependencies=[Depends(require_role("Admin"))])
-async def log_new_payment(payment_in: PaymentCreate, db: AsyncSession = Depends(get_db), current_user: Profile = Depends(get_current_user_profile)):
+@router.post(
+    "/invoices/payments",
+    response_model=PaymentOut,
+    status_code=201,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def log_new_payment(
+    payment_in: PaymentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Profile = Depends(get_current_user_profile),
+):
     """Log a new payment against an invoice."""
-    target_invoice = await db.get(Invoice, payment_in.invoice_id, options=[joinedload(Invoice.student).joinedload(Student.profile)])
+    target_invoice = await db.get(
+        Invoice,
+        payment_in.invoice_id,
+        options=[joinedload(Invoice.student).joinedload(Student.profile)],
+    )
     if not target_invoice or not target_invoice.student or not target_invoice.student.profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice or associated student/profile not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice or associated student/profile not found",
+        )
 
     if target_invoice.student.profile.school_id != current_user.school_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin cannot log payments for invoices in other schools.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin cannot log payments for invoices in other schools.",
+        )
 
     try:
         return await invoice_service.log_payment(db=db, obj_in=payment_in)
@@ -138,8 +188,16 @@ async def log_new_payment(payment_in: PaymentCreate, db: AsyncSession = Depends(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.post("/invoices/generate-for-class", status_code=200, dependencies=[Depends(require_role("Admin"))])
-async def generate_class_invoices(bulk_invoice_in: BulkInvoiceCreate, db: AsyncSession = Depends(get_db), current_user: Profile = Depends(get_current_user_profile)):
+@router.post(
+    "/invoices/generate-for-class",
+    status_code=200,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def generate_class_invoices(
+    bulk_invoice_in: BulkInvoiceCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Profile = Depends(get_current_user_profile),
+):
     """
     Generate invoices for all students in an entire class for a specific fee term.
     """
@@ -148,7 +206,10 @@ async def generate_class_invoices(bulk_invoice_in: BulkInvoiceCreate, db: AsyncS
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target class not found")
 
     if target_class.school_id != current_user.school_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin cannot generate invoices for classes in other schools.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin cannot generate invoices for classes in other schools.",
+        )
     try:
         result = await invoice_service.generate_invoices_for_class(db=db, obj_in=bulk_invoice_in)
         return result
@@ -156,8 +217,15 @@ async def generate_class_invoices(bulk_invoice_in: BulkInvoiceCreate, db: AsyncS
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.get("/admin/all", response_model=list[InvoiceOut], dependencies=[Depends(require_role("Admin"))])  # Protect with Admin role
-async def list_all_school_invoices_admin(db: AsyncSession = Depends(get_db), current_user: Profile = Depends(get_current_user_profile)):  # Get authenticated admin user
+@router.get(
+    "/admin/all",
+    response_model=list[InvoiceOut],
+    dependencies=[Depends(require_role("Admin"))],
+)  # Protect with Admin role
+async def list_all_school_invoices_admin(
+    db: AsyncSession = Depends(get_db),
+    current_user: Profile = Depends(get_current_user_profile),
+):  # Get authenticated admin user
     """
     Admin endpoint to list all active invoices within their own school.
     School isolation is implicitly handled by fetching based on the admin's school_id.

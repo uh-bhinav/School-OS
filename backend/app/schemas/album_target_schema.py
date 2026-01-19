@@ -18,7 +18,11 @@ class AlbumTargetBase(BaseModel):
     """Base schema for an album target, containing the core fields."""
 
     target_type: AlbumTargetType = Field(..., description="The type of audience for the album.")
-    target_id: int = Field(..., gt=0, description="The specific ID for the target type (e.g., class_id, grade_level).")
+    target_id: int = Field(
+        ...,
+        gt=0,
+        description="The specific ID for the target type (e.g., class_id, grade_level).",
+    )
 
 
 class AlbumTargetCreate(AlbumTargetBase):

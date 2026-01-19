@@ -5,7 +5,14 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 # Import all club-related enums from the central enums file
-from app.schemas.enums import ClubActivityStatus, ClubActivityType, ClubMembershipRole, ClubMembershipStatus, ClubType, MeetingFrequency
+from app.schemas.enums import (
+    ClubActivityStatus,
+    ClubActivityType,
+    ClubMembershipRole,
+    ClubMembershipStatus,
+    ClubType,
+    MeetingFrequency,
+)
 
 # --- Club Schemas ---
 

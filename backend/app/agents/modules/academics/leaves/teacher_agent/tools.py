@@ -112,7 +112,10 @@ async def get_teacher_qualifications(teacher_id: int) -> dict[str, Any]:
             return {"success": True, "qualifications_info": response}
     except AgentResourceNotFoundError as e:
         logger.warn(f"Qualifications not found for teacher id={teacher_id}: {e.message}")
-        return {"success": False, "error": f"No qualifications found for teacher ID {teacher_id}."}
+        return {
+            "success": False,
+            "error": f"No qualifications found for teacher ID {teacher_id}.",
+        }
     except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
         logger.error(f"Error getting teacher qualifications: {e.message}", exc_info=True)
         return _format_error_response(e)
@@ -137,7 +140,12 @@ async def update_teacher(teacher_id: int, **updates: Any) -> dict[str, Any]:
             logger.info(f"Calling API: PUT /teachers/{teacher_id} with payload: {payload}")
             response = await client.put(f"/teachers/{teacher_id}", json=payload)
             return {"success": True, "updated_teacher": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error updating teacher: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -155,8 +163,17 @@ async def deactivate_teacher(teacher_id: int) -> dict[str, Any]:
             logger.info(f"Calling API: DELETE /teachers/{teacher_id}")
             # DELETE returns a 200 OK with the deactivated object in our refactored API
             response = await client.delete(f"/teachers/{teacher_id}")
-            return {"success": True, "message": f"Teacher {teacher_id} deactivated successfully.", "deactivated_teacher": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+            return {
+                "success": True,
+                "message": f"Teacher {teacher_id} deactivated successfully.",
+                "deactivated_teacher": response,
+            }
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error deactivating teacher: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:

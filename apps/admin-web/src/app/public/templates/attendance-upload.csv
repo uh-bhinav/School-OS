@@ -1,0 +1,3 @@
+student_id,class_id,date,status,remarks
+1001,101,2025-11-08,PRESENT,
+1002,101,2025-11-08,ABSENT,Sick

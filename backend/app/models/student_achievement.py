@@ -1,6 +1,16 @@
 # backend/app/models/student_achievement.py
 
-from sqlalchemy import TIMESTAMP, Boolean, CheckConstraint, Column, Date, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    TIMESTAMP,
+    Boolean,
+    CheckConstraint,
+    Column,
+    Date,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy import Enum as SQLAEnum
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
@@ -14,11 +24,29 @@ class StudentAchievement(Base):
     __tablename__ = "student_achievements"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.student_id", ondelete="CASCADE"), nullable=False, index=True)
-    school_id = Column(Integer, ForeignKey("schools.school_id", ondelete="CASCADE"), nullable=False, index=True)
+    student_id = Column(
+        Integer,
+        ForeignKey("students.student_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    school_id = Column(
+        Integer,
+        ForeignKey("schools.school_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     academic_year_id = Column(Integer, ForeignKey("academic_years.id", ondelete="RESTRICT"), nullable=False)
-    awarded_by_user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id", ondelete="RESTRICT"), nullable=False)
-    verified_by_user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id", ondelete="SET NULL"), nullable=True)
+    awarded_by_user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("profiles.user_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    verified_by_user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("profiles.user_id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     achievement_type = Column(
         SQLAEnum(
@@ -58,7 +86,12 @@ class StudentAchievement(Base):
     )
 
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     __table_args__ = (
         CheckConstraint("points_awarded >= 0", name="chk_points_non_negative"),

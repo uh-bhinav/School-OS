@@ -2,7 +2,10 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.club_agent.main import ClubAgent, club_agent_instance
+from app.agents.modules.academics.leaves.club_agent.main import (
+    ClubAgent,
+    club_agent_instance,
+)
 from app.agents.modules.academics.leaves.club_agent.tools import club_agent_tools
 
 # This marks all tests in this file as async
@@ -44,10 +47,16 @@ async def test_happy_path_list_club_members(mock_club_llm_invoke, mock_club_http
     tool_args = {"club_name": "Science Club"}
     tool_call = ToolCall(name="list_club_members", args=tool_args, id="tool_123")
 
-    mock_club_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="The members of the Science Club are Rohan and Priya.")]
+    mock_club_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="The members of the Science Club are Rohan and Priya."),
+    ]
 
     # 2. Setup Mock API
-    mock_response = [{"student_id": 101, "full_name": "Rohan Sharma"}, {"student_id": 102, "full_name": "Priya Singh"}]
+    mock_response = [
+        {"student_id": 101, "full_name": "Rohan Sharma"},
+        {"student_id": 102, "full_name": "Priya Singh"},
+    ]
     mock_club_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent

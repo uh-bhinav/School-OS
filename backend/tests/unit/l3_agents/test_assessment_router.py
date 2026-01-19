@@ -2,7 +2,9 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Function we are testing
-from app.agents.modules.academics.routers.assessment_router import invoke_assessment_router
+from app.agents.modules.academics.routers.assessment_router import (
+    invoke_assessment_router,
+)
 
 # Schema for type hints
 from app.agents.modules.academics.routers.assessment_schemas import AssessmentRoute

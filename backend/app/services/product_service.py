@@ -20,7 +20,11 @@ from sqlalchemy.orm import selectinload
 from app.models.product import Product
 from app.models.product_category import ProductCategory
 from app.models.profile import Profile
-from app.schemas.product_schema import ProductCreate, ProductStockAdjustment, ProductUpdate
+from app.schemas.product_schema import (
+    ProductCreate,
+    ProductStockAdjustment,
+    ProductUpdate,
+)
 
 
 class ProductService:

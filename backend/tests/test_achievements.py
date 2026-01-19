@@ -53,7 +53,11 @@ async def test_achievement_rules_crud_as_admin(client: TestClient, test_db_sessi
     admin_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Admin", school_id=school_id)
     teacher_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Teacher", school_id=school_id)
     # 1. Teachers cannot create rules
-    rule_data = {"achievement_type": "academic", "category_name": "Math Olympiad", "base_points": 100}
+    rule_data = {
+        "achievement_type": "academic",
+        "category_name": "Math Olympiad",
+        "base_points": 100,
+    }
     response = client.post("/api/v1/achievements/rules", headers=teacher_auth_headers, json=rule_data)
     # Assuming RoleChecker returns 403 Forbidden
     # If not implemented, this might be 401, but the endpoint is protected
@@ -77,7 +81,11 @@ async def test_achievement_rules_crud_as_admin(client: TestClient, test_db_sessi
 
     # 4. Admin updates the rule
     update_data = {"base_points": 150, "is_active": False}
-    response = client.put(f"/api/v1/achievements/rules/{rule_id}", headers=admin_auth_headers, json=update_data)
+    response = client.put(
+        f"/api/v1/achievements/rules/{rule_id}",
+        headers=admin_auth_headers,
+        json=update_data,
+    )
     assert response.status_code == 200
     updated_rule = response.json()
     assert updated_rule["base_points"] == 150
@@ -85,7 +93,12 @@ async def test_achievement_rules_crud_as_admin(client: TestClient, test_db_sessi
 
 
 @pytest.mark.asyncio
-async def test_student_achievement_workflow(client: TestClient, test_db_session: AsyncSession, test_academic_year: AcademicYear, test_student: Student):
+async def test_student_achievement_workflow(
+    client: TestClient,
+    test_db_session: AsyncSession,
+    test_academic_year: AcademicYear,
+    test_student: Student,
+):
     admin_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Admin", school_id=test_academic_year.school_id)
     teacher_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Teacher", school_id=test_academic_year.school_id)
     # Capture baseline counts for existing achievements in seeded data
@@ -107,7 +120,11 @@ async def test_student_achievement_workflow(client: TestClient, test_db_session:
     baseline_all = len(baseline_all_resp.json())
 
     # 1. Create a point rule for this test
-    rule_data = {"achievement_type": "sports", "category_name": "Athletics", "base_points": 75}
+    rule_data = {
+        "achievement_type": "sports",
+        "category_name": "Athletics",
+        "base_points": 75,
+    }
     response = client.post("/api/v1/achievements/rules", headers=admin_auth_headers, json=rule_data)
     assert response.status_code == 201
 
@@ -156,7 +173,14 @@ async def test_student_achievement_workflow(client: TestClient, test_db_session:
     assert response.status_code == 404  # Service returns False, endpoint raises 404
 
     # 7. Add a second, unverified achievement
-    ach_data_2 = {"student_id": student_id, "academic_year_id": academic_year_id, "achievement_type": "cultural", "title": "Singing Contest", "achievement_category": "Music", "date_awarded": _award_date_iso()}
+    ach_data_2 = {
+        "student_id": student_id,
+        "academic_year_id": academic_year_id,
+        "achievement_type": "cultural",
+        "title": "Singing Contest",
+        "achievement_category": "Music",
+        "date_awarded": _award_date_iso(),
+    }
     response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=ach_data_2)
     assert response.status_code == 201
     unverified_ach_2_id = response.json()["id"]
@@ -169,7 +193,10 @@ async def test_student_achievement_workflow(client: TestClient, test_db_session:
     assert any(item["id"] == ach_id for item in achievements)
 
     # 9. Get all student achievements
-    response = client.get(f"/api/v1/achievements/student/{student_id}?verified_only=False", headers=teacher_auth_headers)
+    response = client.get(
+        f"/api/v1/achievements/student/{student_id}?verified_only=False",
+        headers=teacher_auth_headers,
+    )
     assert response.status_code == 200
     achievements = response.json()
     assert len(achievements) == baseline_all + 2
@@ -181,7 +208,10 @@ async def test_student_achievement_workflow(client: TestClient, test_db_session:
     assert response.status_code == 204
 
     # Verify it's gone
-    response = client.get(f"/api/v1/achievements/student/{student_id}?verified_only=False", headers=teacher_auth_headers)
+    response = client.get(
+        f"/api/v1/achievements/student/{student_id}?verified_only=False",
+        headers=teacher_auth_headers,
+    )
     assert response.status_code == 200
     achievements = response.json()
     assert len(achievements) == baseline_all + 1
@@ -192,29 +222,57 @@ async def test_student_achievement_workflow(client: TestClient, test_db_session:
 
 
 @pytest.mark.asyncio
-async def test_errors_and_validation(client: TestClient, test_db_session: AsyncSession, test_student: Student, test_academic_year: AcademicYear):
+async def test_errors_and_validation(
+    client: TestClient,
+    test_db_session: AsyncSession,
+    test_student: Student,
+    test_academic_year: AcademicYear,
+):
     admin_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Admin", school_id=test_academic_year.school_id)
     teacher_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Teacher", school_id=test_academic_year.school_id)
     # 1. Test 404 Not Found
     response = client.put("/api/v1/achievements/verify/999999", headers=admin_auth_headers)
     assert response.status_code == 404
 
-    response = client.put("/api/v1/achievements/999999", headers=teacher_auth_headers, json={"title": "test"})
+    response = client.put(
+        "/api/v1/achievements/999999",
+        headers=teacher_auth_headers,
+        json={"title": "test"},
+    )
     assert response.status_code == 404
 
     response = client.delete("/api/v1/achievements/999999", headers=teacher_auth_headers)
     assert response.status_code == 404
 
-    response = client.put("/api/v1/achievements/rules/999999", headers=admin_auth_headers, json={"base_points": 10})
+    response = client.put(
+        "/api/v1/achievements/rules/999999",
+        headers=admin_auth_headers,
+        json={"base_points": 10},
+    )
     assert response.status_code == 404
 
     # 2. Test 422 Unprocessable Entity (Invalid Data)
-    invalid_rule_data = {"achievement_type": "academic", "category_name": "Invalid Rule", "base_points": -50}  # Invalid, must be >= 0
+    invalid_rule_data = {
+        "achievement_type": "academic",
+        "category_name": "Invalid Rule",
+        "base_points": -50,
+    }  # Invalid, must be >= 0
     response = client.post("/api/v1/achievements/rules", headers=admin_auth_headers, json=invalid_rule_data)
     assert response.status_code == 422
 
-    invalid_achievement_data = {"student_id": test_student.student_id, "academic_year_id": 999, "achievement_type": "invalid_type", "title": "Test", "achievement_category": "Test", "date_awarded": _award_date_iso()}  # Invalid enum
-    response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=invalid_achievement_data)
+    invalid_achievement_data = {
+        "student_id": test_student.student_id,
+        "academic_year_id": 999,
+        "achievement_type": "invalid_type",
+        "title": "Test",
+        "achievement_category": "Test",
+        "date_awarded": _award_date_iso(),
+    }  # Invalid enum
+    response = client.post(
+        "/api/v1/achievements/",
+        headers=teacher_auth_headers,
+        json=invalid_achievement_data,
+    )
     assert response.status_code == 422
 
     missing_student_data = {
@@ -232,11 +290,23 @@ async def test_errors_and_validation(client: TestClient, test_db_session: AsyncS
 
 
 @pytest.mark.asyncio
-async def test_teacher_cannot_verify_achievement(client: TestClient, test_db_session: AsyncSession, test_student: Student, test_academic_year: AcademicYear):
+async def test_teacher_cannot_verify_achievement(
+    client: TestClient,
+    test_db_session: AsyncSession,
+    test_student: Student,
+    test_academic_year: AcademicYear,
+):
     teacher_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Teacher", school_id=test_academic_year.school_id)
     admin_auth_headers = await _auth_headers_for_role(test_db_session, role_name="Admin", school_id=test_academic_year.school_id)
     # 1. Teacher adds an achievement
-    achievement_data = {"student_id": test_student.student_id, "academic_year_id": test_academic_year.id, "achievement_type": "leadership", "title": "Class Captain", "achievement_category": "Responsibility", "date_awarded": _award_date_iso()}
+    achievement_data = {
+        "student_id": test_student.student_id,
+        "academic_year_id": test_academic_year.id,
+        "achievement_type": "leadership",
+        "title": "Class Captain",
+        "achievement_category": "Responsibility",
+        "date_awarded": _award_date_iso(),
+    }
     response = client.post("/api/v1/achievements/", headers=teacher_auth_headers, json=achievement_data)
     assert response.status_code == 201
     ach_id = response.json()["id"]
@@ -289,7 +359,11 @@ async def test_multi_tenancy_security(
     assert response.status_code == 404
 
     # 3. Admin from School 2 tries to update the achievement
-    response = client.put(f"/api/v1/achievements/{ach_id}", headers=admin_auth_headers_two, json={"title": "Hacking Attempt"})
+    response = client.put(
+        f"/api/v1/achievements/{ach_id}",
+        headers=admin_auth_headers_two,
+        json={"title": "Hacking Attempt"},
+    )
     assert response.status_code == 404
 
     # 4. Admin from School 2 tries to delete the achievement

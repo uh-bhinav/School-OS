@@ -160,7 +160,12 @@ async def search_marks(
     return [MarkOut.model_validate(mark, from_attributes=True) for mark in marks]
 
 
-@router.put("/{mark_id}", response_model=MarkOut, dependencies=[Depends(require_role("Teacher", "Admin"))], summary="[Secured] Update Mark")
+@router.put(
+    "/{mark_id}",
+    response_model=MarkOut,
+    dependencies=[Depends(require_role("Teacher", "Admin"))],
+    summary="[Secured] Update Mark",
+)
 async def update_mark(
     mark_id: int,
     mark_in: MarkUpdate,
@@ -178,7 +183,12 @@ async def update_mark(
     return await mark_service.update_mark(db, db_obj=db_obj, mark_in=mark_in)
 
 
-@router.delete("/{mark_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_role("Admin"))], summary="[Secured] Delete Mark")
+@router.delete(
+    "/{mark_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_role("Admin"))],
+    summary="[Secured] Delete Mark",
+)
 async def delete_mark(
     mark_id: int,
     db: AsyncSession = Depends(deps.get_db_session),
@@ -196,7 +206,12 @@ async def delete_mark(
     return None  # Return 204 No Content
 
 
-@router.get("/performance/class/{class_id}/exam/{exam_id}", response_model=ClassPerformanceSummary, dependencies=[Depends(require_role("Admin", "Teacher"))], summary="[Secured] Get Class Performance")  # Allow Teacher
+@router.get(
+    "/performance/class/{class_id}/exam/{exam_id}",
+    response_model=ClassPerformanceSummary,
+    dependencies=[Depends(require_role("Admin", "Teacher"))],
+    summary="[Secured] Get Class Performance",
+)  # Allow Teacher
 async def get_class_performance(
     class_id: int,
     exam_id: int,
@@ -216,7 +231,11 @@ async def get_class_performance(
     return summary
 
 
-@router.get("/report-card/student/{student_id}", response_model=list[MarkOut], summary="[Secured] Get Report Card")
+@router.get(
+    "/report-card/student/{student_id}",
+    response_model=list[MarkOut],
+    summary="[Secured] Get Report Card",
+)
 async def get_report_card(
     student_id: int,
     academic_year_id: int,
@@ -246,7 +265,11 @@ async def get_report_card(
     return await mark_service.get_student_report_card(db=db, student_id=student_id, academic_year_id=academic_year_id)
 
 
-@router.get("/progression/student/{student_id}/subject/{subject_id}", response_model=list[MarkOut], summary="[Secured] Get Grade Progression")
+@router.get(
+    "/progression/student/{student_id}/subject/{subject_id}",
+    response_model=list[MarkOut],
+    summary="[Secured] Get Grade Progression",
+)
 async def get_grade_progression(
     student_id: int,
     subject_id: int,
@@ -288,7 +311,11 @@ async def get_grade_progression(
     summary="[Legacy] Get Student Marks",
     dependencies=[Depends(require_role("Student", "Parent"))],
 )
-async def get_student_marks(student_id: int, db: AsyncSession = Depends(deps.get_db_session), current_profile: Profile = Depends(deps.get_current_active_user)):
+async def get_student_marks(
+    student_id: int,
+    db: AsyncSession = Depends(deps.get_db_session),
+    current_profile: Profile = Depends(deps.get_current_active_user),
+):
     """
     Get all marks for a specific student.
     [Legacy: Use /search?student_id=... instead]
@@ -319,7 +346,12 @@ async def get_student_marks(student_id: int, db: AsyncSession = Depends(deps.get
     summary="[Legacy] list Marks",
     dependencies=[Depends(require_role("Teacher", "Admin"))],
 )
-async def list_marks(student_id: int, exam_id: Optional[int] = None, db: AsyncSession = Depends(deps.get_db_session), current_profile: Profile = Depends(deps.get_current_active_user)):
+async def list_marks(
+    student_id: int,
+    exam_id: Optional[int] = None,
+    db: AsyncSession = Depends(deps.get_db_session),
+    current_profile: Profile = Depends(deps.get_current_active_user),
+):
     """
     [Legacy: Use /search?student_id=... instead]
     """

@@ -35,7 +35,11 @@ from app.models.product import Product
 from app.models.product_category import ProductCategory
 from app.models.product_package import PackageItem, ProductPackage
 from app.models.profile import Profile
-from app.schemas.product_schema import ProductCreate, ProductStockAdjustment, ProductUpdate
+from app.schemas.product_schema import (
+    ProductCreate,
+    ProductStockAdjustment,
+    ProductUpdate,
+)
 from app.services.product_service import ProductService
 
 # ===========================================================================
@@ -122,7 +126,13 @@ async def test_create_product_fails_duplicate_sku(db_session: AsyncSession, mock
     print("\n--- Test 2.2: Create Product Fails - Duplicate SKU ---")
 
     # Step 1: Create first product with SKU
-    product_data = ProductCreate(name="First Product with SKU", price=Decimal("500.00"), stock_quantity=50, category_id=1, sku="UNIFORM-001")
+    product_data = ProductCreate(
+        name="First Product with SKU",
+        price=Decimal("500.00"),
+        stock_quantity=50,
+        category_id=1,
+        sku="UNIFORM-001",
+    )
 
     product_service = ProductService(db_session)
     first_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -130,7 +140,13 @@ async def test_create_product_fails_duplicate_sku(db_session: AsyncSession, mock
     print(f"✓ First product created with SKU: {first_product.sku}")
 
     # Step 2: Attempt to create product with same SKU
-    duplicate_sku_data = ProductCreate(name="Second Product Different Name", price=Decimal("600.00"), stock_quantity=30, category_id=1, sku="UNIFORM-001")
+    duplicate_sku_data = ProductCreate(
+        name="Second Product Different Name",
+        price=Decimal("600.00"),
+        stock_quantity=30,
+        category_id=1,
+        sku="UNIFORM-001",
+    )
 
     with pytest.raises(HTTPException) as exc_info:
         await product_service.create_product(product_in=duplicate_sku_data, current_profile=mock_admin_profile)
@@ -161,7 +177,12 @@ async def test_create_product_fails_category_not_found(db_session: AsyncSession,
     print("\n--- Test 2.3: Create Product Fails - Category Not Found ---")
 
     # Step 1: Attempt to create product with non-existent category
-    product_data = ProductCreate(name="Product with Invalid Category", price=Decimal("100.00"), stock_quantity=10, category_id=99999)
+    product_data = ProductCreate(
+        name="Product with Invalid Category",
+        price=Decimal("100.00"),
+        stock_quantity=10,
+        category_id=99999,
+    )
 
     product_service = ProductService(db_session)
 
@@ -204,7 +225,12 @@ async def test_create_product_fails_category_wrong_school(db_session: AsyncSessi
     print(f"✓ Created category for school_id=2: ID={other_category_id}")
 
     # Step 2: Admin from school_id=1 tries to use it
-    product_data = ProductCreate(name="Cross-School Category Test", price=Decimal("100.00"), stock_quantity=10, category_id=other_category_id)
+    product_data = ProductCreate(
+        name="Cross-School Category Test",
+        price=Decimal("100.00"),
+        stock_quantity=10,
+        category_id=other_category_id,
+    )
 
     product_service = ProductService(db_session)
 
@@ -237,7 +263,12 @@ async def test_create_product_fails_invalid_price(db_session: AsyncSession, mock
     # Test 1: Price = 0
     print("\nTest: price=0")
     with pytest.raises(ValidationError) as exc_info:
-        ProductCreate(name="Zero Price Product", price=Decimal("0.00"), stock_quantity=10, category_id=1)
+        ProductCreate(
+            name="Zero Price Product",
+            price=Decimal("0.00"),
+            stock_quantity=10,
+            category_id=1,
+        )
 
     error_str = str(exc_info.value)
     assert "price" in error_str.lower()
@@ -246,7 +277,12 @@ async def test_create_product_fails_invalid_price(db_session: AsyncSession, mock
     # Test 2: Negative price
     print("\nTest: price=-100")
     with pytest.raises(ValidationError) as exc_info:
-        ProductCreate(name="Negative Price Product", price=Decimal("-100.00"), stock_quantity=10, category_id=1)
+        ProductCreate(
+            name="Negative Price Product",
+            price=Decimal("-100.00"),
+            stock_quantity=10,
+            category_id=1,
+        )
 
     error_str = str(exc_info.value)
     assert "price" in error_str.lower()
@@ -271,7 +307,12 @@ async def test_create_product_fails_negative_stock(db_session: AsyncSession, moc
     print("\n--- Test 2.6: Create Product - Negative Stock ---")
 
     with pytest.raises(ValidationError) as exc_info:
-        ProductCreate(name="Negative Stock Product", price=Decimal("100.00"), stock_quantity=-10, category_id=1)
+        ProductCreate(
+            name="Negative Stock Product",
+            price=Decimal("100.00"),
+            stock_quantity=-10,
+            category_id=1,
+        )
 
     error_str = str(exc_info.value)
     assert "stock" in error_str.lower() or "quantity" in error_str.lower()
@@ -296,7 +337,13 @@ async def test_create_product_fails_invalid_sku_format(db_session: AsyncSession,
     print("\n--- Test 2.7: Create Product - Invalid SKU Format ---")
 
     with pytest.raises(ValidationError) as exc_info:
-        ProductCreate(name="Invalid SKU Product", price=Decimal("100.00"), stock_quantity=10, category_id=1, sku="UNIFORM@123!")  # Contains @ and !
+        ProductCreate(
+            name="Invalid SKU Product",
+            price=Decimal("100.00"),
+            stock_quantity=10,
+            category_id=1,
+            sku="UNIFORM@123!",
+        )  # Contains @ and !
 
     error_str = str(exc_info.value)
     assert "sku" in error_str.lower()
@@ -327,9 +374,25 @@ async def test_update_product_fails_name_conflict(db_session: AsyncSession, mock
     # Step 1: Create two products
     product_service = ProductService(db_session)
 
-    product_a = await product_service.create_product(product_in=ProductCreate(name="T-Shirt Blue", price=Decimal("750.00"), stock_quantity=50, category_id=1), current_profile=mock_admin_profile)
+    product_a = await product_service.create_product(
+        product_in=ProductCreate(
+            name="T-Shirt Blue",
+            price=Decimal("750.00"),
+            stock_quantity=50,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )
 
-    product_b = await product_service.create_product(product_in=ProductCreate(name="T-Shirt Red", price=Decimal("750.00"), stock_quantity=50, category_id=1), current_profile=mock_admin_profile)
+    product_b = await product_service.create_product(
+        product_in=ProductCreate(
+            name="T-Shirt Red",
+            price=Decimal("750.00"),
+            stock_quantity=50,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )
 
     product_b_id = product_b.product_id
     print(f"✓ Created Product A: '{product_a.name}'")
@@ -378,9 +441,27 @@ async def test_update_product_fails_sku_conflict(db_session: AsyncSession, mock_
     # Step 1: Create two products with different SKUs
     product_service = ProductService(db_session)
 
-    product_a = await product_service.create_product(product_in=ProductCreate(name="Product A", price=Decimal("100.00"), stock_quantity=10, category_id=1, sku="ABC-001"), current_profile=mock_admin_profile)
+    product_a = await product_service.create_product(
+        product_in=ProductCreate(
+            name="Product A",
+            price=Decimal("100.00"),
+            stock_quantity=10,
+            category_id=1,
+            sku="ABC-001",
+        ),
+        current_profile=mock_admin_profile,
+    )
 
-    product_b = await product_service.create_product(product_in=ProductCreate(name="Product B", price=Decimal("100.00"), stock_quantity=10, category_id=1, sku="ABC-002"), current_profile=mock_admin_profile)
+    product_b = await product_service.create_product(
+        product_in=ProductCreate(
+            name="Product B",
+            price=Decimal("100.00"),
+            stock_quantity=10,
+            category_id=1,
+            sku="ABC-002",
+        ),
+        current_profile=mock_admin_profile,
+    )
 
     product_b_id = product_b.product_id
     print(f"✓ Product A: SKU={product_a.sku}")
@@ -425,7 +506,15 @@ async def test_update_product_fails_category_wrong_school(db_session: AsyncSessi
     # Step 1: Create product
     product_service = ProductService(db_session)
 
-    product = await product_service.create_product(product_in=ProductCreate(name="Test Product", price=Decimal("100.00"), stock_quantity=10, category_id=1), current_profile=mock_admin_profile)
+    product = await product_service.create_product(
+        product_in=ProductCreate(
+            name="Test Product",
+            price=Decimal("100.00"),
+            stock_quantity=10,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )
 
     product_id = product.product_id
     print("✓ Product created in category 1")
@@ -478,13 +567,26 @@ async def test_delete_product_fails_in_package(db_session: AsyncSession, mock_ad
     # Step 1: Create product
     product_service = ProductService(db_session)
 
-    product = await product_service.create_product(product_in=ProductCreate(name="Product In Package", price=Decimal("100.00"), stock_quantity=10, category_id=1), current_profile=mock_admin_profile)
+    product = await product_service.create_product(
+        product_in=ProductCreate(
+            name="Product In Package",
+            price=Decimal("100.00"),
+            stock_quantity=10,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )
 
     product_id = product.product_id
     print(f"✓ Product created: ID={product_id}")
 
     # Step 2: Create package with this product
-    package = ProductPackage(school_id=admin_school_id, name="Test Package", price=Decimal("500.00"), is_active=True)
+    package = ProductPackage(
+        school_id=admin_school_id,
+        name="Test Package",
+        price=Decimal("500.00"),
+        is_active=True,
+    )
     db_session.add(package)
     await db_session.commit()
     await db_session.refresh(package)
@@ -538,7 +640,15 @@ async def test_adjust_stock_fails_negative_result(db_session: AsyncSession, mock
     # Step 1: Create product with low stock
     product_service = ProductService(db_session)
 
-    product = await product_service.create_product(product_in=ProductCreate(name="Low Stock Product", price=Decimal("100.00"), stock_quantity=5, category_id=1), current_profile=mock_admin_profile)
+    product = await product_service.create_product(
+        product_in=ProductCreate(
+            name="Low Stock Product",
+            price=Decimal("100.00"),
+            stock_quantity=5,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )
 
     product_id = product.product_id
     print("✓ Product created with stock=5")
@@ -584,7 +694,14 @@ async def test_get_product_fails_wrong_school(db_session: AsyncSession, mock_adm
     print("\n--- Test 2.13: Get Product - Wrong School ---")
 
     # Step 1: Create product for different school (use school_id=2)
-    other_school_product = Product(school_id=2, category_id=1, name="Other School Product", price=Decimal("100.00"), stock_quantity=10, is_active=True)
+    other_school_product = Product(
+        school_id=2,
+        category_id=1,
+        name="Other School Product",
+        price=Decimal("100.00"),
+        stock_quantity=10,
+        is_active=True,
+    )
     db_session.add(other_school_product)
     await db_session.commit()
     await db_session.refresh(other_school_product)
@@ -630,7 +747,15 @@ async def test_bulk_update_category_fails_invalid_category(db_session: AsyncSess
     product_ids = []
 
     for i in range(2):
-        product = await product_service.create_product(product_in=ProductCreate(name=f"Bulk Test {i}", price=Decimal("50.00"), stock_quantity=10, category_id=1), current_profile=mock_admin_profile)
+        product = await product_service.create_product(
+            product_in=ProductCreate(
+                name=f"Bulk Test {i}",
+                price=Decimal("50.00"),
+                stock_quantity=10,
+                category_id=1,
+            ),
+            current_profile=mock_admin_profile,
+        )
         product_ids.append(product.product_id)
 
     print("✓ Created 2 products in category 1")
@@ -683,7 +808,15 @@ async def test_bulk_update_category_fails_product_not_found(db_session: AsyncSes
     # Step 2: Create one valid product
     product_service = ProductService(db_session)
 
-    product = await product_service.create_product(product_in=ProductCreate(name="Valid Product", price=Decimal("50.00"), stock_quantity=10, category_id=1), current_profile=mock_admin_profile)
+    product = await product_service.create_product(
+        product_in=ProductCreate(
+            name="Valid Product",
+            price=Decimal("50.00"),
+            stock_quantity=10,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )
 
     valid_product_id = product.product_id
     print(f"✓ Created valid product: ID={valid_product_id}")

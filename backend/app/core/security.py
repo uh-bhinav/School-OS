@@ -17,18 +17,22 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
+
+# Import singleton Supabase client
+from app.core.supabase import get_supabase_client as get_singleton_supabase_client
 from app.db.session import get_db
 from app.models.profile import Profile
 from app.models.role_definition import RoleDefinition
 from app.models.user_roles import UserRole
-from supabase import Client, create_async_client
+from supabase import Client
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-# Dependency to get the Supabase client
-async def get_supabase_client() -> Client:
-    return await create_async_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+# CRITICAL: This is now an alias to the singleton client
+# The function name remains unchanged to maintain backward compatibility
+# with all existing code that uses Depends(get_supabase_client)
+get_supabase_client = get_singleton_supabase_client
 
 
 async def _fetch_profile_for_role(
@@ -179,7 +183,15 @@ async def _get_current_user_profile_from_db(
         if not auth_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-        stmt = select(Profile).where(Profile.user_id == auth_user.id).options(selectinload(Profile.roles).selectinload(UserRole.role_definition))
+        stmt = (
+            select(Profile)
+            .where(Profile.user_id == auth_user.id)
+            .options(
+                selectinload(Profile.roles).selectinload(UserRole.role_definition),
+                selectinload(Profile.teacher),
+                selectinload(Profile.student),
+            )
+        )
         result = await db.execute(stmt)
         profile = result.scalars().first()
 

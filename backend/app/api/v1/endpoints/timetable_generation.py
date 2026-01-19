@@ -128,7 +128,10 @@ async def generate_class_timetable(
     except Exception as e:
         # If any exception occurs, the get_db() dependency will handle rollback
         # We just need to return a proper HTTP error
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Timetable generation failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Timetable generation failed: {str(e)}",
+        )
 
 
 @router.post(
@@ -182,9 +185,17 @@ async def check_scheduling_conflict(
 
     # Business Logic: Delegate to service
     service = TimetableGenerationService(db)
-    has_conflict, details = await service.check_teacher_conflict(teacher_id=check.teacher_id, day_of_week=check.day_of_week, period_id=check.period_id)
+    has_conflict, details = await service.check_teacher_conflict(
+        teacher_id=check.teacher_id,
+        day_of_week=check.day_of_week,
+        period_id=check.period_id,
+    )
 
-    return ConflictCheckResponse(has_conflict=has_conflict, conflict_type="teacher_double_booking" if has_conflict else None, details=details)
+    return ConflictCheckResponse(
+        has_conflict=has_conflict,
+        conflict_type="teacher_double_booking" if has_conflict else None,
+        details=details,
+    )
 
 
 @router.delete(
@@ -307,7 +318,10 @@ async def swap_timetable_entries(
     # Extract user_id from authenticated profile (JWT token)
     service = TimetableGenerationService(db)
     success, message, swapped_entries = await service.swap_timetable_entries(
-        entry_1_id=swap_request.entry_1_id, entry_2_id=swap_request.entry_2_id, performed_by_user_id=current_profile.user_id, school_id=current_profile.school_id  # Extract from JWT
+        entry_1_id=swap_request.entry_1_id,
+        entry_2_id=swap_request.entry_2_id,
+        performed_by_user_id=current_profile.user_id,
+        school_id=current_profile.school_id,  # Extract from JWT
     )
 
     # Convert Timetable models to TimetableEntryOut schemas
@@ -316,4 +330,9 @@ async def swap_timetable_entries(
     if swapped_entries:
         swapped_entries_out = [TimetableEntryOut.model_validate(entry) for entry in swapped_entries]
 
-    return TimetableSwapResponse(success=success, message=message, swapped_entries=swapped_entries_out, conflict_details=None if success else message)
+    return TimetableSwapResponse(
+        success=success,
+        message=message,
+        swapped_entries=swapped_entries_out,
+        conflict_details=None if success else message,
+    )

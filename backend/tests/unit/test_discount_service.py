@@ -19,7 +19,13 @@ async def test_create_discount_template_percentage(db_session, mock_admin_profil
     """
     # Arrange: Prepare the service and input data
     service = DiscountService(db_session)
-    discount_data = DiscountCreate(school_id=mock_admin_profile.school_id, name="15% Early Bird Discount", description="For payments made before the due date.", type=DiscountType.PERCENTAGE, value=15.0)  # Explicitly testing the 'percentage' type
+    discount_data = DiscountCreate(
+        school_id=mock_admin_profile.school_id,
+        name="15% Early Bird Discount",
+        description="For payments made before the due date.",
+        type=DiscountType.PERCENTAGE,
+        value=15.0,
+    )  # Explicitly testing the 'percentage' type
 
     # Act: Call the service function to create the discount template
     new_discount = await service.create_discount_template(discount_data=discount_data)
@@ -45,7 +51,14 @@ async def test_apply_discount_to_student(db_session, mock_admin_profile, mocker)
     # Arrange:
     # 1. Create a master discount template to apply.
     service = DiscountService(db_session)
-    discount_template = await service.create_discount_template(DiscountCreate(school_id=mock_admin_profile.school_id, name="Test Merit Scholarship", type=DiscountType.PERCENTAGE, value=25.0))
+    discount_template = await service.create_discount_template(
+        DiscountCreate(
+            school_id=mock_admin_profile.school_id,
+            name="Test Merit Scholarship",
+            type=DiscountType.PERCENTAGE,
+            value=25.0,
+        )
+    )
 
     # 2. Use a known, existing student.
     test_student_id = 22
@@ -87,7 +100,14 @@ async def test_apply_discount_duplicate_fails(db_session, mock_admin_profile, mo
     # Arrange:
     # 1. Create a master discount template.
     service = DiscountService(db_session)
-    discount_template = await service.create_discount_template(DiscountCreate(school_id=mock_admin_profile.school_id, name="Test Duplicate Scholarship", type=DiscountType.FIXED_AMOUNT, value=1000.0))
+    discount_template = await service.create_discount_template(
+        DiscountCreate(
+            school_id=mock_admin_profile.school_id,
+            name="Test Duplicate Scholarship",
+            type=DiscountType.FIXED_AMOUNT,
+            value=1000.0,
+        )
+    )
 
     # 2. Use a known, existing student.
     student_to_test = await db_session.get(Student, 22)
@@ -101,11 +121,19 @@ async def test_apply_discount_duplicate_fails(db_session, mock_admin_profile, mo
     mocker.patch("app.services.discount_service.audit_service", new_callable=AsyncMock)
 
     # 5. Apply the discount the first time (this should succeed).
-    await service.apply_discount_to_student(application_data=application_data, user_id=mock_admin_profile.user_id, ip_address="127.0.0.1")
+    await service.apply_discount_to_student(
+        application_data=application_data,
+        user_id=mock_admin_profile.user_id,
+        ip_address="127.0.0.1",
+    )
 
     # Act & Assert: Attempt to apply the exact same discount again.
     with pytest.raises(HTTPException) as exc_info:
-        await service.apply_discount_to_student(application_data=application_data, user_id=mock_admin_profile.user_id, ip_address="127.0.0.1")
+        await service.apply_discount_to_student(
+            application_data=application_data,
+            user_id=mock_admin_profile.user_id,
+            ip_address="127.0.0.1",
+        )
 
     assert exc_info.value.status_code == 409
     assert "already applied" in exc_info.value.detail

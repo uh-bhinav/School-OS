@@ -60,12 +60,20 @@ async def handle_razorpay_webhook(
     if raw_body is None:
         # Fallback: if middleware didn't capture it, log error
         logger.error(f"Raw body not available for webhook from IP: {client_ip}. " f"RawBodyMiddleware may not be properly configured.")
-        return {"status": "error", "message": "Raw body not available for signature verification."}
+        return {
+            "status": "error",
+            "message": "Raw body not available for signature verification.",
+        }
 
     # Parse the JSON payload for processing (after we have the raw body)
     payload = await request.json()
 
     # Pass client IP to service for security logging
-    await service.handle_webhook_event(payload=payload, raw_body=raw_body, signature=x_razorpay_signature, client_ip=client_ip)
+    await service.handle_webhook_event(
+        payload=payload,
+        raw_body=raw_body,
+        signature=x_razorpay_signature,
+        client_ip=client_ip,
+    )
 
     return {"status": "ok"}

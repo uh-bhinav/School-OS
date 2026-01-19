@@ -78,7 +78,10 @@ class CartItemProductDetail(BaseModel):
     image_url: Optional[str] = None
     sku: Optional[str] = None
     stock_quantity: int = Field(..., description="Current available stock")
-    availability: ProductAvailability = Field(..., description="Computed availability status (in_stock, low_stock, out_of_stock, discontinued)")
+    availability: ProductAvailability = Field(
+        ...,
+        description="Computed availability status (in_stock, low_stock, out_of_stock, discontinued)",
+    )
     category_name: Optional[str] = Field(None, description="Product category for display")
 
     class Config:
@@ -253,7 +256,14 @@ class CartOut(BaseModel):
                         "cart_item_id": 101,
                         "product_id": 42,
                         "quantity": 2,
-                        "product": {"product_id": 42, "name": "House T-Shirt (Blue)", "price": "750.00", "stock_quantity": 50, "availability": "in_stock", "category_name": "Uniforms"},
+                        "product": {
+                            "product_id": 42,
+                            "name": "House T-Shirt (Blue)",
+                            "price": "750.00",
+                            "stock_quantity": 50,
+                            "availability": "in_stock",
+                            "category_name": "Uniforms",
+                        },
                         "subtotal": "1500.00",
                         "is_available": True,
                         "stock_warning": None,

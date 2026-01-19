@@ -6,7 +6,12 @@ import pytest
 
 from app.models.achievementPointRules import AchievementPointRule
 from app.models.student_achievement import StudentAchievement
-from app.schemas.achievement_schema import AchievementPointRuleCreate, AchievementPointRuleUpdate, StudentAchievementCreate, StudentAchievementUpdate
+from app.schemas.achievement_schema import (
+    AchievementPointRuleCreate,
+    AchievementPointRuleUpdate,
+    StudentAchievementCreate,
+    StudentAchievementUpdate,
+)
 from app.schemas.enums import AchievementType
 from app.services.achievement_service import AchievementService
 
@@ -43,7 +48,11 @@ def achievement_service(mock_db_session):
 
 @pytest.mark.asyncio
 async def test_create_rule(achievement_service: AchievementService, mock_db_session):
-    rule_data = AchievementPointRuleCreate(achievement_type=AchievementType.academic, category_name="Olympiad", base_points=100)
+    rule_data = AchievementPointRuleCreate(
+        achievement_type=AchievementType.academic,
+        category_name="Olympiad",
+        base_points=100,
+    )
 
     await achievement_service.create_rule(rule_data, SCHOOL_ID)
 
@@ -62,7 +71,13 @@ async def test_create_rule(achievement_service: AchievementService, mock_db_sess
 
 @pytest.mark.asyncio
 async def test_get_rule_found(achievement_service: AchievementService, mock_db_session):
-    mock_rule = AchievementPointRule(id=1, school_id=SCHOOL_ID, achievement_type=AchievementType.academic, category_name="Olympiad", base_points=100)
+    mock_rule = AchievementPointRule(
+        id=1,
+        school_id=SCHOOL_ID,
+        achievement_type=AchievementType.academic,
+        category_name="Olympiad",
+        base_points=100,
+    )
 
     mock_result = MagicMock()
     mock_result.scalars.return_value.first.return_value = mock_rule
@@ -88,7 +103,14 @@ async def test_get_rule_not_found(achievement_service: AchievementService, mock_
 
 @pytest.mark.asyncio
 async def test_update_rule(achievement_service: AchievementService, mock_db_session):
-    mock_rule = AchievementPointRule(id=1, school_id=SCHOOL_ID, achievement_type=AchievementType.academic, category_name="Olympiad", base_points=100, is_active=True)
+    mock_rule = AchievementPointRule(
+        id=1,
+        school_id=SCHOOL_ID,
+        achievement_type=AchievementType.academic,
+        category_name="Olympiad",
+        base_points=100,
+        is_active=True,
+    )
 
     mock_result = MagicMock()
     mock_result.scalars.return_value.first.return_value = mock_rule
@@ -110,7 +132,14 @@ async def test_update_rule(achievement_service: AchievementService, mock_db_sess
 
 @pytest.mark.asyncio
 async def test_add_achievement(achievement_service: AchievementService, mock_db_session):
-    ach_data = StudentAchievementCreate(student_id=STUDENT_ID, academic_year_id=ACADEMIC_YEAR_ID, achievement_type=AchievementType.sports, title="100m Dash Winner", achievement_category="Athletics", date_awarded=date(2023, 5, 1))
+    ach_data = StudentAchievementCreate(
+        student_id=STUDENT_ID,
+        academic_year_id=ACADEMIC_YEAR_ID,
+        achievement_type=AchievementType.sports,
+        title="100m Dash Winner",
+        achievement_category="Athletics",
+        date_awarded=date(2023, 5, 1),
+    )
 
     mock_result = MagicMock()
     mock_result.scalars.return_value.first.return_value = STUDENT_ID
@@ -133,7 +162,14 @@ async def test_add_achievement(achievement_service: AchievementService, mock_db_
 
 @pytest.mark.asyncio
 async def test_add_achievement_student_not_found(achievement_service: AchievementService, mock_db_session):
-    ach_data = StudentAchievementCreate(student_id=999999, academic_year_id=ACADEMIC_YEAR_ID, achievement_type=AchievementType.academic, title="Invalid", achievement_category="Competition", date_awarded=date(2023, 5, 1))
+    ach_data = StudentAchievementCreate(
+        student_id=999999,
+        academic_year_id=ACADEMIC_YEAR_ID,
+        achievement_type=AchievementType.academic,
+        title="Invalid",
+        achievement_category="Competition",
+        date_awarded=date(2023, 5, 1),
+    )
 
     mock_result = MagicMock()
     mock_result.scalars.return_value.first.return_value = None
@@ -163,12 +199,26 @@ async def test_verify_achievement_success_with_rule(achievement_service: Achieve
         points_awarded=0,
     )
 
-    matching_rule = AchievementPointRule(id=1, school_id=SCHOOL_ID, achievement_type=AchievementType.academic, category_name="Math Olympiad", base_points=50)
+    matching_rule = AchievementPointRule(
+        id=1,
+        school_id=SCHOOL_ID,
+        achievement_type=AchievementType.academic,
+        category_name="Math Olympiad",
+        base_points=50,
+    )
 
     # Mock the internal calls
     # We use patch.object to mock methods on the *instance* of the service
-    with patch.object(achievement_service, "get_achievement_by_id", new=AsyncMock(return_value=unverified_ach)):
-        with patch.object(achievement_service, "_get_rule_by_type_and_category", new=AsyncMock(return_value=matching_rule)):
+    with patch.object(
+        achievement_service,
+        "get_achievement_by_id",
+        new=AsyncMock(return_value=unverified_ach),
+    ):
+        with patch.object(
+            achievement_service,
+            "_get_rule_by_type_and_category",
+            new=AsyncMock(return_value=matching_rule),
+        ):
             verified_ach = await achievement_service.verify_achievement(1, PRINCIPAL_USER_ID, SCHOOL_ID)
 
             assert verified_ach is not None
@@ -197,8 +247,16 @@ async def test_verify_achievement_success_no_rule(achievement_service: Achieveme
     )
 
     # Mock the internal calls
-    with patch.object(achievement_service, "get_achievement_by_id", new=AsyncMock(return_value=unverified_ach)):
-        with patch.object(achievement_service, "_get_rule_by_type_and_category", new=AsyncMock(return_value=None)):  # No matching rule
+    with patch.object(
+        achievement_service,
+        "get_achievement_by_id",
+        new=AsyncMock(return_value=unverified_ach),
+    ):
+        with patch.object(
+            achievement_service,
+            "_get_rule_by_type_and_category",
+            new=AsyncMock(return_value=None),
+        ):  # No matching rule
             verified_ach = await achievement_service.verify_achievement(1, PRINCIPAL_USER_ID, SCHOOL_ID)
 
             assert verified_ach is not None
@@ -211,9 +269,20 @@ async def test_verify_achievement_success_no_rule(achievement_service: Achieveme
 
 @pytest.mark.asyncio
 async def test_verify_achievement_already_verified(achievement_service: AchievementService, mock_db_session):
-    verified_ach = StudentAchievement(id=1, student_id=STUDENT_ID, school_id=SCHOOL_ID, is_verified=True, points_awarded=50, verified_by_user_id=PRINCIPAL_USER_ID)
+    verified_ach = StudentAchievement(
+        id=1,
+        student_id=STUDENT_ID,
+        school_id=SCHOOL_ID,
+        is_verified=True,
+        points_awarded=50,
+        verified_by_user_id=PRINCIPAL_USER_ID,
+    )
 
-    with patch.object(achievement_service, "get_achievement_by_id", new=AsyncMock(return_value=verified_ach)):
+    with patch.object(
+        achievement_service,
+        "get_achievement_by_id",
+        new=AsyncMock(return_value=verified_ach),
+    ):
         result = await achievement_service.verify_achievement(1, PRINCIPAL_USER_ID, SCHOOL_ID)
 
         assert result is not None
@@ -225,10 +294,20 @@ async def test_verify_achievement_already_verified(achievement_service: Achievem
 
 @pytest.mark.asyncio
 async def test_update_achievement_unverified(achievement_service: AchievementService, mock_db_session):
-    unverified_ach = StudentAchievement(id=1, student_id=STUDENT_ID, school_id=SCHOOL_ID, title="Old Title", is_verified=False)
+    unverified_ach = StudentAchievement(
+        id=1,
+        student_id=STUDENT_ID,
+        school_id=SCHOOL_ID,
+        title="Old Title",
+        is_verified=False,
+    )
     update_data = StudentAchievementUpdate(title="New Title")
 
-    with patch.object(achievement_service, "get_achievement_by_id", new=AsyncMock(return_value=unverified_ach)):
+    with patch.object(
+        achievement_service,
+        "get_achievement_by_id",
+        new=AsyncMock(return_value=unverified_ach),
+    ):
         result = await achievement_service.update_achievement(1, update_data, SCHOOL_ID)
 
         assert result is not None
@@ -239,10 +318,20 @@ async def test_update_achievement_unverified(achievement_service: AchievementSer
 
 @pytest.mark.asyncio
 async def test_update_achievement_fail_if_verified(achievement_service: AchievementService, mock_db_session):
-    verified_ach = StudentAchievement(id=1, student_id=STUDENT_ID, school_id=SCHOOL_ID, title="Verified Title", is_verified=True)
+    verified_ach = StudentAchievement(
+        id=1,
+        student_id=STUDENT_ID,
+        school_id=SCHOOL_ID,
+        title="Verified Title",
+        is_verified=True,
+    )
     update_data = StudentAchievementUpdate(title="New Title Attempt")
 
-    with patch.object(achievement_service, "get_achievement_by_id", new=AsyncMock(return_value=verified_ach)):
+    with patch.object(
+        achievement_service,
+        "get_achievement_by_id",
+        new=AsyncMock(return_value=verified_ach),
+    ):
         result = await achievement_service.update_achievement(1, update_data, SCHOOL_ID)
 
         assert result is None  # Service logic should return None
@@ -253,7 +342,11 @@ async def test_update_achievement_fail_if_verified(achievement_service: Achievem
 async def test_delete_achievement_unverified(achievement_service: AchievementService, mock_db_session):
     unverified_ach = StudentAchievement(id=1, school_id=SCHOOL_ID, is_verified=False)
 
-    with patch.object(achievement_service, "get_achievement_by_id", new=AsyncMock(return_value=unverified_ach)):
+    with patch.object(
+        achievement_service,
+        "get_achievement_by_id",
+        new=AsyncMock(return_value=unverified_ach),
+    ):
         success = await achievement_service.delete_achievement(1, SCHOOL_ID)
 
         assert success is True
@@ -265,7 +358,11 @@ async def test_delete_achievement_unverified(achievement_service: AchievementSer
 async def test_delete_achievement_fail_if_verified(achievement_service: AchievementService, mock_db_session):
     verified_ach = StudentAchievement(id=1, school_id=SCHOOL_ID, is_verified=True)
 
-    with patch.object(achievement_service, "get_achievement_by_id", new=AsyncMock(return_value=verified_ach)):
+    with patch.object(
+        achievement_service,
+        "get_achievement_by_id",
+        new=AsyncMock(return_value=verified_ach),
+    ):
         success = await achievement_service.delete_achievement(1, SCHOOL_ID)
 
         assert success is False
@@ -280,8 +377,26 @@ async def test_delete_achievement_fail_if_verified(achievement_service: Achievem
 async def test_get_school_leaderboard(achievement_service: AchievementService, mock_db_session):
     # Mock the complex query result from `_get_student_base_query`
     mock_leaderboard_data = [
-        {"student_id": 1, "student_name": "Student Alpha", "class_id": 10, "class_name": "10 A", "achievement_points": 100, "exam_points": 500, "club_points": 20, "total_points": 620},
-        {"student_id": 2, "student_name": "Student Beta", "class_id": 11, "class_name": "11 B", "achievement_points": 50, "exam_points": 400, "club_points": 10, "total_points": 460},
+        {
+            "student_id": 1,
+            "student_name": "Student Alpha",
+            "class_id": 10,
+            "class_name": "10 A",
+            "achievement_points": 100,
+            "exam_points": 500,
+            "club_points": 20,
+            "total_points": 620,
+        },
+        {
+            "student_id": 2,
+            "student_name": "Student Beta",
+            "class_id": 11,
+            "class_name": "11 B",
+            "achievement_points": 50,
+            "exam_points": 400,
+            "club_points": 10,
+            "total_points": 460,
+        },
     ]
 
     mock_result = MagicMock()
@@ -304,7 +419,18 @@ async def test_get_school_leaderboard(achievement_service: AchievementService, m
 @pytest.mark.asyncio
 async def test_get_class_leaderboard(achievement_service: AchievementService, mock_db_session):
     # Mock the complex query result
-    mock_leaderboard_data = [{"student_id": 1, "student_name": "Student Alpha", "class_id": 10, "class_name": "10 A", "achievement_points": 100, "exam_points": 500, "club_points": 20, "total_points": 620}]
+    mock_leaderboard_data = [
+        {
+            "student_id": 1,
+            "student_name": "Student Alpha",
+            "class_id": 10,
+            "class_name": "10 A",
+            "achievement_points": 100,
+            "exam_points": 500,
+            "club_points": 20,
+            "total_points": 620,
+        }
+    ]
 
     mock_result = MagicMock()
     mock_result.mappings.return_value = mock_leaderboard_data
@@ -323,7 +449,10 @@ async def test_get_class_leaderboard(achievement_service: AchievementService, mo
 
 @pytest.mark.asyncio
 async def test_get_club_leaderboard(achievement_service: AchievementService, mock_db_session):
-    mock_club_data = [{"club_id": 1, "club_name": "Debate Club", "total_points": 150}, {"club_id": 2, "club_name": "Science Club", "total_points": 120}]
+    mock_club_data = [
+        {"club_id": 1, "club_name": "Debate Club", "total_points": 150},
+        {"club_id": 2, "club_name": "Science Club", "total_points": 120},
+    ]
 
     mock_result = MagicMock()
     mock_result.mappings.return_value = mock_club_data

@@ -2,8 +2,13 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.timetable_agent.main import TimetableAgent, timetable_agent_instance
-from app.agents.modules.academics.leaves.timetable_agent.tools import timetable_agent_tools
+from app.agents.modules.academics.leaves.timetable_agent.main import (
+    TimetableAgent,
+    timetable_agent_instance,
+)
+from app.agents.modules.academics.leaves.timetable_agent.tools import (
+    timetable_agent_tools,
+)
 
 # This marks all tests in this file as async
 pytestmark = pytest.mark.asyncio
@@ -48,7 +53,10 @@ async def test_happy_path_get_class_schedule(mock_timetable_llm_invoke, mock_tim
     tool_args = {"class_name": "9B", "day": test_date_str}
     tool_call = ToolCall(name="get_class_schedule", args=tool_args, id="tool_123")
 
-    mock_timetable_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Here is the schedule for 9B: Period 1 is Physics.")]
+    mock_timetable_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Here is the schedule for 9B: Period 1 is Physics."),
+    ]
 
     # 2. Setup Mock API
     mock_response = {"class_schedule": [{"period": 1, "subject_name": "Physics"}]}

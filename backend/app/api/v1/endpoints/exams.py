@@ -16,7 +16,13 @@ router = APIRouter()
 # --- 1. AGENT-READY ENDPOINTS (NEW & REFACTORED) ---
 
 
-@router.post("/", response_model=ExamOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role("Admin"))], summary="[Agent-Ready] Create Exam")
+@router.post(
+    "/",
+    response_model=ExamOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role("Admin"))],
+    summary="[Agent-Ready] Create Exam",
+)
 async def create_new_exam(
     exam_in: ExamCreate,
     db: AsyncSession = Depends(deps.get_db_session),
@@ -35,7 +41,12 @@ async def create_new_exam(
     return await exam_service.create_exam(db=db, exam_in=exam_in)
 
 
-@router.get("/", response_model=list[ExamOut], dependencies=[Depends(require_role("Admin", "Teacher", "Parent"))], summary="[Agent-Ready] List All Exams")
+@router.get(
+    "/",
+    response_model=list[ExamOut],
+    dependencies=[Depends(require_role("Admin", "Teacher", "Parent"))],
+    summary="[Agent-Ready] List All Exams",
+)
 async def list_all_exams_for_school(
     db: AsyncSession = Depends(deps.get_db_session),
     current_profile: Profile = Depends(deps.get_current_active_user),
@@ -53,7 +64,12 @@ async def list_all_exams_for_school(
     return exams
 
 
-@router.get("/search", response_model=list[ExamOut], dependencies=[Depends(require_role("Admin", "Teacher", "Parent"))], summary="[Agent-Ready] Search Exams")
+@router.get(
+    "/search",
+    response_model=list[ExamOut],
+    dependencies=[Depends(require_role("Admin", "Teacher", "Parent"))],
+    summary="[Agent-Ready] Search Exams",
+)
 async def search_exams(
     *,
     name: Optional[str] = None,
@@ -66,7 +82,13 @@ async def search_exams(
     Flexibly search for active exams in the user's school.
     Can search by name, exam type, or academic year.
     """
-    exams = await exam_service.search_exams(db=db, school_id=current_profile.school_id, name=name, exam_type_id=exam_type_id, academic_year_id=academic_year_id)
+    exams = await exam_service.search_exams(
+        db=db,
+        school_id=current_profile.school_id,
+        name=name,
+        exam_type_id=exam_type_id,
+        academic_year_id=academic_year_id,
+    )
     if not exams:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -75,7 +97,12 @@ async def search_exams(
     return exams
 
 
-@router.get("/{exam_id}", response_model=ExamOut, dependencies=[Depends(require_role("Admin", "Teacher", "Parent"))], summary="[Secured] Get Exam by ID")
+@router.get(
+    "/{exam_id}",
+    response_model=ExamOut,
+    dependencies=[Depends(require_role("Admin", "Teacher", "Parent"))],
+    summary="[Secured] Get Exam by ID",
+)
 async def get_exam_by_id(
     exam_id: int,
     db: AsyncSession = Depends(deps.get_db_session),
@@ -93,7 +120,12 @@ async def get_exam_by_id(
     return db_exam
 
 
-@router.put("/{exam_id}", response_model=ExamOut, dependencies=[Depends(require_role("Admin"))], summary="[Secured] Update Exam")
+@router.put(
+    "/{exam_id}",
+    response_model=ExamOut,
+    dependencies=[Depends(require_role("Admin"))],
+    summary="[Secured] Update Exam",
+)
 async def update_exam(
     exam_id: int,
     exam_in: ExamUpdate,
@@ -111,7 +143,12 @@ async def update_exam(
     return updated
 
 
-@router.delete("/{exam_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_role("Admin"))], summary="[Secured] Delete Exam")
+@router.delete(
+    "/{exam_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_role("Admin"))],
+    summary="[Secured] Delete Exam",
+)
 async def delete_exam(
     exam_id: int,
     db: AsyncSession = Depends(deps.get_db_session),

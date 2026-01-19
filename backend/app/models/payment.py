@@ -1,6 +1,15 @@
 # app/models/payment.py
 
-from sqlalchemy import TIMESTAMP, CheckConstraint, Column, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import (
+    TIMESTAMP,
+    CheckConstraint,
+    Column,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import ENUM, UUID
 from sqlalchemy.dialects.postgresql.json import JSONB
 from sqlalchemy.orm import relationship
@@ -28,8 +37,32 @@ class Payment(Base):
     gateway_signature = Column(Text)
 
     # --- Status and Metadata Fields ---
-    status = Column(ENUM("pending", "authorized", "captured", "failed", "refunded", "partially_refunded", "captured_allocation_failed", name="payment_status", create_type=False), default="pending")
-    reconciliation_status = Column(ENUM("pending", "reconciled", "discrepancy", "under_review", "settled", name="reconciliation_status", create_type=False), default="pending")
+    status = Column(
+        ENUM(
+            "pending",
+            "authorized",
+            "captured",
+            "failed",
+            "refunded",
+            "partially_refunded",
+            "captured_allocation_failed",
+            name="payment_status",
+            create_type=False,
+        ),
+        default="pending",
+    )
+    reconciliation_status = Column(
+        ENUM(
+            "pending",
+            "reconciled",
+            "discrepancy",
+            "under_review",
+            "settled",
+            name="reconciliation_status",
+            create_type=False,
+        ),
+        default="pending",
+    )
     method = Column(String(50))
     error_code = Column(String(255))
     error_description = Column(Text)
@@ -45,4 +78,9 @@ class Payment(Base):
     student = relationship("Student")
     user = relationship("Profile")
 
-    __table_args__ = (CheckConstraint("(invoice_id IS NOT NULL AND order_id IS NULL) OR (invoice_id IS NULL AND order_id IS NOT NULL)", name="chk_payment_target"),)
+    __table_args__ = (
+        CheckConstraint(
+            "(invoice_id IS NOT NULL AND order_id IS NULL) OR (invoice_id IS NULL AND order_id IS NOT NULL)",
+            name="chk_payment_target",
+        ),
+    )

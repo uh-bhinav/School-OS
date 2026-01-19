@@ -4,7 +4,9 @@ from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
 # Import the L2 orchestrator we just built
-from app.agents.modules.academics.module_agent import academics_module_orchestrator_instance
+from app.agents.modules.academics.module_agent import (
+    academics_module_orchestrator_instance,
+)
 
 logger = logging.getLogger(__name__)
 

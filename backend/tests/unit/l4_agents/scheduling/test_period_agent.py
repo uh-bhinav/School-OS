@@ -2,7 +2,10 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.period_agent.main import PeriodAgent, period_agent_instance
+from app.agents.modules.academics.leaves.period_agent.main import (
+    PeriodAgent,
+    period_agent_instance,
+)
 from app.agents.modules.academics.leaves.period_agent.tools import period_agent_tools
 
 # This marks all tests in this file as async
@@ -42,10 +45,20 @@ async def test_happy_path_list_periods(mock_period_llm_invoke, mock_period_http_
     query = "What are the school's period timings?"
     tool_call = ToolCall(name="list_periods", args={}, id="tool_123")
 
-    mock_period_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Period 1 is 09:00-09:40.")]
+    mock_period_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Period 1 is 09:00-09:40."),
+    ]
 
     # 2. Setup Mock API
-    mock_response = [{"period_number": 1, "name": "Period 1", "start_time": "09:00", "end_time": "09:40"}]
+    mock_response = [
+        {
+            "period_number": 1,
+            "name": "Period 1",
+            "start_time": "09:00",
+            "end_time": "09:40",
+        }
+    ]
     mock_period_http_client.get.return_value = mock_response
 
     # 3. Invoke Agent

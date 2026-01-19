@@ -31,7 +31,12 @@ logger = logging.getLogger(__name__)
 class AgentHTTPClientError(Exception):
     """Base exception for HTTP client errors in agents."""
 
-    def __init__(self, message: str, status_code: Optional[int] = None, detail: Optional[dict[str, Any]] = None):
+    def __init__(
+        self,
+        message: str,
+        status_code: Optional[int] = None,
+        detail: Optional[dict[str, Any]] = None,
+    ):
         self.message = message
         self.status_code = status_code
         self.detail = detail or {}

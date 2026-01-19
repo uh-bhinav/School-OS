@@ -1,6 +1,14 @@
 # backend/app/models/club_membership.py
 
-from sqlalchemy import TIMESTAMP, CheckConstraint, Column, Date, ForeignKey, Integer, Text
+from sqlalchemy import (
+    TIMESTAMP,
+    CheckConstraint,
+    Column,
+    Date,
+    ForeignKey,
+    Integer,
+    Text,
+)
 from sqlalchemy import Enum as SQLAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -15,8 +23,17 @@ class ClubMembership(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     club_id = Column(Integer, ForeignKey("clubs.id", ondelete="CASCADE"), nullable=False, index=True)
-    student_id = Column(Integer, ForeignKey("students.student_id", ondelete="CASCADE"), nullable=False, index=True)
-    approved_by_user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id", ondelete="RESTRICT"), nullable=False)
+    student_id = Column(
+        Integer,
+        ForeignKey("students.student_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    approved_by_user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("profiles.user_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
 
     # Use the enum member names defined in app.schemas.enums
     role = Column(
@@ -54,7 +71,12 @@ class ClubMembership(Base):
     approved_at = Column(TIMESTAMP(timezone=True))
 
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     __table_args__ = (
         CheckConstraint("attendance_count >= 0", name="chk_attendance_count_non_negative"),

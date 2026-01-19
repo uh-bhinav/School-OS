@@ -20,7 +20,11 @@ class ProductAlbumLinkCreate(ProductAlbumLinkBase):
     This is intended for internal service-layer use after a file is uploaded.
     """
 
-    storage_path: str = Field(..., max_length=1024, description="The relative path to the image in the storage bucket.")
+    storage_path: str = Field(
+        ...,
+        max_length=1024,
+        description="The relative path to the image in the storage bucket.",
+    )
 
 
 class ProductAlbumLinkResponse(BaseModel):

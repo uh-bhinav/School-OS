@@ -63,4 +63,9 @@ class Teacher(Base):
         back_populates="teacher",
         lazy="selectin",
     )
-    clubs_in_charge = relationship("Club", foreign_keys="[Club.teacher_in_charge_id]", back_populates="teacher_in_charge", lazy="selectin")
+    clubs_in_charge = relationship(
+        "Club",
+        foreign_keys="[Club.teacher_in_charge_id]",
+        back_populates="teacher_in_charge",
+        lazy="selectin",
+    )

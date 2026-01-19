@@ -185,7 +185,13 @@ async def fetch_exams_by_academic_year(db: AsyncSession, academic_year_id: int) 
     return result.scalars().all()
 
 
-async def search_exams(db: AsyncSession, school_id: int, name: Optional[str] = None, exam_type_id: Optional[int] = None, academic_year_id: Optional[int] = None) -> list[Exam]:
+async def search_exams(
+    db: AsyncSession,
+    school_id: int,
+    name: Optional[str] = None,
+    exam_type_id: Optional[int] = None,
+    academic_year_id: Optional[int] = None,
+) -> list[Exam]:
     """
     Flexibly searches for active exams by name, type, or academic year.
     """

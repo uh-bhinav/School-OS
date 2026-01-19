@@ -79,7 +79,12 @@ class AgentChatResponse(BaseModel):
 
     class Config:
         # Allow arbitrary types and longer strings
-        json_schema_extra = {"example": {"response": "This is a detailed response from the agent...", "session_id": "default-session"}}
+        json_schema_extra = {
+            "example": {
+                "response": "This is a detailed response from the agent...",
+                "session_id": "default-session",
+            }
+        }
 
 
 def get_api_base_url() -> str:

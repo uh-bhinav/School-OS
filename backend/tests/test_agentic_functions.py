@@ -242,7 +242,9 @@ async def test_get_teacher_qualifications(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_teacher_qualifications_returns_none_for_missing(db_session: AsyncSession) -> None:
+async def test_get_teacher_qualifications_returns_none_for_missing(
+    db_session: AsyncSession,
+) -> None:
     result = await get_teacher_qualifications(db_session, teacher_id=999_999)
     assert result is None
 

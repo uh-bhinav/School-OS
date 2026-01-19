@@ -4,7 +4,10 @@ from langchain_core.messages import AIMessage, ToolCall
 from app.agents.http_client import AgentAuthenticationError
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.teacher_agent.main import TeacherAgent, teacher_agent_instance
+from app.agents.modules.academics.leaves.teacher_agent.main import (
+    TeacherAgent,
+    teacher_agent_instance,
+)
 from app.agents.modules.academics.leaves.teacher_agent.tools import teacher_agent_tools
 
 # This marks all tests in this file as async
@@ -63,7 +66,10 @@ async def test_happy_path_get_teacher_qualifications(mock_teacher_llm_invoke, mo
     search_response = [{"teacher_id": 12, "profile": {"first_name": "Priya", "last_name": "Sharma"}}]
     # API response for 'get_teacher_qualifications'
     qualifications_response = {"degree": "PhD in Physics", "years_of_experience": 10}
-    mock_teacher_http_client.get.side_effect = [search_response, qualifications_response]
+    mock_teacher_http_client.get.side_effect = [
+        search_response,
+        qualifications_response,
+    ]
 
     # 3. Invoke Agent
     result = await teacher_agent_instance.ainvoke(query)
@@ -123,7 +129,10 @@ async def test_edge_case_handles_auth_error_403(mock_teacher_llm_invoke, mock_te
     # This is the *exact* user-facing response required by the prompt
     final_error_response = "I'm sorry, but you do not have 'Admin' permissions to perform this action."
 
-    mock_teacher_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content=final_error_response)]  # 1. LLM calls the admin tool  # 2. LLM synthesizes the 403 error
+    mock_teacher_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content=final_error_response),
+    ]  # 1. LLM calls the admin tool  # 2. LLM synthesizes the 403 error
 
     # 2. Setup Mock API: Force the 'get' call to raise a 403 error
     mock_teacher_http_client.get.side_effect = AgentAuthenticationError("Insufficient permissions", status_code=403)

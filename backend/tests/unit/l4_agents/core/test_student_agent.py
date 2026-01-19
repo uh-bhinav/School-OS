@@ -2,7 +2,10 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.student_agent.main import StudentAgent, student_agent_instance
+from app.agents.modules.academics.leaves.student_agent.main import (
+    StudentAgent,
+    student_agent_instance,
+)
 from app.agents.modules.academics.leaves.student_agent.tools import student_agent_tools
 
 pytestmark = pytest.mark.asyncio
@@ -106,7 +109,10 @@ async def test_edge_case_handles_empty_search_result(mock_student_llm_invoke, mo
     # Step 2: The tool will return 'count: 0'. The LLM synthesizes this.
     mock_response_text = "I'm sorry, I could not find any student named 'John Smith'."
 
-    mock_student_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call_1]), AIMessage(content=mock_response_text)]  # 1. LLM calls search  # 2. LLM synthesizes the empty result
+    mock_student_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call_1]),
+        AIMessage(content=mock_response_text),
+    ]  # 1. LLM calls search  # 2. LLM synthesizes the empty result
 
     # 2. Setup Mock API
     # The API returns an empty list

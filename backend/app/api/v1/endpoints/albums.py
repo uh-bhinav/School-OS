@@ -79,7 +79,10 @@ async def get_album_details(
     accessible_albums = await album_service.get_accessible_albums(db=db, user_context=user_context)
 
     if album_id not in {a.id for a in accessible_albums}:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this album")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this album",
+        )
 
     return album
 

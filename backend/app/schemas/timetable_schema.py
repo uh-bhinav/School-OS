@@ -61,12 +61,44 @@ class TimetableConstraint(BaseModel):
     All fields are optional to maintain backward compatibility.
     """
 
-    min_classes_per_day: Optional[int] = Field(default=None, ge=0, le=10, description="Minimum classes a teacher should have per day (soft constraint)")
-    max_classes_per_day: Optional[int] = Field(default=None, ge=1, le=10, description="Maximum classes a teacher can have per day (hard constraint)")
-    min_classes_per_week: Optional[int] = Field(default=None, ge=0, le=50, description="Minimum classes a teacher should have per week (soft constraint)")
-    max_classes_per_week: Optional[int] = Field(default=None, ge=1, le=50, description="Maximum classes a teacher can have per week (hard constraint)")
-    prioritize_core_subjects: Optional[bool] = Field(default=True, description="Schedule core subjects (Math, Science) in early periods when possible")
-    core_subject_names: Optional[list[str]] = Field(default_factory=lambda: ["Mathematics", "Science", "Physics", "Chemistry", "Biology"], description="List of subject names considered as core subjects")
+    min_classes_per_day: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=10,
+        description="Minimum classes a teacher should have per day (soft constraint)",
+    )
+    max_classes_per_day: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=10,
+        description="Maximum classes a teacher can have per day (hard constraint)",
+    )
+    min_classes_per_week: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=50,
+        description="Minimum classes a teacher should have per week (soft constraint)",
+    )
+    max_classes_per_week: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=50,
+        description="Maximum classes a teacher can have per week (hard constraint)",
+    )
+    prioritize_core_subjects: Optional[bool] = Field(
+        default=True,
+        description="Schedule core subjects (Math, Science) in early periods when possible",
+    )
+    core_subject_names: Optional[list[str]] = Field(
+        default_factory=lambda: [
+            "Mathematics",
+            "Science",
+            "Physics",
+            "Chemistry",
+            "Biology",
+        ],
+        description="List of subject names considered as core subjects",
+    )
 
 
 class ConstraintRule(BaseModel):
@@ -75,10 +107,16 @@ class ConstraintRule(BaseModel):
     These are NOT persisted to DB - only used during generation.
     """
 
-    rule_type: str = Field(..., description="Type of constraint (e.g., 'teacher_max_daily_periods', 'subject_time_restriction')")
+    rule_type: str = Field(
+        ...,
+        description="Type of constraint (e.g., 'teacher_max_daily_periods', 'subject_time_restriction')",
+    )
     target_type: str = Field(..., description="'teacher', 'subject', 'class'")
     target_id: int = Field(..., description="ID of the teacher/subject/class")
-    parameters: dict[str, Any] = Field(default_factory=dict, description="Rule-specific parameters (e.g., {'max_periods': 5, 'before_period': 4})")
+    parameters: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Rule-specific parameters (e.g., {'max_periods': 5, 'before_period': 4})",
+    )
     priority: int = Field(default=1, ge=1, le=3, description="1=High, 2=Medium, 3=Low")
 
 
@@ -104,8 +142,14 @@ class TimetableGenerateRequest(BaseModel):
     academic_year_id: int
     working_days: list[int] = Field(default=[1, 2, 3, 4, 5, 6], description="1=Monday, 6=Saturday. Default Mon-Sat")
     subject_requirements: list[SubjectRequirement]
-    constraints: Optional[list[ConstraintRule]] = Field(default_factory=list, description="Session-level soft constraints (DEPRECATED: use teacher_constraints instead)")
-    teacher_constraints: Optional[TimetableConstraint] = Field(default=None, description="Teacher workload limits and core subject prioritization")
+    constraints: Optional[list[ConstraintRule]] = Field(
+        default_factory=list,
+        description="Session-level soft constraints (DEPRECATED: use teacher_constraints instead)",
+    )
+    teacher_constraints: Optional[TimetableConstraint] = Field(
+        default=None,
+        description="Teacher workload limits and core subject prioritization",
+    )
     dry_run: bool = Field(default=True, description="If True, don't save to DB. If False, commit results.")
 
 
@@ -141,7 +185,10 @@ class TimetableGenerateResponse(BaseModel):
     generated_entries: list[TimetableEntryOut]
     unassigned_subjects: list[UnassignedSubjectInfo] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list, description="Soft constraint violations (non-fatal)")
-    conflicts: list[ConflictDetail] = Field(default_factory=list, description="Hard constraint violations (fatal if not empty)")
+    conflicts: list[ConflictDetail] = Field(
+        default_factory=list,
+        description="Hard constraint violations (fatal if not empty)",
+    )
     optimization_score: float = Field(default=0.0, description="Overall quality score (0-100). Higher is better.")
     generation_metadata: dict[str, Any] = Field(default_factory=dict, description="Debug info: time taken, iterations, etc.")
 

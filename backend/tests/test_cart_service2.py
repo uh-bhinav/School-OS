@@ -109,7 +109,10 @@ async def test_add_item_fails_product_not_found(db_session: AsyncSession, parent
     cart_service = CartService(db_session)
 
     with pytest.raises(HTTPException) as exc_info:
-        await cart_service.add_item_to_cart(user_id=parent_user_id, item_in=CartItemIn(product_id=fake_product_id, quantity=1))
+        await cart_service.add_item_to_cart(
+            user_id=parent_user_id,
+            item_in=CartItemIn(product_id=fake_product_id, quantity=1),
+        )
 
     # Step 2: Verify error details
     assert exc_info.value.status_code == 404

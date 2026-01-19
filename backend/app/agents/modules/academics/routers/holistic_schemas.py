@@ -15,7 +15,10 @@ class HolisticRoute(BaseModel):
     Holistic Development sub-module.
     """
 
-    agent_name: AgentName = Field(..., description=("The name of the leaf agent to route the query to. " "Use '__self__' for simple greetings or general questions."))
+    agent_name: AgentName = Field(
+        ...,
+        description=("The name of the leaf agent to route the query to. " "Use '__self__' for simple greetings or general questions."),
+    )
 
 
 __all__ = ["HolisticRoute"]

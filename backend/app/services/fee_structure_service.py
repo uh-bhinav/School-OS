@@ -22,7 +22,12 @@ class FeeStructureService:
 
     # Fee Component Methods
     async def create_fee_component(self, component_data: FeeComponentCreate) -> FeeComponent:
-        stmt = select(FeeComponent).where(and_(FeeComponent.school_id == component_data.school_id, FeeComponent.component_name.ilike(component_data.component_name)))
+        stmt = select(FeeComponent).where(
+            and_(
+                FeeComponent.school_id == component_data.school_id,
+                FeeComponent.component_name.ilike(component_data.component_name),
+            )
+        )
         result = await self.db.execute(stmt)
         existing = result.scalar_one_or_none()
 
@@ -56,11 +61,17 @@ class FeeStructureService:
 
         # 2. Validate that all component IDs are valid for the given school
         if component_ids:
-            stmt = select(FeeComponent.id).where(FeeComponent.id.in_(component_ids), FeeComponent.school_id == template_data.school_id)
+            stmt = select(FeeComponent.id).where(
+                FeeComponent.id.in_(component_ids),
+                FeeComponent.school_id == template_data.school_id,
+            )
             result = await self.db.execute(stmt)
             valid_component_ids = [row[0] for row in result.all()]
             if len(valid_component_ids) != len(component_ids):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or mismatched component IDs.")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid or mismatched component IDs.",
+                )
 
         # 3. Create the main FeeTemplate record
         new_template = FeeTemplate(**template_dict)
@@ -100,7 +111,14 @@ class FeeStructureService:
         return template
 
     async def get_fee_templates_by_school(self, school_id: int) -> list[FeeTemplate]:
-        stmt = select(FeeTemplate).options(selectinload(FeeTemplate.fee_terms), selectinload(FeeTemplate.components)).where(FeeTemplate.school_id == school_id)
+        stmt = (
+            select(FeeTemplate)
+            .options(
+                selectinload(FeeTemplate.fee_terms),
+                selectinload(FeeTemplate.components),
+            )
+            .where(FeeTemplate.school_id == school_id)
+        )
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
@@ -112,7 +130,14 @@ class FeeStructureService:
         # --- THE DEFINITIVE FIX: Use an explicit JOIN ---
         # 1. Instead of loading the template and its relationships, we write a direct
         #    query to get the exact data we need: the component IDs and their base amounts.
-        stmt = select(FeeComponent.id, FeeComponent.base_amount).join(FeeTemplateComponent, FeeTemplateComponent.fee_component_id == FeeComponent.id).where(FeeTemplateComponent.fee_template_id == assignment_data.template_id)
+        stmt = (
+            select(FeeComponent.id, FeeComponent.base_amount)
+            .join(
+                FeeTemplateComponent,
+                FeeTemplateComponent.fee_component_id == FeeComponent.id,
+            )
+            .where(FeeTemplateComponent.fee_template_id == assignment_data.template_id)
+        )
         result = await self.db.execute(stmt)
         components_to_assign = result.all()  # This gives a simple list of (id, amount) tuples
 
@@ -125,12 +150,21 @@ class FeeStructureService:
 
         # 2. Iterate through the simple, pre-fetched data. No lazy loading can occur here.
         for component_id, base_amount in components_to_assign:
-            existing_stmt = select(ClassFeeStructure).where(ClassFeeStructure.class_id == assignment_data.class_id, ClassFeeStructure.component_id == component_id, ClassFeeStructure.academic_year_id == assignment_data.academic_year_id)
+            existing_stmt = select(ClassFeeStructure).where(
+                ClassFeeStructure.class_id == assignment_data.class_id,
+                ClassFeeStructure.component_id == component_id,
+                ClassFeeStructure.academic_year_id == assignment_data.academic_year_id,
+            )
             existing_result = await self.db.execute(existing_stmt)
             existing_assignment = existing_result.scalars().first()
 
             if not existing_assignment:
-                new_assignment = ClassFeeStructure(class_id=assignment_data.class_id, component_id=component_id, academic_year_id=assignment_data.academic_year_id, amount=base_amount)
+                new_assignment = ClassFeeStructure(
+                    class_id=assignment_data.class_id,
+                    component_id=component_id,
+                    academic_year_id=assignment_data.academic_year_id,
+                    amount=base_amount,
+                )
                 self.db.add(new_assignment)
 
         await self.db.commit()

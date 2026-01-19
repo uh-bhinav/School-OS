@@ -14,6 +14,7 @@ from app.api.v1.endpoints import (
     classes,
     clubs,
     communication,
+    dashboard,
     discounts,
     employment_statuses,
     exam_class_mappings,
@@ -49,12 +50,17 @@ api_router = APIRouter()
 
 # Include all the individual routers into the main v1 router
 api_router.include_router(schools.router, prefix="/schools", tags=["Schools"])
+api_router.include_router(dashboard.router, prefix="", tags=["Dashboard"])  # Dashboard endpoints
 api_router.include_router(academic_years.router, prefix="/academic-years", tags=["Academic Years"])
 api_router.include_router(classes.router, prefix="/classes", tags=["Classes"])
 api_router.include_router(subjects.router, prefix="/subjects", tags=["Subjects"])
 api_router.include_router(students.router, prefix="/students", tags=["Students"])
 api_router.include_router(student_contacts.router, prefix="/student-contacts", tags=["Students"])
-api_router.include_router(exam_class_mappings.router, prefix="/exam-class-mappings", tags=["Exam Class Mappings"])
+api_router.include_router(
+    exam_class_mappings.router,
+    prefix="/exam-class-mappings",
+    tags=["Exam Class Mappings"],
+)
 
 
 # Academics
@@ -66,10 +72,22 @@ api_router.include_router(attendance_records.router, prefix="/attendance", tags=
 
 # E-commerce
 api_router.include_router(products.router, prefix="/products", tags=["E-Commerce: Products"])
-api_router.include_router(timetable_generation.router, prefix="/timetable-generate", tags=["Timetable Generation"])
+api_router.include_router(
+    timetable_generation.router,
+    prefix="/timetable-generate",
+    tags=["Timetable Generation"],
+)
 api_router.include_router(admin_products.router, prefix="/admin/products", tags=["Admin: Products"])
-api_router.include_router(admin_product_categories.router, prefix="/admin/product-categories", tags=["Admin: Product Categories"])
-api_router.include_router(admin_product_packages.router, prefix="/admin/product-packages", tags=["Admin: Product Packages"])
+api_router.include_router(
+    admin_product_categories.router,
+    prefix="/admin/product-categories",
+    tags=["Admin: Product Categories"],
+)
+api_router.include_router(
+    admin_product_packages.router,
+    prefix="/admin/product-packages",
+    tags=["Admin: Product Packages"],
+)
 api_router.include_router(carts.router, prefix="/cart", tags=["E-Commerce: Cart"])
 api_router.include_router(orders.router, prefix="/orders", tags=["E-Commerce: Orders"])
 
@@ -90,7 +108,11 @@ api_router.include_router(discounts.router, prefix="/finance", tags=["Finance - 
 api_router.include_router(invoices.router, prefix="/finance", tags=["Finance - Invoices & Payments"])
 api_router.include_router(student_fee_assignments.router, prefix="/finance", tags=["Finance - Overrides"])
 api_router.include_router(refunds.router, prefix="/finance/refunds", tags=["Finance - Refunds"])
-api_router.include_router(payment_gateway.router, prefix="/finance/gateway", tags=["Finance - Gateway Configuration"])
+api_router.include_router(
+    payment_gateway.router,
+    prefix="/finance/gateway",
+    tags=["Finance - Gateway Configuration"],
+)
 api_router.include_router(payments.router, prefix="/finance/payments", tags=["Finance - Payments"])
 api_router.include_router(webhooks.router, prefix="/webhooks", tags=["Webhooks"])
 

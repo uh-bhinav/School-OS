@@ -2,10 +2,14 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Function we are testing
-from app.agents.modules.academics.routers.core_curriculum_router import invoke_core_curriculum_router
+from app.agents.modules.academics.routers.core_curriculum_router import (
+    invoke_core_curriculum_router,
+)
 
 # Schema for type hints
-from app.agents.modules.academics.routers.core_curriculum_schemas import CoreCurriculumRoute
+from app.agents.modules.academics.routers.core_curriculum_schemas import (
+    CoreCurriculumRoute,
+)
 
 pytestmark = pytest.mark.asyncio
 

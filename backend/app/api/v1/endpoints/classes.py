@@ -365,7 +365,14 @@ async def get_class_complete_info(
             subject_id = row.subject_id
 
             if subject_id not in subjects_dict:
-                subjects_dict[subject_id] = {"subject_id": row.subject_id, "name": row.name, "short_code": row.short_code, "description": row.description, "category": row.category, "teachers": []}
+                subjects_dict[subject_id] = {
+                    "subject_id": row.subject_id,
+                    "name": row.name,
+                    "short_code": row.short_code,
+                    "description": row.description,
+                    "category": row.category,
+                    "teachers": [],
+                }
 
             if row.teacher_id:
                 teacher_info = {
@@ -434,7 +441,10 @@ async def get_class_complete_info(
         raise
     except Exception as e:
         logger.exception(f"Error in get_class_complete_info: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error fetching class info: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching class info: {str(e)}",
+        )
 
 
 def _get_teacher_names(teachers):

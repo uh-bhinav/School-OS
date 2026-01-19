@@ -12,7 +12,10 @@ from app.models.invoice_item import InvoiceItem
 from app.models.student import Student
 from app.models.student_fee_discount import StudentFeeDiscount
 from app.schemas.invoice_schema import BulkInvoiceCreate, InvoiceCreate
-from app.services.invoice_service import generate_invoice_for_student, generate_invoices_for_class
+from app.services.invoice_service import (
+    generate_invoice_for_student,
+    generate_invoices_for_class,
+)
 
 # Mark all tests in this file as asynchronous
 pytestmark = pytest.mark.asyncio
@@ -347,7 +350,11 @@ async def test_generate_invoices_for_class_atomic_rollback(clean_class_invoices,
         return await original_core(db=db, obj_in=obj_in)
 
     # Patch the function
-    mocker.patch.object(invoice_service, "_generate_invoice_for_student_core", side_effect=failing_core_wrapper)
+    mocker.patch.object(
+        invoice_service,
+        "_generate_invoice_for_student_core",
+        side_effect=failing_core_wrapper,
+    )
 
     bulk_data = BulkInvoiceCreate(class_id=class_id_to_test, fee_term_id=1)
 

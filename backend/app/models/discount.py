@@ -1,6 +1,18 @@
 # app/models/discount.py
 
-from sqlalchemy import JSON, TIMESTAMP, Boolean, CheckConstraint, Column, Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import (
+    JSON,
+    TIMESTAMP,
+    Boolean,
+    CheckConstraint,
+    Column,
+    Enum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
@@ -33,12 +45,20 @@ class Discount(Base):
     is_active = Column(Boolean, default=True, nullable=False)
 
     created_at = Column(TIMESTAMP(timezone=True), server_default="now()", nullable=False)
-    updated_at = Column(TIMESTAMP(timezone=True), server_default="now()", onupdate="now()", nullable=False)
+    updated_at = Column(
+        TIMESTAMP(timezone=True),
+        server_default="now()",
+        onupdate="now()",
+        nullable=False,
+    )
 
     # Relationship to School
     school = relationship("School", back_populates="discounts")
 
     __table_args__ = (
         CheckConstraint("value > 0", name="chk_discount_value_positive"),
-        CheckConstraint("type != 'percentage' OR (value >= 0 AND value <= 100)", name="chk_discount_percentage"),
+        CheckConstraint(
+            "type != 'percentage' OR (value >= 0 AND value <= 100)",
+            name="chk_discount_percentage",
+        ),
     )

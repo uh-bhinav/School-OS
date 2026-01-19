@@ -65,7 +65,11 @@ async def create_period_structure(periods: list[dict]) -> dict[str, Any]:
             validated_data = CreatePeriodStructureSchema(periods=periods)
         except Exception as e:
             # This validation error goes back to the LLM
-            return {"success": False, "error": f"Invalid input: {str(e)}", "status_code": 400}
+            return {
+                "success": False,
+                "error": f"Invalid input: {str(e)}",
+                "status_code": 400,
+            }
 
         async with AgentHTTPClient() as client:
             # Convert Pydantic models to dicts for the JSON payload
@@ -99,7 +103,12 @@ async def update_period_timing(period_number: int, start_time: str, end_time: st
             logger.info(f"Calling API: PUT /periods/{period_number} with payload: {payload}")
             response = await client.put(f"/periods/{period_number}", json=payload)
             return {"success": True, "updated_period": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error updating period: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:

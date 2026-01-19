@@ -38,7 +38,12 @@ async def get_student_report_card_data(db: Session, student_id: int, academic_ye
 
     # 2. Get all marks for that student in the given academic year
     marks_query = (
-        select(Subject.name.label("subject_name"), Exam.exam_name, Mark.marks_obtained, Mark.max_marks)
+        select(
+            Subject.name.label("subject_name"),
+            Exam.exam_name,
+            Mark.marks_obtained,
+            Mark.max_marks,
+        )
         .join(Subject, Mark.subject_id == Subject.subject_id)
         .join(Exam, Mark.exam_id == Exam.id)
         .where(Mark.student_id == student_id, Exam.academic_year_id == academic_year_id)
@@ -72,7 +77,15 @@ async def get_student_report_card_data(db: Session, student_id: int, academic_ye
     # 4. Build the final response objects
     exam_summaries = []
     for exam_name, data in exam_groups.items():
-        exam_summaries.append(schemas.ExamSummary(exam_name=exam_name, marks=data["marks"], total_obtained=data["total_obtained"], total_max_marks=data["total_max"], percentage=get_percentage(data["total_obtained"], data["total_max"])))
+        exam_summaries.append(
+            schemas.ExamSummary(
+                exam_name=exam_name,
+                marks=data["marks"],
+                total_obtained=data["total_obtained"],
+                total_max_marks=data["total_max"],
+                percentage=get_percentage(data["total_obtained"], data["total_max"]),
+            )
+        )
 
     # 5. Build the final ReportCard object
     report_card_data = schemas.ReportCard(

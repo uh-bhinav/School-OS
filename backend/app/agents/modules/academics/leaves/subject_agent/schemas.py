@@ -14,9 +14,18 @@ class ListAllSubjectsSchema(BaseModel):
 class SearchSubjectsSchema(BaseModel):
     """Input schema for the search_subjects tool. All fields are optional."""
 
-    name: Optional[str] = Field(default=None, description="Optional: Filter by subject name (e.g., 'Physics', 'Math').")
-    code: Optional[str] = Field(default=None, description="Optional: Filter by subject short code (e.g., 'PHY101').")
-    category: Optional[str] = Field(default=None, description="Optional: Filter by category (e.g., 'Science', 'Humanities').")
+    name: Optional[str] = Field(
+        default=None,
+        description="Optional: Filter by subject name (e.g., 'Physics', 'Math').",
+    )
+    code: Optional[str] = Field(
+        default=None,
+        description="Optional: Filter by subject short code (e.g., 'PHY101').",
+    )
+    category: Optional[str] = Field(
+        default=None,
+        description="Optional: Filter by category (e.g., 'Science', 'Humanities').",
+    )
 
 
 class GetSubjectDetailsSchema(BaseModel):
@@ -36,7 +45,10 @@ class CreateSubjectSchema(BaseModel):
 
     school_id: int = Field(..., description="The ID of the school. Must match the Admin's school ID.")
     name: str = Field(..., description="The full name of the subject (e.g., 'Physics').")
-    short_code: Optional[str] = Field(default=None, description="Optional: A short code for the subject (e.g., 'PHY101').")
+    short_code: Optional[str] = Field(
+        default=None,
+        description="Optional: A short code for the subject (e.g., 'PHY101').",
+    )
     category: Optional[str] = Field(default=None, description="Optional: A category (e.g., 'Science', 'Language').")
 
 
@@ -57,4 +69,12 @@ class DeleteSubjectSchema(BaseModel):
 
 
 # Export all schemas
-__all__ = ["ListAllSubjectsSchema", "SearchSubjectsSchema", "GetSubjectDetailsSchema", "GetSubjectTeachersSchema", "CreateSubjectSchema", "UpdateSubjectSchema", "DeleteSubjectSchema"]
+__all__ = [
+    "ListAllSubjectsSchema",
+    "SearchSubjectsSchema",
+    "GetSubjectDetailsSchema",
+    "GetSubjectTeachersSchema",
+    "CreateSubjectSchema",
+    "UpdateSubjectSchema",
+    "DeleteSubjectSchema",
+]

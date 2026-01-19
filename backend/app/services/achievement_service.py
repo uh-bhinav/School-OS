@@ -14,7 +14,15 @@ from app.models.mark import Mark
 from app.models.profile import Profile
 from app.models.student import Student
 from app.models.student_achievement import StudentAchievement
-from app.schemas.achievement_schema import AchievementPointRuleCreate, AchievementPointRuleUpdate, AchievementType, LeaderboardClub, LeaderboardStudent, StudentAchievementCreate, StudentAchievementUpdate
+from app.schemas.achievement_schema import (
+    AchievementPointRuleCreate,
+    AchievementPointRuleUpdate,
+    AchievementType,
+    LeaderboardClub,
+    LeaderboardStudent,
+    StudentAchievementCreate,
+    StudentAchievementUpdate,
+)
 
 
 class AchievementService:
@@ -33,7 +41,12 @@ class AchievementService:
 
     async def get_rule(self, rule_id: int, school_id: int) -> AchievementPointRule | None:
         """Gets a single achievement point rule by ID."""
-        result = await self.db.execute(select(AchievementPointRule).where(AchievementPointRule.id == rule_id, AchievementPointRule.school_id == school_id))
+        result = await self.db.execute(
+            select(AchievementPointRule).where(
+                AchievementPointRule.id == rule_id,
+                AchievementPointRule.school_id == school_id,
+            )
+        )
         return result.scalars().first()
 
     async def get_rules_by_school(self, school_id: int) -> list[AchievementPointRule]:
@@ -79,16 +92,34 @@ class AchievementService:
 
     # --- Student Achievement Management ---
 
-    async def add_achievement(self, achievement_data: StudentAchievementCreate, awarded_by_user_id: UUID, school_id: int) -> Optional[StudentAchievement]:
+    async def add_achievement(
+        self,
+        achievement_data: StudentAchievementCreate,
+        awarded_by_user_id: UUID,
+        school_id: int,
+    ) -> Optional[StudentAchievement]:
         """
         Adds a new student achievement, initially unverified and with 0 points.
         """
-        student_query = select(Student.student_id).join(Profile, Student.user_id == Profile.user_id).where(Student.student_id == achievement_data.student_id, Profile.school_id == school_id)
+        student_query = (
+            select(Student.student_id)
+            .join(Profile, Student.user_id == Profile.user_id)
+            .where(
+                Student.student_id == achievement_data.student_id,
+                Profile.school_id == school_id,
+            )
+        )
         result = await self.db.execute(student_query)
         if not result.scalars().first():
             return None
 
-        db_achievement = StudentAchievement(**achievement_data.model_dump(), school_id=school_id, awarded_by_user_id=awarded_by_user_id, is_verified=False, points_awarded=0)  # Points are awarded upon verification
+        db_achievement = StudentAchievement(
+            **achievement_data.model_dump(),
+            school_id=school_id,
+            awarded_by_user_id=awarded_by_user_id,
+            is_verified=False,
+            points_awarded=0,
+        )  # Points are awarded upon verification
         self.db.add(db_achievement)
         await self.db.commit()
         await self.db.refresh(db_achievement)
@@ -106,7 +137,11 @@ class AchievementService:
             return db_achievement  # Already verified
 
         # Find the matching rule to auto-calculate points
-        rule = await self._get_rule_by_type_and_category(school_id=school_id, ach_type=db_achievement.achievement_type, category=db_achievement.achievement_category)
+        rule = await self._get_rule_by_type_and_category(
+            school_id=school_id,
+            ach_type=db_achievement.achievement_type,
+            category=db_achievement.achievement_category,
+        )
 
         points_to_award = 0
         if rule:
@@ -125,7 +160,14 @@ class AchievementService:
 
     async def get_student_achievements(self, student_id: int, school_id: int, only_verified: bool) -> list[StudentAchievement]:
         """Gets achievements for a specific student."""
-        query = select(StudentAchievement).where(StudentAchievement.student_id == student_id, StudentAchievement.school_id == school_id).order_by(desc(StudentAchievement.date_awarded))
+        query = (
+            select(StudentAchievement)
+            .where(
+                StudentAchievement.student_id == student_id,
+                StudentAchievement.school_id == school_id,
+            )
+            .order_by(desc(StudentAchievement.date_awarded))
+        )
 
         if only_verified:
             query = query.where(StudentAchievement.is_verified.is_(True))
@@ -135,10 +177,20 @@ class AchievementService:
 
     async def get_achievement_by_id(self, achievement_id: int, school_id: int) -> StudentAchievement | None:
         """Gets a single achievement by its ID."""
-        result = await self.db.execute(select(StudentAchievement).where(StudentAchievement.id == achievement_id, StudentAchievement.school_id == school_id))
+        result = await self.db.execute(
+            select(StudentAchievement).where(
+                StudentAchievement.id == achievement_id,
+                StudentAchievement.school_id == school_id,
+            )
+        )
         return result.scalars().first()
 
-    async def update_achievement(self, achievement_id: int, achievement_data: StudentAchievementUpdate, school_id: int) -> StudentAchievement | None:
+    async def update_achievement(
+        self,
+        achievement_id: int,
+        achievement_data: StudentAchievementUpdate,
+        school_id: int,
+    ) -> StudentAchievement | None:
         """Updates an achievement, only if it is NOT verified."""
         db_achievement = await self.get_achievement_by_id(achievement_id, school_id)
 
@@ -181,7 +233,12 @@ class AchievementService:
         class_name_expr = func.trim(func.coalesce(cast(Class.grade_level, String), literal("")) + literal(" ") + func.coalesce(Class.section, ""))
 
         student_query = (
-            select(Student.student_id, student_name_expr.label("student_name"), Class.class_id, class_name_expr.label("class_name"))
+            select(
+                Student.student_id,
+                student_name_expr.label("student_name"),
+                Class.class_id,
+                class_name_expr.label("class_name"),
+            )
             .join(Profile, Student.user_id == Profile.user_id)
             .join(Class, Student.current_class_id == Class.class_id, isouter=True)
             .where(Profile.school_id == school_id)
@@ -193,7 +250,10 @@ class AchievementService:
 
         # 2. Sum achievements
         ach_query = (
-            select(StudentAchievement.student_id, func.sum(StudentAchievement.points_awarded).label("achievement_points"))
+            select(
+                StudentAchievement.student_id,
+                func.sum(StudentAchievement.points_awarded).label("achievement_points"),
+            )
             .where(
                 StudentAchievement.school_id == school_id,
                 StudentAchievement.academic_year_id == academic_year_id,
@@ -216,9 +276,16 @@ class AchievementService:
 
         # 4. Sum club contributions
         club_query = (
-            select(ClubMembership.student_id, func.sum(ClubMembership.contribution_score).label("club_points"))
+            select(
+                ClubMembership.student_id,
+                func.sum(ClubMembership.contribution_score).label("club_points"),
+            )
             .join(Club, ClubMembership.club_id == Club.id)
-            .where(Club.school_id == school_id, Club.academic_year_id == academic_year_id, ClubMembership.status == "active")
+            .where(
+                Club.school_id == school_id,
+                Club.academic_year_id == academic_year_id,
+                ClubMembership.status == "active",
+            )
             .group_by(ClubMembership.student_id)
         ).cte("club_scores")
 
@@ -234,9 +301,21 @@ class AchievementService:
                 func.coalesce(club_query.c.club_points, 0).label("club_points"),
                 (func.coalesce(ach_query.c.achievement_points, 0) + func.coalesce(mark_query.c.exam_points, 0) + func.coalesce(club_query.c.club_points, 0)).label("total_points"),
             )
-            .join(ach_query, students_cte.c.student_id == ach_query.c.student_id, isouter=True)
-            .join(mark_query, students_cte.c.student_id == mark_query.c.student_id, isouter=True)
-            .join(club_query, students_cte.c.student_id == club_query.c.student_id, isouter=True)
+            .join(
+                ach_query,
+                students_cte.c.student_id == ach_query.c.student_id,
+                isouter=True,
+            )
+            .join(
+                mark_query,
+                students_cte.c.student_id == mark_query.c.student_id,
+                isouter=True,
+            )
+            .join(
+                club_query,
+                students_cte.c.student_id == club_query.c.student_id,
+                isouter=True,
+            )
             .order_by(desc("total_points"))
         )
 
@@ -257,7 +336,11 @@ class AchievementService:
     async def get_club_leaderboard(self, school_id: int, academic_year_id: int) -> list[LeaderboardClub]:
         """Computes the leaderboard for all clubs in the school."""
         query = (
-            select(Club.id.label("club_id"), Club.name.label("club_name"), func.sum(func.coalesce(ClubMembership.contribution_score, 0)).label("total_points"))
+            select(
+                Club.id.label("club_id"),
+                Club.name.label("club_name"),
+                func.sum(func.coalesce(ClubMembership.contribution_score, 0)).label("total_points"),
+            )
             .join(ClubMembership, Club.id == ClubMembership.club_id, isouter=True)
             .where(
                 Club.school_id == school_id,
@@ -273,7 +356,14 @@ class AchievementService:
 
     async def get_student_by_name(self, full_name: str, school_id: int) -> Student | None:
         """Finds a student by their full name within the school."""
-        stmt = select(Student).join(Profile).where(Profile.full_name.ilike(f"%{full_name}%"), Profile.school_id == school_id)
+        stmt = (
+            select(Student)
+            .join(Profile)
+            .where(
+                Profile.full_name.ilike(f"%{full_name}%"),
+                Profile.school_id == school_id,
+            )
+        )
         result = await self.db.execute(stmt)
         return result.scalars().first()  # Returns the first match
 
@@ -329,4 +419,7 @@ class AchievementService:
         # just acknowledge the job.
 
         print("SIMULATING: Computation complete.")
-        return {"status": "success", "message": "Leaderboard computation job triggered."}
+        return {
+            "status": "success",
+            "message": "Leaderboard computation job triggered.",
+        }

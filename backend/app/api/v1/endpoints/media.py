@@ -1,4 +1,13 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Response,
+    UploadFile,
+    status,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
@@ -25,7 +34,10 @@ async def upload_media_item(
     """Upload a media file to the requested album when the user has privileges."""
 
     if not (is_teacher(current_user) or is_school_admin(current_user)):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to upload media")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to upload media",
+        )
 
     media_item = await media_service.upload_media_item(
         db,

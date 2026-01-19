@@ -84,7 +84,9 @@ def mock_achievement_http_client():
 def mock_achievement_llm_invoke():
     """Mock the LLM for the AchievementAgent by replacing the entire model object."""
     # We must import the instance *inside* the fixture
-    from app.agents.modules.academics.leaves.achievement_agent.main import achievement_agent_instance
+    from app.agents.modules.academics.leaves.achievement_agent.main import (
+        achievement_agent_instance,
+    )
 
     mock_model = MagicMock()
     # Set a default return value for safety
@@ -126,7 +128,9 @@ def mock_leaderboard_http_client():
 def mock_leaderboard_llm_invoke():
     """Mock the LLM for the LeaderboardAgent by replacing the entire model object."""
     # We must import the instance *inside* the fixture
-    from app.agents.modules.academics.leaves.leaderboard_agent.main import leaderboard_agent_instance
+    from app.agents.modules.academics.leaves.leaderboard_agent.main import (
+        leaderboard_agent_instance,
+    )
 
     mock_model = MagicMock()
     # Set a default return value for safety

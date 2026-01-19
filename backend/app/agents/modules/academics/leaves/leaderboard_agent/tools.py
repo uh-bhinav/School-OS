@@ -60,8 +60,18 @@ async def get_class_leaderboard(class_name: str, category: Category = "academic"
             params = {"category": category, "top_n": top_n}
             logger.info(f"Calling API: GET /leaderboard/agent/class-by-name/{class_name} with params={params}")
             response = await client.get(f"/leaderboard/agent/class-by-name/{class_name}", params=params)
-            return {"success": True, "class_name": class_name, "category": category, "leaderboard": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+            return {
+                "success": True,
+                "class_name": class_name,
+                "category": category,
+                "leaderboard": response,
+            }
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting class leaderboard: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -80,7 +90,12 @@ async def get_club_leaderboard(top_n: int = 5) -> dict[str, Any]:
             logger.info(f"Calling API: GET /leaderboard/agent/clubs with params={params}")
             response = await client.get("/leaderboard/agent/clubs", params=params)
             return {"success": True, "leaderboard": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting club leaderboard: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:

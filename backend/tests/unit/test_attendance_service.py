@@ -9,7 +9,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.models.attendance_record import AttendanceRecord
 
 # --- FIX: Import the *schema* for bulk create ---
-from app.schemas.attendance_record_schema import AttendanceRecordBulkCreate, AttendanceRecordCreate
+from app.schemas.attendance_record_schema import (
+    AttendanceRecordBulkCreate,
+    AttendanceRecordCreate,
+)
 
 # Import the necessary service, schema, and model
 from app.services.attendance_record_service import (
@@ -95,7 +98,11 @@ async def test_create_attendance_record_sad_path_db_error():
         ),
     ):
         with pytest.raises(SQLAlchemyError):
-            await create_attendance_record(db=mock_db_session, attendance_in=attendance_in, school_id=mock_school_id)  # <-- FIX 2: Added school_id
+            await create_attendance_record(
+                db=mock_db_session,
+                attendance_in=attendance_in,
+                school_id=mock_school_id,
+            )  # <-- FIX 2: Added school_id
 
     # Verify the database transaction was attempted and then rolled back
     mock_db_session.add.assert_called_once()
@@ -149,7 +156,11 @@ async def test_bulk_create_attendance_records_happy_path():
         "app.services.attendance_record_service.AttendanceRecord",
         side_effect=lambda **kwargs: _make_record(**kwargs),
     ) as mock_attendance_model:
-        result = await bulk_create_attendance_records(db=mock_db_session, attendance_data=attendance_list_in, school_id=mock_school_id)  # <-- FIX 3: Added school_id
+        result = await bulk_create_attendance_records(
+            db=mock_db_session,
+            attendance_data=attendance_list_in,
+            school_id=mock_school_id,
+        )  # <-- FIX 3: Added school_id
 
     assert mock_attendance_model.call_count == len(attendance_list_in)
 
@@ -195,7 +206,11 @@ async def test_bulk_create_attendance_records_sad_path_db_error():
     # 2. Act & 3. Assert
     with patch("app.services.attendance_record_service.AttendanceRecord", autospec=True):
         with pytest.raises(SQLAlchemyError):
-            await bulk_create_attendance_records(db=mock_db_session, attendance_data=invalid_attendance_list, school_id=mock_school_id)  # <-- FIX 4: Added school_id
+            await bulk_create_attendance_records(
+                db=mock_db_session,
+                attendance_data=invalid_attendance_list,
+                school_id=mock_school_id,
+            )  # <-- FIX 4: Added school_id
 
     # Verify the transaction handling
     mock_db_session.add_all.assert_called_once()

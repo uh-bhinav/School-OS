@@ -14,7 +14,10 @@ class ListAllClassesSchema(BaseModel):
 class SearchClassesSchema(BaseModel):
     """Input schema for the search_classes tool. All fields are optional."""
 
-    name: Optional[str] = Field(default=None, description="Optional: Filter by class name (e.g., '10A', 'Science').")
+    name: Optional[str] = Field(
+        default=None,
+        description="Optional: Filter by class name (e.g., '10A', 'Science').",
+    )
     grade_level: Optional[int] = Field(default=None, description="Optional: Filter by grade level (e.g., 9).")
     academic_year_id: Optional[int] = Field(default=None, description="Optional: Filter by academic year ID.")
     teacher_id: Optional[int] = Field(default=None, description="Optional: Filter by the assigned class teacher's ID.")
@@ -39,7 +42,10 @@ class CreateClassSchema(BaseModel):
     grade_level: int = Field(..., description="The grade level for the class (e.g., 1, 10, 12).")
     section: str = Field(..., description="The section name (e.g., 'A', 'B', 'Science').")
     academic_year_id: int = Field(..., description="The ID of the academic year this class belongs to.")
-    class_teacher_id: Optional[int] = Field(default=None, description="Optional: The ID of the teacher assigned as the class teacher.")
+    class_teacher_id: Optional[int] = Field(
+        default=None,
+        description="Optional: The ID of the teacher assigned as the class teacher.",
+    )
 
 
 class UpdateClassSchema(BaseModel):
@@ -67,4 +73,13 @@ class AssignSubjectsSchema(BaseModel):
 
 
 # Export all schemas
-__all__ = ["ListAllClassesSchema", "SearchClassesSchema", "GetClassDetailsSchema", "GetClassStudentsSchema", "CreateClassSchema", "UpdateClassSchema", "DeleteClassSchema", "AssignSubjectsSchema"]
+__all__ = [
+    "ListAllClassesSchema",
+    "SearchClassesSchema",
+    "GetClassDetailsSchema",
+    "GetClassStudentsSchema",
+    "CreateClassSchema",
+    "UpdateClassSchema",
+    "DeleteClassSchema",
+    "AssignSubjectsSchema",
+]

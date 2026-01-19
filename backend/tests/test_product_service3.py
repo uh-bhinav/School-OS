@@ -66,7 +66,15 @@ async def test_school_isolation_product_list(db_session: AsyncSession, mock_admi
     school_1_product_ids = []
 
     for i in range(3):
-        product = await product_service.create_product(product_in=ProductCreate(name=f"School 1 Product {i+1}", price=Decimal("100.00"), stock_quantity=10, category_id=1), current_profile=mock_admin_profile)
+        product = await product_service.create_product(
+            product_in=ProductCreate(
+                name=f"School 1 Product {i+1}",
+                price=Decimal("100.00"),
+                stock_quantity=10,
+                category_id=1,
+            ),
+            current_profile=mock_admin_profile,
+        )
         school_1_product_ids.append(product.product_id)
 
     print(f"✓ Created 3 products for School 1: {school_1_product_ids}")
@@ -74,7 +82,14 @@ async def test_school_isolation_product_list(db_session: AsyncSession, mock_admi
     # Step 2: Create products for School 2 (direct DB insert)
     school_2_product_ids = []
     for i in range(2):
-        product = Product(school_id=2, category_id=1, name=f"School 2 Product {i+1}", price=Decimal("200.00"), stock_quantity=20, is_active=True)
+        product = Product(
+            school_id=2,
+            category_id=1,
+            name=f"School 2 Product {i+1}",
+            price=Decimal("200.00"),
+            stock_quantity=20,
+            is_active=True,
+        )
         db_session.add(product)
 
     await db_session.commit()
@@ -135,7 +150,12 @@ async def test_school_isolation_product_create(db_session: AsyncSession, mock_ad
     admin_school_id = mock_admin_profile.school_id
 
     # Step 1: Create product (no school_id in request)
-    product_data = ProductCreate(name="Security Test Product", price=Decimal("100.00"), stock_quantity=10, category_id=1)
+    product_data = ProductCreate(
+        name="Security Test Product",
+        price=Decimal("100.00"),
+        stock_quantity=10,
+        category_id=1,
+    )
 
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -171,7 +191,14 @@ async def test_school_isolation_product_update(db_session: AsyncSession, mock_ad
     print("\n--- Test 3.3: School Isolation - Product Update ---")
 
     # Step 1: Create product for School 2
-    other_school_product = Product(school_id=2, category_id=1, name="School 2 Restricted Product", price=Decimal("500.00"), stock_quantity=50, is_active=True)
+    other_school_product = Product(
+        school_id=2,
+        category_id=1,
+        name="School 2 Restricted Product",
+        price=Decimal("500.00"),
+        stock_quantity=50,
+        is_active=True,
+    )
     db_session.add(other_school_product)
     await db_session.commit()
     await db_session.refresh(other_school_product)
@@ -218,7 +245,14 @@ async def test_school_isolation_product_delete(db_session: AsyncSession, mock_ad
     print("\n--- Test 3.4: School Isolation - Product Delete ---")
 
     # Step 1: Create product for School 2
-    other_school_product = Product(school_id=2, category_id=1, name="School 2 Delete Test Product", price=Decimal("300.00"), stock_quantity=30, is_active=True)
+    other_school_product = Product(
+        school_id=2,
+        category_id=1,
+        name="School 2 Delete Test Product",
+        price=Decimal("300.00"),
+        stock_quantity=30,
+        is_active=True,
+    )
     db_session.add(other_school_product)
     await db_session.commit()
     await db_session.refresh(other_school_product)
@@ -266,7 +300,15 @@ async def test_category_relationship_security(db_session: AsyncSession, mock_adm
     # Step 1: Create product in School 1
     product_service = ProductService(db_session)
 
-    product = await product_service.create_product(product_in=ProductCreate(name="Cross-Category Security Test", price=Decimal("100.00"), stock_quantity=10, category_id=1), current_profile=mock_admin_profile)
+    product = await product_service.create_product(
+        product_in=ProductCreate(
+            name="Cross-Category Security Test",
+            price=Decimal("100.00"),
+            stock_quantity=10,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )
 
     product_id = product.product_id
     print("✓ Product created in School 1, category_id=1")
@@ -326,7 +368,16 @@ async def test_role_based_access_parent_view_active(db_session: AsyncSession, mo
 
     active_product_ids = []
     for i in range(3):
-        product = await product_service.create_product(product_in=ProductCreate(name=f"Active Product {i+1}", price=Decimal("100.00"), stock_quantity=10, category_id=1, is_active=True), current_profile=mock_admin_profile)
+        product = await product_service.create_product(
+            product_in=ProductCreate(
+                name=f"Active Product {i+1}",
+                price=Decimal("100.00"),
+                stock_quantity=10,
+                category_id=1,
+                is_active=True,
+            ),
+            current_profile=mock_admin_profile,
+        )
         active_product_ids.append(product.product_id)
 
     print("✓ Created 3 active products")
@@ -334,7 +385,16 @@ async def test_role_based_access_parent_view_active(db_session: AsyncSession, mo
     # Create inactive products
     inactive_product_ids = []
     for i in range(2):
-        product = await product_service.create_product(product_in=ProductCreate(name=f"Inactive Product {i+1}", price=Decimal("100.00"), stock_quantity=10, category_id=1, is_active=True), current_profile=mock_admin_profile)
+        product = await product_service.create_product(
+            product_in=ProductCreate(
+                name=f"Inactive Product {i+1}",
+                price=Decimal("100.00"),
+                stock_quantity=10,
+                category_id=1,
+                is_active=True,
+            ),
+            current_profile=mock_admin_profile,
+        )
         inactive_product_ids.append(product.product_id)
 
         # Soft delete
@@ -369,7 +429,11 @@ async def test_role_based_access_parent_view_active(db_session: AsyncSession, mo
 
 
 @pytest.mark.asyncio
-async def test_sku_uniqueness_global(db_session: AsyncSession, mock_admin_profile: Profile, mock_admin_profile_school_2: Profile):
+async def test_sku_uniqueness_global(
+    db_session: AsyncSession,
+    mock_admin_profile: Profile,
+    mock_admin_profile_school_2: Profile,
+):
     """
     Test 3.7: Verify SKU is globally unique (not school-scoped).
 
@@ -390,10 +454,16 @@ async def test_sku_uniqueness_global(db_session: AsyncSession, mock_admin_profil
     unique_sku = f"GLOBAL-SKU-TEST-{str(uuid.uuid4()).upper()}"
 
     # Step 1: Create categories for both schools using direct DB insert
-    category_school_1 = ProductCategory(school_id=admin_school_id_1, category_name=f"Global SKU Cat S1 {uuid.uuid4().hex[:8]}")
+    category_school_1 = ProductCategory(
+        school_id=admin_school_id_1,
+        category_name=f"Global SKU Cat S1 {uuid.uuid4().hex[:8]}",
+    )
     db_session.add(category_school_1)
 
-    category_school_2 = ProductCategory(school_id=admin_school_id_2, category_name=f"Global SKU Cat S2 {uuid.uuid4().hex[:8]}")
+    category_school_2 = ProductCategory(
+        school_id=admin_school_id_2,
+        category_name=f"Global SKU Cat S2 {uuid.uuid4().hex[:8]}",
+    )
     db_session.add(category_school_2)
 
     await db_session.commit()
@@ -415,7 +485,15 @@ async def test_sku_uniqueness_global(db_session: AsyncSession, mock_admin_profil
         raise RuntimeError("Failed to fetch fresh profile for school 1")
 
     school_1_product = await product_service_1.create_product(
-        product_in=ProductCreate(name="School 1 SKU Test Product", description="Test description", price=Decimal("500.00"), stock_quantity=50, category_id=category_id_school_1, sku=unique_sku), current_profile=profile_school_1_fresh
+        product_in=ProductCreate(
+            name="School 1 SKU Test Product",
+            description="Test description",
+            price=Decimal("500.00"),
+            stock_quantity=50,
+            category_id=category_id_school_1,
+            sku=unique_sku,
+        ),
+        current_profile=profile_school_1_fresh,
     )
 
     # Extract product info immediately after creation
@@ -442,7 +520,14 @@ async def test_sku_uniqueness_global(db_session: AsyncSession, mock_admin_profil
     if not profile_school_2_fresh:
         raise RuntimeError("Failed to re-fetch admin profile for school 2")
 
-    product_data_school_2 = ProductCreate(name="School 2 SKU Test Product", description="Attempt duplicate SKU", price=Decimal("600.00"), stock_quantity=60, category_id=category_id_school_2, sku=unique_sku)  # SAME SKU as School 1
+    product_data_school_2 = ProductCreate(
+        name="School 2 SKU Test Product",
+        description="Attempt duplicate SKU",
+        price=Decimal("600.00"),
+        stock_quantity=60,
+        category_id=category_id_school_2,
+        sku=unique_sku,
+    )  # SAME SKU as School 1
 
     # Step 5: Verify duplicate SKU is rejected with HTTP 409
     with pytest.raises(HTTPException) as exc_info:
@@ -478,7 +563,11 @@ async def test_sku_uniqueness_global(db_session: AsyncSession, mock_admin_profil
 
 
 @pytest.mark.asyncio
-async def test_product_name_uniqueness_school_scoped(db_session: AsyncSession, mock_admin_profile: Profile, mock_admin_profile_school_2: Profile):
+async def test_product_name_uniqueness_school_scoped(
+    db_session: AsyncSession,
+    mock_admin_profile: Profile,
+    mock_admin_profile_school_2: Profile,
+):
     """
     Test 3.8: Verify product names are unique within a school, but can be duplicated across schools.
 
@@ -508,7 +597,14 @@ async def test_product_name_uniqueness_school_scoped(db_session: AsyncSession, m
     # Step 2: School 1 creates product
     product_service_1 = ProductService(db_session)
     school_1_product = await product_service_1.create_product(
-        product_in=ProductCreate(name=unique_product_name, description="School 1 version", price=Decimal("700.00"), stock_quantity=40, category_id=category_id_school_1), current_profile=mock_admin_profile
+        product_in=ProductCreate(
+            name=unique_product_name,
+            description="School 1 version",
+            price=Decimal("700.00"),
+            stock_quantity=40,
+            category_id=category_id_school_1,
+        ),
+        current_profile=mock_admin_profile,
     )
 
     # Extract values IMMEDIATELY after creation
@@ -527,7 +623,14 @@ async def test_product_name_uniqueness_school_scoped(db_session: AsyncSession, m
         raise RuntimeError("Failed to re-fetch admin profile for school 2")
 
     school_2_product = await product_service_2.create_product(
-        product_in=ProductCreate(name=unique_product_name, description="School 2 version", price=Decimal("800.00"), stock_quantity=50, category_id=category_id_school_2), current_profile=admin_profile_school_2_fresh
+        product_in=ProductCreate(
+            name=unique_product_name,
+            description="School 2 version",
+            price=Decimal("800.00"),
+            stock_quantity=50,
+            category_id=category_id_school_2,
+        ),
+        current_profile=admin_profile_school_2_fresh,
     )
 
     # Extract values IMMEDIATELY after creation
@@ -557,7 +660,14 @@ async def test_product_name_uniqueness_school_scoped(db_session: AsyncSession, m
     # Step 6: Verify school 1 admin still cannot create duplicate in THEIR school
     with pytest.raises(HTTPException) as exc_info:
         await product_service_1.create_product(
-            product_in=ProductCreate(name=unique_product_name, description="Duplicate attempt in School 1", price=Decimal("700.00"), stock_quantity=40, category_id=category_id_school_1), current_profile=mock_admin_profile
+            product_in=ProductCreate(
+                name=unique_product_name,
+                description="Duplicate attempt in School 1",
+                price=Decimal("700.00"),
+                stock_quantity=40,
+                category_id=category_id_school_1,
+            ),
+            current_profile=mock_admin_profile,
         )
 
     assert exc_info.value.status_code == 409

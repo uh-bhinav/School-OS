@@ -27,7 +27,10 @@ class RefundService:
             raise HTTPException(status_code=404, detail="Original payment transaction not found.")
 
         if payment.status != "captured":
-            raise HTTPException(status_code=400, detail=f"Cannot refund a payment with status '{payment.status}'. Only 'captured' payments are refundable.")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot refund a payment with status '{payment.status}'. Only 'captured' payments are refundable.",
+            )
 
         # 2. Calculate the total amount already refunded for this payment.
         refunded_stmt = select(func.sum(Refund.amount)).where(Refund.payment_id == refund_data.payment_id, Refund.status == "processed")
@@ -39,7 +42,10 @@ class RefundService:
 
         # 4. Validate the requested refund amount.
         if refund_data.amount > refundable_amount:
-            raise HTTPException(status_code=400, detail=f"Refund amount ({refund_data.amount}) exceeds the refundable amount ({refundable_amount}).")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Refund amount ({refund_data.amount}) exceeds the refundable amount ({refundable_amount}).",
+            )
 
         # 5. Create the new refund record with a 'pending' status.
         # In the full Razorpay integration, this is where you would call the Razorpay API.

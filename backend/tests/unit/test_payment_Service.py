@@ -13,7 +13,10 @@ from app.models.order import Order
 from app.models.payment import Payment
 from app.models.school import School
 from app.models.student import Student
-from app.schemas.payment_schema import PaymentInitiateRequest, PaymentVerificationRequest
+from app.schemas.payment_schema import (
+    PaymentInitiateRequest,
+    PaymentVerificationRequest,
+)
 
 # --- Imports from your app ---
 from app.services.payment_service import PaymentService
@@ -58,10 +61,16 @@ async def test_initiate_payment_for_invoice(mocker, mock_razorpay_client: MagicM
     # --- Mock Dependencies ---
 
     # Mock crypto_service (still needed)
-    mocker.patch("app.core.crypto_service.decrypt_value", side_effect=["rzp_key_12345", "rzp_secret_67890"])
+    mocker.patch(
+        "app.core.crypto_service.decrypt_value",
+        side_effect=["rzp_key_12345", "rzp_secret_67890"],
+    )
 
     # Configure the mock_razorpay_client *instance* from the fixture
-    mock_razorpay_client.order.create.return_value = {"id": "order_FROM_FIXTURE_MOCK", "amount": 150000}  # 1500.00 * 100
+    mock_razorpay_client.order.create.return_value = {
+        "id": "order_FROM_FIXTURE_MOCK",
+        "amount": 150000,
+    }  # 1500.00 * 100
 
     # Mock AsyncSession
     db = AsyncMock(spec=AsyncSession)
@@ -163,10 +172,16 @@ async def test_initiate_payment_for_order(mocker, mock_razorpay_client: MagicMoc
     # --- Mock Dependencies ---
 
     # Mock crypto_service
-    mocker.patch("app.core.crypto_service.decrypt_value", side_effect=["rzp_key_ecom", "rzp_secret_ecom"])
+    mocker.patch(
+        "app.core.crypto_service.decrypt_value",
+        side_effect=["rzp_key_ecom", "rzp_secret_ecom"],
+    )
 
     # Configure the mock_razorpay_client *instance* from the fixture
-    mock_razorpay_client.order.create.return_value = {"id": "order_ECOMMERCE_MOCK_ID", "amount": 205000}  # 2050.00 * 100
+    mock_razorpay_client.order.create.return_value = {
+        "id": "order_ECOMMERCE_MOCK_ID",
+        "amount": 205000,
+    }  # 2050.00 * 100
 
     # Mock AsyncSession
     db = AsyncMock(spec=AsyncSession)
@@ -338,7 +353,12 @@ async def test_verify_payment_valid_signature_for_order(mocker, mock_razorpay_cl
     order_id = 101
     school_id = 3
 
-    verify_request = PaymentVerificationRequest(razorpay_payment_id="pay_VALID_SIG", razorpay_order_id="order_FROM_FIXTURE_MOCK", razorpay_signature="valid_signature_string", internal_payment_id=payment_id)
+    verify_request = PaymentVerificationRequest(
+        razorpay_payment_id="pay_VALID_SIG",
+        razorpay_order_id="order_FROM_FIXTURE_MOCK",
+        razorpay_signature="valid_signature_string",
+        internal_payment_id=payment_id,
+    )
 
     # Mock the internal payment record, status is 'pending'
     mock_pending_payment = MagicMock(spec=Payment)
@@ -361,13 +381,19 @@ async def test_verify_payment_valid_signature_for_order(mocker, mock_razorpay_cl
     # --- Mock Dependencies ---
 
     # Mock crypto_service (called for verify_payment AND _get_razorpay_client)
-    mocker.patch("app.core.crypto_service.decrypt_value", side_effect=["rzp_secret_123", "rzp_key_123", "rzp_secret_123"])  # For verify_payment signature  # For _get_razorpay_client auth  # For _get_razorpay_client auth
+    mocker.patch(
+        "app.core.crypto_service.decrypt_value",
+        side_effect=["rzp_secret_123", "rzp_key_123", "rzp_secret_123"],
+    )  # For verify_payment signature  # For _get_razorpay_client auth  # For _get_razorpay_client auth
 
     # Configure mock_razorpay_client (from conftest)
     # 1. Signature verification succeeds (returns None)
     mock_razorpay_client.utility.verify_payment_signature.return_value = None
     # 2. Payment fetch succeeds
-    mock_razorpay_client.payment.fetch.return_value = {"method": "upi", "notes": {"internal_payment_id": payment_id}}
+    mock_razorpay_client.payment.fetch.return_value = {
+        "method": "upi",
+        "notes": {"internal_payment_id": payment_id},
+    }
 
     # Mock AsyncSession
     db = AsyncMock(spec=AsyncSession)
@@ -408,7 +434,13 @@ async def test_verify_payment_valid_signature_for_order(mocker, mock_razorpay_cl
     assert mock_pending_payment.method == "upi"  # From payment.fetch
 
     # Assert: Signature verification was called
-    mock_razorpay_client.utility.verify_payment_signature.assert_called_once_with({"razorpay_order_id": "order_FROM_FIXTURE_MOCK", "razorpay_payment_id": "pay_VALID_SIG", "razorpay_signature": "valid_signature_string"})
+    mock_razorpay_client.utility.verify_payment_signature.assert_called_once_with(
+        {
+            "razorpay_order_id": "order_FROM_FIXTURE_MOCK",
+            "razorpay_payment_id": "pay_VALID_SIG",
+            "razorpay_signature": "valid_signature_string",
+        }
+    )
 
     # Assert: Payment fetch was called
     mock_razorpay_client.payment.fetch.assert_called_once_with("pay_VALID_SIG")
@@ -438,7 +470,12 @@ async def test_verify_payment_valid_signature_for_invoice(mocker, mock_razorpay_
     school_id = 4
     parent_uuid = uuid.uuid4()
 
-    verify_request = PaymentVerificationRequest(razorpay_payment_id="pay_VALID_SIG_INV", razorpay_order_id="order_INVOICE_MOCK", razorpay_signature="valid_signature_string_inv", internal_payment_id=payment_id)
+    verify_request = PaymentVerificationRequest(
+        razorpay_payment_id="pay_VALID_SIG_INV",
+        razorpay_order_id="order_INVOICE_MOCK",
+        razorpay_signature="valid_signature_string_inv",
+        internal_payment_id=payment_id,
+    )
 
     mock_pending_payment = MagicMock(spec=Payment)
     mock_pending_payment.id = payment_id
@@ -459,15 +496,24 @@ async def test_verify_payment_valid_signature_for_invoice(mocker, mock_razorpay_
     # --- Mock Dependencies ---
 
     # Mock crypto_service
-    mocker.patch("app.core.crypto_service.decrypt_value", side_effect=["rzp_secret_inv", "rzp_key_inv", "rzp_secret_inv"])  # For verify_payment  # For _get_razorpay_client  # For _get_razorpay_client
+    mocker.patch(
+        "app.core.crypto_service.decrypt_value",
+        side_effect=["rzp_secret_inv", "rzp_key_inv", "rzp_secret_inv"],
+    )  # For verify_payment  # For _get_razorpay_client  # For _get_razorpay_client
 
     # Mock invoice_service.allocate_payment_to_invoice_items
     # The code calls this function. We must mock it.
-    mock_allocate = mocker.patch("app.services.invoice_service.allocate_payment_to_invoice_items", new_callable=AsyncMock)
+    mock_allocate = mocker.patch(
+        "app.services.invoice_service.allocate_payment_to_invoice_items",
+        new_callable=AsyncMock,
+    )
 
     # Configure mock_razorpay_client
     mock_razorpay_client.utility.verify_payment_signature.return_value = None
-    mock_razorpay_client.payment.fetch.return_value = {"method": "netbanking", "notes": {}}
+    mock_razorpay_client.payment.fetch.return_value = {
+        "method": "netbanking",
+        "notes": {},
+    }
 
     # Mock AsyncSession
     db = AsyncMock(spec=AsyncSession)
@@ -524,7 +570,12 @@ async def test_verify_payment_invalid_signature_fails(mocker, mock_razorpay_clie
     payment_id = 997
     school_id = 5
 
-    verify_request = PaymentVerificationRequest(razorpay_payment_id="pay_INVALID_SIG", razorpay_order_id="order_INVALID", razorpay_signature="invalid_signature_string", internal_payment_id=payment_id)
+    verify_request = PaymentVerificationRequest(
+        razorpay_payment_id="pay_INVALID_SIG",
+        razorpay_order_id="order_INVALID",
+        razorpay_signature="invalid_signature_string",
+        internal_payment_id=payment_id,
+    )
 
     mock_pending_payment = MagicMock(spec=Payment)
     mock_pending_payment.id = payment_id
@@ -600,7 +651,12 @@ async def test_verify_payment_idempotent(mocker, mock_razorpay_client: MagicMock
     # --- Mock Data ---
     payment_id = 996
 
-    verify_request = PaymentVerificationRequest(razorpay_payment_id="pay_ALREADY_CAPTURED", razorpay_order_id="order_ALREADY_CAPTURED", razorpay_signature="some_signature", internal_payment_id=payment_id)
+    verify_request = PaymentVerificationRequest(
+        razorpay_payment_id="pay_ALREADY_CAPTURED",
+        razorpay_order_id="order_ALREADY_CAPTURED",
+        razorpay_signature="some_signature",
+        internal_payment_id=payment_id,
+    )
 
     # --- CRITICAL: Mock a payment that is *already* 'captured' ---
     mock_captured_payment = MagicMock(spec=Payment)

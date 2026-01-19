@@ -65,7 +65,12 @@ async def browse_products(
     "/{product_id}",
     response_model=ProductOut,
 )
-async def get_product_details(product_id: int, school_id: int = Query(..., description="School ID for validation"), db: AsyncSession = Depends(get_db), current_profile=Depends(get_current_user_profile)):
+async def get_product_details(
+    product_id: int,
+    school_id: int = Query(..., description="School ID for validation"),
+    db: AsyncSession = Depends(get_db),
+    current_profile=Depends(get_current_user_profile),
+):
     """
     Get detailed product information (Parent-facing).
 

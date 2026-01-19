@@ -71,7 +71,12 @@ class ClubService:
         await self.db.commit()
         return True
 
-    async def get_clubs_by_school(self, school_id: int, academic_year_id: Optional[int] = None, is_active: bool = True) -> Sequence[Club]:
+    async def get_clubs_by_school(
+        self,
+        school_id: int,
+        academic_year_id: Optional[int] = None,
+        is_active: bool = True,
+    ) -> Sequence[Club]:
         stmt = select(Club).where(Club.school_id == school_id, Club.is_active == is_active)
         if academic_year_id:
             stmt = stmt.where(Club.academic_year_id == academic_year_id)
@@ -81,7 +86,12 @@ class ClubService:
 
     # --- Club Membership Management ---
 
-    async def add_student_to_club(self, membership_data: ClubMembershipCreate, approver_user_id: UUID, school_id: int) -> Optional[ClubMembership]:
+    async def add_student_to_club(
+        self,
+        membership_data: ClubMembershipCreate,
+        approver_user_id: UUID,
+        school_id: int,
+    ) -> Optional[ClubMembership]:
         # Check if club exists and belongs to the school
         club = await self.get_club_by_id(membership_data.club_id, school_id)
         if not club:
@@ -263,7 +273,11 @@ class ClubService:
         stmt = (
             select(ClubActivity)
             .join(Club)
-            .where(Club.school_id == school_id, ClubActivity.scheduled_date >= datetime.utcnow().date(), ClubActivity.status.in_([ClubActivityStatus.planned, ClubActivityStatus.ongoing]))  # ✅ Changed from PLANNED, ONGOING
+            .where(
+                Club.school_id == school_id,
+                ClubActivity.scheduled_date >= datetime.utcnow().date(),
+                ClubActivity.status.in_([ClubActivityStatus.planned, ClubActivityStatus.ongoing]),
+            )  # ✅ Changed from PLANNED, ONGOING
             .order_by(ClubActivity.scheduled_date.asc())
         )
 
@@ -273,7 +287,15 @@ class ClubService:
     async def get_teacher_by_name(self, full_name: str, school_id: int) -> Optional[Teacher]:
         """Finds a teacher by their full name within the school."""
         # This assumes Profile has a 'full_name' field. Adjust if needed.
-        stmt = select(Teacher).join(Profile).where(Profile.full_name.ilike(f"%{full_name}%"), Profile.school_id == school_id).options(selectinload(Teacher.profile))
+        stmt = (
+            select(Teacher)
+            .join(Profile)
+            .where(
+                Profile.full_name.ilike(f"%{full_name}%"),
+                Profile.school_id == school_id,
+            )
+            .options(selectinload(Teacher.profile))
+        )
 
         result = await self.db.execute(stmt)
         return result.scalars().first()  # Returns the first match
@@ -287,7 +309,14 @@ class ClubService:
             stmt = (
                 select(Student)
                 .join(Profile)
-                .where(or_(func.concat(Profile.first_name, " ", Profile.last_name).ilike(f"%{full_name}%"), Profile.first_name.ilike(f"%{full_name}%"), Profile.last_name.ilike(f"%{full_name}%")), Profile.school_id == school_id)
+                .where(
+                    or_(
+                        func.concat(Profile.first_name, " ", Profile.last_name).ilike(f"%{full_name}%"),
+                        Profile.first_name.ilike(f"%{full_name}%"),
+                        Profile.last_name.ilike(f"%{full_name}%"),
+                    ),
+                    Profile.school_id == school_id,
+                )
                 .options(selectinload(Student.profile))
             )
             result = await self.db.execute(stmt)

@@ -1,6 +1,18 @@
 # backend/app/models/club_activity.py
 
-from sqlalchemy import TIMESTAMP, Boolean, CheckConstraint, Column, Date, ForeignKey, Integer, Numeric, String, Text, Time
+from sqlalchemy import (
+    TIMESTAMP,
+    Boolean,
+    CheckConstraint,
+    Column,
+    Date,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    Time,
+)
 from sqlalchemy import Enum as SQLAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
@@ -55,13 +67,30 @@ class ClubActivity(Base):
     media_urls = Column(JSONB, default=[])
 
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     __table_args__ = (
-        CheckConstraint("max_participants IS NULL OR max_participants > 0", name="chk_max_participants_positive"),
-        CheckConstraint("budget_allocated IS NULL OR budget_allocated >= 0", name="chk_budget_non_negative"),
-        CheckConstraint("end_time IS NULL OR start_time IS NULL OR end_time > start_time", name="chk_activity_time"),
-        CheckConstraint("scheduled_date >= CURRENT_DATE - INTERVAL '1 year'", name="chk_activity_scheduled_future"),
+        CheckConstraint(
+            "max_participants IS NULL OR max_participants > 0",
+            name="chk_max_participants_positive",
+        ),
+        CheckConstraint(
+            "budget_allocated IS NULL OR budget_allocated >= 0",
+            name="chk_budget_non_negative",
+        ),
+        CheckConstraint(
+            "end_time IS NULL OR start_time IS NULL OR end_time > start_time",
+            name="chk_activity_time",
+        ),
+        CheckConstraint(
+            "scheduled_date >= CURRENT_DATE - INTERVAL '1 year'",
+            name="chk_activity_scheduled_future",
+        ),
     )
 
     club = relationship("Club", back_populates="activities", lazy="selectin")

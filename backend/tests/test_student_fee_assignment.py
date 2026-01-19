@@ -14,7 +14,10 @@ async def test_create_override_to_disable_fee(db_session, mock_admin_profile_1):
     Tests that an admin can create an override to disable a fee for a student.
     """
     # Arrange:
-    fee_component_stmt = select(FeeComponent).where(FeeComponent.component_name == "Transport Fee", FeeComponent.school_id == mock_admin_profile_1.school_id)
+    fee_component_stmt = select(FeeComponent).where(
+        FeeComponent.component_name == "Transport Fee",
+        FeeComponent.school_id == mock_admin_profile_1.school_id,
+    )
     component_result = await db_session.execute(fee_component_stmt)
     transport_component = component_result.scalars().first()
     if not transport_component:

@@ -11,17 +11,32 @@ class GetStudentAchievementsSchema(BaseModel):
     """Input schema for the get_student_achievements tool."""
 
     student_name: str = Field(..., description="The full name of the student whose achievements to fetch.")
-    verified_only: Optional[bool] = Field(default=True, description="Set to False to include unverified achievements. Defaults to True.")
+    verified_only: Optional[bool] = Field(
+        default=True,
+        description="Set to False to include unverified achievements. Defaults to True.",
+    )
 
 
 class AddStudentAchievementSchema(BaseModel):
     """Input schema for the add_student_achievement tool."""
 
     student_name: str = Field(..., description="The full name of the student who earned the achievement.")
-    title: str = Field(..., description="The title of the achievement (e.g., 'Won Debate Competition').")
-    achievement_type: str = Field(..., description="The category of the achievement (e.g., 'Sports', 'Academics', 'Arts').")
-    level: Optional[str] = Field(default=None, description="Optional level (e.g., 'School', 'State', 'National').")
-    issued_by: Optional[str] = Field(default=None, description="The person or organization that issued the achievement (e.g., 'Science Olympiad Foundation').")
+    title: str = Field(
+        ...,
+        description="The title of the achievement (e.g., 'Won Debate Competition').",
+    )
+    achievement_type: str = Field(
+        ...,
+        description="The category of the achievement (e.g., 'Sports', 'Academics', 'Arts').",
+    )
+    level: Optional[str] = Field(
+        default=None,
+        description="Optional level (e.g., 'School', 'State', 'National').",
+    )
+    issued_by: Optional[str] = Field(
+        default=None,
+        description="The person or organization that issued the achievement (e.g., 'Science Olympiad Foundation').",
+    )
 
 
 class VerifyAchievementSchema(BaseModel):
@@ -45,4 +60,10 @@ class GetPointsForAchievementSchema(BaseModel):
 
 # --- Exports ---
 
-__all__ = ["GetStudentAchievementsSchema", "AddStudentAchievementSchema", "VerifyAchievementSchema", "GetUnverifiedAchievementsSchema", "GetPointsForAchievementSchema"]
+__all__ = [
+    "GetStudentAchievementsSchema",
+    "AddStudentAchievementSchema",
+    "VerifyAchievementSchema",
+    "GetUnverifiedAchievementsSchema",
+    "GetPointsForAchievementSchema",
+]

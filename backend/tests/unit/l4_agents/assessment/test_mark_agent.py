@@ -2,7 +2,10 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.mark_agent.main import MarkAgent, mark_agent_instance
+from app.agents.modules.academics.leaves.mark_agent.main import (
+    MarkAgent,
+    mark_agent_instance,
+)
 from app.agents.modules.academics.leaves.mark_agent.tools import mark_agent_tools
 
 # This marks all tests in this file as async
@@ -45,7 +48,10 @@ async def test_happy_path_search_marks(mock_mark_llm_invoke, mock_mark_http_clie
     tool_args = {"student_id": 101}
     tool_call = ToolCall(name="search_marks", args=tool_args, id="tool_123")
 
-    mock_mark_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Student 101 got 85 in Physics.")]  # 1. LLM calls tool  # 2. LLM gives final answer
+    mock_mark_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Student 101 got 85 in Physics."),
+    ]  # 1. LLM calls tool  # 2. LLM gives final answer
 
     # 2. Setup Mock API
     mock_response = [{"mark_id": 1, "student_id": 101, "marks_obtained": 85, "subject_id": 42}]
@@ -74,7 +80,10 @@ async def test_happy_path_get_class_performance(mock_mark_llm_invoke, mock_mark_
     tool_args = {"class_id": 5, "exam_id": 22}
     tool_call = ToolCall(name="get_class_performance", args=tool_args, id="tool_456")
 
-    mock_mark_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Class 5 had an average of 78.")]
+    mock_mark_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Class 5 had an average of 78."),
+    ]
 
     # 2. Setup Mock API
     mock_response = {"average": 78.5, "high_score": 99, "low_score": 45}

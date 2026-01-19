@@ -139,7 +139,13 @@ class ConstraintValidator:
     """
 
     @staticmethod
-    def validate_teacher_availability(teacher_id: int, day: int, period_id: int, state: ScheduleState, constraints: list[ConstraintRule]) -> tuple[bool, Optional[str]]:
+    def validate_teacher_availability(
+        teacher_id: int,
+        day: int,
+        period_id: int,
+        state: ScheduleState,
+        constraints: list[ConstraintRule],
+    ) -> tuple[bool, Optional[str]]:
         """
         Check if teacher is available at this slot.
 
@@ -150,7 +156,10 @@ class ConstraintValidator:
         """
         # Hard constraint: Teacher double-booking
         if period_id in state.teacher_schedule[teacher_id][day]:
-            return False, f"Teacher {teacher_id} already teaching Day {day}, Period {period_id}"
+            return (
+                False,
+                f"Teacher {teacher_id} already teaching Day {day}, Period {period_id}",
+            )
 
         # Soft constraint: Custom availability rules (e.g., part-time teachers)
         for rule in constraints:
@@ -162,7 +171,12 @@ class ConstraintValidator:
         return True, None
 
     @staticmethod
-    def validate_subject_timing(subject_id: int, period_number: int, period_start_time: time, constraints: list[ConstraintRule]) -> tuple[bool, Optional[str]]:
+    def validate_subject_timing(
+        subject_id: int,
+        period_number: int,
+        period_start_time: time,
+        constraints: list[ConstraintRule],
+    ) -> tuple[bool, Optional[str]]:
         """
         Check if subject can be scheduled at this time.
 
@@ -176,14 +190,20 @@ class ConstraintValidator:
                 # Check allowed periods (e.g., [7, 8] for PE)
                 allowed_periods = rule.parameters.get("allowed_periods", [])
                 if allowed_periods and period_number not in allowed_periods:
-                    return False, f"Subject {subject_id} restricted to periods {allowed_periods}"
+                    return (
+                        False,
+                        f"Subject {subject_id} restricted to periods {allowed_periods}",
+                    )
 
                 # Check time-based restriction (e.g., "only after 14:00")
                 min_time = rule.parameters.get("min_start_time")
                 if min_time:
                     min_time_obj = time.fromisoformat(min_time)
                     if period_start_time < min_time_obj:
-                        return False, f"Subject {subject_id} must start after {min_time}"
+                        return (
+                            False,
+                            f"Subject {subject_id} must start after {min_time}",
+                        )
 
         return True, None
 
@@ -203,12 +223,20 @@ class ConstraintValidator:
         placements = state.subject_placements[subject_id]
         for placed_day, _ in placements:
             if abs(placed_day - day) < min_gap:
-                return False, f"Subject {subject_id} needs {min_gap} day gap (currently on day {placed_day})"
+                return (
+                    False,
+                    f"Subject {subject_id} needs {min_gap} day gap (currently on day {placed_day})",
+                )
 
         return True, None
 
     @staticmethod
-    def find_consecutive_slots(state: ScheduleState, day: int, required_count: int, available_periods: list[Slot]) -> Optional[list[Slot]]:
+    def find_consecutive_slots(
+        state: ScheduleState,
+        day: int,
+        required_count: int,
+        available_periods: list[Slot],
+    ) -> Optional[list[Slot]]:
         """
         Find N consecutive free periods on a given day.
 
@@ -257,7 +285,12 @@ class TeacherWorkloadValidator:
     """
 
     @staticmethod
-    def can_assign_teacher(teacher_id: int, day: int, state: ScheduleState, teacher_constraints: Optional["TimetableConstraint"]) -> tuple[bool, Optional[str]]:
+    def can_assign_teacher(
+        teacher_id: int,
+        day: int,
+        state: ScheduleState,
+        teacher_constraints: Optional["TimetableConstraint"],
+    ) -> tuple[bool, Optional[str]]:
         """
         Check if teacher can be assigned to a slot based on workload limits.
 
@@ -380,7 +413,15 @@ class TimetableScheduler:
 
         # Day-specific periods (School 2 model: periods have day_of_week set)
         if sample.day_of_week is not None:
-            periods_query = select(Period).where(Period.school_id == school_id, Period.is_recess.is_(False), Period.is_active).order_by(Period.start_time)
+            periods_query = (
+                select(Period)
+                .where(
+                    Period.school_id == school_id,
+                    Period.is_recess.is_(False),
+                    Period.is_active,
+                )
+                .order_by(Period.start_time)
+            )
 
             periods_result = await self.db.execute(periods_query)
             all_periods = periods_result.scalars().all()
@@ -388,11 +429,25 @@ class TimetableScheduler:
             for period in all_periods:
                 day = self._day_name_to_number(period.day_of_week)
                 if day in working_days:
-                    state.grid[day][period.id] = Slot(day=day, period_id=period.id, period_number=period.period_number, start_time=period.start_time)
+                    state.grid[day][period.id] = Slot(
+                        day=day,
+                        period_id=period.id,
+                        period_number=period.period_number,
+                        start_time=period.start_time,
+                    )
 
         # Day-agnostic periods (School 1 model: periods apply to all days)
         else:
-            periods_query = select(Period).where(Period.school_id == school_id, Period.is_recess.is_(False), Period.is_active, Period.day_of_week.is_(None)).order_by(Period.period_number)
+            periods_query = (
+                select(Period)
+                .where(
+                    Period.school_id == school_id,
+                    Period.is_recess.is_(False),
+                    Period.is_active,
+                    Period.day_of_week.is_(None),
+                )
+                .order_by(Period.period_number)
+            )
 
             periods_result = await self.db.execute(periods_query)
             all_periods = periods_result.scalars().all()
@@ -400,7 +455,12 @@ class TimetableScheduler:
             # Replicate periods across all working days
             for day in working_days:
                 for period in all_periods:
-                    state.grid[day][period.id] = Slot(day=day, period_id=period.id, period_number=period.period_number, start_time=period.start_time)
+                    state.grid[day][period.id] = Slot(
+                        day=day,
+                        period_id=period.id,
+                        period_number=period.period_number,
+                        start_time=period.start_time,
+                    )
 
     def _day_name_to_number(self, day_name: str) -> int:
         """
@@ -412,7 +472,15 @@ class TimetableScheduler:
         Returns:
             Integer 1-7 (Monday=1, Sunday=7)
         """
-        mapping = {"Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6, "Sunday": 7}
+        mapping = {
+            "Monday": 1,
+            "Tuesday": 2,
+            "Wednesday": 3,
+            "Thursday": 4,
+            "Friday": 5,
+            "Saturday": 6,
+            "Sunday": 7,
+        }
         return mapping.get(day_name, 1)
 
     def _sort_subjects_by_priority(self, requirements: list[SubjectRequirement]) -> list[SubjectRequirement]:
@@ -432,11 +500,23 @@ class TimetableScheduler:
         """
 
         def priority_score(req: SubjectRequirement) -> tuple[int, int, int]:
-            return (1 if req.requires_consecutive else 0, 1 if req.is_core else 0, req.periods_per_week)  # Labs first  # Core second  # High frequency third
+            return (
+                1 if req.requires_consecutive else 0,
+                1 if req.is_core else 0,
+                req.periods_per_week,
+            )  # Labs first  # Core second  # High frequency third
 
         return sorted(requirements, key=priority_score, reverse=True)
 
-    async def schedule_subject(self, requirement: SubjectRequirement, state: ScheduleState, constraints: list[ConstraintRule], academic_year_id: int, teacher_constraints: Optional[TimetableConstraint] = None, subject_name: str = "") -> int:
+    async def schedule_subject(
+        self,
+        requirement: SubjectRequirement,
+        state: ScheduleState,
+        constraints: list[ConstraintRule],
+        academic_year_id: int,
+        teacher_constraints: Optional[TimetableConstraint] = None,
+        subject_name: str = "",
+    ) -> int:
         """
         Schedule all periods for a single subject using greedy algorithm with teacher workload enforcement.
 
@@ -482,7 +562,10 @@ class TimetableScheduler:
 
             for day in day_candidates:
                 # HIGHEST PRIORITY: Check teacher workload constraints
-                can_assign, workload_reason = TeacherWorkloadValidator.can_assign_teacher(requirement.teacher_id, day, state, teacher_constraints)
+                (
+                    can_assign,
+                    workload_reason,
+                ) = TeacherWorkloadValidator.can_assign_teacher(requirement.teacher_id, day, state, teacher_constraints)
                 if not can_assign:
                     # Skip this day - teacher has reached limit
                     continue
@@ -533,7 +616,12 @@ class TimetableScheduler:
                         break
 
                     # Subject timing restriction check
-                    is_valid, error = self.validator.validate_subject_timing(requirement.subject_id, slot.period_number, slot.start_time, constraints)
+                    is_valid, error = self.validator.validate_subject_timing(
+                        requirement.subject_id,
+                        slot.period_number,
+                        slot.start_time,
+                        constraints,
+                    )
                     if not is_valid:
                         all_valid = False
                         validation_errors.append(error)
@@ -557,7 +645,15 @@ class TimetableScheduler:
 
                         # Create timetable entry (as dict, converted to Pydantic later)
                         state.entries.append(
-                            {"class_id": state.class_id, "subject_id": requirement.subject_id, "teacher_id": requirement.teacher_id, "period_id": slot.period_id, "day_of_week": day, "academic_year_id": academic_year_id, "school_id": state.school_id}
+                            {
+                                "class_id": state.class_id,
+                                "subject_id": requirement.subject_id,
+                                "teacher_id": requirement.teacher_id,
+                                "period_id": slot.period_id,
+                                "day_of_week": day,
+                                "academic_year_id": academic_year_id,
+                                "school_id": state.school_id,
+                            }
                         )
 
                     placed_count += 1
@@ -674,12 +770,25 @@ class TimetableGenerationService:
             unassigned_subjects = []
             for req in sorted_requirements:
                 subject_name = subjects_map.get(req.subject_id, f"Subject {req.subject_id}")
-                placed_count = await self.scheduler.schedule_subject(requirement=req, state=state, constraints=request.constraints, academic_year_id=request.academic_year_id, teacher_constraints=request.teacher_constraints, subject_name=subject_name)
+                placed_count = await self.scheduler.schedule_subject(
+                    requirement=req,
+                    state=state,
+                    constraints=request.constraints,
+                    academic_year_id=request.academic_year_id,
+                    teacher_constraints=request.teacher_constraints,
+                    subject_name=subject_name,
+                )
 
                 # Track partially/fully unassigned subjects
                 if placed_count < req.periods_per_week:
                     unassigned_subjects.append(
-                        UnassignedSubjectInfo(subject_id=req.subject_id, subject_name=subject_name, requested_periods=req.periods_per_week, assigned_periods=placed_count, reason="Insufficient slots, teacher workload limit, or constraint conflicts")
+                        UnassignedSubjectInfo(
+                            subject_id=req.subject_id,
+                            subject_name=subject_name,
+                            requested_periods=req.periods_per_week,
+                            assigned_periods=placed_count,
+                            reason="Insufficient slots, teacher workload limit, or constraint conflicts",
+                        )
                     )
 
             # Phase 3.5: Check minimum teacher workload thresholds (soft constraint warnings)
@@ -729,7 +838,17 @@ class TimetableGenerationService:
                     generated_entries.append(TimetableEntryOut.model_validate(db_entry))
             else:
                 # Dry run: return entries without IDs
-                generated_entries = [TimetableEntryOut(id=0, **entry_data, subject=None, teacher=None, period=None, is_active=True) for entry_data in state.entries]  # Placeholder for dry run
+                generated_entries = [
+                    TimetableEntryOut(
+                        id=0,
+                        **entry_data,
+                        subject=None,
+                        teacher=None,
+                        period=None,
+                        is_active=True,
+                    )
+                    for entry_data in state.entries
+                ]  # Placeholder for dry run
 
             # Phase 5: Calculate metrics
             optimization_score = self.scheduler.calculate_optimization_score(state)
@@ -756,12 +875,25 @@ class TimetableGenerationService:
             return TimetableGenerateResponse(
                 success=False,
                 generated_entries=[],
-                conflicts=[ConflictDetail(conflict_type="generation_error", day=0, period_id=0, details=f"Unexpected error: {str(e)}")],
+                conflicts=[
+                    ConflictDetail(
+                        conflict_type="generation_error",
+                        day=0,
+                        period_id=0,
+                        details=f"Unexpected error: {str(e)}",
+                    )
+                ],
                 optimization_score=0.0,
                 generation_metadata={"error": str(e), "error_type": type(e).__name__},
             )
 
-    async def check_teacher_conflict(self, teacher_id: int, day_of_week: int, period_id: int, exclude_entry_id: Optional[int] = None) -> tuple[bool, Optional[str]]:
+    async def check_teacher_conflict(
+        self,
+        teacher_id: int,
+        day_of_week: int,
+        period_id: int,
+        exclude_entry_id: Optional[int] = None,
+    ) -> tuple[bool, Optional[str]]:
         """
         Check if placing teacher at this slot creates a conflict.
 
@@ -776,7 +908,12 @@ class TimetableGenerationService:
         Returns:
             (has_conflict, conflict_details)
         """
-        query = select(Timetable).where(Timetable.teacher_id == teacher_id, Timetable.day_of_week == day_of_week, Timetable.period_id == period_id, Timetable.is_active)
+        query = select(Timetable).where(
+            Timetable.teacher_id == teacher_id,
+            Timetable.day_of_week == day_of_week,
+            Timetable.period_id == period_id,
+            Timetable.is_active,
+        )
 
         if exclude_entry_id:
             query = query.where(Timetable.id != exclude_entry_id)
@@ -785,11 +922,20 @@ class TimetableGenerationService:
         conflict = result.scalar_one_or_none()
 
         if conflict:
-            return True, f"Teacher {teacher_id} already teaching Class {conflict.class_id} at this time"
+            return (
+                True,
+                f"Teacher {teacher_id} already teaching Class {conflict.class_id} at this time",
+            )
 
         return False, None
 
-    async def swap_timetable_entries(self, entry_1_id: int, entry_2_id: int, performed_by_user_id: UUID, school_id: int) -> tuple[bool, str, Optional[list[Timetable]]]:  # Now automatically extracted from JWT in endpoint
+    async def swap_timetable_entries(
+        self,
+        entry_1_id: int,
+        entry_2_id: int,
+        performed_by_user_id: UUID,
+        school_id: int,
+    ) -> tuple[bool, str, Optional[list[Timetable]]]:  # Now automatically extracted from JWT in endpoint
         """
         Swap two timetable entries after validating no teacher conflicts occur.
 
@@ -812,7 +958,11 @@ class TimetableGenerationService:
 
         query1 = (
             select(Timetable)
-            .where(Timetable.id == entry_1_id, Timetable.is_active, Timetable.school_id == school_id)
+            .where(
+                Timetable.id == entry_1_id,
+                Timetable.is_active,
+                Timetable.school_id == school_id,
+            )
             .options(
                 selectinload(Timetable.subject).selectinload(Subject.streams),
                 selectinload(Timetable.teacher).selectinload(Teacher.profile),  # FIX: Load nested profile to avoid MissingGreenlet
@@ -821,7 +971,11 @@ class TimetableGenerationService:
         )
         query2 = (
             select(Timetable)
-            .where(Timetable.id == entry_2_id, Timetable.is_active, Timetable.school_id == school_id)
+            .where(
+                Timetable.id == entry_2_id,
+                Timetable.is_active,
+                Timetable.school_id == school_id,
+            )
             .options(
                 selectinload(Timetable.subject).selectinload(Subject.streams),
                 selectinload(Timetable.teacher).selectinload(Teacher.profile),  # FIX: Load nested profile to avoid MissingGreenlet
@@ -893,7 +1047,11 @@ class TimetableGenerationService:
             entry1_reloaded = result1_reload.scalar_one()
             entry2_reloaded = result2_reload.scalar_one()
 
-            return True, "Timetable entries swapped successfully", [entry1_reloaded, entry2_reloaded]
+            return (
+                True,
+                "Timetable entries swapped successfully",
+                [entry1_reloaded, entry2_reloaded],
+            )
         except Exception as e:
             await self.db.rollback()
             return False, f"Database error during swap: {str(e)}", None
@@ -914,13 +1072,23 @@ class TimetableGenerationService:
             (can_swap, conflict_reason)
         """
         # Check if entry1's teacher has a conflict at entry2's time
-        conflict1_exists, conflict1_details = await self.check_teacher_conflict(teacher_id=entry1.teacher_id, day_of_week=entry2.day_of_week, period_id=entry2.period_id, exclude_entry_id=entry1.id)  # Exclude entry1 itself
+        conflict1_exists, conflict1_details = await self.check_teacher_conflict(
+            teacher_id=entry1.teacher_id,
+            day_of_week=entry2.day_of_week,
+            period_id=entry2.period_id,
+            exclude_entry_id=entry1.id,
+        )  # Exclude entry1 itself
 
         if conflict1_exists:
             return False, f"Teacher {entry1.teacher_id} {conflict1_details}"
 
         # Check if entry2's teacher has a conflict at entry1's time
-        conflict2_exists, conflict2_details = await self.check_teacher_conflict(teacher_id=entry2.teacher_id, day_of_week=entry1.day_of_week, period_id=entry1.period_id, exclude_entry_id=entry2.id)  # Exclude entry2 itself
+        conflict2_exists, conflict2_details = await self.check_teacher_conflict(
+            teacher_id=entry2.teacher_id,
+            day_of_week=entry1.day_of_week,
+            period_id=entry1.period_id,
+            exclude_entry_id=entry2.id,
+        )  # Exclude entry2 itself
 
         if conflict2_exists:
             return False, f"Teacher {entry2.teacher_id} {conflict2_details}"

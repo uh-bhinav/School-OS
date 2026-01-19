@@ -17,7 +17,11 @@ from app.models.media_item import MediaItem
 from app.models.profile import Profile
 from app.schemas.album_schema import AccessScope, AlbumType
 from app.schemas.album_target_schema import AlbumTargetType
-from tests.utils.albums import create_album_record, get_profile_with_role, get_student_context
+from tests.utils.albums import (
+    create_album_record,
+    get_profile_with_role,
+    get_student_context,
+)
 
 SCHOOL_ID = 1
 
@@ -259,7 +263,13 @@ async def test_get_signed_url_forbidden(
         upload_response = await test_client.post(
             "/api/v1/media/upload",
             data={"album_id": str(inaccessible_album.id)},
-            files={"file": ("restricted_photo.png", io.BytesIO(b"photo-bytes"), "image/png")},
+            files={
+                "file": (
+                    "restricted_photo.png",
+                    io.BytesIO(b"photo-bytes"),
+                    "image/png",
+                )
+            },
         )
     finally:
         _clear_user_override()
@@ -410,7 +420,13 @@ async def test_delete_others_media_item_forbidden(
         upload_response = await test_client.post(
             "/api/v1/media/upload",
             data={"album_id": str(album.id)},
-            files={"file": ("teacher_file.jpg", io.BytesIO(b"teacher-content"), "image/jpeg")},
+            files={
+                "file": (
+                    "teacher_file.jpg",
+                    io.BytesIO(b"teacher-content"),
+                    "image/jpeg",
+                )
+            },
         )
     finally:
         _clear_user_override()

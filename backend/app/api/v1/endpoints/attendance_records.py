@@ -33,7 +33,13 @@ router = APIRouter()
     response_model=list[AttendanceRecordOut],
     dependencies=[Depends(require_role("Teacher", "Admin", "Parent"))],
 )
-async def list_attendance_records(student_id: int, start_date: date | None = None, end_date: date | None = None, db: AsyncSession = Depends(get_db), current_profile: Profile = Depends(get_current_user_profile)):
+async def list_attendance_records(
+    student_id: int,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     Retrieve attendance records for a student, optionally filtered by a date range.
     """
@@ -67,7 +73,11 @@ async def delete_attendance(attendance_id: int, db: AsyncSession = Depends(get_d
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_role("Admin", "Teacher"))],
 )
-async def create_bulk_attendance(attendance_in: AttendanceRecordBulkCreate, db: AsyncSession = Depends(get_db), current_profile: Profile = Depends(get_current_user_profile)):
+async def create_bulk_attendance(
+    attendance_in: AttendanceRecordBulkCreate,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     Create multiple attendance records for a class in a single transaction.
     """
@@ -136,7 +146,11 @@ async def get_class_weekly_summary(
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_role("Teacher", "Admin"))],
 )
-async def create_attendance(attendance_in: AttendanceRecordCreate, db: AsyncSession = Depends(get_db), current_profile: Profile = Depends(get_current_user_profile)):  # <-- SECURE
+async def create_attendance(
+    attendance_in: AttendanceRecordCreate,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):  # <-- SECURE
     """(SECURE) Submits a single attendance record."""
     # Security: Check if student/class belongs to school
     # (This should be done in the service or here)
@@ -148,7 +162,13 @@ async def create_attendance(attendance_in: AttendanceRecordCreate, db: AsyncSess
     response_model=list[AttendanceRecordOut],
     dependencies=[Depends(require_role("Teacher", "Admin", "Parent"))],
 )
-async def get_student_attendance_history(student_id: int, start_date: date | None = Query(None), end_date: date | None = Query(None), db: AsyncSession = Depends(get_db), current_profile: Profile = Depends(get_current_user_profile)):  # <-- SECURE
+async def get_student_attendance_history(
+    student_id: int,
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):  # <-- SECURE
     """(SECURE) Fetches attendance history for a specific student."""
     # TODO: Add parent/student self-check logic here
     records = await attendance_record_service.get_attendance_by_student_in_range(
@@ -166,7 +186,12 @@ async def get_student_attendance_history(student_id: int, start_date: date | Non
     response_model=AttendanceRecordOut,
     dependencies=[Depends(require_role("Teacher", "Admin"))],
 )
-async def update_attendance(attendance_id: int, attendance_in: AttendanceRecordUpdate, db: AsyncSession = Depends(get_db), current_profile: Profile = Depends(get_current_user_profile)):  # <-- SECURE
+async def update_attendance(
+    attendance_id: int,
+    attendance_in: AttendanceRecordUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):  # <-- SECURE
     """(SECURE) Updates a single attendance record."""
     db_obj = await attendance_record_service.get_attendance_record_by_id(db, attendance_id=attendance_id, school_id=current_profile.school_id)  # <-- SECURE
     if not db_obj:
@@ -177,8 +202,18 @@ async def update_attendance(attendance_id: int, attendance_in: AttendanceRecordU
 # --- ROBUST "Power Tool" Endpoints for Agents ---
 
 
-@router.get("/agent/sheet/{class_name}", response_model=dict, dependencies=[Depends(require_role("Teacher", "Admin"))], summary="[AGENT] Get attendance sheet for a class")
-async def agent_get_attendance_sheet(class_name: str, target_date: date = Query(default_factory=date.today), db: AsyncSession = Depends(get_db), current_profile: Profile = Depends(get_current_user_profile)):
+@router.get(
+    "/agent/sheet/{class_name}",
+    response_model=dict,
+    dependencies=[Depends(require_role("Teacher", "Admin"))],
+    summary="[AGENT] Get attendance sheet for a class",
+)
+async def agent_get_attendance_sheet(
+    class_name: str,
+    target_date: date = Query(default_factory=date.today),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     (AGENT TOOL) Gets current attendance status for a class.
     Returns list of all students and their attendance status for the date.
@@ -191,7 +226,12 @@ async def agent_get_attendance_sheet(class_name: str, target_date: date = Query(
             raise HTTPException(status_code=404, detail=f"Class '{class_name}' not found")
 
         # ✅ FIX: Pass class object, service builds class_name internally
-        sheet = await attendance_record_service.get_class_attendance_sheet(db=db, class_id=target_class.class_id, target_date=target_date, school_id=current_profile.school_id)
+        sheet = await attendance_record_service.get_class_attendance_sheet(
+            db=db,
+            class_id=target_class.class_id,
+            target_date=target_date,
+            school_id=current_profile.school_id,
+        )
 
         return sheet
 
@@ -202,8 +242,18 @@ async def agent_get_attendance_sheet(class_name: str, target_date: date = Query(
         raise HTTPException(status_code=500, detail=f"Failed to get attendance sheet: {str(e)}")
 
 
-@router.post("/agent/take", response_model=dict, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role("Teacher", "Admin"))], summary="[AGENT] Take attendance for class")
-async def agent_take_attendance(request_body: dict, db: AsyncSession = Depends(get_db), current_profile: Profile = Depends(get_current_user_profile)):  # Will contain: class_name, date, present_student_ids, absent_student_ids, late_student_ids
+@router.post(
+    "/agent/take",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role("Teacher", "Admin"))],
+    summary="[AGENT] Take attendance for class",
+)
+async def agent_take_attendance(
+    request_body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):  # Will contain: class_name, date, present_student_ids, absent_student_ids, late_student_ids
     """
     (AGENT TOOL) Records attendance for entire class.
     Expects AgentTakeAttendanceRequest in body.
@@ -218,7 +268,12 @@ async def agent_take_attendance(request_body: dict, db: AsyncSession = Depends(g
         logger.info(f"Taking attendance: class={attendance_request.class_name}, " f"date={attendance_request.date}, " f"present={len(attendance_request.present_student_ids)}, " f"absent={len(attendance_request.absent_student_ids)}")
 
         # ✅ Call your existing service function
-        records = await attendance_record_service.agent_bulk_create_attendance(db=db, data=attendance_request, teacher_id=current_profile.teacher.teacher_id, school_id=current_profile.school_id)
+        records = await attendance_record_service.agent_bulk_create_attendance(
+            db=db,
+            data=attendance_request,
+            teacher_id=current_profile.teacher.teacher_id,
+            school_id=current_profile.school_id,
+        )
 
         return {
             "success": True,
@@ -240,17 +295,34 @@ async def agent_take_attendance(request_body: dict, db: AsyncSession = Depends(g
         raise HTTPException(status_code=500, detail=f"Failed to record attendance: {str(e)}")
 
 
-@router.get("/agent/absentees/today", response_model=list[DailyAbsenteeRecord], dependencies=[Depends(require_role("Admin"))], summary="[AGENT] Get all absentees for today")
-async def agent_get_all_absentees_today(db: AsyncSession = Depends(get_db), current_profile: Profile = Depends(get_current_user_profile)):
+@router.get(
+    "/agent/absentees/today",
+    response_model=list[DailyAbsenteeRecord],
+    dependencies=[Depends(require_role("Admin"))],
+    summary="[AGENT] Get all absentees for today",
+)
+async def agent_get_all_absentees_today(
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     (ROBUST) Admin tool to get a school-wide list of all absentees.
     """
     return await attendance_record_service.get_absentees_for_today(db=db, school_id=current_profile.school_id)
 
 
-@router.get("/agent/report/low-attendance", response_model=list[LowAttendanceStudent], dependencies=[Depends(require_role("Teacher", "Admin"))], summary="[AGENT] Get low attendance report")
+@router.get(
+    "/agent/report/low-attendance",
+    response_model=list[LowAttendanceStudent],
+    dependencies=[Depends(require_role("Teacher", "Admin"))],
+    summary="[AGENT] Get low attendance report",
+)
 async def agent_get_low_attendance_report(
-    threshold_percent: float = Query(75.0, ge=0, le=100), start_date: date = Query(...), end_date: date = Query(default_factory=date.today), db: AsyncSession = Depends(get_db), current_profile: Profile = Depends(get_current_user_profile)
+    threshold_percent: float = Query(75.0, ge=0, le=100),
+    start_date: date = Query(...),
+    end_date: date = Query(default_factory=date.today),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
     (ROBUST) Admin/Teacher tool to find students below an attendance threshold.
@@ -258,11 +330,27 @@ async def agent_get_low_attendance_report(
     if start_date > end_date:
         raise HTTPException(status_code=400, detail="Start date cannot be after end date.")
 
-    return await attendance_record_service.get_low_attendance_report(db=db, school_id=current_profile.school_id, threshold_percent=threshold_percent, start_date=start_date, end_date=end_date)
+    return await attendance_record_service.get_low_attendance_report(
+        db=db,
+        school_id=current_profile.school_id,
+        threshold_percent=threshold_percent,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
 
-@router.get("/agent/my-report", response_model=list[AttendanceRecordOut], dependencies=[Depends(require_role("Student", "Parent"))], summary="[AGENT] Get 'my' attendance report (Student/Parent)")
-async def agent_get_my_attendance_report(start_date: date | None = Query(None), end_date: date | None = Query(default_factory=date.today), db: AsyncSession = Depends(get_db), current_profile: Profile = Depends(get_current_user_profile)):
+@router.get(
+    "/agent/my-report",
+    response_model=list[AttendanceRecordOut],
+    dependencies=[Depends(require_role("Student", "Parent"))],
+    summary="[AGENT] Get 'my' attendance report (Student/Parent)",
+)
+async def agent_get_my_attendance_report(
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(default_factory=date.today),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
     """
     (ROBUST) Gets the attendance report for the authenticated user.
     - If user is a Student, gets their own report.
@@ -276,7 +364,14 @@ async def agent_get_my_attendance_report(start_date: date | None = Query(None), 
 
     elif current_profile.is_parent:
         # Get the parent's first linked student
-        stmt = select(StudentContact.student_id).where(StudentContact.profile_user_id == current_profile.user_id, StudentContact.is_active).limit(1)
+        stmt = (
+            select(StudentContact.student_id)
+            .where(
+                StudentContact.profile_user_id == current_profile.user_id,
+                StudentContact.is_active,
+            )
+            .limit(1)
+        )
         result = await db.execute(stmt)
         student_id_to_fetch = result.scalars().first()
 
@@ -284,12 +379,28 @@ async def agent_get_my_attendance_report(start_date: date | None = Query(None), 
         raise HTTPException(status_code=404, detail="No linked student found for this profile.")
 
     # Now call the secure service function
-    return await attendance_record_service.get_attendance_by_student_in_range(db=db, student_id=student_id_to_fetch, school_id=school_id, start_date=start_date, end_date=end_date)
+    return await attendance_record_service.get_attendance_by_student_in_range(
+        db=db,
+        student_id=student_id_to_fetch,
+        school_id=school_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
 
-@router.post("/agent/bulk-record", response_model=dict, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role("Teacher", "Admin"))], summary="[AGENT] Bulk record attendance from natural language")
+@router.post(
+    "/agent/bulk-record",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role("Teacher", "Admin"))],
+    summary="[AGENT] Bulk record attendance from natural language",
+)
 async def agent_bulk_record_attendance(
-    class_name: str, target_date: date = Query(default_factory=date.today), absent_student_names: list[str] = Query(default_factory=list), db: AsyncSession = Depends(get_db), current_profile: Profile = Depends(get_current_user_profile)
+    class_name: str,
+    target_date: date = Query(default_factory=date.today),
+    absent_student_names: list[str] = Query(default_factory=list),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
 ):
     """
     (AGENT TOOL) Records attendance for entire class from natural language.
@@ -304,7 +415,12 @@ async def agent_bulk_record_attendance(
 
     try:
         result = await attendance_record_service.agent_parse_and_take_attendance(
-            db=db, class_name=class_name, target_date=target_date, absent_student_names=absent_student_names, teacher_id=current_profile.teacher.id, school_id=current_profile.school_id
+            db=db,
+            class_name=class_name,
+            target_date=target_date,
+            absent_student_names=absent_student_names,
+            teacher_id=current_profile.teacher.id,
+            school_id=current_profile.school_id,
         )
 
         if not result.get("success"):

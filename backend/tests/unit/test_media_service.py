@@ -43,7 +43,13 @@ async def test_generate_signed_url_success_public_album(
         album_type=AlbumType.CULTURAL.value,
         access_scope=AccessScope.PUBLIC.value,  # Public album
     )
-    mock_media_item = MediaItem(id=media_item_id, album_id=mock_album.id, storage_path="10/some_image.jpg", mime_type="image/jpeg", album=mock_album)  # Mock the relationship
+    mock_media_item = MediaItem(
+        id=media_item_id,
+        album_id=mock_album.id,
+        storage_path="10/some_image.jpg",
+        mime_type="image/jpeg",
+        album=mock_album,
+    )  # Mock the relationship
 
     # Configure mock DB execute to return the media item
     mock_scalar_result = MagicMock()
@@ -107,7 +113,13 @@ async def test_generate_signed_url_success_targeted_album(
         album_type=AlbumType.ECOMMERCE.value,  # Different type
         access_scope=AccessScope.TARGETED.value,  # Targeted album
     )
-    mock_media_item = MediaItem(id=media_item_id, album_id=mock_album.id, storage_path="11/product.png", mime_type="image/png", album=mock_album)
+    mock_media_item = MediaItem(
+        id=media_item_id,
+        album_id=mock_album.id,
+        storage_path="11/product.png",
+        mime_type="image/png",
+        album=mock_album,
+    )
 
     # Mock DB execute
     mock_scalar_result = MagicMock()
@@ -203,7 +215,12 @@ async def test_upload_media_item_success(
     mock_db.refresh = AsyncMock()
 
     # --- Act ---
-    created_media_item = await service.upload_media_item(db=mock_db, album_id=album_id, file=mock_upload_file, uploaded_by_id=uploaded_by_id)
+    created_media_item = await service.upload_media_item(
+        db=mock_db,
+        album_id=album_id,
+        file=mock_upload_file,
+        uploaded_by_id=uploaded_by_id,
+    )
 
     # --- Assert ---
     # 1. Check DB call to get album type
@@ -211,7 +228,12 @@ async def test_upload_media_item_success(
     # Optionally: check the specific query for the album
 
     # 2. Check storage client call
-    mock_storage_client.upload_file.assert_called_once_with(bucket=expected_bucket, path=expected_storage_path, file=file_content, mime_type=file_mime_type)
+    mock_storage_client.upload_file.assert_called_once_with(
+        bucket=expected_bucket,
+        path=expected_storage_path,
+        file=file_content,
+        mime_type=file_mime_type,
+    )
     # Ensure uuid4 was called to generate the path component
     mock_uuid4.assert_called_once()
 
@@ -252,7 +274,14 @@ async def test_delete_own_media_item_success(
 
     # Mock Album and MediaItem (including uploader ID)
     mock_album = Album(id=20, school_id=1, album_type=album_type)
-    mock_media_item = MediaItem(id=media_item_id, album_id=mock_album.id, storage_path="20/profile.png", mime_type="image/png", uploaded_by_id=uploader_user_id, album=mock_album)  # This user uploaded it
+    mock_media_item = MediaItem(
+        id=media_item_id,
+        album_id=mock_album.id,
+        storage_path="20/profile.png",
+        mime_type="image/png",
+        uploaded_by_id=uploader_user_id,
+        album=mock_album,
+    )  # This user uploaded it
 
     # Configure mock DB execute to return the media item
     # Use the MagicMock chain for scalars().first()
@@ -305,7 +334,14 @@ async def test_delete_others_media_item_forbidden(
 
     # Mock Album and MediaItem
     mock_album = Album(id=21, school_id=1, album_type=AlbumType.CULTURAL.value)
-    mock_media_item = MediaItem(id=media_item_id, album_id=mock_album.id, storage_path="21/event.jpg", mime_type="image/jpeg", uploaded_by_id=original_uploader_id, album=mock_album)  # Uploaded by someone else
+    mock_media_item = MediaItem(
+        id=media_item_id,
+        album_id=mock_album.id,
+        storage_path="21/event.jpg",
+        mime_type="image/jpeg",
+        uploaded_by_id=original_uploader_id,
+        album=mock_album,
+    )  # Uploaded by someone else
 
     # Mock DB execute
     mock_result_media = MagicMock()

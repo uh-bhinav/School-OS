@@ -40,7 +40,9 @@ def mock_class_http_client():
 @pytest.fixture
 def mock_class_llm_invoke():
     """Mock the LLM for the ClassAgent by replacing the entire model object."""
-    from app.agents.modules.academics.leaves.class_agent.main import class_agent_instance
+    from app.agents.modules.academics.leaves.class_agent.main import (
+        class_agent_instance,
+    )
 
     mock_model = MagicMock()
     mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default ClassAgent mock response"))
@@ -77,7 +79,9 @@ def mock_student_http_client():
 @pytest.fixture
 def mock_student_llm_invoke():
     """Mock the LLM for the StudentAgent by replacing the entire model object."""
-    from app.agents.modules.academics.leaves.student_agent.main import student_agent_instance
+    from app.agents.modules.academics.leaves.student_agent.main import (
+        student_agent_instance,
+    )
 
     mock_model = MagicMock()
     mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default StudentAgent mock response"))
@@ -112,7 +116,9 @@ def mock_academic_year_http_client():
 @pytest.fixture
 def mock_academic_year_llm_invoke():
     """Mock the LLM for the AcademicYearAgent by replacing the entire model object."""
-    from app.agents.modules.academics.leaves.academic_year_agent.main import academic_year_agent_instance
+    from app.agents.modules.academics.leaves.academic_year_agent.main import (
+        academic_year_agent_instance,
+    )
 
     mock_model = MagicMock()
     # Set a default return value for safety
@@ -153,7 +159,9 @@ def mock_subject_http_client():
 @pytest.fixture
 def mock_subject_llm_invoke():
     """Mock the LLM for the SubjectAgent by replacing the entire model object."""
-    from app.agents.modules.academics.leaves.subject_agent.main import subject_agent_instance
+    from app.agents.modules.academics.leaves.subject_agent.main import (
+        subject_agent_instance,
+    )
 
     mock_model = MagicMock()
     # Set a default return value for safety
@@ -193,7 +201,9 @@ def mock_teacher_http_client():
 @pytest.fixture
 def mock_teacher_llm_invoke():
     """Mock the LLM for the TeacherAgent by replacing the entire model object."""
-    from app.agents.modules.academics.leaves.teacher_agent.main import teacher_agent_instance
+    from app.agents.modules.academics.leaves.teacher_agent.main import (
+        teacher_agent_instance,
+    )
 
     mock_model = MagicMock()
     mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default TeacherAgent mock response"))

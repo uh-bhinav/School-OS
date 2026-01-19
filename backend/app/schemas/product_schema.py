@@ -46,7 +46,12 @@ class ProductCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="Product name")
     description: Optional[str] = Field(None, max_length=2000, description="Detailed product description")
 
-    price: Decimal = Field(..., gt=0, decimal_places=2, description="Price per unit in INR (must be positive)")
+    price: Decimal = Field(
+        ...,
+        gt=0,
+        decimal_places=2,
+        description="Price per unit in INR (must be positive)",
+    )
 
     stock_quantity: int = Field(default=0, ge=0, description="Initial stock quantity (defaults to 0)")
 
@@ -162,9 +167,17 @@ class ProductStockAdjustment(BaseModel):
     Used by: PATCH /api/v1/admin/products/{product_id}/stock
     """
 
-    adjustment: int = Field(..., description="Stock adjustment amount (positive to add, negative to subtract)")
+    adjustment: int = Field(
+        ...,
+        description="Stock adjustment amount (positive to add, negative to subtract)",
+    )
 
-    reason: str = Field(..., min_length=1, max_length=500, description="Reason for adjustment (audit trail)")
+    reason: str = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="Reason for adjustment (audit trail)",
+    )
 
     class Config:
         json_schema_extra = {"example": {"adjustment": 50, "reason": "Received new shipment from vendor"}}
@@ -380,7 +393,10 @@ class ProductFilterParams(BaseModel):
     is_active: Optional[bool] = Field(None, description="Filter by active status")
     min_price: Optional[Decimal] = Field(None, ge=0, description="Minimum price filter")
     max_price: Optional[Decimal] = Field(None, ge=0, description="Maximum price filter")
-    availability: Optional[ProductAvailability] = Field(None, description="Filter by availability (in_stock, low_stock, out_of_stock, discontinued)")
+    availability: Optional[ProductAvailability] = Field(
+        None,
+        description="Filter by availability (in_stock, low_stock, out_of_stock, discontinued)",
+    )
     search: Optional[str] = Field(None, max_length=100, description="Search in product name and description")
 
 

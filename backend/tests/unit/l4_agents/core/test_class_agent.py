@@ -2,7 +2,10 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.class_agent.main import ClassAgent, class_agent_instance
+from app.agents.modules.academics.leaves.class_agent.main import (
+    ClassAgent,
+    class_agent_instance,
+)
 from app.agents.modules.academics.leaves.class_agent.tools import class_agent_tools
 
 pytestmark = pytest.mark.asyncio
@@ -54,7 +57,10 @@ async def test_happy_path_get_students_in_class(mock_class_llm_invoke, mock_clas
     # API response for 'search_classes'
     search_response = [{"class_id": 15, "name": "10A", "grade_level": 10}]
     # API response for 'get_students_in_class'
-    students_response = [{"student_id": 101, "first_name": "Rohan"}, {"student_id": 102, "first_name": "Priya"}]
+    students_response = [
+        {"student_id": 101, "first_name": "Rohan"},
+        {"student_id": 102, "first_name": "Priya"},
+    ]
     mock_class_http_client.get.side_effect = [search_response, students_response]
 
     # 3. Invoke Agent

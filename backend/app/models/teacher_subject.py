@@ -1,6 +1,15 @@
 # backend/app/models/teacher_subject.py
 
-from sqlalchemy import TIMESTAMP, Boolean, CheckConstraint, Column, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    TIMESTAMP,
+    Boolean,
+    CheckConstraint,
+    Column,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy import Enum as SQLAEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -13,8 +22,18 @@ class TeacherSubject(Base):
     __tablename__ = "teacher_subjects"
 
     id = Column(Integer, primary_key=True, index=True)
-    teacher_id = Column(Integer, ForeignKey("teachers.teacher_id", ondelete="CASCADE"), nullable=False, index=True)
-    subject_id = Column(Integer, ForeignKey("subjects.subject_id", ondelete="CASCADE"), nullable=False, index=True)
+    teacher_id = Column(
+        Integer,
+        ForeignKey("teachers.teacher_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    subject_id = Column(
+        Integer,
+        ForeignKey("subjects.subject_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
     is_primary = Column(Boolean, nullable=False, default=False)
     proficiency_level = Column(
@@ -32,7 +51,12 @@ class TeacherSubject(Base):
     certification_number = Column(String(100))
 
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     __table_args__ = (
         CheckConstraint("years_teaching_subject >= 0", name="chk_years_teaching_non_negative"),

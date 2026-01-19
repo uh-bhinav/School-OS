@@ -61,7 +61,15 @@ async def test_stock_adjustment_exact_zero_result(db_session: AsyncSession, mock
     # Step 1: Create product with stock=10
     product_service = ProductService(db_session)
 
-    product = await product_service.create_product(product_in=ProductCreate(name="Zero Stock Test Product", price=Decimal("100.00"), stock_quantity=10, category_id=1), current_profile=mock_admin_profile)
+    product = await product_service.create_product(
+        product_in=ProductCreate(
+            name="Zero Stock Test Product",
+            price=Decimal("100.00"),
+            stock_quantity=10,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )
 
     product_id = product.product_id
     print("✅ Product created with stock=10")
@@ -112,7 +120,15 @@ async def test_stock_multiple_sequential_adjustments(db_session: AsyncSession, m
     # Step 1: Create product with initial stock=50
     product_service = ProductService(db_session)
 
-    product = await product_service.create_product(product_in=ProductCreate(name="Sequential Adjustment Test", price=Decimal("100.00"), stock_quantity=50, category_id=1), current_profile=mock_admin_profile)
+    product = await product_service.create_product(
+        product_in=ProductCreate(
+            name="Sequential Adjustment Test",
+            price=Decimal("100.00"),
+            stock_quantity=50,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )
 
     product_id = product.product_id
     print("✅ Initial stock: 50")
@@ -178,7 +194,16 @@ async def test_stock_threshold_low_stock_warning(db_session: AsyncSession, mock_
     # Step 1: Create product with reorder_level=20, stock=25
     product_service = ProductService(db_session)
 
-    product = await product_service.create_product(product_in=ProductCreate(name="Low Stock Threshold Test", price=Decimal("100.00"), stock_quantity=25, reorder_level=20, category_id=1), current_profile=mock_admin_profile)
+    product = await product_service.create_product(
+        product_in=ProductCreate(
+            name="Low Stock Threshold Test",
+            price=Decimal("100.00"),
+            stock_quantity=25,
+            reorder_level=20,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )
 
     product_id = product.product_id
     print("✅ Product created: stock=25, reorder_level=20")
@@ -237,7 +262,15 @@ async def test_stock_threshold_out_of_stock(db_session: AsyncSession, mock_admin
     # Step 1: Create product with stock=5
     product_service = ProductService(db_session)
 
-    product = await product_service.create_product(product_in=ProductCreate(name="Out of Stock Test", price=Decimal("100.00"), stock_quantity=5, category_id=1), current_profile=mock_admin_profile)
+    product = await product_service.create_product(
+        product_in=ProductCreate(
+            name="Out of Stock Test",
+            price=Decimal("100.00"),
+            stock_quantity=5,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )
 
     product_id = product.product_id
     print("✅ Product created with stock=5")
@@ -286,7 +319,16 @@ async def test_stock_adjustment_no_reorder_level(db_session: AsyncSession, mock_
     # Step 1: Create product with reorder_level=None, stock=5
     product_service = ProductService(db_session)
 
-    product = await product_service.create_product(product_in=ProductCreate(name="No Reorder Level Test", price=Decimal("100.00"), stock_quantity=5, reorder_level=None, category_id=1), current_profile=mock_admin_profile)  # No reorder level set
+    product = await product_service.create_product(
+        product_in=ProductCreate(
+            name="No Reorder Level Test",
+            price=Decimal("100.00"),
+            stock_quantity=5,
+            reorder_level=None,
+            category_id=1,
+        ),
+        current_profile=mock_admin_profile,
+    )  # No reorder level set
 
     # product_id = product.product_id
     print("✅ Product created: stock=5, reorder_level=None")
@@ -342,7 +384,15 @@ async def test_bulk_category_update_same_school(db_session: AsyncSession, mock_a
     product_ids = []
 
     for i in range(5):
-        product = await product_service.create_product(product_in=ProductCreate(name=f"Bulk Category Test Product {i+1}", price=Decimal("50.00"), stock_quantity=10, category_id=1), current_profile=mock_admin_profile)
+        product = await product_service.create_product(
+            product_in=ProductCreate(
+                name=f"Bulk Category Test Product {i+1}",
+                price=Decimal("50.00"),
+                stock_quantity=10,
+                category_id=1,
+            ),
+            current_profile=mock_admin_profile,
+        )
         product_ids.append(product.product_id)
 
     print(f"✅ Created 5 products in category 1: {product_ids}")
@@ -389,13 +439,28 @@ async def test_bulk_category_update_mixed_schools(db_session: AsyncSession, mock
 
     school_1_products = []
     for i in range(2):
-        product = await product_service.create_product(product_in=ProductCreate(name=f"School 1 Bulk Product {i+1}", price=Decimal("50.00"), stock_quantity=10, category_id=1), current_profile=mock_admin_profile)
+        product = await product_service.create_product(
+            product_in=ProductCreate(
+                name=f"School 1 Bulk Product {i+1}",
+                price=Decimal("50.00"),
+                stock_quantity=10,
+                category_id=1,
+            ),
+            current_profile=mock_admin_profile,
+        )
         school_1_products.append(product.product_id)
 
     print(f"✅ Created 2 products for School 1: {school_1_products}")
 
     # Step 2: Create product for School 2
-    school_2_product = Product(school_id=2, category_id=1, name="School 2 Product", price=Decimal("100.00"), stock_quantity=20, is_active=True)
+    school_2_product = Product(
+        school_id=2,
+        category_id=1,
+        name="School 2 Product",
+        price=Decimal("100.00"),
+        stock_quantity=20,
+        is_active=True,
+    )
     db_session.add(school_2_product)
     await db_session.commit()
     await db_session.refresh(school_2_product)
@@ -456,7 +521,15 @@ async def test_category_filtering_get_products(db_session: AsyncSession, mock_ad
 
     uniform_product_ids = []
     for i in range(3):
-        product = await product_service.create_product(product_in=ProductCreate(name=f"Uniform Item {i+1}", price=Decimal("500.00"), stock_quantity=50, category_id=1), current_profile=mock_admin_profile)
+        product = await product_service.create_product(
+            product_in=ProductCreate(
+                name=f"Uniform Item {i+1}",
+                price=Decimal("500.00"),
+                stock_quantity=50,
+                category_id=1,
+            ),
+            current_profile=mock_admin_profile,
+        )
         uniform_product_ids.append(product.product_id)
 
     print("✅ Created 3 products in category 1 (Uniforms)")
@@ -464,7 +537,15 @@ async def test_category_filtering_get_products(db_session: AsyncSession, mock_ad
     # Step 3: Create products in category 2 (Books)
     book_product_ids = []
     for i in range(2):
-        product = await product_service.create_product(product_in=ProductCreate(name=f"Book Item {i+1}", price=Decimal("300.00"), stock_quantity=30, category_id=2), current_profile=mock_admin_profile)
+        product = await product_service.create_product(
+            product_in=ProductCreate(
+                name=f"Book Item {i+1}",
+                price=Decimal("300.00"),
+                stock_quantity=30,
+                category_id=2,
+            ),
+            current_profile=mock_admin_profile,
+        )
         book_product_ids.append(product.product_id)
 
     print("✅ Created 2 products in category 2 (Books)")
@@ -518,7 +599,16 @@ async def test_include_inactive_products_flag(db_session: AsyncSession, mock_adm
 
     active_product_ids = []
     for i in range(5):
-        product = await product_service.create_product(product_in=ProductCreate(name=f"Active Product {i+1}", price=Decimal("100.00"), stock_quantity=10, category_id=1, is_active=True), current_profile=mock_admin_profile)
+        product = await product_service.create_product(
+            product_in=ProductCreate(
+                name=f"Active Product {i+1}",
+                price=Decimal("100.00"),
+                stock_quantity=10,
+                category_id=1,
+                is_active=True,
+            ),
+            current_profile=mock_admin_profile,
+        )
         active_product_ids.append(product.product_id)
 
     print("✅ Created 5 active products")
@@ -526,7 +616,15 @@ async def test_include_inactive_products_flag(db_session: AsyncSession, mock_adm
     # Step 2: Create 2 products and soft-delete them
     inactive_product_ids = []
     for i in range(2):
-        product = await product_service.create_product(product_in=ProductCreate(name=f"Inactive Product {i+1}", price=Decimal("100.00"), stock_quantity=10, category_id=1), current_profile=mock_admin_profile)
+        product = await product_service.create_product(
+            product_in=ProductCreate(
+                name=f"Inactive Product {i+1}",
+                price=Decimal("100.00"),
+                stock_quantity=10,
+                category_id=1,
+            ),
+            current_profile=mock_admin_profile,
+        )
         inactive_product_ids.append(product.product_id)
 
         # Soft delete
@@ -587,7 +685,10 @@ async def test_product_ordering_by_name(db_session: AsyncSession, mock_admin_pro
     created_product_ids = []
 
     for name in product_names:
-        product = await product_service.create_product(product_in=ProductCreate(name=name, price=Decimal("500.00"), stock_quantity=50, category_id=1), current_profile=mock_admin_profile)
+        product = await product_service.create_product(
+            product_in=ProductCreate(name=name, price=Decimal("500.00"), stock_quantity=50, category_id=1),
+            current_profile=mock_admin_profile,
+        )
         created_product_ids.append(product.product_id)
 
     print(f"✅ Created products: {product_names}")

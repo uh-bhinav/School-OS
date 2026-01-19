@@ -173,7 +173,12 @@ class OrderCreateFromCart(BaseModel):
     delivery_notes: Optional[str] = Field(None, max_length=500, description="Special delivery instructions or notes")
 
     class Config:
-        json_schema_extra = {"example": {"student_id": 22, "delivery_notes": "Please deliver to admin office"}}
+        json_schema_extra = {
+            "example": {
+                "student_id": 22,
+                "delivery_notes": "Please deliver to admin office",
+            }
+        }
 
 
 class OrderCreateManual(BaseModel):
@@ -202,7 +207,11 @@ class OrderCreateManual(BaseModel):
 
     parent_user_id: UUID = Field(..., description="Parent/guardian user ID (must belong to same school)")
 
-    items: list[OrderItemCreate] = Field(..., min_length=1, description="List of products/packages to order (minimum 1 item)")
+    items: list[OrderItemCreate] = Field(
+        ...,
+        min_length=1,
+        description="List of products/packages to order (minimum 1 item)",
+    )
 
     delivery_notes: Optional[str] = Field(None, max_length=500, description="Special delivery instructions or notes")
 
@@ -232,7 +241,17 @@ class OrderCreateManual(BaseModel):
         return v
 
     class Config:
-        json_schema_extra = {"example": {"student_id": 22, "parent_user_id": "123e4567-e89b-12d3-a456-426614174000", "items": [{"product_id": 42, "quantity": 2}, {"package_id": 1, "quantity": 1}], "delivery_notes": "Rush order - needed by Friday"}}
+        json_schema_extra = {
+            "example": {
+                "student_id": 22,
+                "parent_user_id": "123e4567-e89b-12d3-a456-426614174000",
+                "items": [
+                    {"product_id": 42, "quantity": 2},
+                    {"package_id": 1, "quantity": 1},
+                ],
+                "delivery_notes": "Rush order - needed by Friday",
+            }
+        }
 
 
 class OrderUpdate(BaseModel):
@@ -259,12 +278,22 @@ class OrderUpdate(BaseModel):
 
     delivery_notes: Optional[str] = Field(None, max_length=500)
 
-    tracking_number: Optional[str] = Field(None, max_length=100, description="Shipping tracking number (set when status changes to 'shipped')")
+    tracking_number: Optional[str] = Field(
+        None,
+        max_length=100,
+        description="Shipping tracking number (set when status changes to 'shipped')",
+    )
 
     # admin_notes: Optional[str] = Field(None, max_length=1000, description="Internal notes (not visible to parents)")
 
     class Config:
-        json_schema_extra = {"example": {"status": "shipped", "tracking_number": "TRK123456789", "admin_notes": "Dispatched via BlueDart"}}
+        json_schema_extra = {
+            "example": {
+                "status": "shipped",
+                "tracking_number": "TRK123456789",
+                "admin_notes": "Dispatched via BlueDart",
+            }
+        }
 
 
 class OrderCancel(BaseModel):
@@ -279,12 +308,22 @@ class OrderCancel(BaseModel):
     Used by: POST /api/v1/orders/{order_id}/cancel
     """
 
-    reason: str = Field(..., min_length=1, max_length=500, description="Reason for cancellation (mandatory)")
+    reason: str = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="Reason for cancellation (mandatory)",
+    )
 
     refund_payment: bool = Field(default=False, description="Whether to initiate refund if payment was captured")
 
     class Config:
-        json_schema_extra = {"example": {"reason": "Parent requested cancellation - ordered wrong size", "refund_payment": True}}
+        json_schema_extra = {
+            "example": {
+                "reason": "Parent requested cancellation - ordered wrong size",
+                "refund_payment": True,
+            }
+        }
 
 
 # ============================================================================
@@ -431,7 +470,18 @@ class OrderOut(BaseModel):
                 "delivery_notes": "Please deliver to admin office",
                 "tracking_number": None,
                 # "admin_notes": None,
-                "items": [{"id": 201, "order_id": 101, "product_id": 42, "item_name": "House T-Shirt (Blue)", "quantity": 2, "price_at_time_of_order": "750.00", "status": "pending", "line_total": "1500.00"}],
+                "items": [
+                    {
+                        "id": 201,
+                        "order_id": 101,
+                        "product_id": 42,
+                        "item_name": "House T-Shirt (Blue)",
+                        "quantity": 2,
+                        "price_at_time_of_order": "750.00",
+                        "status": "pending",
+                        "line_total": "1500.00",
+                    }
+                ],
                 "payment_id": 601,
                 "payment_status": "captured",
                 "payment_method": "UPI",
@@ -505,7 +555,10 @@ class OrderCheckoutResponse(BaseModel):
     """
 
     success: bool = Field(default=True)
-    message: str = Field(default="Order created successfully. Please proceed to payment.", description="User-friendly success message")
+    message: str = Field(
+        default="Order created successfully. Please proceed to payment.",
+        description="User-friendly success message",
+    )
 
     order_id: int = Field(..., description="ID of the newly created order")
     order_number: str = Field(..., description="Human-readable order number")
@@ -515,7 +568,15 @@ class OrderCheckoutResponse(BaseModel):
     order: Optional[OrderOut] = Field(None, description="Complete order details (if requested)")
 
     class Config:
-        json_schema_extra = {"example": {"success": True, "message": "Order created successfully. Please proceed to payment.", "order_id": 101, "order_number": "ORD-3-20250115-101", "total_amount": "2050.00"}}
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Order created successfully. Please proceed to payment.",
+                "order_id": 101,
+                "order_number": "ORD-3-20250115-101",
+                "total_amount": "2050.00",
+            }
+        }
 
 
 # ============================================================================

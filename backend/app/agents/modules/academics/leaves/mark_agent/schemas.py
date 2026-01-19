@@ -8,7 +8,10 @@ from pydantic import BaseModel, Field
 class CreateMarkSchema(BaseModel):
     """Input schema for the create_mark tool."""
 
-    school_id: int = Field(..., description="The ID of the school. Must match the Admin's/Teacher's school ID.")
+    school_id: int = Field(
+        ...,
+        description="The ID of the school. Must match the Admin's/Teacher's school ID.",
+    )
     student_id: int = Field(..., description="The ID of the student.")
     exam_id: int = Field(..., description="The ID of the exam.")
     subject_id: int = Field(..., description="The ID of the subject.")
@@ -67,4 +70,13 @@ class GetGradeProgressionSchema(BaseModel):
 
 
 # Export all schemas
-__all__ = ["CreateMarkSchema", "BulkCreateMarksSchema", "SearchMarksSchema", "UpdateMarkSchema", "DeleteMarkSchema", "GetClassPerformanceSchema", "GetReportCardSchema", "GetGradeProgressionSchema"]
+__all__ = [
+    "CreateMarkSchema",
+    "BulkCreateMarksSchema",
+    "SearchMarksSchema",
+    "UpdateMarkSchema",
+    "DeleteMarkSchema",
+    "GetClassPerformanceSchema",
+    "GetReportCardSchema",
+    "GetGradeProgressionSchema",
+]

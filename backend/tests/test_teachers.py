@@ -77,7 +77,12 @@ async def test_get_nonexistent_teacher_fails(test_client: AsyncClient, mock_admi
 
 
 @pytest.mark.asyncio
-async def test_update_teacher_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile, mock_admin_auth_headers):
+async def test_update_teacher_as_admin(
+    test_client: AsyncClient,
+    db_session: AsyncSession,
+    mock_admin_profile: Profile,
+    mock_admin_auth_headers,
+):
     # ✅ FIXED: Override both authentication AND database session
     from app.api.deps import get_db_session
 
@@ -127,7 +132,12 @@ async def test_update_nonexistent_teacher_fails(test_client: AsyncClient, mock_a
 
 
 @pytest.mark.asyncio
-async def test_get_teacher_qualifications(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile, mock_admin_auth_headers):
+async def test_get_teacher_qualifications(
+    test_client: AsyncClient,
+    db_session: AsyncSession,
+    mock_admin_profile: Profile,
+    mock_admin_auth_headers,
+):
     # ✅ FIXED: Override both authentication AND database session
     from app.api.deps import get_db_session
 
@@ -158,7 +168,12 @@ async def test_get_teacher_qualifications(test_client: AsyncClient, db_session: 
 
 
 @pytest.mark.asyncio
-async def test_deactivate_teacher_as_admin(test_client: AsyncClient, db_session: AsyncSession, mock_admin_profile: Profile, mock_admin_auth_headers):
+async def test_deactivate_teacher_as_admin(
+    test_client: AsyncClient,
+    db_session: AsyncSession,
+    mock_admin_profile: Profile,
+    mock_admin_auth_headers,
+):
     """
     Happy Path: Tests an admin can soft-delete a teacher.
     """

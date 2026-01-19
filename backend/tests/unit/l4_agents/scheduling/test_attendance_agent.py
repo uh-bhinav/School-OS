@@ -4,8 +4,13 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.attendance_agent.main import AttendanceAgent, attendance_agent_instance
-from app.agents.modules.academics.leaves.attendance_agent.tools import attendance_agent_tools
+from app.agents.modules.academics.leaves.attendance_agent.main import (
+    AttendanceAgent,
+    attendance_agent_instance,
+)
+from app.agents.modules.academics.leaves.attendance_agent.tools import (
+    attendance_agent_tools,
+)
 
 # This marks all tests in this file as async
 pytestmark = pytest.mark.asyncio
@@ -47,7 +52,10 @@ async def test_happy_path_step_1_get_sheet(mock_attendance_llm_invoke, mock_atte
     tool_args = {"class_name": "8B", "date": today_str}
     tool_call = ToolCall(name="get_class_attendance_sheet", args=tool_args, id="tool_123")
 
-    mock_attendance_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Here is the attendance sheet for 8B: [{'student_id': 101, 'full_name': 'Rohan Sharma'}]...")]
+    mock_attendance_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Here is the attendance sheet for 8B: [{'student_id': 101, 'full_name': 'Rohan Sharma'}]..."),
+    ]
 
     # 2. Setup Mock API
     mock_response = [{"student_id": 101, "full_name": "Rohan Sharma"}]
@@ -72,10 +80,19 @@ async def test_happy_path_step_2_take_attendance(mock_attendance_llm_invoke, moc
     # 1. Setup Mock LLM
     query = "Okay, for 8B, mark Rohan (101) as absent. Priya (102) is late. The rest are present."
     today_str = date.today().isoformat()
-    tool_args = {"class_name": "8B", "date": today_str, "absent_student_ids": [101], "late_student_ids": [102], "present_student_ids": []}  # Assuming LLM would be smart enough to add the rest
+    tool_args = {
+        "class_name": "8B",
+        "date": today_str,
+        "absent_student_ids": [101],
+        "late_student_ids": [102],
+        "present_student_ids": [],
+    }  # Assuming LLM would be smart enough to add the rest
     tool_call = ToolCall(name="take_class_attendance", args=tool_args, id="tool_456")
 
-    mock_attendance_llm_invoke.side_effect = [AIMessage(content="", tool_calls=[tool_call]), AIMessage(content="Attendance has been submitted successfully for 8B.")]
+    mock_attendance_llm_invoke.side_effect = [
+        AIMessage(content="", tool_calls=[tool_call]),
+        AIMessage(content="Attendance has been submitted successfully for 8B."),
+    ]
 
     # 2. Setup Mock API
     mock_response = {"status": "success", "records_created": 2}

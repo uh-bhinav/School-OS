@@ -40,7 +40,11 @@ async def _get_class_by_name(db: AsyncSession, class_name: str, school_id: int) 
     if grade_match:
         grade = int(grade_match.group(1))
         section = grade_match.group(2).upper()
-        stmt = select(Class).where(Class.grade_level == grade, Class.section == section, Class.school_id == school_id)
+        stmt = select(Class).where(
+            Class.grade_level == grade,
+            Class.section == section,
+            Class.school_id == school_id,
+        )
         result = await db.execute(stmt)
         return result.scalars().first()
 
@@ -49,7 +53,11 @@ async def _get_class_by_name(db: AsyncSession, class_name: str, school_id: int) 
     if digit_match:
         grade = int(digit_match.group(1))
         section = digit_match.group(2).upper()
-        stmt = select(Class).where(Class.grade_level == grade, Class.section == section, Class.school_id == school_id)
+        stmt = select(Class).where(
+            Class.grade_level == grade,
+            Class.section == section,
+            Class.school_id == school_id,
+        )
         result = await db.execute(stmt)
         return result.scalars().first()
 
@@ -80,7 +88,15 @@ async def _get_student_by_name(db: AsyncSession, full_name: str, class_id: int, 
 
 
 # ADD this new function for the agent to parse the query
-async def agent_parse_and_take_attendance(db: AsyncSession, *, class_name: str, target_date: date, absent_student_names: list[str], teacher_id: int, school_id: int) -> dict[str, Any]:
+async def agent_parse_and_take_attendance(
+    db: AsyncSession,
+    *,
+    class_name: str,
+    target_date: date,
+    absent_student_names: list[str],
+    teacher_id: int,
+    school_id: int,
+) -> dict[str, Any]:
     """
     (AGENT HELPER) Parses natural language attendance query and creates records.
 
@@ -92,7 +108,10 @@ async def agent_parse_and_take_attendance(db: AsyncSession, *, class_name: str, 
         logger.info(f"Finding class: {class_name}")
         target_class = await _get_class_by_name(db, class_name, school_id)
         if not target_class:
-            return {"success": False, "error": f"Class '{class_name}' not found in school {school_id}"}
+            return {
+                "success": False,
+                "error": f"Class '{class_name}' not found in school {school_id}",
+            }
 
         class_id = target_class.class_id
         logger.info(f"Found class_id={class_id} for {class_name}")
@@ -101,13 +120,23 @@ async def agent_parse_and_take_attendance(db: AsyncSession, *, class_name: str, 
         logger.info(f"Fetching students for class_id={class_id}")
         student_name_expr = func.concat(Profile.first_name, " ", Profile.last_name)
         stmt = (
-            select(Student.student_id, student_name_expr.label("full_name")).join(Profile, Student.user_id == Profile.user_id).where(Student.current_class_id == class_id, Profile.school_id == school_id, Student.is_active).order_by(Student.student_id)
+            select(Student.student_id, student_name_expr.label("full_name"))
+            .join(Profile, Student.user_id == Profile.user_id)
+            .where(
+                Student.current_class_id == class_id,
+                Profile.school_id == school_id,
+                Student.is_active,
+            )
+            .order_by(Student.student_id)
         )
         result = await db.execute(stmt)
         all_students = {row.student_id: row.full_name for row in result.mappings()}
 
         if not all_students:
-            return {"success": False, "error": f"No active students found in class '{class_name}'"}
+            return {
+                "success": False,
+                "error": f"No active students found in class '{class_name}'",
+            }
 
         logger.info(f"Found {len(all_students)} students in class")
 
@@ -130,10 +159,28 @@ async def agent_parse_and_take_attendance(db: AsyncSession, *, class_name: str, 
         records_to_create = []
 
         for student_id in present_student_ids:
-            records_to_create.append(AttendanceRecord(student_id=student_id, class_id=class_id, date=target_date, status="Present", teacher_id=teacher_id, school_id=school_id))
+            records_to_create.append(
+                AttendanceRecord(
+                    student_id=student_id,
+                    class_id=class_id,
+                    date=target_date,
+                    status="Present",
+                    teacher_id=teacher_id,
+                    school_id=school_id,
+                )
+            )
 
         for student_id in absent_student_ids:
-            records_to_create.append(AttendanceRecord(student_id=student_id, class_id=class_id, date=target_date, status="Absent", teacher_id=teacher_id, school_id=school_id))
+            records_to_create.append(
+                AttendanceRecord(
+                    student_id=student_id,
+                    class_id=class_id,
+                    date=target_date,
+                    status="Absent",
+                    teacher_id=teacher_id,
+                    school_id=school_id,
+                )
+            )
 
         # Step 6: Bulk insert
         db.add_all(records_to_create)
@@ -144,7 +191,10 @@ async def agent_parse_and_take_attendance(db: AsyncSession, *, class_name: str, 
         except Exception as e:
             await db.rollback()
             logger.error(f"Failed to create attendance records: {str(e)}")
-            return {"success": False, "error": f"Failed to create attendance records: {str(e)}"}
+            return {
+                "success": False,
+                "error": f"Failed to create attendance records: {str(e)}",
+            }
 
         return {
             "success": True,
@@ -195,7 +245,10 @@ async def get_attendance_by_student_in_range(
     end_date: Optional[date] = None,
 ) -> list[AttendanceRecord]:
     # SECURE: Filter by student_id AND school_id
-    stmt = select(AttendanceRecord).where(AttendanceRecord.student_id == student_id, AttendanceRecord.school_id == school_id)
+    stmt = select(AttendanceRecord).where(
+        AttendanceRecord.student_id == student_id,
+        AttendanceRecord.school_id == school_id,
+    )
     if start_date:
         stmt = stmt.where(AttendanceRecord.date >= start_date)
     if end_date:
@@ -241,26 +294,61 @@ async def get_class_attendance_sheet(db: AsyncSession, *, class_id: int, target_
 
         # Step 2: Get all students in the class with their attendance for the day
         stmt = (
-            select(Student.student_id, func.concat(Profile.first_name, " ", Profile.last_name).label("full_name"), AttendanceRecord.status, AttendanceRecord.id.label("attendance_id"))
+            select(
+                Student.student_id,
+                func.concat(Profile.first_name, " ", Profile.last_name).label("full_name"),
+                AttendanceRecord.status,
+                AttendanceRecord.id.label("attendance_id"),
+            )
             .join(Profile, Student.user_id == Profile.user_id)
-            .outerjoin(AttendanceRecord, and_(AttendanceRecord.student_id == Student.student_id, AttendanceRecord.class_id == class_id, AttendanceRecord.date == target_date))
-            .where(Student.current_class_id == class_id, Profile.school_id == school_id, Student.is_active)
+            .outerjoin(
+                AttendanceRecord,
+                and_(
+                    AttendanceRecord.student_id == Student.student_id,
+                    AttendanceRecord.class_id == class_id,
+                    AttendanceRecord.date == target_date,
+                ),
+            )
+            .where(
+                Student.current_class_id == class_id,
+                Profile.school_id == school_id,
+                Student.is_active,
+            )
             .order_by(Student.student_id)
         )
 
         result = await db.execute(stmt)
         students_data = []
         for row in result.mappings():
-            students_data.append({"student_id": row.student_id, "full_name": row.full_name, "status": row.status or "Not Marked", "attendance_id": row.attendance_id})  # If no attendance record, mark as "Not Marked"
+            students_data.append(
+                {
+                    "student_id": row.student_id,
+                    "full_name": row.full_name,
+                    "status": row.status or "Not Marked",
+                    "attendance_id": row.attendance_id,
+                }
+            )  # If no attendance record, mark as "Not Marked"
 
-        return {"class_id": class_id, "class_name": class_name, "date": target_date, "total_students": len(students_data), "students": students_data}  # ✅ Now built correctly
+        return {
+            "class_id": class_id,
+            "class_name": class_name,
+            "date": target_date,
+            "total_students": len(students_data),
+            "students": students_data,
+        }  # ✅ Now built correctly
 
     except Exception as e:
         logger.exception(f"Error getting attendance sheet: {e}")
         raise
 
 
-async def agent_bulk_create_attendance(db: AsyncSession, *, data: AgentTakeAttendanceRequest, teacher_id: int, school_id: int) -> list[AttendanceRecordOut]:
+async def agent_bulk_create_attendance(
+    db: AsyncSession,
+    *,
+    data: AgentTakeAttendanceRequest,
+    teacher_id: int,
+    school_id: int,
+) -> list[AttendanceRecordOut]:
     """
     (ROBUST TOOL) Securely creates bulk attendance from an agent request.
     """
@@ -274,17 +362,40 @@ async def agent_bulk_create_attendance(db: AsyncSession, *, data: AgentTakeAtten
     for student_id in data.present_student_ids:
         records_to_create.append(
             AttendanceRecord(  # ✅ Create AttendanceRecord directly, not AttendanceRecordCreate
-                student_id=student_id, class_id=target_class.class_id, status=AttendanceStatus.present, teacher_id=teacher_id, date=data.date, school_id=school_id  # ✅ school_id is set
+                student_id=student_id,
+                class_id=target_class.class_id,
+                status=AttendanceStatus.present,
+                teacher_id=teacher_id,
+                date=data.date,
+                school_id=school_id,  # ✅ school_id is set
             )
         )
 
     # Process Absent list
     for student_id in data.absent_student_ids:
-        records_to_create.append(AttendanceRecord(student_id=student_id, class_id=target_class.class_id, status=AttendanceStatus.absent, teacher_id=teacher_id, date=data.date, school_id=school_id))  # ✅ school_id is set
+        records_to_create.append(
+            AttendanceRecord(
+                student_id=student_id,
+                class_id=target_class.class_id,
+                status=AttendanceStatus.absent,
+                teacher_id=teacher_id,
+                date=data.date,
+                school_id=school_id,
+            )
+        )  # ✅ school_id is set
 
     # Process Late list
     for student_id in data.late_student_ids:
-        records_to_create.append(AttendanceRecord(student_id=student_id, class_id=target_class.class_id, status=AttendanceStatus.late, teacher_id=teacher_id, date=data.date, school_id=school_id))  # ✅ school_id is set
+        records_to_create.append(
+            AttendanceRecord(
+                student_id=student_id,
+                class_id=target_class.class_id,
+                status=AttendanceStatus.late,
+                teacher_id=teacher_id,
+                date=data.date,
+                school_id=school_id,
+            )
+        )  # ✅ school_id is set
 
     # ✅ No need to convert - records_to_create already has AttendanceRecord objects
     db.add_all(records_to_create)
@@ -310,11 +421,21 @@ async def get_absentees_for_today(db: AsyncSession, *, school_id: int) -> list[D
     class_name_expr = Class.name
 
     stmt = (
-        select(Student.student_id, student_name_expr.label("full_name"), class_name_expr.label("class_name"), AttendanceRecord.status, AttendanceRecord.notes)
+        select(
+            Student.student_id,
+            student_name_expr.label("full_name"),
+            class_name_expr.label("class_name"),
+            AttendanceRecord.status,
+            AttendanceRecord.notes,
+        )
         .join(Student, AttendanceRecord.student_id == Student.student_id)
         .join(Profile, Student.user_id == Profile.user_id)
         .join(Class, AttendanceRecord.class_id == Class.class_id)
-        .where(AttendanceRecord.school_id == school_id, AttendanceRecord.date == today, AttendanceRecord.status.in_([AttendanceStatus.absent, AttendanceStatus.late]))
+        .where(
+            AttendanceRecord.school_id == school_id,
+            AttendanceRecord.date == today,
+            AttendanceRecord.status.in_([AttendanceStatus.absent, AttendanceStatus.late]),
+        )
         .distinct(Student.student_id)  # Get one record per student
         .order_by(Student.student_id, AttendanceRecord.created_at.desc())
     )
@@ -323,14 +444,25 @@ async def get_absentees_for_today(db: AsyncSession, *, school_id: int) -> list[D
     return [DailyAbsenteeRecord(**row) for row in result.mappings()]
 
 
-async def get_low_attendance_report(db: AsyncSession, *, school_id: int, threshold_percent: float, start_date: date, end_date: date) -> list[LowAttendanceStudent]:
+async def get_low_attendance_report(
+    db: AsyncSession,
+    *,
+    school_id: int,
+    threshold_percent: float,
+    start_date: date,
+    end_date: date,
+) -> list[LowAttendanceStudent]:
     """
     (ROBUST TOOL) Generates a report of students below an attendance threshold.
     """
     # 1. CTE for all students in the school
     student_name_expr = Profile.first_name + literal(" ") + Profile.last_name
     students_cte = (
-        select(Student.student_id, student_name_expr.label("full_name"), Class.name.label("class_name"))
+        select(
+            Student.student_id,
+            student_name_expr.label("full_name"),
+            Class.name.label("class_name"),
+        )
         .join(Profile, Student.user_id == Profile.user_id)
         .join(Class, Student.current_class_id == Class.class_id, isouter=True)
         .where(Profile.school_id == school_id, Student.is_active)
@@ -338,8 +470,16 @@ async def get_low_attendance_report(db: AsyncSession, *, school_id: int, thresho
 
     # 2. CTE for attendance records in range, counting "Present" as 1
     attendance_cte = (
-        select(AttendanceRecord.student_id, func.count().label("total_days"), func.sum(case((AttendanceStatus.present, 1), else_=0)).label("present_days"), func.sum(case((AttendanceStatus.absent, 1), else_=0)).label("absent_days"))
-        .where(AttendanceRecord.school_id == school_id, AttendanceRecord.date.between(start_date, end_date))
+        select(
+            AttendanceRecord.student_id,
+            func.count().label("total_days"),
+            func.sum(case((AttendanceStatus.present, 1), else_=0)).label("present_days"),
+            func.sum(case((AttendanceStatus.absent, 1), else_=0)).label("absent_days"),
+        )
+        .where(
+            AttendanceRecord.school_id == school_id,
+            AttendanceRecord.date.between(start_date, end_date),
+        )
         .group_by(AttendanceRecord.student_id)
     ).cte("attendance_counts")
 

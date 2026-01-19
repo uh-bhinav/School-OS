@@ -45,7 +45,11 @@ async def search_student_by_name(student_name: str) -> dict[str, Any]:
             students = response.get("data", []) if isinstance(response, dict) else response
 
             if not students or len(students) == 0:
-                return {"success": False, "error": f"No student found with name '{student_name}'", "suggestion": "Check the spelling and try again."}
+                return {
+                    "success": False,
+                    "error": f"No student found with name '{student_name}'",
+                    "suggestion": "Check the spelling and try again.",
+                }
 
             # Return first match
             student = students[0]
@@ -82,8 +86,18 @@ async def get_student_achievements(student_id: int, verified_only: bool = True) 
             params = {"verified_only": verified_only}
             logger.info(f"Fetching achievements for student ID: {student_id} with params={params}")
             response = await client.get(f"/achievements/student/{student_id}", params=params)
-            return {"success": True, "student_id": student_id, "count": len(response), "achievements": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+            return {
+                "success": True,
+                "student_id": student_id,
+                "count": len(response),
+                "achievements": response,
+            }
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting student achievements: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -92,20 +106,37 @@ async def get_student_achievements(student_id: int, verified_only: bool = True) 
 
 
 @tool("add_student_achievement")
-async def add_student_achievement(student_name: str, title: str, achievement_type: str, level: Optional[str] = None, issued_by: Optional[str] = None) -> dict[str, Any]:
+async def add_student_achievement(
+    student_name: str,
+    title: str,
+    achievement_type: str,
+    level: Optional[str] = None,
+    issued_by: Optional[str] = None,
+) -> dict[str, Any]:
     """
     (Teacher Tool) Adds a new, unverified achievement for a student.
     This starts the verification workflow.
     """
     try:
         async with AgentHTTPClient() as client:
-            payload = {"student_name": student_name, "title": title, "type": achievement_type, "level": level, "issued_by": issued_by}
+            payload = {
+                "student_name": student_name,
+                "title": title,
+                "type": achievement_type,
+                "level": level,
+                "issued_by": issued_by,
+            }
             # Filter out None values
             payload = {k: v for k, v in payload.items() if v is not None}
             logger.info(f"Calling API: POST /achievements/add with payload: {payload}")
             response = await client.post("/achievements/add", json=payload)
             return {"success": True, "created_achievement": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error adding student achievement: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -124,7 +155,12 @@ async def verify_achievement(achievement_id: int) -> dict[str, Any]:
             logger.info(f"Calling API: POST /achievements/verify/{achievement_id}")
             response = await client.post(f"/achievements/verify/{achievement_id}")
             return {"success": True, "verified_achievement": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error verifying achievement: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -142,7 +178,11 @@ async def get_unverified_achievements_list() -> dict[str, Any]:
         async with AgentHTTPClient() as client:
             logger.info("Calling API: GET /achievements/unverified")
             response = await client.get("/achievements/unverified")
-            return {"success": True, "count": len(response), "unverified_achievements": response}
+            return {
+                "success": True,
+                "count": len(response),
+                "unverified_achievements": response,
+            }
     except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
         logger.error(f"Error getting unverified achievements: {e.message}", exc_info=True)
         return _format_error_response(e)
@@ -163,7 +203,12 @@ async def get_points_for_achievement(achievement_type: str, level: str) -> dict[
             logger.info(f"Calling API: GET /achievements/points-lookup with params={params}")
             response = await client.get("/achievements/points-lookup", params=params)
             return {"success": True, "points": response.get("points")}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting achievement points: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:

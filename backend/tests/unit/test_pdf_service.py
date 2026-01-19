@@ -25,12 +25,35 @@ def sample_report_card() -> ReportCard:
         exam_summaries=[
             ExamSummary(
                 exam_name="March Final exams",
-                marks=[SubjectMark(subject_name="Mathematics", marks_obtained=Decimal("92.00"), max_marks=Decimal("100.00")), SubjectMark(subject_name="Science", marks_obtained=Decimal("88.00"), max_marks=Decimal("100.00"))],
+                marks=[
+                    SubjectMark(
+                        subject_name="Mathematics",
+                        marks_obtained=Decimal("92.00"),
+                        max_marks=Decimal("100.00"),
+                    ),
+                    SubjectMark(
+                        subject_name="Science",
+                        marks_obtained=Decimal("88.00"),
+                        max_marks=Decimal("100.00"),
+                    ),
+                ],
                 total_obtained=Decimal("180.00"),
                 total_max_marks=Decimal("200.00"),
                 percentage=90.0,
             ),
-            ExamSummary(exam_name="Surprise exams", marks=[SubjectMark(subject_name="Mathematics", marks_obtained=Decimal("95.00"), max_marks=Decimal("100.00"))], total_obtained=Decimal("95.00"), total_max_marks=Decimal("100.00"), percentage=95.0),
+            ExamSummary(
+                exam_name="Surprise exams",
+                marks=[
+                    SubjectMark(
+                        subject_name="Mathematics",
+                        marks_obtained=Decimal("95.00"),
+                        max_marks=Decimal("100.00"),
+                    )
+                ],
+                total_obtained=Decimal("95.00"),
+                total_max_marks=Decimal("100.00"),
+                percentage=95.0,
+            ),
         ],
         grand_total_obtained=Decimal("275.00"),
         grand_total_max_marks=Decimal("300.00"),
@@ -47,7 +70,19 @@ def minimal_report_card() -> ReportCard:
         student_name="Test Student",
         class_name="Grade 1 - A",
         exam_summaries=[
-            ExamSummary(exam_name="Test Exam", marks=[SubjectMark(subject_name="Test Subject", marks_obtained=Decimal("50.00"), max_marks=Decimal("100.00"))], total_obtained=Decimal("50.00"), total_max_marks=Decimal("100.00"), percentage=50.0)
+            ExamSummary(
+                exam_name="Test Exam",
+                marks=[
+                    SubjectMark(
+                        subject_name="Test Subject",
+                        marks_obtained=Decimal("50.00"),
+                        max_marks=Decimal("100.00"),
+                    )
+                ],
+                total_obtained=Decimal("50.00"),
+                total_max_marks=Decimal("100.00"),
+                percentage=50.0,
+            )
         ],
         grand_total_obtained=Decimal("50.00"),
         grand_total_max_marks=Decimal("100.00"),
@@ -215,7 +250,19 @@ class TestPDFWithEdgeCases:
             student_name="Test Student",
             class_name="Grade 1 - A",
             exam_summaries=[
-                ExamSummary(exam_name="Test Exam", marks=[SubjectMark(subject_name="Test", marks_obtained=Decimal("0"), max_marks=Decimal("0"))], total_obtained=Decimal("0"), total_max_marks=Decimal("0"), percentage=None)  # This is the edge case
+                ExamSummary(
+                    exam_name="Test Exam",
+                    marks=[
+                        SubjectMark(
+                            subject_name="Test",
+                            marks_obtained=Decimal("0"),
+                            max_marks=Decimal("0"),
+                        )
+                    ],
+                    total_obtained=Decimal("0"),
+                    total_max_marks=Decimal("0"),
+                    percentage=None,
+                )  # This is the edge case
             ],
             grand_total_obtained=Decimal("0"),
             grand_total_max_marks=Decimal("0"),
@@ -245,7 +292,13 @@ class TestPDFWithEdgeCases:
             exam_summaries=[
                 ExamSummary(
                     exam_name="Very Long Exam Name That Goes On And On",
-                    marks=[SubjectMark(subject_name="Long Subject Name", marks_obtained=Decimal("50"), max_marks=Decimal("100"))],
+                    marks=[
+                        SubjectMark(
+                            subject_name="Long Subject Name",
+                            marks_obtained=Decimal("50"),
+                            max_marks=Decimal("100"),
+                        )
+                    ],
                     total_obtained=Decimal("50"),
                     total_max_marks=Decimal("100"),
                     percentage=50.0,
@@ -268,7 +321,14 @@ class TestPDFWithEdgeCases:
             exam_summaries.append(
                 ExamSummary(
                     exam_name=f"Exam {i+1}",
-                    marks=[SubjectMark(subject_name=f"Subject {j+1}", marks_obtained=Decimal("80"), max_marks=Decimal("100")) for j in range(3)],  # 3 subjects per exam
+                    marks=[
+                        SubjectMark(
+                            subject_name=f"Subject {j+1}",
+                            marks_obtained=Decimal("80"),
+                            max_marks=Decimal("100"),
+                        )
+                        for j in range(3)
+                    ],  # 3 subjects per exam
                     total_obtained=Decimal("240"),
                     total_max_marks=Decimal("300"),
                     percentage=80.0,
@@ -301,7 +361,21 @@ class TestPDFWithEdgeCases:
             student_user_id="00000000-0000-0000-0000-000000000005",
             student_name="Test Student",
             class_name="Grade 5 - B",
-            exam_summaries=[ExamSummary(exam_name="Test Exam", marks=[SubjectMark(subject_name="Math", marks_obtained=Decimal("87.5"), max_marks=Decimal("100.0"))], total_obtained=Decimal("87.5"), total_max_marks=Decimal("100.0"), percentage=87.5)],
+            exam_summaries=[
+                ExamSummary(
+                    exam_name="Test Exam",
+                    marks=[
+                        SubjectMark(
+                            subject_name="Math",
+                            marks_obtained=Decimal("87.5"),
+                            max_marks=Decimal("100.0"),
+                        )
+                    ],
+                    total_obtained=Decimal("87.5"),
+                    total_max_marks=Decimal("100.0"),
+                    percentage=87.5,
+                )
+            ],
             grand_total_obtained=Decimal("87.5"),
             grand_total_max_marks=Decimal("100.0"),
             overall_percentage=87.5,

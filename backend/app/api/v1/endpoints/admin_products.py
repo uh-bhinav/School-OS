@@ -18,7 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user_profile, get_db, require_role
 from app.models.profile import Profile
-from app.schemas.product_schema import BulkUpdateCategoryRequest, ProductCreate, ProductOut, ProductStockAdjustment, ProductUpdate
+from app.schemas.product_schema import (
+    BulkUpdateCategoryRequest,
+    ProductCreate,
+    ProductOut,
+    ProductStockAdjustment,
+    ProductUpdate,
+)
 from app.services.product_service import ProductService
 
 router = APIRouter(
@@ -32,7 +38,12 @@ router = APIRouter(
 # ============================================================================
 
 
-@router.post("/", response_model=ProductOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role("Admin"))])
+@router.post(
+    "/",
+    response_model=ProductOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role("Admin"))],
+)
 async def create_product(
     product_in: ProductCreate,
     db: AsyncSession = Depends(get_db),
@@ -58,7 +69,11 @@ async def create_product(
 # ============================================================================
 
 
-@router.put("/bulk-update-category", response_model=list[ProductOut], dependencies=[Depends(require_role("Admin"))])
+@router.put(
+    "/bulk-update-category",
+    response_model=list[ProductOut],
+    dependencies=[Depends(require_role("Admin"))],
+)
 async def bulk_update_category(
     request_body: BulkUpdateCategoryRequest,  # ✅ CHANGE THIS
     db: AsyncSession = Depends(get_db),
@@ -87,7 +102,11 @@ async def bulk_update_category(
     )
 
 
-@router.get("/{product_id}", response_model=ProductOut, dependencies=[Depends(require_role("Admin"))])
+@router.get(
+    "/{product_id}",
+    response_model=ProductOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
 async def get_product(
     product_id: int,
     db: AsyncSession = Depends(get_db),
@@ -127,8 +146,16 @@ async def get_all_products(
     )
 
 
-@router.patch("/{product_id}", response_model=ProductOut, dependencies=[Depends(require_role("Admin"))])
-@router.put("/{product_id}", response_model=ProductOut, dependencies=[Depends(require_role("Admin"))])
+@router.patch(
+    "/{product_id}",
+    response_model=ProductOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
+@router.put(
+    "/{product_id}",
+    response_model=ProductOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
 async def update_product(
     product_id: int,
     product_update: ProductUpdate,
@@ -150,7 +177,11 @@ async def update_product(
     return await service.update_product(db_product, product_update)
 
 
-@router.delete("/{product_id}", response_model=ProductOut, dependencies=[Depends(require_role("Admin"))])
+@router.delete(
+    "/{product_id}",
+    response_model=ProductOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
 async def delete_product(
     product_id: int,
     db: AsyncSession = Depends(get_db),
@@ -175,8 +206,16 @@ async def delete_product(
 # ============================================================================
 
 
-@router.patch("/{product_id}/stock", response_model=ProductOut, dependencies=[Depends(require_role("Admin"))])
-@router.put("/{product_id}/stock", response_model=ProductOut, dependencies=[Depends(require_role("Admin"))])
+@router.patch(
+    "/{product_id}/stock",
+    response_model=ProductOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
+@router.put(
+    "/{product_id}/stock",
+    response_model=ProductOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
 async def adjust_stock(
     product_id: int,
     adjustment: ProductStockAdjustment,

@@ -75,9 +75,19 @@ class AlbumService:
 
         target_filters = []
         if grade_level is not None:
-            target_filters.append(and_(AlbumTarget.target_type == "grade", AlbumTarget.target_id == grade_level))
+            target_filters.append(
+                and_(
+                    AlbumTarget.target_type == "grade",
+                    AlbumTarget.target_id == grade_level,
+                )
+            )
         if current_class_id is not None:
-            target_filters.append(and_(AlbumTarget.target_type == "class", AlbumTarget.target_id == current_class_id))
+            target_filters.append(
+                and_(
+                    AlbumTarget.target_type == "class",
+                    AlbumTarget.target_id == current_class_id,
+                )
+            )
 
         if user_id:
             try:
@@ -90,7 +100,12 @@ class AlbumService:
                 student_result = await db.execute(student_stmt)
                 student_id = student_result.scalar_one_or_none()
                 if student_id is not None:
-                    target_filters.append(and_(AlbumTarget.target_type == "individual_student", AlbumTarget.target_id == student_id))
+                    target_filters.append(
+                        and_(
+                            AlbumTarget.target_type == "individual_student",
+                            AlbumTarget.target_id == student_id,
+                        )
+                    )
 
         if target_filters:
             subquery = select(AlbumTarget.album_id).where(or_(*target_filters))

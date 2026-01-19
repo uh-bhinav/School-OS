@@ -12,7 +12,12 @@ from app.models.student import Student
 from app.models.subject import Subject
 from app.models.teacher import Teacher
 from app.models.timetable import Timetable
-from app.schemas.timetable_schema import TeacherFreeSlot, TeacherFreeSlotResponse, TimetableEntryCreate, TimetableEntryUpdate
+from app.schemas.timetable_schema import (
+    TeacherFreeSlot,
+    TeacherFreeSlotResponse,
+    TimetableEntryCreate,
+    TimetableEntryUpdate,
+)
 
 
 def get_timetable_with_details_options():
@@ -184,7 +189,16 @@ async def find_teacher_free_slots(db: AsyncSession, *, teacher_id: int, school_i
     free_slots = []
     for period_id, period in all_period_map.items():
         if period_id not in busy_period_ids:
-            free_slots.append(TeacherFreeSlot(period_id=period.id, period_number=period.period_number, period_name=period.period_name, start_time=period.start_time, end_time=period.end_time, day_of_week=day_of_week))
+            free_slots.append(
+                TeacherFreeSlot(
+                    period_id=period.id,
+                    period_number=period.period_number,
+                    period_name=period.period_name,
+                    start_time=period.start_time,
+                    end_time=period.end_time,
+                    day_of_week=day_of_week,
+                )
+            )
 
     # Sort by start time
     free_slots.sort(key=lambda x: x.start_time)

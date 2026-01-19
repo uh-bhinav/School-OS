@@ -21,7 +21,12 @@ from app.services.cart_service import CartService
 from app.services.order_service import OrderService
 
 
-async def checkout_for_parent(db_session: AsyncSession, parent_user_id: UUID, checkout_data: OrderCreateFromCart, parent_name: str):
+async def checkout_for_parent(
+    db_session: AsyncSession,
+    parent_user_id: UUID,
+    checkout_data: OrderCreateFromCart,
+    parent_name: str,
+):
     """
     Helper function to perform checkout.
     Uses the SAME session to avoid transaction isolation issues in tests.
@@ -68,7 +73,13 @@ async def _ensure_parent_link(db_session: AsyncSession, parent_profile: Profile,
 
 
 @pytest.mark.asyncio
-async def test_concurrent_checkout_prevents_overselling(db_session: AsyncSession, parent_profile_1: Profile, parent_profile_2: Profile, student_22: Student, student_23: Student):
+async def test_concurrent_checkout_prevents_overselling(
+    db_session: AsyncSession,
+    parent_profile_1: Profile,
+    parent_profile_2: Profile,
+    student_22: Student,
+    student_23: Student,
+):
     """
     Test 3.1: CONCURRENCY - Two parents buy last item simultaneously.
 

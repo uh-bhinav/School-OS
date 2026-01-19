@@ -25,4 +25,8 @@ class DownloadReportCardPDFSchema(BaseModel):
 
 
 # Export all schemas
-__all__ = ["GetStudentReportCardSchema", "GetClassReportCardsSchema", "DownloadReportCardPDFSchema"]
+__all__ = [
+    "GetStudentReportCardSchema",
+    "GetClassReportCardsSchema",
+    "DownloadReportCardPDFSchema",
+]

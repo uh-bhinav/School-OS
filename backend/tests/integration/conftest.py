@@ -38,7 +38,9 @@ def mock_l1_llm_invoke():
 @pytest.fixture
 def mock_l2_llm_invoke():
     """Mocks the LLM for the L2 Academics Module Orchestrator."""
-    from app.agents.modules.academics.module_agent import academics_module_orchestrator_instance
+    from app.agents.modules.academics.module_agent import (
+        academics_module_orchestrator_instance,
+    )
 
     mock_model = MagicMock()
     mock_model.ainvoke = AsyncMock(return_value=AIMessage(content="Default L2 mock"))

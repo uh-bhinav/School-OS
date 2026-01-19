@@ -33,7 +33,12 @@ from app.models.product import Product
 from app.models.product_category import ProductCategory
 from app.models.profile import Profile
 from app.schemas.enums import ProductAvailability
-from app.schemas.product_schema import ProductCreate, ProductOut, ProductStockAdjustment, ProductUpdate
+from app.schemas.product_schema import (
+    ProductCreate,
+    ProductOut,
+    ProductStockAdjustment,
+    ProductUpdate,
+)
 from app.services.product_service import ProductService
 
 # ===========================================================================
@@ -69,7 +74,13 @@ async def test_create_product_successfully(db_session: AsyncSession, mock_admin_
     print(f"✓ Category exists: {category.category_name}")
 
     # Step 2: Create product
-    product_data = ProductCreate(name="Test House T-Shirt (Blue)", description="Premium cotton house t-shirt", price=Decimal("750.00"), stock_quantity=100, category_id=1)
+    product_data = ProductCreate(
+        name="Test House T-Shirt (Blue)",
+        description="Premium cotton house t-shirt",
+        price=Decimal("750.00"),
+        stock_quantity=100,
+        category_id=1,
+    )
 
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -177,7 +188,12 @@ async def test_get_product_by_id_successfully(db_session: AsyncSession, mock_adm
     admin_school_id = mock_admin_profile.school_id
 
     # Step 1: Create a product first
-    product_data = ProductCreate(name="Test Notebook (A4)", price=Decimal("50.00"), stock_quantity=200, category_id=1)
+    product_data = ProductCreate(
+        name="Test Notebook (A4)",
+        price=Decimal("50.00"),
+        stock_quantity=200,
+        category_id=1,
+    )
 
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -287,7 +303,12 @@ async def test_update_product_successfully(db_session: AsyncSession, mock_admin_
     admin_school_id = mock_admin_profile.school_id
 
     # Step 1: Create initial product
-    product_data = ProductCreate(name="Original Product Name", price=Decimal("100.00"), stock_quantity=50, category_id=1)
+    product_data = ProductCreate(
+        name="Original Product Name",
+        price=Decimal("100.00"),
+        stock_quantity=50,
+        category_id=1,
+    )
 
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -345,7 +366,12 @@ async def test_soft_delete_product(db_session: AsyncSession, mock_admin_profile:
     admin_school_id = mock_admin_profile.school_id
 
     # Step 1: Create product
-    product_data = ProductCreate(name="Product to Delete", price=Decimal("75.00"), stock_quantity=20, category_id=1)
+    product_data = ProductCreate(
+        name="Product to Delete",
+        price=Decimal("75.00"),
+        stock_quantity=20,
+        category_id=1,
+    )
 
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -401,7 +427,12 @@ async def test_adjust_stock_add_inventory(db_session: AsyncSession, mock_admin_p
     admin_school_id = mock_admin_profile.school_id
 
     # Step 1: Create product with low stock
-    product_data = ProductCreate(name="Product for Stock Adjustment", price=Decimal("100.00"), stock_quantity=10, category_id=1)
+    product_data = ProductCreate(
+        name="Product for Stock Adjustment",
+        price=Decimal("100.00"),
+        stock_quantity=10,
+        category_id=1,
+    )
 
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -451,7 +482,12 @@ async def test_adjust_stock_remove_inventory(db_session: AsyncSession, mock_admi
     admin_school_id = mock_admin_profile.school_id
 
     # Step 1: Create product with adequate stock
-    product_data = ProductCreate(name="Product for Stock Removal", price=Decimal("100.00"), stock_quantity=50, category_id=1)
+    product_data = ProductCreate(
+        name="Product for Stock Removal",
+        price=Decimal("100.00"),
+        stock_quantity=50,
+        category_id=1,
+    )
 
     product_service = ProductService(db_session)
     created_product = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
@@ -515,7 +551,12 @@ async def test_bulk_update_category(db_session: AsyncSession, mock_admin_profile
     product_ids = []
 
     for i in range(3):
-        product_data = ProductCreate(name=f"Bulk Test Product {i+1}", price=Decimal("50.00"), stock_quantity=10, category_id=1)
+        product_data = ProductCreate(
+            name=f"Bulk Test Product {i+1}",
+            price=Decimal("50.00"),
+            stock_quantity=10,
+            category_id=1,
+        )
         created = await product_service.create_product(product_in=product_data, current_profile=mock_admin_profile)
         product_ids.append(created.product_id)
 

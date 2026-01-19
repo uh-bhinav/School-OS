@@ -69,7 +69,12 @@ async def get_class_attendance_sheet(class_name: str, date: str) -> dict[str, An
             logger.info(f"Calling API: GET /attendance/agent/sheet/{class_name} with params={params}")
             response = await client.get(f"/attendance/agent/sheet/{class_name}", params=params)
             return {"success": True, "attendance_sheet": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting class attendance sheet: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -78,7 +83,13 @@ async def get_class_attendance_sheet(class_name: str, date: str) -> dict[str, An
 
 
 @tool("take_class_attendance")
-async def take_class_attendance(class_name: str, date: str, present_student_ids: list[int], absent_student_ids: list[int], late_student_ids: Optional[list[int]] = None) -> dict[str, Any]:
+async def take_class_attendance(
+    class_name: str,
+    date: str,
+    present_student_ids: list[int],
+    absent_student_ids: list[int],
+    late_student_ids: Optional[list[int]] = None,
+) -> dict[str, Any]:
     """
     (Teacher Tool) Submits the attendance for a class.
     This is the *second step* after getting the student IDs from the sheet.
@@ -95,7 +106,12 @@ async def take_class_attendance(class_name: str, date: str, present_student_ids:
             logger.info(f"Calling API: POST /attendance/agent/take with {len(present_student_ids)} present, {len(absent_student_ids)} absent")
             response = await client.post("/attendance/agent/take", json=payload)
             return {"success": True, "submission_status": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error taking class attendance: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -130,7 +146,11 @@ async def get_students_with_low_attendance_report(threshold_percent: float, star
     """
     try:
         async with AgentHTTPClient() as client:
-            params = {"threshold_percent": threshold_percent, "start_date": str(start_date), "end_date": str(end_date)}
+            params = {
+                "threshold_percent": threshold_percent,
+                "start_date": str(start_date),
+                "end_date": str(end_date),
+            }
             logger.info(f"Calling API: GET /attendance/agent/report/low-attendance with params={params}")
             response = await client.get("/attendance/agent/report/low-attendance", params=params)
             return {"success": True, "low_attendance_report": response}
@@ -143,7 +163,11 @@ async def get_students_with_low_attendance_report(threshold_percent: float, star
 
 
 @tool("record_class_attendance_bulk")
-async def record_class_attendance_bulk(class_name: str, target_date: Optional[str] = None, absent_student_names: Optional[list[str]] = None) -> dict[str, Any]:
+async def record_class_attendance_bulk(
+    class_name: str,
+    target_date: Optional[str] = None,
+    absent_student_names: Optional[list[str]] = None,
+) -> dict[str, Any]:
     """
     (Teacher Tool) Records attendance for an entire class in one go.
 
@@ -171,7 +195,11 @@ async def record_class_attendance_bulk(class_name: str, target_date: Optional[st
         logger.info(f"Recording attendance: class={class_name}, date={target_date}, absent={absent_student_names}")
 
         async with AgentHTTPClient() as client:
-            payload = {"class_name": class_name, "target_date": target_date, "absent_student_names": absent_student_names}
+            payload = {
+                "class_name": class_name,
+                "target_date": target_date,
+                "absent_student_names": absent_student_names,
+            }
 
             response = await client.post("/attendance/agent/bulk-record", json=payload)
 

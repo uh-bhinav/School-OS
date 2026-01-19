@@ -31,14 +31,19 @@ from app.api.v1.endpoints.student_contacts import router as student_contacts
 # Import and register routers
 from app.api.v1.endpoints.teachers import router as teachers
 from app.core.config import settings
-from app.core.security import create_access_token, get_current_user_profile, require_role
+from app.core.security import (
+    create_access_token,
+    get_current_user_profile,
+    require_role,
+)
 from app.db.session import db_context, get_db, init_engine
 
 # CRITICAL: Importing app.main will automatically import app.db.base
 # which registers all SQLAlchemy models. Do NOT import base separately
 # here as it would cause double registration.
 from app.main import app
-from app.models import teacher_subject  # noqa: F401  # Ensure teacher_subject model is registered
+
+# noqa: F401  # Ensure teacher_subject model is registered
 from app.models.academic_year import AcademicYear
 from app.models.profile import Profile
 from app.models.role_definition import RoleDefinition
@@ -103,7 +108,9 @@ async def async_client(test_client: AsyncClient) -> AsyncGenerator[AsyncClient, 
 
 
 @pytest_asyncio.fixture(scope="function")
-async def test_db_session(db_session: AsyncSession) -> AsyncGenerator[AsyncSession, None]:
+async def test_db_session(
+    db_session: AsyncSession,
+) -> AsyncGenerator[AsyncSession, None]:
     """Backward compatible alias for db_session used in older tests."""
     yield db_session
 
@@ -120,7 +127,7 @@ async def _ensure_school(db_session: AsyncSession, school_id: int, name: str) ->
 
 async def _ensure_academic_year(db_session: AsyncSession, school_id: int) -> AcademicYear:
     """Fetch or create an active academic year for the supplied school."""
-    stmt = select(AcademicYear).where(AcademicYear.school_id == school_id, AcademicYear.is_active == True).order_by(AcademicYear.start_date.desc())  # noqa: E712
+    stmt = select(AcademicYear).where(AcademicYear.school_id == school_id, AcademicYear.is_active).order_by(AcademicYear.start_date.desc())  # noqa: E712
     result = await db_session.execute(stmt)
     academic_year = result.scalars().first()
 
@@ -141,7 +148,7 @@ async def _ensure_academic_year(db_session: AsyncSession, school_id: int) -> Aca
 
 async def _ensure_student_for_school(db_session: AsyncSession, school_id: int) -> Student:
     """Fetch or create a student associated with the provided school."""
-    stmt = select(Student).join(Profile, Student.user_id == Profile.user_id).where(Profile.school_id == school_id, Student.is_active == True).order_by(Student.student_id.asc())  # noqa: E712
+    stmt = select(Student).join(Profile, Student.user_id == Profile.user_id).where(Profile.school_id == school_id, Student.is_active).order_by(Student.student_id.asc())  # noqa: E712
     result = await db_session.execute(stmt)
     student = result.scalars().first()
 
@@ -434,7 +441,9 @@ async def test_client_admin_security_override() -> AsyncGenerator[AsyncClient, N
 
 
 @pytest_asyncio.fixture(scope="function")
-async def test_client_authenticated_admin(mock_admin_profile: Profile) -> AsyncGenerator[AsyncClient, None]:
+async def test_client_authenticated_admin(
+    mock_admin_profile: Profile,
+) -> AsyncGenerator[AsyncClient, None]:
     """
     Provides an AsyncClient where the get_current_user dependency is
     overridden to always return a mock admin profile.
@@ -458,7 +467,9 @@ async def test_client_authenticated_admin(mock_admin_profile: Profile) -> AsyncG
 
 
 @pytest_asyncio.fixture(scope="function")
-async def test_client_authenticated_parent(mock_parent_profile: Profile) -> AsyncGenerator[AsyncClient, None]:
+async def test_client_authenticated_parent(
+    mock_parent_profile: Profile,
+) -> AsyncGenerator[AsyncClient, None]:
     """
     Provides an AsyncClient where get_current_user is overridden
     to always return a mock parent profile.
@@ -509,10 +520,19 @@ def mock_razorpay_client(mocker) -> MagicMock:  # Use 'mocker' fixture
     mock_instance = MagicMock()
 
     # Configure the mock 'order.create' method to return specific data
-    mock_instance.order.create.return_value = {"id": "order_MOCK123456789", "amount": 1500000, "currency": "INR", "status": "created"}  # A predictable mock order ID  # Example amount in paise
+    mock_instance.order.create.return_value = {
+        "id": "order_MOCK123456789",
+        "amount": 1500000,
+        "currency": "INR",
+        "status": "created",
+    }  # A predictable mock order ID  # Example amount in paise
 
     # Configure the mock 'payment.fetch' method (needed for verify_payment)
-    mock_instance.payment.fetch.return_value = {"id": "pay_MOCK_SUCCESS", "method": "card", "notes": {"internal_payment_id": 1}}  # Example notes
+    mock_instance.payment.fetch.return_value = {
+        "id": "pay_MOCK_SUCCESS",
+        "method": "card",
+        "notes": {"internal_payment_id": 1},
+    }  # Example notes
 
     # Configure the mock 'utility.verify_payment_signature'
     # By default, it will do nothing (simulate success)
@@ -601,12 +621,21 @@ async def mock_parent_auth_headers(mock_parent_profile: Profile, db_session: Asy
         db_session.add(parent_role)
 
     # 3. Ensure the user exists in auth.users (for the profile trigger)
-    await db_session.execute(text("INSERT INTO auth.users (id, email) VALUES (:user_id, :email) ON CONFLICT (id) DO NOTHING"), {"user_id": profile_data["user_id"], "email": email})
+    await db_session.execute(
+        text("INSERT INTO auth.users (id, email) VALUES (:user_id, :email) ON CONFLICT (id) DO NOTHING"),
+        {"user_id": profile_data["user_id"], "email": email},
+    )
 
     # 4. Ensure the Parent profile exists
     parent_profile = await db_session.get(Profile, profile_data["user_id"])
     if not parent_profile:
-        parent_profile = Profile(user_id=profile_data["user_id"], school_id=profile_data["school_id"], first_name=profile_data["first_name"], last_name=profile_data["last_name"], is_active=True)
+        parent_profile = Profile(
+            user_id=profile_data["user_id"],
+            school_id=profile_data["school_id"],
+            first_name=profile_data["first_name"],
+            last_name=profile_data["last_name"],
+            is_active=True,
+        )
         db_session.add(parent_profile)
 
     # 5. Ensure the user_roles link exists

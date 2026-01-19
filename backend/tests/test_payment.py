@@ -21,7 +21,10 @@ from app.models.school import School
 from app.models.student import Student
 from app.models.user_roles import UserRole
 from app.schemas.enums import OrderStatus, PaymentStatus
-from app.schemas.payment_schema import PaymentInitiateRequest, PaymentVerificationRequest
+from app.schemas.payment_schema import (
+    PaymentInitiateRequest,
+    PaymentVerificationRequest,
+)
 
 # --- Imports from your app ---
 from app.services.payment_service import PaymentService
@@ -48,14 +51,24 @@ async def test_initiate_payment_for_order_integration(db_session: AsyncSession, 
     # 1. --- ARRANGE ---
 
     # --- Mock Dependencies (External) ---
-    mocker.patch("app.core.crypto_service.decrypt_value", side_effect=["rzp_key_integration", "rzp_secret_integration"])
+    mocker.patch(
+        "app.core.crypto_service.decrypt_value",
+        side_effect=["rzp_key_integration", "rzp_secret_integration"],
+    )
 
-    mock_razorpay_client.order.create.return_value = {"id": "order_INTEG_MOCK_ID", "amount": 250000}
+    mock_razorpay_client.order.create.return_value = {
+        "id": "order_INTEG_MOCK_ID",
+        "amount": 250000,
+    }
 
     # --- Create Real Data in the DB (in correct order) ---
 
     # School
-    db_school = School(name="Integration Test School", razorpay_key_id_encrypted=b"mock_key_bytes", razorpay_key_secret_encrypted=b"mock_secret_bytes")
+    db_school = School(
+        name="Integration Test School",
+        razorpay_key_id_encrypted=b"mock_key_bytes",
+        razorpay_key_secret_encrypted=b"mock_secret_bytes",
+    )
     db_session.add(db_school)
 
     # RoleDefinition
@@ -95,7 +108,14 @@ async def test_initiate_payment_for_order_integration(db_session: AsyncSession, 
     await db_session.flush()
 
     # Order
-    db_order = Order(student_id=db_student.student_id, parent_user_id=db_parent_profile.user_id, school_id=db_school.school_id, order_number="INT-ORD-001", total_amount=Decimal("2500.00"), status="pending_payment")
+    db_order = Order(
+        student_id=db_student.student_id,
+        parent_user_id=db_parent_profile.user_id,
+        school_id=db_school.school_id,
+        order_number="INT-ORD-001",
+        total_amount=Decimal("2500.00"),
+        status="pending_payment",
+    )
     db_session.add(db_order)
     await db_session.flush()
 
@@ -134,18 +154,32 @@ async def test_verify_payment_valid_signature_for_order_integration(db_session: 
     # We mock crypto_service twice:
     # 1. For verify_payment (key_secret)
     # 2. For _get_razorpay_client (key_id, key_secret)
-    mocker.patch("app.core.crypto_service.decrypt_value", side_effect=["rzp_secret_for_verify", "rzp_key_for_fetch", "rzp_secret_for_fetch"])
+    mocker.patch(
+        "app.core.crypto_service.decrypt_value",
+        side_effect=[
+            "rzp_secret_for_verify",
+            "rzp_key_for_fetch",
+            "rzp_secret_for_fetch",
+        ],
+    )
 
     # Configure mock_razorpay_client
     # 1. Signature verification succeeds
     mock_razorpay_client.utility.verify_payment_signature.return_value = None
     # 2. Payment fetch succeeds
-    mock_razorpay_client.payment.fetch.return_value = {"method": "upi", "notes": {"internal_payment_id": "test"}}
+    mock_razorpay_client.payment.fetch.return_value = {
+        "method": "upi",
+        "notes": {"internal_payment_id": "test"},
+    }
 
     # --- Create Real Data in the DB ---
 
     # School
-    db_school = School(name="Integration Verify School", razorpay_key_id_encrypted=b"mock_key_bytes", razorpay_key_secret_encrypted=b"mock_secret_bytes")
+    db_school = School(
+        name="Integration Verify School",
+        razorpay_key_id_encrypted=b"mock_key_bytes",
+        razorpay_key_secret_encrypted=b"mock_secret_bytes",
+    )
     db_session.add(db_school)
 
     # RoleDefinition
@@ -182,7 +216,14 @@ async def test_verify_payment_valid_signature_for_order_integration(db_session: 
     await db_session.flush()
 
     # Create Order
-    db_order = Order(student_id=db_student.student_id, parent_user_id=db_parent_profile.user_id, school_id=db_school.school_id, order_number="INT-ORD-VERIFY-001", total_amount=Decimal("3000.00"), status="pending_payment")  # CRITICAL: Initial state
+    db_order = Order(
+        student_id=db_student.student_id,
+        parent_user_id=db_parent_profile.user_id,
+        school_id=db_school.school_id,
+        order_number="INT-ORD-VERIFY-001",
+        total_amount=Decimal("3000.00"),
+        status="pending_payment",
+    )  # CRITICAL: Initial state
     db_session.add(db_order)
     await db_session.flush()
 
@@ -207,7 +248,12 @@ async def test_verify_payment_valid_signature_for_order_integration(db_session: 
 
     # --- Service and Request ---
     service = PaymentService(db_session)
-    verify_request = PaymentVerificationRequest(razorpay_payment_id="pay_VALID_SIG_INTEG", razorpay_order_id="order_GATEWAY_ID_123", razorpay_signature="valid_signature_string", internal_payment_id=payment_id)  # Use the real payment ID
+    verify_request = PaymentVerificationRequest(
+        razorpay_payment_id="pay_VALID_SIG_INTEG",
+        razorpay_order_id="order_GATEWAY_ID_123",
+        razorpay_signature="valid_signature_string",
+        internal_payment_id=payment_id,
+    )  # Use the real payment ID
 
     # 2. --- ACT ---
     # This call will run the service logic AND commit the changes
@@ -556,7 +602,11 @@ async def test_verify_payment_invalid_signature_fails_integration(db_session: As
     mock_razorpay_client.utility.verify_payment_signature.side_effect = razorpay.errors.SignatureVerificationError("Invalid signature")
 
     # --- Create Real Data in the DB ---
-    db_school = School(name="Integration Fail School", razorpay_key_id_encrypted=b"mock_key_bytes", razorpay_key_secret_encrypted=b"mock_secret_bytes")
+    db_school = School(
+        name="Integration Fail School",
+        razorpay_key_id_encrypted=b"mock_key_bytes",
+        razorpay_key_secret_encrypted=b"mock_secret_bytes",
+    )
     db_session.add(db_school)
 
     db_role = RoleDefinition(role_id=995, role_name="Test Fail Role")
@@ -588,7 +638,14 @@ async def test_verify_payment_invalid_signature_fails_integration(db_session: As
     db_session.add(db_student)
     await db_session.flush()
 
-    db_order = Order(student_id=db_student.student_id, parent_user_id=db_parent_profile.user_id, school_id=db_school.school_id, order_number="INT-ORD-FAIL-001", total_amount=Decimal("100.00"), status="pending_payment")
+    db_order = Order(
+        student_id=db_student.student_id,
+        parent_user_id=db_parent_profile.user_id,
+        school_id=db_school.school_id,
+        order_number="INT-ORD-FAIL-001",
+        total_amount=Decimal("100.00"),
+        status="pending_payment",
+    )
     db_session.add(db_order)
 
     # --- THIS IS THE FIX ---
@@ -613,7 +670,12 @@ async def test_verify_payment_invalid_signature_fails_integration(db_session: As
 
     # --- Service and Request ---
     service = PaymentService(db_session)
-    verify_request = PaymentVerificationRequest(razorpay_payment_id="pay_INVALID_SIG_INTEG", razorpay_order_id="order_GATEWAY_ID_FAIL", razorpay_signature="invalid_signature_string", internal_payment_id=payment_id_to_verify)
+    verify_request = PaymentVerificationRequest(
+        razorpay_payment_id="pay_INVALID_SIG_INTEG",
+        razorpay_order_id="order_GATEWAY_ID_FAIL",
+        razorpay_signature="invalid_signature_string",
+        internal_payment_id=payment_id_to_verify,
+    )
 
     # 2. --- ACT & ASSERT (Exception) ---
     with pytest.raises(HTTPException) as exc_info:
@@ -662,10 +724,16 @@ async def test_initiate_payment_partial_failure_db_flush_fails(mocker, mock_razo
     # --- Mock Dependencies ---
 
     # Mock crypto_service to succeed
-    mocker.patch("app.core.crypto_service.decrypt_value", side_effect=["rzp_key_123", "rzp_secret_123"])
+    mocker.patch(
+        "app.core.crypto_service.decrypt_value",
+        side_effect=["rzp_key_123", "rzp_secret_123"],
+    )
 
     # Mock razorpay_client to succeed
-    mock_razorpay_client.order.create.return_value = {"id": "order_TEST_RAZORPAY_ID", "amount": 205000}
+    mock_razorpay_client.order.create.return_value = {
+        "id": "order_TEST_RAZORPAY_ID",
+        "amount": 205000,
+    }
 
     # Mock AsyncSession
     db = AsyncMock(spec=AsyncSession)
@@ -727,10 +795,17 @@ async def test_order_deleted_after_payment_initiated_integration(db_session: Asy
     # Mock signature verification to SUCCEED
     mock_razorpay_client.utility.verify_payment_signature.return_value = None
     # Mock payment fetch (in case it's called)
-    mock_razorpay_client.payment.fetch.return_value = {"method": "netbanking", "notes": {}}
+    mock_razorpay_client.payment.fetch.return_value = {
+        "method": "netbanking",
+        "notes": {},
+    }
 
     # --- Create Real Data in the DB (Simplified) ---
-    db_school = School(name="Cancelled Order School", razorpay_key_id_encrypted=b"k", razorpay_key_secret_encrypted=b"s")
+    db_school = School(
+        name="Cancelled Order School",
+        razorpay_key_id_encrypted=b"k",
+        razorpay_key_secret_encrypted=b"s",
+    )
     db_session.add(db_school)
 
     parent_user = TempAuthUser(id=uuid.uuid4(), email="parent-cancel@test.com")
@@ -747,12 +822,26 @@ async def test_order_deleted_after_payment_initiated_integration(db_session: Asy
     await db_session.flush()  # Flush to get student_id
 
     # Create the Order
-    db_order = Order(student_id=db_student.student_id, parent_user_id=parent_user.id, school_id=db_school.school_id, total_amount=Decimal("75.00"), status=OrderStatus.PENDING_PAYMENT)
+    db_order = Order(
+        student_id=db_student.student_id,
+        parent_user_id=parent_user.id,
+        school_id=db_school.school_id,
+        total_amount=Decimal("75.00"),
+        status=OrderStatus.PENDING_PAYMENT,
+    )
     db_session.add(db_order)
     await db_session.flush()  # Flush to get order_id
 
     # Create the 'pending' Payment record
-    db_payment = Payment(order_id=db_order.order_id, amount_paid=Decimal("75.00"), status=PaymentStatus.PENDING, school_id=db_school.school_id, student_id=db_student.student_id, user_id=parent_user.id, gateway_order_id="order_GATEWAY_CANCELLED")
+    db_payment = Payment(
+        order_id=db_order.order_id,
+        amount_paid=Decimal("75.00"),
+        status=PaymentStatus.PENDING,
+        school_id=db_school.school_id,
+        student_id=db_student.student_id,
+        user_id=parent_user.id,
+        gateway_order_id="order_GATEWAY_CANCELLED",
+    )
     db_session.add(db_payment)
     await db_session.flush()
     # Commit all initial data
@@ -769,7 +858,12 @@ async def test_order_deleted_after_payment_initiated_integration(db_session: Asy
 
     # --- Service and Request ---
     service = PaymentService(db_session)
-    verify_request = PaymentVerificationRequest(razorpay_payment_id="pay_VALID_SIG_CANCELLED_ORDER", razorpay_order_id="order_GATEWAY_CANCELLED", razorpay_signature="valid_sig_cancelled", internal_payment_id=payment_id)
+    verify_request = PaymentVerificationRequest(
+        razorpay_payment_id="pay_VALID_SIG_CANCELLED_ORDER",
+        razorpay_order_id="order_GATEWAY_CANCELLED",
+        razorpay_signature="valid_sig_cancelled",
+        internal_payment_id=payment_id,
+    )
 
     # 2. --- ACT ---
     # This should NOT raise an error

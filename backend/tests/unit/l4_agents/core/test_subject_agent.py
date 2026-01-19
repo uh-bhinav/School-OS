@@ -2,7 +2,10 @@ import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
 # Import the agent we are testing
-from app.agents.modules.academics.leaves.subject_agent.main import SubjectAgent, subject_agent_instance
+from app.agents.modules.academics.leaves.subject_agent.main import (
+    SubjectAgent,
+    subject_agent_instance,
+)
 from app.agents.modules.academics.leaves.subject_agent.tools import subject_agent_tools
 
 # This marks all tests in this file as async
@@ -60,7 +63,10 @@ async def test_happy_path_get_teachers_for_subject(mock_subject_llm_invoke, mock
     # API response for 'search_subjects'
     search_response = [{"subject_id": 42, "name": "Physics", "category": "Science"}]
     # API response for 'get_teachers_for_subject'
-    teachers_response = [{"teacher_id": 5, "first_name": "Priya"}, {"teacher_id": 6, "first_name": "Raj"}]
+    teachers_response = [
+        {"teacher_id": 5, "first_name": "Priya"},
+        {"teacher_id": 6, "first_name": "Raj"},
+    ]
     mock_subject_http_client.get.side_effect = [search_response, teachers_response]
 
     # 3. Invoke Agent

@@ -127,7 +127,10 @@ async def test_update_delete_non_existent_status_fails(test_client: AsyncClient,
     non_existent_id = 99999
 
     # Test UPDATE
-    update_response = await test_client.put(f"/api/v1/employment-statuses/{non_existent_id}", json={"status_name": "Wont Work"})
+    update_response = await test_client.put(
+        f"/api/v1/employment-statuses/{non_existent_id}",
+        json={"status_name": "Wont Work"},
+    )
     assert update_response.status_code == status.HTTP_404_NOT_FOUND
 
     # Test DELETE

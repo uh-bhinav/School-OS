@@ -15,7 +15,9 @@ router = APIRouter()
 
 
 @router.get("/me", response_model=ProfileOut)
-async def get_my_profile(current_profile: Profile = Depends(get_current_user_profile)) -> Profile:
+async def get_my_profile(
+    current_profile: Profile = Depends(get_current_user_profile),
+) -> Profile:
     """Return the authenticated user's profile."""
 
     return current_profile
@@ -36,7 +38,10 @@ async def get_all_profiles(
     """List profiles for the admin's school with optional filters."""
 
     if current_profile.school_id != school_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this school")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this school",
+        )
 
     return await profile_service.get_all_profiles_for_school(db=db, school_id=school_id, role=role, name=name)
 
@@ -73,7 +78,10 @@ async def delete_profile(
 
     deleted_profile = await profile_service.soft_delete_profile(db=db, user_id=user_id, school_id=current_profile.school_id)
     if not deleted_profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Active profile for user_id {user_id} not found in this school")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Active profile for user_id {user_id} not found in this school",
+        )
     return None
 
 

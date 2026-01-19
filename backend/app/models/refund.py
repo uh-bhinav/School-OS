@@ -18,7 +18,11 @@ class Refund(Base):
     currency = Column(String(3), nullable=False, default="INR")
     reason = Column(Text, nullable=False)
 
-    status = Column(ENUM("pending", "processed", "failed", name="refund_status", create_type=False), nullable=False, default="pending")
+    status = Column(
+        ENUM("pending", "processed", "failed", name="refund_status", create_type=False),
+        nullable=False,
+        default="pending",
+    )
 
     # Audit trail for who processed the refund
     processed_by_user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.user_id"))

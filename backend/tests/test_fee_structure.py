@@ -69,10 +69,20 @@ async def test_get_fee_templates_isolates_by_school(test_client_authenticated_ad
     admin_school_template_name = f"Admin School Template {uuid.uuid4()}"
     other_school_template_name = f"Other School Template {uuid.uuid4()}"
 
-    admin_school_template = FeeTemplate(school_id=mock_admin_profile.school_id, academic_year_id=1, name=admin_school_template_name, status="Active")
+    admin_school_template = FeeTemplate(
+        school_id=mock_admin_profile.school_id,
+        academic_year_id=1,
+        name=admin_school_template_name,
+        status="Active",
+    )
     db_session.add(admin_school_template)
 
-    other_school_template = FeeTemplate(school_id=2, academic_year_id=1, name=other_school_template_name, status="Active")  # A different school ID
+    other_school_template = FeeTemplate(
+        school_id=2,
+        academic_year_id=1,
+        name=other_school_template_name,
+        status="Active",
+    )  # A different school ID
     db_session.add(other_school_template)
     await db_session.commit()
 

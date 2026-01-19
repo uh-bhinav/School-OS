@@ -9,7 +9,13 @@ pytestmark = pytest.mark.asyncio
 
 
 @pytest.fixture
-def full_e2e_mocks(mock_l1_llm_invoke, mock_l2_llm_invoke, mock_l3_assessment_llm_ainvoke, mock_l4_mark_llm_invoke, mock_l4_mark_http_client):
+def full_e2e_mocks(
+    mock_l1_llm_invoke,
+    mock_l2_llm_invoke,
+    mock_l3_assessment_llm_ainvoke,
+    mock_l4_mark_llm_invoke,
+    mock_l4_mark_http_client,
+):
     """A helper fixture to combine all mocks for a clean test signature."""
     return {
         "l1_llm": mock_l1_llm_invoke,

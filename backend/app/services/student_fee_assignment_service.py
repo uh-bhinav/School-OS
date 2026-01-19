@@ -19,7 +19,10 @@ class StudentFeeAssignmentService:
         using fully asynchronous database patterns.
         """
         # --- FIX: Use the correct async 'select' pattern ---
-        stmt = select(StudentFeeAssignment).where(StudentFeeAssignment.student_id == override_data.student_id, StudentFeeAssignment.fee_component_id == override_data.fee_component_id)
+        stmt = select(StudentFeeAssignment).where(
+            StudentFeeAssignment.student_id == override_data.student_id,
+            StudentFeeAssignment.fee_component_id == override_data.fee_component_id,
+        )
         result = await self.db.execute(stmt)
         existing_override = result.scalars().first()
 
@@ -38,7 +41,14 @@ class StudentFeeAssignmentService:
         await self.db.flush()  # Flush to get the ID for the audit log
 
         # Create the audit log
-        audit_log = AuditCreate(user_id=user_id, action_type=action_type, table_name="student_fee_assignments", record_id=str(override_to_return.id), ip_address=ip_address, new_data=override_data.model_dump())
+        audit_log = AuditCreate(
+            user_id=user_id,
+            action_type=action_type,
+            table_name="student_fee_assignments",
+            record_id=str(override_to_return.id),
+            ip_address=ip_address,
+            new_data=override_data.model_dump(),
+        )
 
         # Call the audit service (which correctly does not commit)
         await audit_service.create_audit_log(db=self.db, audit_data=audit_log)

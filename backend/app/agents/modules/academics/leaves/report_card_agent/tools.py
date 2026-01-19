@@ -41,7 +41,10 @@ async def get_student_report_card(student_id: int, academic_year_id: int) -> dic
             return {"success": True, "report_card": response}
     except AgentResourceNotFoundError as e:
         logger.warn(f"Report card not found for student_id={student_id}: {e.message}")
-        return {"success": False, "error": f"Report card data not found for student {student_id} in that academic year."}
+        return {
+            "success": False,
+            "error": f"Report card data not found for student {student_id} in that academic year.",
+        }
     except (AgentAuthenticationError, AgentValidationError, AgentHTTPClientError) as e:
         logger.error(f"Error getting student report card: {e.message}", exc_info=True)
         return _format_error_response(e)
@@ -62,7 +65,12 @@ async def get_class_report_cards(class_id: int, academic_year_id: int) -> dict[s
             logger.info(f"Calling API: GET /report-card/class/{class_id} with params: {params}")
             response = await client.get(f"/report-card/class/{class_id}", params=params)
             return {"success": True, "count": len(response), "report_cards": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting class report cards: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -95,9 +103,18 @@ async def download_student_report_card_pdf(student_id: int, academic_year_id: in
             url = f"{base_url}/report-card/student/{student_id}/pdf?academic_year_id={academic_year_id}"
 
             # For now, the agent's job is to provide the URL.
-            return {"success": True, "message": "To download the PDF, please use this URL. (Note: The frontend client must handle this URL)", "download_url": url}
+            return {
+                "success": True,
+                "message": "To download the PDF, please use this URL. (Note: The frontend client must handle this URL)",
+                "download_url": url,
+            }
 
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting report card PDF URL: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -116,7 +133,10 @@ async def search_students_for_report_card(name: str) -> dict[str, Any]:
             logger.info(f"Calling API: GET /students/search with params={{'name': {name}}}")
             response = await client.get("/students/search", params={"name": name})
             if not response:
-                return {"success": False, "error": f"No students found with name '{name}'"}
+                return {
+                    "success": False,
+                    "error": f"No students found with name '{name}'",
+                }
             return {"success": True, "count": len(response), "students": response}
     except AgentResourceNotFoundError as e:
         logger.warn(f"No students found for name='{name}': {e.message}")

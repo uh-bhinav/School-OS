@@ -150,7 +150,12 @@ async def update_student(student_id: int, **updates: Any) -> dict[str, Any]:
             logger.info(f"Calling API: PUT /students/{student_id} with payload: {payload}")
             response = await client.put(f"/students/{student_id}", json=payload)
             return {"success": True, "updated_student": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error updating student: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -168,8 +173,16 @@ async def delete_student(student_id: int) -> dict[str, Any]:
             logger.info(f"Calling API: DELETE /students/{student_id}")
             # DELETE returns 204 No Content, so response is None
             await client.delete(f"/students/{student_id}")
-            return {"success": True, "message": f"Student {student_id} deleted successfully."}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+            return {
+                "success": True,
+                "message": f"Student {student_id} deleted successfully.",
+            }
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error deleting student: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -213,7 +226,12 @@ async def get_student_academic_summary(student_id: int, academic_year_id: Option
             logger.info(f"Calling API: GET /students/{student_id}/academic-summary")
             response = await client.get(f"/students/{student_id}/academic-summary", params=params)
             return {"success": True, "summary": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error getting student summary: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -294,7 +312,12 @@ async def update_parent_contact(contact_id: int, **updates: Any) -> dict[str, An
             logger.info(f"Calling API: PUT /student-contacts/{contact_id} with payload")
             response = await client.put(f"/student-contacts/{contact_id}", json=payload)
             return {"success": True, "updated_contact": response}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error updating parent contact: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -313,7 +336,12 @@ async def remove_parent_contact(contact_id: int) -> dict[str, Any]:
             # DELETE returns 204 No Content
             await client.delete(f"/student-contacts/{contact_id}")
             return {"success": True, "message": f"Contact link {contact_id} deleted."}
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error removing parent contact: {e.message}", exc_info=True)
         return _format_error_response(e)
     except Exception as e:
@@ -369,7 +397,10 @@ async def create_student_account(
             school_id = class_data.get("school_id")
 
             if not class_id or not school_id:
-                return {"success": False, "error": f"Invalid class data for '{class_name}'"}
+                return {
+                    "success": False,
+                    "error": f"Invalid class data for '{class_name}'",
+                }
 
             logger.info(f"Found class: ID={class_id}, School={school_id}")
 
@@ -401,9 +432,17 @@ async def create_student_account(
                     "message": f"✅ Successfully enrolled {first_name} {last_name} in {class_name}!\n\nLogin Credentials:\nEmail: {email}\nPassword: {password}",
                 }
             else:
-                return {"success": False, "error": f"Failed to create student. Response: {student_response}"}
+                return {
+                    "success": False,
+                    "error": f"Failed to create student. Response: {student_response}",
+                }
 
-    except (AgentAuthenticationError, AgentValidationError, AgentResourceNotFoundError, AgentHTTPClientError) as e:
+    except (
+        AgentAuthenticationError,
+        AgentValidationError,
+        AgentResourceNotFoundError,
+        AgentHTTPClientError,
+    ) as e:
         logger.error(f"Error creating student: {e.message}", exc_info=True)
         return {"success": False, "error": f"API Error: {e.message}"}
     except Exception as e:

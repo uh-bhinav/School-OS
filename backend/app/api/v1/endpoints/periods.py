@@ -7,7 +7,13 @@ from app.db.session import get_db
 from app.models.class_model import Class
 from app.models.period import Period
 from app.models.profile import Profile
-from app.schemas.period_schema import PeriodCreate, PeriodCreateRequest, PeriodOut, PeriodStructureCreate, PeriodUpdate
+from app.schemas.period_schema import (
+    PeriodCreate,
+    PeriodCreateRequest,
+    PeriodOut,
+    PeriodStructureCreate,
+    PeriodUpdate,
+)
 from app.services import period_service
 
 # Required for direct DB access in DELETE/GET

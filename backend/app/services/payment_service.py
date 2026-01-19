@@ -23,7 +23,12 @@ from app.models.payment import Payment
 from app.models.school import School
 from app.models.student import Student
 from app.schemas.enums import OrderStatus, PaymentStatus
-from app.schemas.payment_schema import PaymentHealthStats, PaymentInitiateRequest, PaymentVerificationRequest, ReconciliationReportStats
+from app.schemas.payment_schema import (
+    PaymentHealthStats,
+    PaymentInitiateRequest,
+    PaymentVerificationRequest,
+    ReconciliationReportStats,
+)
 from app.services import invoice_service
 
 logger = logging.getLogger(__name__)
@@ -55,11 +60,18 @@ class PaymentService:
         """
         # 1. Determine target (Invoice or Order) and fetch details
         if request_data.invoice_id:
-            target_obj = await self.db.get(Invoice, request_data.invoice_id, options=[selectinload(Invoice.student).selectinload(Student.current_class)])
+            target_obj = await self.db.get(
+                Invoice,
+                request_data.invoice_id,
+                options=[selectinload(Invoice.student).selectinload(Student.current_class)],
+            )
             if not target_obj:
                 raise HTTPException(status_code=404, detail="Invoice not found.")
             if not target_obj.student or not target_obj.student.current_class:
-                raise HTTPException(status_code=400, detail="Student or class not found for this invoice.")
+                raise HTTPException(
+                    status_code=400,
+                    detail="Student or class not found for this invoice.",
+                )
 
             school_id = target_obj.student.current_class.school_id
             amount = Decimal(target_obj.amount_due)
@@ -77,7 +89,10 @@ class PaymentService:
         # 2. Retrieve and decrypt school's Razorpay credentials BEFORE creating payment
         school = await self.db.get(School, school_id)
         if not school or not school.razorpay_key_id_encrypted or not school.razorpay_key_secret_encrypted:
-            raise HTTPException(status_code=503, detail="Payment gateway is not configured for this school.")
+            raise HTTPException(
+                status_code=503,
+                detail="Payment gateway is not configured for this school.",
+            )
 
         key_id = crypto_service.decrypt_value(school.razorpay_key_id_encrypted)
         key_secret = crypto_service.decrypt_value(school.razorpay_key_secret_encrypted)
@@ -99,10 +114,16 @@ class PaymentService:
                 },
             }
             razorpay_order = client.order.create(data=order_payload)
-        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as net_err:
+        except (
+            requests.exceptions.Timeout,
+            requests.exceptions.ConnectionError,
+        ) as net_err:
             logger.error(f"Razorpay API network error during order creation: {net_err}")
             # Raise 504 Gateway Timeout or 503 Service Unavailable
-            raise HTTPException(status_code=504, detail="Payment gateway timed out. Please try again later.")
+            raise HTTPException(
+                status_code=504,
+                detail="Payment gateway timed out. Please try again later.",
+            )
         except (BadRequestError, ServerError, GatewayError) as rzp_err:
             # Log specific Razorpay error
             logger.error(f"Razorpay API error during order creation: {rzp_err}")
@@ -111,7 +132,10 @@ class PaymentService:
         except Exception as e:
             # Catch any other unexpected errors during Razorpay interaction
             logger.exception(f"Unexpected error during Razorpay order creation: {e}")
-            raise HTTPException(status_code=500, detail="An unexpected error occurred with the payment gateway.")
+            raise HTTPException(
+                status_code=500,
+                detail="An unexpected error occurred with the payment gateway.",
+            )
 
         # 4. NOW create our internal 'pending' payment record (only if Razorpay succeeded)
         new_payment = Payment(
@@ -137,7 +161,14 @@ class PaymentService:
 
         # 5. Return data required by the frontend
         # The caller's get_db() dependency will commit this transaction
-        return {"razorpay_order_id": new_payment.gateway_order_id, "razorpay_key_id": key_id, "amount": razorpay_order["amount"], "internal_payment_id": new_payment.id, "school_name": school.name, "description": description}
+        return {
+            "razorpay_order_id": new_payment.gateway_order_id,
+            "razorpay_key_id": key_id,
+            "amount": razorpay_order["amount"],
+            "internal_payment_id": new_payment.id,
+            "school_name": school.name,
+            "description": description,
+        }
 
     async def verify_payment(self, *, verification_data: PaymentVerificationRequest) -> Payment:
         """
@@ -163,7 +194,10 @@ class PaymentService:
 
         if payment.status != "pending":
             logger.warning(f"Payment {payment.id} is in non-verifiable state: {payment.status}")
-            raise HTTPException(status_code=400, detail=f"Payment not in a verifiable state (status: {payment.status}).")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Payment not in a verifiable state (status: {payment.status}).",
+            )
 
         # 2. Retrieve and decrypt the school's Razorpay secret
         school = await self.db.get(School, payment.school_id)
@@ -175,7 +209,13 @@ class PaymentService:
         # 3. Perform the cryptographic signature verification
         try:
             client = razorpay.Client(auth=("", key_secret))  # Key ID is not needed for verification
-            client.utility.verify_payment_signature({"razorpay_order_id": verification_data.razorpay_order_id, "razorpay_payment_id": verification_data.razorpay_payment_id, "razorpay_signature": verification_data.razorpay_signature})
+            client.utility.verify_payment_signature(
+                {
+                    "razorpay_order_id": verification_data.razorpay_order_id,
+                    "razorpay_payment_id": verification_data.razorpay_payment_id,
+                    "razorpay_signature": verification_data.razorpay_signature,
+                }
+            )
         except razorpay.errors.SignatureVerificationError:
             # This is a critical security event. The signature is invalid.
             PAYMENTS_COUNTER.labels(status="failed_signature", gateway="razorpay").inc()
@@ -189,7 +229,10 @@ class PaymentService:
             payment_id_log = payment.id
             logger.exception(f"Error during Razorpay signature verification for internal_payment_id {payment_id_log}: {sig_err}")
             # Don't change payment status yet, maybe temporary issue
-            raise HTTPException(status_code=502, detail="Error verifying payment signature with gateway.")
+            raise HTTPException(
+                status_code=502,
+                detail="Error verifying payment signature with gateway.",
+            )
         # --- END ERROR HANDLING ---
 
         # 4. If verification succeeds, update our records atomically
@@ -203,7 +246,10 @@ class PaymentService:
             payment_details = razorpay_client.payment.fetch(payment.gateway_payment_id)
             payment.method = payment_details.get("method")  # e.g., 'card', 'upi'
             payment.metadata = payment_details.get("notes")  # Razorpay uses 'notes' for metadata
-        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as net_err:
+        except (
+            requests.exceptions.Timeout,
+            requests.exceptions.ConnectionError,
+        ) as net_err:
             # Log the error but continue - verification succeeded, details are secondary
             logger.warning(f"Network error fetching Razorpay payment details for {payment.gateway_payment_id}: {net_err}")
         except (BadRequestError, ServerError, GatewayError) as rzp_err:
@@ -303,7 +349,10 @@ class PaymentService:
 
             except Exception as inner_e:
                 # Absolute worst-case scenario: we can't even update the DB.
-                logger.critical(f"FATAL: Could not mark payment {payment_id_error} as 'captured_allocation_failed'. " f"DB error: {inner_e}", exc_info=True)
+                logger.critical(
+                    f"FATAL: Could not mark payment {payment_id_error} as 'captured_allocation_failed'. " f"DB error: {inner_e}",
+                    exc_info=True,
+                )
 
                 # --- 3. ADD SENTRY ALERT FOR THE FATAL ERROR ---
                 with sentry_sdk.push_scope() as scope:
@@ -324,7 +373,14 @@ class PaymentService:
 
         return payment
 
-    async def handle_webhook_event(self, *, payload: dict, raw_body: bytes, signature: str, client_ip: str = "unknown") -> None:
+    async def handle_webhook_event(
+        self,
+        *,
+        payload: dict,
+        raw_body: bytes,
+        signature: str,
+        client_ip: str = "unknown",
+    ) -> None:
         """
         Handles incoming Razorpay webhooks, verifying signature and idempotency.
 
@@ -453,7 +509,10 @@ class PaymentService:
             except Exception as e:
                 # Any processing error - log it and mark as failed
                 ALLOCATION_FAILURES_COUNTER.labels(source="webhook").inc()
-                logger.error(f"Webhook processing failed for event {event_id}: {e}", exc_info=True)
+                logger.error(
+                    f"Webhook processing failed for event {event_id}: {e}",
+                    exc_info=True,
+                )
                 await self.db.rollback()
                 try:
                     # STEP 2: Start a new transaction to log the failure
@@ -480,7 +539,10 @@ class PaymentService:
                         sentry_sdk.capture_message(f"Webhook Processing Failed: {event_id}", level="error")
                     # <<<====== END BLOCK 1 ======>>>
                 except Exception as inner_e:
-                    logger.critical(f"FATAL: Could not log failed webhook {event_id}: {inner_e}", exc_info=True)
+                    logger.critical(
+                        f"FATAL: Could not log failed webhook {event_id}: {inner_e}",
+                        exc_info=True,
+                    )
 
                     #
                     # <<<====== BLOCK 2: ADD SENTRY ALERT HERE ======>>>
@@ -501,7 +563,10 @@ class PaymentService:
                 await self.db.commit()  # This commits the event AND all payment changes
                 logger.info(f"Webhook event {event_id} committed with status '{new_event.status}'")
             except Exception as commit_error:
-                logger.error(f"Failed to commit *successful* webhook event {event_id}: {commit_error}", exc_info=True)
+                logger.error(
+                    f"Failed to commit *successful* webhook event {event_id}: {commit_error}",
+                    exc_info=True,
+                )
                 #
                 # <<<====== BLOCK 3: ADD SENTRY ALERT HERE ======>>>
                 # (This is an edge case: processing was OK, but the final commit failed!)
@@ -588,7 +653,10 @@ class PaymentService:
                             reconciled += 1
 
                         except Exception as e:
-                            logger.critical(f"RECONCILIATION_ALLOCATION_FAILURE: Payment {payment.id} reconciled but FAILED allocation. Error: {e}", exc_info=True)
+                            logger.critical(
+                                f"RECONCILIATION_ALLOCATION_FAILURE: Payment {payment.id} reconciled but FAILED allocation. Error: {e}",
+                                exc_info=True,
+                            )
                             await db.rollback()
                             # Mark as failed in a new session
                             payment.status = PaymentStatus.CAPTURED_ALLOCATION_FAILED
@@ -657,7 +725,12 @@ class PaymentService:
                 # Don't change status, just log. Will retry next time.
 
         logger.info(f"Reconciliation complete. Processed: {processed}, " f"Reconciled (captured): {reconciled}, Marked Failed: {failed}, Marked Expired: {expired}.")
-        return {"processed": processed, "reconciled": reconciled, "failed": failed, "expired": expired}
+        return {
+            "processed": processed,
+            "reconciled": reconciled,
+            "failed": failed,
+            "expired": expired,
+        }
 
     async def reconcile_authorized_payments(self, db: AsyncSession):
         """
@@ -749,7 +822,10 @@ class PaymentService:
                             captured += 1
 
                         except Exception as allocation_error:
-                            logger.critical(f"CAPTURE_ALLOCATION_FAILURE: Payment {payment.id} captured but " f"FAILED allocation. Error: {allocation_error}", exc_info=True)
+                            logger.critical(
+                                f"CAPTURE_ALLOCATION_FAILURE: Payment {payment.id} captured but " f"FAILED allocation. Error: {allocation_error}",
+                                exc_info=True,
+                            )
                             await db.rollback()
                             # Mark as captured but allocation failed
                             payment.status = PaymentStatus.CAPTURED_ALLOCATION_FAILED
@@ -790,7 +866,10 @@ class PaymentService:
                     # Don't increment counters - this payment will be retried
 
                 except Exception as capture_err:
-                    logger.error(f"Unexpected error capturing payment {payment.id}: {capture_err}", exc_info=True)
+                    logger.error(
+                        f"Unexpected error capturing payment {payment.id}: {capture_err}",
+                        exc_info=True,
+                    )
                     await db.rollback()
                     # Don't change status - will retry later
 
@@ -800,11 +879,19 @@ class PaymentService:
                 await db.rollback()
 
             except Exception as e:
-                logger.error(f"Authorized payment reconciliation error for Payment {payment_id}: {e}", exc_info=True)
+                logger.error(
+                    f"Authorized payment reconciliation error for Payment {payment_id}: {e}",
+                    exc_info=True,
+                )
                 await db.rollback()
 
         logger.info(f"Authorized payment reconciliation complete. " f"Processed: {processed}, Captured: {captured}, " f"Expired: {expired}, Failed: {failed}")
-        return {"processed": processed, "captured": captured, "expired": expired, "failed": failed}
+        return {
+            "processed": processed,
+            "captured": captured,
+            "expired": expired,
+            "failed": failed,
+        }
 
     async def get_failed_allocations(self, *, db: AsyncSession) -> list[Payment]:
         """
@@ -850,7 +937,10 @@ class PaymentService:
 
         except Exception as e:
             # --- 🚨 FAILURE HANDLER 🚨 ---
-            logger.error(f"ADMIN: Retry allocation FAILED AGAIN for payment_id={payment.id}: {e}", exc_info=True)
+            logger.error(
+                f"ADMIN: Retry allocation FAILED AGAIN for payment_id={payment.id}: {e}",
+                exc_info=True,
+            )
             await db.rollback()
 
             # Send an alert so the admin knows their retry failed
@@ -897,14 +987,24 @@ class PaymentService:
 
         if not stats or stats.total_payments_24h == 0:
             # No payments, return zeroed-out stats
-            return PaymentHealthStats(total_payments_24h=0, successful_payments_24h=0, success_rate_24h=0.0, failed_allocations_24h=0)
+            return PaymentHealthStats(
+                total_payments_24h=0,
+                successful_payments_24h=0,
+                success_rate_24h=0.0,
+                failed_allocations_24h=0,
+            )
 
         # Calculate success rate
         success_rate = 0.0
         if stats.total_payments_24h > 0:
             success_rate = round((stats.successful_payments_24h / stats.total_payments_24h) * 100, 2)
 
-        return PaymentHealthStats(total_payments_24h=stats.total_payments_24h, successful_payments_24h=stats.successful_payments_24h, success_rate_24h=success_rate, failed_allocations_24h=stats.failed_allocations_24h)
+        return PaymentHealthStats(
+            total_payments_24h=stats.total_payments_24h,
+            successful_payments_24h=stats.successful_payments_24h,
+            success_rate_24h=success_rate,
+            failed_allocations_24h=stats.failed_allocations_24h,
+        )
 
     async def get_reconciliation_report(self, *, db: AsyncSession) -> ReconciliationReportStats:
         """
@@ -936,12 +1036,16 @@ class PaymentService:
         # 2. Query the Payment table for reconciliation task updates
         # We check for payments that were updated by the task
         recon_stmt = select(func.count(Payment.id)).where(
-            Payment.status.in_([PaymentStatus.CAPTURED, PaymentStatus.FAILED]), Payment.error_description.like("Reconciled:%"), Payment.updated_at >= twenty_four_hours_ago  # Check for our "Reconciled:" marker
+            Payment.status.in_([PaymentStatus.CAPTURED, PaymentStatus.FAILED]),
+            Payment.error_description.like("Reconciled:%"),
+            Payment.updated_at >= twenty_four_hours_ago,  # Check for our "Reconciled:" marker
         )
 
         recon_result = await db.execute(recon_stmt)
         reconciled_via_task_24h = recon_result.scalar_one_or_none() or 0
 
         return ReconciliationReportStats(
-            webhooks_processed_24h=webhook_stats.webhooks_processed_24h if webhook_stats else 0, webhooks_failed_24h=webhook_stats.webhooks_failed_24h if webhook_stats else 0, reconciled_via_task_24h=reconciled_via_task_24h
+            webhooks_processed_24h=webhook_stats.webhooks_processed_24h if webhook_stats else 0,
+            webhooks_failed_24h=webhook_stats.webhooks_failed_24h if webhook_stats else 0,
+            reconciled_via_task_24h=reconciled_via_task_24h,
         )

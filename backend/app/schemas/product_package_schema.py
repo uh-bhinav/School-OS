@@ -40,7 +40,12 @@ class PackageItemIn(BaseModel):
 
     product_id: int = Field(..., description="ID of the product to include in package")
 
-    quantity: int = Field(default=1, ge=1, le=100, description="Quantity of this product in the package (1-100)")
+    quantity: int = Field(
+        default=1,
+        ge=1,
+        le=100,
+        description="Quantity of this product in the package (1-100)",
+    )
 
     class Config:
         json_schema_extra = {"example": {"product_id": 42, "quantity": 2}}
@@ -139,22 +144,44 @@ class ProductPackageCreate(BaseModel):
     Used by: POST /api/v1/admin/product-packages
     """
 
-    name: str = Field(..., min_length=1, max_length=255, description="Package name (e.g., 'Complete Grade 5 Uniform Kit')")
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="Package name (e.g., 'Complete Grade 5 Uniform Kit')",
+    )
 
     description: Optional[str] = Field(None, max_length=2000, description="Detailed package description")
 
-    price: Optional[Decimal] = Field(None, ge=0, decimal_places=2, description="Package price (null = auto-calculate from items). Set manually for bundle discount.")
+    price: Optional[Decimal] = Field(
+        None,
+        ge=0,
+        decimal_places=2,
+        description="Package price (null = auto-calculate from items). Set manually for bundle discount.",
+    )
 
     image_url: Optional[str] = Field(None, max_length=500, description="URL to package image")
 
-    category: Optional[str] = Field(None, max_length=100, description="Package category (e.g., 'Uniform Kits', 'Stationery Sets')")
+    category: Optional[str] = Field(
+        None,
+        max_length=100,
+        description="Package category (e.g., 'Uniform Kits', 'Stationery Sets')",
+    )
 
-    academic_year: Optional[str] = Field(None, max_length=20, description="Academic year this package is valid for (e.g., '2024-2025')")
+    academic_year: Optional[str] = Field(
+        None,
+        max_length=20,
+        description="Academic year this package is valid for (e.g., '2024-2025')",
+    )
 
     is_active: bool = Field(default=True, description="Whether package is available for purchase")
 
     # CRITICAL: List of products and quantities in this package
-    items: list[PackageItemIn] = Field(..., min_length=1, description="List of products and quantities in this package (minimum 1 item)")
+    items: list[PackageItemIn] = Field(
+        ...,
+        min_length=1,
+        description="List of products and quantities in this package (minimum 1 item)",
+    )
 
     @field_validator("items")
     @classmethod
@@ -194,7 +221,12 @@ class ProductPackageCreate(BaseModel):
                 "category": "Uniform Kits",
                 "academic_year": "2024-2025",
                 "is_active": True,
-                "items": [{"product_id": 42, "quantity": 2}, {"product_id": 43, "quantity": 1}, {"product_id": 44, "quantity": 1}, {"product_id": 45, "quantity": 1}],
+                "items": [
+                    {"product_id": 42, "quantity": 2},
+                    {"product_id": 43, "quantity": 1},
+                    {"product_id": 44, "quantity": 1},
+                    {"product_id": 45, "quantity": 1},
+                ],
             }
         }
 
@@ -222,7 +254,12 @@ class ProductPackageUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=2000)
 
-    price: Optional[Decimal] = Field(None, ge=0, decimal_places=2, description="Set to null to auto-calculate from items")
+    price: Optional[Decimal] = Field(
+        None,
+        ge=0,
+        decimal_places=2,
+        description="Set to null to auto-calculate from items",
+    )
 
     image_url: Optional[str] = Field(None, max_length=500)
     category: Optional[str] = Field(None, max_length=100)
@@ -304,7 +341,10 @@ class ProductPackageOut(BaseModel):
     is_active: bool
 
     # Hydrated items list (with full product details)
-    items: list[PackageItemOut] = Field(default_factory=list, description="List of products in this package with quantities and details")
+    items: list[PackageItemOut] = Field(
+        default_factory=list,
+        description="List of products in this package with quantities and details",
+    )
 
     # Timestamps for audit trail
     created_at: datetime
@@ -419,7 +459,18 @@ class ProductPackageOut(BaseModel):
                 "category": "Uniform Kits",
                 "academic_year": "2024-2025",
                 "is_active": True,
-                "items": [{"product_id": 42, "product_name": "House T-Shirt (Blue)", "product_price": "750.00", "quantity": 2, "availability": "in_stock", "stock_quantity": 45, "item_subtotal": "1500.00", "is_available": True}],
+                "items": [
+                    {
+                        "product_id": 42,
+                        "product_name": "House T-Shirt (Blue)",
+                        "product_price": "750.00",
+                        "quantity": 2,
+                        "availability": "in_stock",
+                        "stock_quantity": 45,
+                        "item_subtotal": "1500.00",
+                        "is_available": True,
+                    }
+                ],
                 "created_at": "2025-01-10T09:00:00Z",
                 "updated_at": "2025-01-15T14:30:00Z",
                 "item_count": 5,
