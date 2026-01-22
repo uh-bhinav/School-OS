@@ -17,20 +17,22 @@ export const AISection = () => {
                         Intelligence Engine
                     </span>
                     <h2 className="text-4xl lg:text-5xl font-extrabold text-slate-900 leading-tight mb-6">
-                        Next-Generation AI for <span className="text-[#0A2DAA]">Modern Schools</span>
+                        Run Your Entire School <span className="text-[#0A2DAA]">Without Chasing Anyone</span>
                     </h2>
                     <p className="text-lg text-slate-600">
-                        From simplifying daily operations to enabling data-driven decisions, AcadionAI delivers unmatched intelligence designed for the education ecosystem.
+                        AcadionAI gives principals and management real-time visibility into attendance,
+fees, academics, staff performance, and risks — while AI agents quietly handle
+the follow-ups, reminders, and reporting in the background.
                     </p>
                 </div>
 
                 {/* Hexagonal Layout Container */}
-                <div className="relative w-full max-w-5xl mx-auto" style={{ height: '700px' }}>
+                <div className="relative w-full max-w-5xl mx-auto lg:block hidden" style={{ height: '950px' }}>
                     
-                    {/* SVG Lines with Flowing Animation */}
+                    {/* SVG Lines */}
+                    {/* (unchanged — keeping your animations intact) */}
                     <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 700" preserveAspectRatio="xMidYMid meet">
                         <defs>
-                            {/* Gradient for flowing gel effect - Set 1 (Top-left diagonal) */}
                             <linearGradient id="flowGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
                                 <stop offset="0%" stopColor="transparent" />
                                 <stop offset="40%" stopColor="#3B82F6" stopOpacity="0.8" />
@@ -40,8 +42,7 @@ export const AISection = () => {
                                 <animate attributeName="x1" values="-100%;100%" dur="2s" repeatCount="indefinite" begin="0s" />
                                 <animate attributeName="x2" values="0%;200%" dur="2s" repeatCount="indefinite" begin="0s" />
                             </linearGradient>
-                            
-                            {/* Gradient for flowing gel effect - Set 2 (Top-right diagonal) */}
+
                             <linearGradient id="flowGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
                                 <stop offset="0%" stopColor="transparent" />
                                 <stop offset="40%" stopColor="#3B82F6" stopOpacity="0.8" />
@@ -52,7 +53,6 @@ export const AISection = () => {
                                 <animate attributeName="x2" values="0%;200%" dur="2s" repeatCount="indefinite" begin="1s" />
                             </linearGradient>
 
-                            {/* Glow filter */}
                             <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
                                 <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
                                 <feMerge>
@@ -61,27 +61,24 @@ export const AISection = () => {
                                 </feMerge>
                             </filter>
                         </defs>
-                        
-                        {/* Base lines (dim) */}
+
+                        {/* Dim lines */}
                         <g opacity="0.3" stroke="#0A2DAA" strokeWidth="2" fill="none">
-                            {/* Set 1: Top-left, Left, Bottom-left */}
                             <line x1="400" y1="350" x2="150" y2="120" />
                             <line x1="400" y1="350" x2="80" y2="350" />
                             <line x1="400" y1="350" x2="150" y2="580" />
-                            {/* Set 2: Top-right, Right, Bottom-right */}
                             <line x1="400" y1="350" x2="650" y2="120" />
                             <line x1="400" y1="350" x2="720" y2="350" />
                             <line x1="400" y1="350" x2="650" y2="580" />
                         </g>
-                        
-                        {/* Animated flowing lines - Set 1 */}
+
+                        {/* Animated lines */}
                         <g filter="url(#glow)">
                             <line x1="400" y1="350" x2="150" y2="120" stroke="url(#flowGradient1)" strokeWidth="3" strokeLinecap="round" />
                             <line x1="400" y1="350" x2="80" y2="350" stroke="url(#flowGradient1)" strokeWidth="3" strokeLinecap="round" />
                             <line x1="400" y1="350" x2="150" y2="580" stroke="url(#flowGradient1)" strokeWidth="3" strokeLinecap="round" />
                         </g>
-                        
-                        {/* Animated flowing lines - Set 2 (delayed) */}
+
                         <g filter="url(#glow)">
                             <line x1="400" y1="350" x2="650" y2="120" stroke="url(#flowGradient2)" strokeWidth="3" strokeLinecap="round" />
                             <line x1="400" y1="350" x2="720" y2="350" stroke="url(#flowGradient2)" strokeWidth="3" strokeLinecap="round" />
@@ -92,17 +89,11 @@ export const AISection = () => {
                     {/* Center Orb */}
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
                         <div className="relative w-32 h-32">
-                            {/* Outer glow rings */}
                             <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping" style={{ animationDuration: '3s' }} />
                             <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-blue-600/20 via-blue-400/10 to-blue-600/20 blur-xl animate-pulse" />
                             <div className="absolute -inset-8 rounded-full bg-blue-500/5 blur-2xl" />
-                            
-                            {/* Main orb */}
                             <div className="relative w-full h-full rounded-full bg-gradient-to-br from-blue-400 via-blue-600 to-blue-800 shadow-2xl shadow-blue-500/50 flex items-center justify-center border border-blue-400/50">
-                                {/* Inner glow */}
                                 <div className="absolute inset-2 rounded-full bg-gradient-to-br from-white/30 via-transparent to-transparent" />
-                                
-                                {/* Logo placeholder */}
                                 <div className="relative z-10 text-white font-bold text-lg">
                                     <Sparkles className="w-10 h-10" />
                                 </div>
@@ -110,73 +101,173 @@ export const AISection = () => {
                         </div>
                     </div>
 
-                    {/* Hexagon Vertex Cards */}
-                    {/* Top Left */}
+                    {/* --------------------- FEATURE CARDS ----------------------- */}
+
+                    {/* 1 — Top Left */}
                     <div className="absolute" style={{ left: '2%', top: '2%' }}>
-                        <div className="w-72 bg-white backdrop-blur-sm rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 hover:shadow-xl transition-all duration-300 group shadow-lg">
-                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4 group-hover:bg-[#0A2DAA]/20 transition-colors">
+                        <div className="w-72 bg-white rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 shadow-lg group transition-all">
+                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
                                 <Zap className="w-6 h-6 text-[#0A2DAA]" />
                             </div>
-                            <h3 className="text-slate-900 font-semibold text-base mb-2">Lightning-Fast Automation</h3>
-                            <p className="text-slate-600 text-sm leading-relaxed">Processes tasks instantly — reports, queries — zero delays.</p>
+                            <h3 className="text-slate-900 font-semibold text-base mb-2">
+                                Reduce Admin Work by 60%
+                            </h3>
+                            <p className="text-slate-600 text-sm leading-relaxed">
+                                AI agents automate attendance, fees, reports & reminders—saving hours every day.
+                            </p>
                         </div>
                     </div>
 
-                    {/* Top Right */}
+                    {/* 2 — Top Right */}
                     <div className="absolute" style={{ right: '2%', top: '2%' }}>
-                        <div className="w-72 bg-white backdrop-blur-sm rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 hover:shadow-xl transition-all duration-300 group shadow-lg">
-                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4 group-hover:bg-[#0A2DAA]/20 transition-colors">
+                        <div className="w-72 bg-white rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 shadow-lg group transition-all">
+                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
                                 <Cpu className="w-6 h-6 text-[#0A2DAA]" />
                             </div>
-                            <h3 className="text-slate-900 font-semibold text-base mb-2">Advanced Education AI</h3>
-                            <p className="text-slate-600 text-sm leading-relaxed">Hybrid AI blending LLM with deterministic school logic.</p>
+                            <h3 className="text-slate-900 font-semibold text-base mb-2">
+                                Boost Fee Recovery by 20–35%
+                            </h3>
+                            <p className="text-slate-600 text-sm leading-relaxed">
+                                Automated reminders, Razorpay reconciliation & real-time follow-ups improve collections instantly.
+                            </p>
                         </div>
                     </div>
 
-                    {/* Middle Left */}
+                    {/* 3 — Middle Left */}
                     <div className="absolute" style={{ left: '0%', top: '50%', transform: 'translateY(-50%)' }}>
-                        <div className="w-72 bg-white backdrop-blur-sm rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 hover:shadow-xl transition-all duration-300 group shadow-lg">
-                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4 group-hover:bg-[#0A2DAA]/20 transition-colors">
+                        <div className="w-72 bg-white rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 shadow-lg group transition-all">
+                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
                                 <BrainCircuit className="w-6 h-6 text-[#0A2DAA]" />
                             </div>
-                            <h3 className="text-slate-900 font-semibold text-base mb-2">Adapts to Every School</h3>
-                            <p className="text-slate-600 text-sm leading-relaxed">Learns patterns — attendance, fee cycles — and optimizes.</p>
+                            <h3 className="text-slate-900 font-semibold text-base mb-2">
+                                100% Visibility Across Your School
+                            </h3>
+                            <p className="text-slate-600 text-sm leading-relaxed">
+                                Live insights for academics, attendance, fees & behavior—no more guessing or chasing updates.
+                            </p>
                         </div>
                     </div>
 
-                    {/* Middle Right */}
+                    {/* 4 — Middle Right */}
                     <div className="absolute" style={{ right: '0%', top: '50%', transform: 'translateY(-50%)' }}>
-                        <div className="w-72 bg-white backdrop-blur-sm rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 hover:shadow-xl transition-all duration-300 group shadow-lg">
-                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4 group-hover:bg-[#0A2DAA]/20 transition-colors">
+                        <div className="w-72 bg-white rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 shadow-lg group transition-all">
+                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
                                 <ShieldCheck className="w-6 h-6 text-[#0A2DAA]" />
                             </div>
-                            <h3 className="text-slate-900 font-semibold text-base mb-2">Enterprise-Grade Security</h3>
-                            <p className="text-slate-600 text-sm leading-relaxed">Encrypted, tenant-isolated, industry-standard protection.</p>
+                            <h3 className="text-slate-900 font-semibold text-base mb-2">
+                                AI That Adapts to Your School
+                            </h3>
+                            <p className="text-slate-600 text-sm leading-relaxed">
+                                Learns patterns like absenteeism, fee cycles, class strength & performance to optimize decisions.
+                            </p>
                         </div>
                     </div>
 
-                    {/* Bottom Left */}
+                    {/* 5 — Bottom Left */}
                     <div className="absolute" style={{ left: '2%', bottom: '2%' }}>
-                        <div className="w-72 bg-white backdrop-blur-sm rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 hover:shadow-xl transition-all duration-300 group shadow-lg">
-                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4 group-hover:bg-[#0A2DAA]/20 transition-colors">
+                        <div className="w-72 bg-white rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 shadow-lg group transition-all">
+                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
                                 <Building2 className="w-6 h-6 text-[#0A2DAA]" />
                             </div>
-                            <h3 className="text-slate-900 font-semibold text-base mb-2">Built for Any Size</h3>
-                            <p className="text-slate-600 text-sm leading-relaxed">50 to 5000+ students — scales effortlessly.</p>
+                            <h3 className="text-slate-900 font-semibold text-base mb-2">
+                                Enterprise-Grade Stability & Security
+                            </h3>
+                            <p className="text-slate-600 text-sm leading-relaxed">
+                                Encrypted, reliable & built for peak load—trusted for schools from 200 to 10,000+ students.
+                            </p>
                         </div>
                     </div>
 
-                    {/* Bottom Right */}
+                    {/* 6 — Bottom Right */}
                     <div className="absolute" style={{ right: '2%', bottom: '2%' }}>
-                        <div className="w-72 bg-white backdrop-blur-sm rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 hover:shadow-xl transition-all duration-300 group shadow-lg">
-                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4 group-hover:bg-[#0A2DAA]/20 transition-colors">
+                        <div className="w-72 bg-white rounded-2xl p-6 border border-slate-200 hover:border-[#0A2DAA]/50 shadow-lg group transition-all">
+                            <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
                                 <Gauge className="w-6 h-6 text-[#0A2DAA]" />
                             </div>
-                            <h3 className="text-slate-900 font-semibold text-base mb-2">Consistent Performance</h3>
-                            <p className="text-slate-600 text-sm leading-relaxed">Smart load distribution for peak time stability.</p>
+                            <h3 className="text-slate-900 font-semibold text-base mb-2">
+                                Faster Decisions, Better Outcomes
+                            </h3>
+                            <p className="text-slate-600 text-sm leading-relaxed">
+                                Principals get instant insights to act quickly and confidently on academic and operational issues.
+                            </p>
                         </div>
                     </div>
 
+                </div>
+
+                {/* Mobile Stacked Layout */}
+                <div className="lg:hidden grid grid-cols-1 gap-6">
+                    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-lg">
+                        <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
+                            <Zap className="w-6 h-6 text-[#0A2DAA]" />
+                        </div>
+                        <h3 className="text-slate-900 font-semibold text-base mb-2">
+                            Reduce Admin Work by 60%
+                        </h3>
+                        <p className="text-slate-600 text-sm leading-relaxed">
+                            AI agents automate attendance, fees, reports & reminders—saving hours every day.
+                        </p>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-lg">
+                        <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
+                            <Cpu className="w-6 h-6 text-[#0A2DAA]" />
+                        </div>
+                        <h3 className="text-slate-900 font-semibold text-base mb-2">
+                            Boost Fee Recovery by 20–35%
+                        </h3>
+                        <p className="text-slate-600 text-sm leading-relaxed">
+                            Automated reminders, Razorpay reconciliation & real-time follow-ups improve collections instantly.
+                        </p>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-lg">
+                        <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
+                            <BrainCircuit className="w-6 h-6 text-[#0A2DAA]" />
+                        </div>
+                        <h3 className="text-slate-900 font-semibold text-base mb-2">
+                            100% Visibility Across Your School
+                        </h3>
+                        <p className="text-slate-600 text-sm leading-relaxed">
+                            Live insights for academics, attendance, fees & behavior—no more guessing or chasing updates.
+                        </p>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-lg">
+                        <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
+                            <ShieldCheck className="w-6 h-6 text-[#0A2DAA]" />
+                        </div>
+                        <h3 className="text-slate-900 font-semibold text-base mb-2">
+                            AI That Adapts to Your School
+                        </h3>
+                        <p className="text-slate-600 text-sm leading-relaxed">
+                            Learns patterns like absenteeism, fee cycles, class strength & performance to optimize decisions.
+                        </p>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-lg">
+                        <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
+                            <Building2 className="w-6 h-6 text-[#0A2DAA]" />
+                        </div>
+                        <h3 className="text-slate-900 font-semibold text-base mb-2">
+                            Enterprise-Grade Stability & Security
+                        </h3>
+                        <p className="text-slate-600 text-sm leading-relaxed">
+                            Encrypted, reliable & built for peak load—trusted for schools from 200 to 10,000+ students.
+                        </p>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-lg">
+                        <div className="w-12 h-12 rounded-xl bg-[#0A2DAA]/10 flex items-center justify-center mb-4">
+                            <Gauge className="w-6 h-6 text-[#0A2DAA]" />
+                        </div>
+                        <h3 className="text-slate-900 font-semibold text-base mb-2">
+                            Faster Decisions, Better Outcomes
+                        </h3>
+                        <p className="text-slate-600 text-sm leading-relaxed">
+                            Principals get instant insights to act quickly and confidently on academic and operational issues.
+                        </p>
+                    </div>
                 </div>
             </div>
         </section>

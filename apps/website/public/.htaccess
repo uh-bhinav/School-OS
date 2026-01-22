@@ -1,0 +1,27 @@
+# Enable rewrite engine
+RewriteEngine On
+
+# Redirect to HTTPS (optional, uncomment if you want to force HTTPS)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Handle trailing slashes - redirect without trailing slash to with trailing slash
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_URI} !(.*)/$
+RewriteRule ^(.*)$ $1/ [L,R=301]
+
+# Serve .html files without extension
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.+)$ $1.html [L]
+
+# Custom error pages
+ErrorDocument 403 /index.html
+ErrorDocument 404 /404.html
+
+# Disable directory browsing
+Options -Indexes
+
+# Set default index files
+DirectoryIndex index.html index.htm
