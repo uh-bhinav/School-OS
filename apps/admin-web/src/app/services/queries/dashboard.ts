@@ -45,7 +45,7 @@ export interface ModuleUsage {
 }
 
 // Query hooks
-export function useDashboardMetrics(schoolId: number) {
+export function useDashboardMetrics(schoolId: number, enabled: boolean) {
   return useQuery({
     queryKey: ['dashboard', 'metrics', schoolId],
     queryFn: async () => {
@@ -72,12 +72,12 @@ export function useDashboardMetrics(schoolId: number) {
       return response.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!schoolId,
+    enabled,
     retry: 2,
   });
 }
 
-export function useRevenueData(schoolId: number, months: number = 8) {
+export function useRevenueData(schoolId: number, enabled: boolean, months: number = 8) {
   return useQuery({
     queryKey: ['dashboard', 'revenue', schoolId, months],
     queryFn: async () => {
@@ -99,12 +99,12 @@ export function useRevenueData(schoolId: number, months: number = 8) {
       return response.data;
     },
     staleTime: 10 * 60 * 1000,
-    enabled: !!schoolId,
+    enabled,
     retry: 2,
   });
 }
 
-export function useStudentDistribution(schoolId: number) {
+export function useStudentDistribution(schoolId: number, enabled: boolean) {
   return useQuery({
     queryKey: ['dashboard', 'students', 'distribution', schoolId],
     queryFn: async () => {
@@ -125,12 +125,12 @@ export function useStudentDistribution(schoolId: number) {
       return response.data;
     },
     staleTime: 30 * 60 * 1000, // 30 minutes
-    enabled: !!schoolId,
+    enabled,
     retry: 2,
   });
 }
 
-export function useAttendanceByGrade(schoolId: number, dateRange?: { start: string; end: string }) {
+export function useAttendanceByGrade(schoolId: number, enabled: boolean, dateRange?: { start: string; end: string }) {
   return useQuery({
     queryKey: ['dashboard', 'attendance', schoolId, dateRange],
     queryFn: async () => {
@@ -152,12 +152,12 @@ export function useAttendanceByGrade(schoolId: number, dateRange?: { start: stri
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
-    enabled: !!schoolId,
+    enabled,
     retry: 2,
   });
 }
 
-export function useModuleUsage(schoolId: number, days: number = 7) {
+export function useModuleUsage(schoolId: number, enabled: boolean, days: number = 7) {
   return useQuery({
     queryKey: ['dashboard', 'module-usage', schoolId, days],
     queryFn: async () => {
@@ -179,7 +179,7 @@ export function useModuleUsage(schoolId: number, days: number = 7) {
       return response.data;
     },
     staleTime: 15 * 60 * 1000,
-    enabled: !!schoolId,
+    enabled,
     retry: 2,
   });
 }

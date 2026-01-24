@@ -21,7 +21,7 @@ import { http } from "./http";
 
 export const SchoolConfigSchema = z
   .object({
-    version: z.literal("1.0.0"),
+    version: z.string().regex(/^\d+\.\d+(\.\d+)?$/),
 
     // ============================================================================
     // IDENTITY - School identification metadata
@@ -45,7 +45,7 @@ export const SchoolConfigSchema = z
     // ============================================================================
     branding: z.object({
       logo: z.object({
-        primary_url: z.string().url(),
+        primary_url: z.string().nullable(),
         dark_mode_variant_url: z.string().url().nullable().optional(),
       }),
       colors: z.object({

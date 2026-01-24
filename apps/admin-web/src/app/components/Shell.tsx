@@ -50,22 +50,23 @@ import { useConfigStore } from "../stores/useConfigStore";
 import { supabase } from "../services/supabase";
 import { ConfigRoot } from "../providers/ConfigProvider"; // ✅ Import ConfigProvider
 
-export function Protected({ children }: { children: React.ReactNode }) {
+type Role = "admin" | "teacher" | "student" | "parent" | "front_office";
+
+interface ProtectedProps {
+  children: React.ReactNode;
+  allowedRoles: Role[];
+}
+
+export function Protected({ children, allowedRoles }: ProtectedProps) {
   const { role, schoolId, userId } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Simple check - if no auth data, redirect to login
-    // AuthProvider handles all the session restoration logic
     if (!role || !schoolId || !userId) {
-      console.log("[PROTECTED] ❌ No auth data - redirecting to login");
       navigate("/auth/login", { replace: true });
-    } else {
-      console.log("[PROTECTED] ✅ Auth verified:", { role, schoolId });
     }
   }, [role, schoolId, userId, navigate]);
 
-  // If no auth, don't render (will redirect)
   if (!role || !schoolId || !userId) {
     return (
       <Box
@@ -74,20 +75,13 @@ export function Protected({ children }: { children: React.ReactNode }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          flexDirection: "column",
-          gap: 2,
         }}
       >
         <CircularProgress />
-        <Typography variant="body2" color="text.secondary">
-          Checking authentication...
-        </Typography>
       </Box>
     );
   }
 
-  // ✅ UPDATED: Allow both admin and front_office roles
-  const allowedRoles = ['admin', 'front_office'];
   if (!allowedRoles.includes(role)) {
     return (
       <Box
@@ -98,16 +92,16 @@ export function Protected({ children }: { children: React.ReactNode }) {
           justifyContent: "center",
         }}
       >
-        <Typography variant="h6" color="error">
-          Access Denied: Staff privileges required
+        <Typography color="error" variant="h6">
+          Access Denied
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        <Typography variant="body2" color="text.secondary">
           Your role: {role}
         </Typography>
       </Box>
     );
   }
-
+  console.log("[PROTECTED]", { role, allowedRoles });
   return <>{children}</>;
 }
 
@@ -127,51 +121,7 @@ const navigationItems: NavItem[] = [
     key: 'dashboard',
     label: 'Dashboard',
     icon: <DashboardIcon />,
-    path: '/',
-  },
-  {
-    key: 'frontoffice',
-    label: 'Front Office',
-    icon: <People />,
-    path: '/frontoffice',
-    children: [
-      {
-        key: 'visitors',
-        label: 'Visitors',
-        icon: <People fontSize="small" />,
-        path: '/frontoffice/visitors'
-      },
-      {
-        key: 'couriers',
-        label: 'Couriers',
-        icon: <LocalOffer fontSize="small" />,
-        path: '/frontoffice/couriers'
-      },
-      {
-        key: 'admissions',
-        label: 'Admissions',
-        icon: <Assignment fontSize="small" />,
-        path: '/frontoffice/admissions'
-      },
-      {
-        key: 'admissions_pipeline', // ✅ ADD THIS
-        label: 'Admissions Pipeline',
-        icon: <EmojiEvents fontSize="small" />,
-        path: '/frontoffice/admissions-pipeline'
-      },
-      {
-        key: 'communication', // ✅ ADD THIS
-        label: 'Communication',
-        icon: <Campaign fontSize="small" />, // ✅ Radio/Broadcast icon
-        path: '/frontoffice/communication'
-      },
-      {
-        key: 'service_requests',
-        label: 'Service Requests',
-        icon: <SettingsIcon fontSize="small" />,
-        path: '/frontoffice/serviceRequest'
-      },
-    ],
+    path: '/admin',
   },
   {
     key: 'academics',
@@ -270,16 +220,6 @@ export function Shell() {
   };
 
   // ✅ ADD: Filter navigation based on role
-  const getVisibleNavItems = () => {
-    if (role === 'front_office') {
-      // Front office only sees: Dashboard, Front Office section
-      return navigationItems.filter(item =>
-        ['dashboard', 'frontoffice'].includes(item.key)
-      );
-    }
-    // Admin sees everything
-    return navigationItems;
-  };
 
   // ✅ Wrap Shell content in ConfigRoot to load configuration after auth
   return (
@@ -340,7 +280,7 @@ export function Shell() {
         <Toolbar />
         <Box sx={{ overflow: "auto", pt: 2 }}>
           <List>
-            {getVisibleNavItems().map((item) => {
+            {navigationItems.map((item) => {
               const hasChildren = item.children && item.children.length > 0;
               const isSubscribed = isModuleSubscribed(item.module);
 

@@ -84,12 +84,15 @@ export default function Dashboard() {
   const schoolId = useAuthStore((s) => s.schoolId);
   const profile = useAuthStore((s) => s.cachedProfile);
   const { mode, toggleMode } = useThemeMode();
+  const role = profile ? getPrimaryRole(profile) : null;
+  const isAdmin = role === 'admin';
+  const isReady = !!schoolId && isAdmin;
 
   // ✅ ADD DEBUGGING
   console.log('[DASHBOARD] Profile:', profile);
   console.log('[DASHBOARD] School ID:', schoolId);
 
-  if (!profile) {
+  if (!profile || !isAdmin) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
         <LinearProgress sx={{ width: 200 }} />
@@ -97,23 +100,15 @@ export default function Dashboard() {
     );
   }
 
-  const role = getPrimaryRole(profile);
-  console.log('[DASHBOARD] Detected role:', role);
-
-  if (role === 'front_office') {
-    console.log('[DASHBOARD] Routing to Front Office dashboard');
-    return <FrontOfficeDashboard />;
-  }
-
   console.log('[DASHBOARD] Routing to Admin/Principal dashboard');
 
   // Data queries
   const { data: metrics, isLoading: metricsLoading, error: metricsError, refetch: refetchMetrics } =
-    useDashboardMetrics(schoolId!);
-  const { data: revenueData, isLoading: revenueLoading } = useRevenueData(schoolId!);
-  const { data: distributionData, isLoading: distributionLoading } = useStudentDistribution(schoolId!);
-  const { data: attendanceData, isLoading: attendanceLoading } = useAttendanceByGrade(schoolId!);
-  const { data: moduleUsageData, isLoading: moduleUsageLoading } = useModuleUsage(schoolId!);
+    useDashboardMetrics(schoolId!, isReady);
+  const { data: revenueData, isLoading: revenueLoading } = useRevenueData(schoolId!, isReady);
+  const { data: distributionData, isLoading: distributionLoading } = useStudentDistribution(schoolId!, isReady);
+  const { data: attendanceData, isLoading: attendanceLoading } = useAttendanceByGrade(schoolId!, isReady);
+  const { data: moduleUsageData, isLoading: moduleUsageLoading } = useModuleUsage(schoolId!, isReady);
 
   // Transform distribution data for pie chart
   const chartDistributionData = useMemo(() => {

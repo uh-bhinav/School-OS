@@ -12,6 +12,8 @@
 
 import { useState } from "react";
 import { supabase } from "../../services/supabase";
+import { useAuthStore } from "../../stores/useAuthStore";
+import { getPrimaryRole } from "../../services/profile.api";
 import {
   Box,
   Button,
@@ -55,6 +57,7 @@ export default function Login() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const cfg = useConfigStore((s) => s.config);
+  const fetchProfile = useAuthStore((s) => s.fetchProfile);
 
   const logo = cfg?.branding.logo.primary_url;
   const schoolName = cfg?.identity?.display_name ?? "School OS";
@@ -79,7 +82,16 @@ export default function Login() {
         if (authError) {
           setError(authError.message);
         } else {
-          navigate("/", { replace: true });
+          const profile = await fetchProfile(true);
+          const role = getPrimaryRole(profile);
+          if (role === "admin") {
+            navigate("/admin", { replace: true });
+          } else if (role === "front_office") {
+            navigate("/frontoffice", { replace: true });
+          } else {
+            // Safety fallback
+            navigate("/auth/login", { replace: true });
+          }
         }
       } catch (err) {
         setError("An unexpected error occurred");

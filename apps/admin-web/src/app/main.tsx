@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { FrontOfficeShell } from "./components/FrontOfficeShell";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeRoot } from "./providers/ThemeProvider";
@@ -42,6 +43,8 @@ import ServiceRequestDetailPage from "./routes/frontoffice/serviceRequestDetail"
 import PrincipalCalendarPage from "./routes/frontoffice/principalCalendar";
 import FrontOfficeCommunication from "./routes/frontoffice/communication";
 import AdmissionsPipeline from './routes/frontoffice/admission-pipline';
+import RootRedirect from "./routes/RootRedirect";
+
 
 
 
@@ -88,8 +91,12 @@ const router = createBrowserRouter([
   },
   {
     path: "/",
+    element: <RootRedirect />,
+  },
+  {
+    path: "/admin",
     element: (
-      <Protected>
+      <Protected allowedRoles={["admin"]}>
         <Shell />
       </Protected>
     ),
@@ -97,42 +104,6 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <Dashboard />,
-      },
-      {
-        path: "dashboard/frontoffice",
-        element: <FrontOfficeDashboard />,
-      },
-      {
-        path: "frontoffice/visitors",
-        element: <VisitorsPage />,
-      },
-      {
-        path: "frontoffice/couriers",
-        element: <CouriersPage />,
-      },
-      {
-        path: "frontoffice/admissions",
-        element: <AdmissionsPage />,
-      },
-      {
-        path: "frontoffice/serviceRequest",
-        element: <ServiceRequestsPage />,
-      },
-      {
-        path: "frontoffice/serviceRequest/:requestId",
-        element: <ServiceRequestDetailPage />,
-      },
-      {
-        path: "frontoffice/principalCalendar",
-        element: <PrincipalCalendarPage />,
-      },
-      {
-        path: "frontoffice/communication",
-        element: <FrontOfficeCommunication />,
-      },
-      {
-        path: 'frontoffice/admissions-pipeline', // ✅ ADD THIS
-        element: <AdmissionsPipeline />
       },
       {
         path: "academics/attendance",
@@ -220,6 +191,26 @@ const router = createBrowserRouter([
         path: "media/products",
         element: <ProductsPage />,
       }
+    ],
+  },
+  // ================= FRONT OFFICE ROOT =================
+  {
+    path: "/frontoffice",
+    element: (
+      <Protected allowedRoles={["front_office"]}>
+        <FrontOfficeShell />
+      </Protected>
+    ),
+    children: [
+      { index: true, element: <FrontOfficeDashboard /> },
+      { path: "visitors", element: <VisitorsPage /> },
+      { path: "couriers", element: <CouriersPage /> },
+      { path: "admissions", element: <AdmissionsPage /> },
+      { path: "admissions-pipeline", element: <AdmissionsPipeline /> },
+      { path: "serviceRequest", element: <ServiceRequestsPage /> },
+      { path: "serviceRequest/:requestId", element: <ServiceRequestDetailPage /> },
+      { path: "principalCalendar", element: <PrincipalCalendarPage /> },
+      { path: "communication", element: <FrontOfficeCommunication /> },
     ],
   },
 ]);
