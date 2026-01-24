@@ -306,6 +306,11 @@ const navigationItems: NavItem[] = [
       { key: 'discounts', label: 'Discounts', icon: <LocalOffer fontSize="small" />, path: '/finance/discounts' },
       { key: 'refunds', label: 'Refunds', icon: <Undo fontSize="small" />, path: '/finance/refunds' },
       { key: 'budgets', label: 'Budgets', icon: <AccountBalance fontSize="small" />, path: '/finance/budgets' },
+      { key: 'fee-components', label: 'Fee Components', icon: <MoneyIcon fontSize="small" />, path: '/finance/fee-components' },
+      { key: 'fee-templates', label: 'Fee Templates', icon: <Receipt fontSize="small" />, path: '/finance/fee-templates' },
+      { key: 'class-mapping', label: 'Class Assignments', icon: <Assignment fontSize="small" />, path: '/finance/class-mapping' },
+      { key: 'overrides', label: 'Student Overrides', icon: <PersonOutline fontSize="small" />, path: '/finance/overrides' },
+      { key: 'student-discounts', label: 'Student Discounts', icon: <LocalOffer fontSize="small" />, path: '/finance/student-discounts' },
     ],
   },
   {

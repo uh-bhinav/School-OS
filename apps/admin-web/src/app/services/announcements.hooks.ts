@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useConfigStore } from "../stores/useConfigStore";
+import { isDemoMode } from "../mockDataProviders";
 import {
   listAnnouncements,
   getAnnouncement,
@@ -59,7 +60,7 @@ export function useAnnouncementsList(params?: {
     refetchOnWindowFocus: false, // ✅ CRITICAL: Prevent auth spam
     retry: false, // ✅ CRITICAL: Don't retry on auth failure
     refetchInterval: false, // ✅ CRITICAL: No automatic refetch
-    enabled: !!(schoolId && isAuthenticated && config), // ✅ CRITICAL: Only run when ready
+    enabled: !!(schoolId && (isAuthenticated || isDemoMode()) && config), // ✅ CRITICAL: Only run when ready
   });
 }
 
@@ -77,7 +78,7 @@ export function useAnnouncement(announcementId?: number) {
     refetchOnWindowFocus: false,
     retry: false,
     refetchInterval: false,
-    enabled: !!(announcementId && isAuthenticated && config),
+    enabled: !!(announcementId && (isAuthenticated || isDemoMode()) && config),
   });
 }
 

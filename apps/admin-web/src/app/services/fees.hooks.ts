@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useConfigStore } from "../stores/useConfigStore";
+import { isDemoMode } from "../mockDataProviders";
 import {
   listInvoices,
   generateInvoice,
@@ -67,7 +68,7 @@ export function useInvoicesList(params?: {
     refetchOnWindowFocus: false,
     retry: false,
     refetchInterval: false,
-    enabled: !!(schoolId && isAuthenticated && config),
+    enabled: !!(schoolId && (isAuthenticated || isDemoMode()) && config),
   });
 }
 
@@ -85,7 +86,7 @@ export function useStudentInvoices(studentId?: number) {
     refetchOnWindowFocus: false,
     retry: false,
     refetchInterval: false,
-    enabled: !!(studentId && isAuthenticated && config),
+    enabled: !!(studentId && (isAuthenticated || isDemoMode()) && config),
   });
 }
 
@@ -128,7 +129,7 @@ export function usePaymentsList(params?: {
     refetchOnWindowFocus: false,
     retry: false,
     refetchInterval: false,
-    enabled: !!(schoolId && isAuthenticated && config),
+    enabled: !!(schoolId && (isAuthenticated || isDemoMode()) && config),
   });
 }
 
@@ -167,7 +168,7 @@ export function useFeeComponentsList() {
     refetchOnWindowFocus: false,
     retry: false,
     refetchInterval: false,
-    enabled: !!(schoolId && isAuthenticated && config),
+    enabled: !!(schoolId && (isAuthenticated || isDemoMode()) && config),
   });
 }
 
