@@ -4,6 +4,7 @@ import { MarkCreate, MarkUpdate } from "./marks.schema";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useConfigStore } from "../stores/useConfigStore";
 import { http } from "./http";
+import { isDemoMode, mockClassesProvider, mockStudentsProvider, mockExamsProvider, mockSubjectsProvider } from "../mockDataProviders";
 
 // ============================================================================
 // MARKS HOOKS - INTEGRATED WITH BACKEND
@@ -228,10 +229,16 @@ export const useClasses = () => {
     queryKey: ["classes", schoolId],
     queryFn: async () => {
       if (!schoolId) return [];
+
+      // DEMO MODE: Return mock data
+      if (isDemoMode()) {
+        return mockClassesProvider.getAllClasses(schoolId);
+      }
+
       const { data } = await http.get(`/classes/school/${schoolId}`);
       return data;
     },
-    enabled: !!(schoolId && isAuthenticated && config),
+    enabled: !!(schoolId && (isAuthenticated || isDemoMode()) && config),
     staleTime: 300000, // 5 minutes
     retry: 1,
     refetchOnWindowFocus: false,
@@ -253,11 +260,17 @@ export const useStudents = (class_id?: number) => {
     queryKey: ["students", schoolId, class_id],
     queryFn: async () => {
       if (!class_id) return [];
+
+      // DEMO MODE: Return mock data
+      if (isDemoMode()) {
+        return mockStudentsProvider.getStudents({ class_id });
+      }
+
       // Backend endpoint returns students for this class
       const { data } = await http.get(`/classes/${class_id}/students`);
       return data;
     },
-    enabled: !!(schoolId && class_id && isAuthenticated && config),
+    enabled: !!(schoolId && class_id && (isAuthenticated || isDemoMode()) && config),
     staleTime: 300000,
     retry: 1,
     refetchOnWindowFocus: false,
@@ -278,6 +291,11 @@ export const useSubjects = (class_id?: number) => {
   return useQuery({
     queryKey: ["subjects", schoolId, class_id],
     queryFn: async () => {
+      // DEMO MODE: Return mock data
+      if (isDemoMode()) {
+        return mockSubjectsProvider.getSubjects({ class_id });
+      }
+
       if (!class_id) {
         // Return all subjects for the school
         // Note: Backend doesn't have /subjects?school_id endpoint yet
@@ -295,7 +313,7 @@ export const useSubjects = (class_id?: number) => {
       const { data: classData } = await http.get(`/classes/${class_id}`);
       return classData.subjects || [];
     },
-    enabled: !!(schoolId && isAuthenticated && config),
+    enabled: !!(schoolId && (isAuthenticated || isDemoMode()) && config),
     staleTime: 300000,
     retry: 1,
     refetchOnWindowFocus: false,
@@ -319,6 +337,14 @@ export const useExams = (academic_year_id?: number, class_id?: number) => {
     queryFn: async () => {
       if (!schoolId) return [];
 
+      // DEMO MODE: Return mock data
+      if (isDemoMode()) {
+        return mockExamsProvider.getExams({
+          academic_year_id: academic_year_id || 2025,
+          class_id
+        });
+      }
+
       // Backend endpoint: GET /api/v1/exams/all/{school_id}
       const { data } = await http.get(`/exams/all/${schoolId}`);
 
@@ -338,7 +364,7 @@ export const useExams = (academic_year_id?: number, class_id?: number) => {
 
       return filtered;
     },
-    enabled: !!(schoolId && isAuthenticated && config),
+    enabled: !!(schoolId && (isAuthenticated || isDemoMode()) && config),
     staleTime: 300000,
     retry: 1,
     refetchOnWindowFocus: false,

@@ -6,6 +6,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useConfigStore } from "../stores/useConfigStore";
+import { isDemoMode } from "../mockDataProviders";
 import {
   getLessonPlansByTeacher,
   getLessonPlanById,
@@ -45,7 +46,7 @@ export function useLessonPlansByTeacher(teacherId: number) {
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config && teacherId),
+    enabled: !!((isAuthenticated || isDemoMode()) && config && teacherId),
   });
 }
 
@@ -63,7 +64,7 @@ export function useLessonPlanById(planId: string) {
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config && planId),
+    enabled: !!((isAuthenticated || isDemoMode()) && config && planId),
   });
 }
 
@@ -81,7 +82,7 @@ export function useLessonPlansBySubject(subjectId: number) {
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config && subjectId),
+    enabled: !!((isAuthenticated || isDemoMode()) && config && subjectId),
   });
 }
 
@@ -99,7 +100,7 @@ export function useLessonPlanStats(teacherId: number) {
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config && teacherId),
+    enabled: !!((isAuthenticated || isDemoMode()) && config && teacherId),
   });
 }
 
@@ -118,6 +119,6 @@ export function useLessonPlanListWithStats(teacherId: number) {
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config && teacherId),
+    enabled: !!((isAuthenticated || isDemoMode()) && config && teacherId),
   });
 }

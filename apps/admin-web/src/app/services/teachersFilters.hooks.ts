@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useConfigStore } from "../stores/useConfigStore";
+import { isDemoMode } from "../mockDataProviders";
 import {
   getAllSubjects,
   getTeacherSubjectMappings,
@@ -69,7 +70,7 @@ export function useSubjectList() {
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config),
+    enabled: !!((isAuthenticated || isDemoMode()) && config),
   });
 }
 
@@ -87,7 +88,7 @@ export function useTeacherSubjectMappings() {
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config),
+    enabled: !!((isAuthenticated || isDemoMode()) && config),
   });
 }
 
@@ -105,7 +106,7 @@ export function useTeacherIdsBySubjects(subjectIds: number[]) {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config && subjectIds.length > 0),
+    enabled: !!((isAuthenticated || isDemoMode()) && config && subjectIds.length > 0),
   });
 }
 
@@ -127,7 +128,7 @@ export function useClassTeacherAssignments() {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config),
+    enabled: !!((isAuthenticated || isDemoMode()) && config),
   });
 }
 
@@ -145,7 +146,7 @@ export function useClassTeacherIds() {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config),
+    enabled: !!((isAuthenticated || isDemoMode()) && config),
   });
 }
 
@@ -163,7 +164,7 @@ export function useIsClassTeacher(teacherId: number) {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config && teacherId),
+    enabled: !!((isAuthenticated || isDemoMode()) && config && teacherId),
   });
 }
 
@@ -181,7 +182,7 @@ export function useClassForTeacher(teacherId: number) {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config && teacherId),
+    enabled: !!((isAuthenticated || isDemoMode()) && config && teacherId),
   });
 }
 
@@ -203,7 +204,7 @@ export function useAllClasses() {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config),
+    enabled: !!((isAuthenticated || isDemoMode()) && config),
   });
 }
 
@@ -221,7 +222,7 @@ export function useAvailableClasses() {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config),
+    enabled: !!((isAuthenticated || isDemoMode()) && config),
   });
 }
 
@@ -290,7 +291,7 @@ export function useFilteredTeachers(filters: TeacherFilters) {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config),
+    enabled: !!((isAuthenticated || isDemoMode()) && config),
   });
 }
 
@@ -308,7 +309,7 @@ export function useTeachersWithClassTeacherInfo() {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
-    enabled: !!(isAuthenticated && config),
+    enabled: !!((isAuthenticated || isDemoMode()) && config),
   });
 }
 

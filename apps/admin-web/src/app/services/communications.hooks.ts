@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useConfigStore } from "../stores/useConfigStore";
+import { isDemoMode } from "../mockDataProviders";
 import {
   listCommunications,
   getCommunication,
@@ -58,7 +59,7 @@ export function useCommunicationsList(params?: {
     refetchOnWindowFocus: false, // ✅ CRITICAL: Prevent auth spam
     retry: false, // ✅ CRITICAL: Don't retry on auth failure
     refetchInterval: false, // ✅ CRITICAL: No automatic refetch
-    enabled: !!(schoolId && isAuthenticated && config), // ✅ CRITICAL: Only run when ready
+    enabled: !!(schoolId && (isAuthenticated || isDemoMode()) && config), // ✅ CRITICAL: Only run when ready
   });
 }
 
@@ -76,7 +77,7 @@ export function useCommunication(communicationId?: number) {
     refetchOnWindowFocus: false,
     retry: false,
     refetchInterval: false,
-    enabled: !!(communicationId && isAuthenticated && config),
+    enabled: !!(communicationId && (isAuthenticated || isDemoMode()) && config),
   });
 }
 
