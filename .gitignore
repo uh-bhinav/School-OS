@@ -1,9 +1,15 @@
 # --- Secrets ---
 # Never commit environment variables or secrets!
 .env
-*.env
-.env.*
+# Ignore all .env.* EXCEPT .env.example and .env.development (for demo mode)
+.env.local
+.env.production
 .env.test
+.env.*.local
+
+# Keep these for easy onboarding (demo mode enabled by default)
+!.env.example
+!.env.development
 
 # --- Node.js / Frontend ---
 # Dependencies

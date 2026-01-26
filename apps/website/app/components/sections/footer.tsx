@@ -11,7 +11,8 @@ import {
   ShieldCheck, 
   Globe, 
   CheckCircle2,
-  CreditCard
+  CreditCard,
+  MapPin
 } from 'lucide-react';
 
 export const Footer = () => {
@@ -34,7 +35,7 @@ export const Footer = () => {
                 </div>
 
                 {/* Navigation Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-10 mb-16 p-10 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 mb-16 p-10 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm">
                     {/* Column 1 */}
                     <div>
                         <h4 className="font-bold text-lg mb-6 text-white">Navigation</h4>
@@ -64,6 +65,26 @@ export const Footer = () => {
                             <li className="flex items-center gap-2"><Facebook size={16}/><a href="#" className="hover:text-white transition-colors">Facebook</a></li>
                             <li className="flex items-center gap-2"><Youtube size={16}/><a href="#" className="hover:text-white transition-colors">YouTube</a></li>
                         </ul>
+                    </div>
+
+                    {/* Column 4 - Office Address */}
+                    <div className="col-span-2 md:col-span-3 lg:col-span-1">
+                        <h4 className="font-bold text-lg mb-6 text-white">Office Address</h4>
+                        <div className="space-y-3 text-sm text-slate-400">
+                            <p className="flex items-start gap-2">
+                                <MapPin size={16} className="flex-shrink-0 mt-0.5" />
+                                <span>#602 Laggere Main Road<br />Parvathinagar, Laggere<br />Bangalore 560058</span>
+                            </p>
+                            <a 
+                                href="https://www.google.com/maps/search/?api=1&query=602+Laggere+Main+Road+Parvathinagar+Laggere+Bangalore+560058" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-[#0A2DAA] hover:text-blue-400 transition-colors font-medium"
+                            >
+                                <MapPin size={14} />
+                                View on Maps
+                            </a>
+                        </div>
                     </div>
                 </div>
 

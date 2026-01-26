@@ -48,16 +48,39 @@ export async function getMyProfile(): Promise<Profile> {
 
 /**
  * Extract primary role from profile
- * Priority: Admin > Teacher > Parent > Student
+ * Priority: super_admin > Admin > Teacher > Parent > Student
+ *
+ * ROLE-AWARE LOGIN: Added super_admin detection for group-level admin routing
  */
-export function getPrimaryRole(profile: Profile): "admin" | "teacher" | "student" | "parent" {
+export function getPrimaryRole(profile: Profile): "super_admin" | "admin" | "teacher" | "student" | "parent" {
   const roleNames = profile.roles.map((r) => r.role_definition.role_name.toLowerCase());
 
-  if (roleNames.includes("admin")) return "admin";
-  if (roleNames.includes("teacher")) return "teacher";
-  if (roleNames.includes("parent")) return "parent";
-  if (roleNames.includes("student")) return "student";
+  // Log roles for debugging role-aware routing
+  console.log("[PROFILE API] 🔍 Detecting primary role from:", roleNames);
 
-  // Default fallback
+  // super_admin has highest priority - routes to /group-overview
+  if (roleNames.includes("super_admin")) {
+    console.log("[PROFILE API] ✅ Resolved role: super_admin");
+    return "super_admin";
+  }
+  if (roleNames.includes("admin")) {
+    console.log("[PROFILE API] ✅ Resolved role: admin");
+    return "admin";
+  }
+  if (roleNames.includes("teacher")) {
+    console.log("[PROFILE API] ✅ Resolved role: teacher");
+    return "teacher";
+  }
+  if (roleNames.includes("parent")) {
+    console.log("[PROFILE API] ✅ Resolved role: parent");
+    return "parent";
+  }
+  if (roleNames.includes("student")) {
+    console.log("[PROFILE API] ✅ Resolved role: student");
+    return "student";
+  }
+
+  // No recognized role found
+  console.warn("[PROFILE API] ⚠️ No recognized role found, defaulting to student");
   return "student";
 }

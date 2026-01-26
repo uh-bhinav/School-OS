@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import PersonIcon from "@mui/icons-material/Person";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import EmptyState from "./EmptyState";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 export default function MessageList() {
   const { sessions, activeId, isLoading } = useChatStore();
@@ -44,13 +45,19 @@ export default function MessageList() {
           <div
             className={`message-bubble rounded-2xl px-4 py-3 ${
               msg.role === "user"
-                ? "bg-primary text-white"
-                : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100"
+                ? "bg-primary text-white max-w-[85%]"
+                : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100 max-w-[90%]"
             }`}
           >
-            <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">
-              {msg.content}
-            </p>
+            {msg.role === "user" ? (
+              <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">
+                {msg.content}
+              </p>
+            ) : (
+              <div className="text-sm md:text-base leading-relaxed">
+                <MarkdownRenderer content={msg.content} />
+              </div>
+            )}
             <span
               className={`text-xs mt-2 block ${
                 msg.role === "user"

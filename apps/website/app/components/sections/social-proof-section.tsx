@@ -29,28 +29,28 @@ export const SocialProofSection = () => {
 
     const testimonials = [
         {
-            name: "Anjali Mehta",
-            role: "Senior Teacher, Bloomfield International",
-            text: "AcadionAI has completely changed the way I manage my classroom workload. Lesson planning, attendance, and parent updates happen so smoothly now. I finally get time to focus on actual teaching rather than administrative tasks.",
-            img: "https://i.pravatar.cc/150?img=5"
+            name: "Mr. Ramesh Babu",
+            role: "Mathemetics Teacher, Vidya Kendra High School",
+            text: "AcadionAI’s analytics help me track student performance across topics instantly — insights that once took hours of manual analysis are now clear in minutes.",
+            img: "/ramesh.png"
         },
         {
-            name: "Arvind Nair",
-            role: "Principal, Greenwood Public Academy",
-            text: "Our entire school runs more efficiently. Fee reminders, announcements, and daily schedules are automated. What used to take hours now happens in minutes — and our parents absolutely love the communication clarity.",
-            img: "https://i.pravatar.cc/150?img=11"
+            name: "Mr. Ranganath Rao",
+            role: "Award-Winning Mathematics & Physics Teacher, Karnataka State Awardee, Widia Poornapragna School",
+            text: "Proxy and leave handling used to cause constant timetable conflicts. AcadionAI resolves proxies in seconds and reduced timetable edits by 80%.",
+            img: "/ranganath_rao.png"
         },
         {
-            name: "Divya Suresh",
-            role: "Parent of Grade 7 Student",
-            text: "As a parent, AcadionAI keeps me updated instantly — homework, attendance, announcements, everything. I no longer miss important school messages. It feels like the school is finally communicating the way we always wished.",
-            img: "https://i.pravatar.cc/150?img=9"
+            name: "Ms. Anitha",
+            role: "Admin Staff, New Horizon English School",
+            text: "Daily attendance reconciliation that once took our clerk 6–8 hours a week is now fully automated. That saved time is now used for student follow-ups.",
+            img: "/Anitha.png"
         },
         {
-            name: "Rahul Kulkarni",
-            role: "Admin Officer, Horizon Public School",
-            text: "Managing fee collections and generating reports used to be stressful. With AcadionAI, reminders go out automatically and reports are ready instantly. Our workload has reduced drastically, and we have fewer parent queries.",
-            img: "https://i.pravatar.cc/150?img=3"
+            name: "K S Sridhar",
+            role: "Ex-Principal, Widia Poornapragna School",
+            text: "AcadionAI cut our timetable preparation from 3 days to 10 minutes. What used to block our admin team now finishes in a single click.",
+            img: "/sridar_rao.png"
         }
     ];
 

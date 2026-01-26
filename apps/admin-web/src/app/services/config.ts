@@ -45,7 +45,7 @@ export const SchoolConfigSchema = z
     // ============================================================================
     branding: z.object({
       logo: z.object({
-        primary_url: z.string().url(),
+        primary_url: z.string().url().nullable().optional(),
         dark_mode_variant_url: z.string().url().nullable().optional(),
       }),
       colors: z.object({
@@ -205,16 +205,134 @@ const SchoolOutSchema = z.object({
 
 type SchoolOut = z.infer<typeof SchoolOutSchema>;
 
+// ============================================================================
+// DEMO MODE: Mock school configuration
+// ============================================================================
+const MOCK_SCHOOL_CONFIG: SchoolConfig = {
+  version: "1.0.0",
+  identity: {
+    school_code: "DEMO001",
+    display_name: "Tapasya Vidyanikethan",
+    subdomain: "demo",
+    external_ids: {
+      emis: null,
+      legacy: null,
+    },
+  },
+  branding: {
+    logo: {
+      primary_url: null,
+      dark_mode_variant_url: null,
+    },
+    colors: {
+      primary: "#1976d2",
+      primary_contrast: "#ffffff",
+      secondary: "#9c27b0",
+      surface: "#ffffff",
+      surface_variant: "#f5f5f5",
+      error: "#d32f2f",
+      success: "#2e7d32",
+      warning: "#ed6c02",
+    },
+    typography: {
+      base_scale: 1,
+      font_family: "Inter, sans-serif",
+    },
+    assets: {
+      favicon_url: null,
+      mobile_splash_url: null,
+    },
+    layout: {
+      density: "comfortable",
+      corner_style: "rounded",
+    },
+  },
+  locale: {
+    language: "en",
+    timezone: "Asia/Kolkata",
+    date_format: "DD/MM/YYYY",
+    time_format: "12h",
+    currency: "INR",
+    number_format: {
+      grouping: "lakh",
+    },
+  },
+  modules: {
+    catalog_version: "1.0.0",
+    // Include all specific module names that route guards check for
+    subscribed: [
+      "academics",
+      "finance",
+      "communications",
+      "hr",
+      // Specific academic modules that routes check for
+      "attendance",
+      "timetable",
+      "marks",
+      "exams",
+      // Additional common modules
+      "calendar",
+      "reports",
+      "settings",
+    ],
+    available: [],
+    settings: {},
+    dependencies: {},
+  },
+  ui: {
+    nav_order: ["dashboard", "academics", "finance", "communications", "hr"],
+    landing: {
+      default: "/",
+    },
+    badges: {
+      beta: [],
+    },
+  },
+  integrations: {},
+  onboarding: {
+    status: "complete",
+    steps: [
+      { key: "school_info", weight: 1, done: true },
+      { key: "branding", weight: 1, done: true },
+      { key: "modules", weight: 1, done: true },
+    ],
+    checklist_notes: null,
+  },
+  feature_flags: {
+    demo_mode: true,
+  },
+  limits: {},
+  support: {},
+};
+
+/**
+ * Check if demo mode is enabled
+ */
+function isDemoMode(): boolean {
+  return import.meta.env.VITE_DEMO_MODE === 'true';
+}
+
 /**
  * Fetch school configuration
  *
  * ✅ FIXED: Endpoint is now /schools/{schoolId} (not /schools/{schoolId}/configuration)
  * Backend returns full SchoolOut object, we extract the configuration property
  * Gracefully handles null/missing configuration
+ * ✅ DEMO MODE: Returns mock data when VITE_DEMO_MODE=true
  */
 export async function fetchSchoolConfig(
   schoolId: number
 ): Promise<SchoolConfig> {
+  // ============================================================================
+  // DEMO MODE: Return mock configuration
+  // ============================================================================
+  if (isDemoMode()) {
+    console.log(`[CONFIG] 🎭 DEMO MODE: Returning mock configuration for school_id: ${schoolId}`);
+    // Simulate network delay for realism
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return MOCK_SCHOOL_CONFIG;
+  }
+
   try {
     console.log(`[CONFIG] Fetching school configuration for school_id: ${schoolId}`);
 

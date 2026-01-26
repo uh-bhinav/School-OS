@@ -27,14 +27,32 @@ export const GetInTouchModal = ({ isOpen, onClose }: GetInTouchModalProps) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
-        // Simulate submission
-        setTimeout(() => {
+        
+        try {
+            const response = await fetch('/api/send-contact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                setIsSubmitted(true);
+            } else {
+                alert('Failed to send message. Please try again or email us directly at talktous@concierai.com');
+            }
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            alert('Failed to send message. Please try again or email us directly at talktous@concierai.com');
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 1500);
+        }
     };
 
     if (!isOpen) return null;
@@ -94,7 +112,7 @@ export const GetInTouchModal = ({ isOpen, onClose }: GetInTouchModalProps) => {
                                         value={formData.schoolName}
                                         onChange={handleChange}
                                         required
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all"
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all text-slate-900"
                                         placeholder="e.g. Greenwood Public School"
                                     />
                                 </div>
@@ -104,7 +122,7 @@ export const GetInTouchModal = ({ isOpen, onClose }: GetInTouchModalProps) => {
                                         name="studentCount"
                                         value={formData.studentCount}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all bg-white"
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all bg-white text-slate-900"
                                     >
                                         <option value="">Select range</option>
                                         <option value="1-100">1 - 100</option>
@@ -132,7 +150,7 @@ export const GetInTouchModal = ({ isOpen, onClose }: GetInTouchModalProps) => {
                                         value={formData.principalName}
                                         onChange={handleChange}
                                         required
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all"
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all text-slate-900"
                                         placeholder="e.g. Dr. Sharma"
                                     />
                                 </div>
@@ -144,7 +162,7 @@ export const GetInTouchModal = ({ isOpen, onClose }: GetInTouchModalProps) => {
                                         value={formData.phone}
                                         onChange={handleChange}
                                         required
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all"
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all text-slate-900"
                                         placeholder="+91 98765 43210"
                                     />
                                 </div>
@@ -157,7 +175,7 @@ export const GetInTouchModal = ({ isOpen, onClose }: GetInTouchModalProps) => {
                                     value={formData.email}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all"
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all text-slate-900"
                                     placeholder="principal@school.edu"
                                 />
                             </div>
@@ -176,7 +194,7 @@ export const GetInTouchModal = ({ isOpen, onClose }: GetInTouchModalProps) => {
                                     name="address"
                                     value={formData.address}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all"
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all text-slate-900"
                                     placeholder="Street address, landmark"
                                 />
                             </div>
@@ -188,7 +206,7 @@ export const GetInTouchModal = ({ isOpen, onClose }: GetInTouchModalProps) => {
                                         name="city"
                                         value={formData.city}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all"
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all text-slate-900"
                                         placeholder="e.g. Bangalore"
                                     />
                                 </div>
@@ -199,7 +217,7 @@ export const GetInTouchModal = ({ isOpen, onClose }: GetInTouchModalProps) => {
                                         name="state"
                                         value={formData.state}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all"
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all text-slate-900"
                                         placeholder="e.g. Karnataka"
                                     />
                                 </div>
@@ -214,7 +232,7 @@ export const GetInTouchModal = ({ isOpen, onClose }: GetInTouchModalProps) => {
                                 value={formData.message}
                                 onChange={handleChange}
                                 rows={3}
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all resize-none"
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#0A2DAA] focus:ring-2 focus:ring-[#0A2DAA]/20 outline-none transition-all resize-none text-slate-900"
                                 placeholder="Tell us more about your requirements..."
                             />
                         </div>

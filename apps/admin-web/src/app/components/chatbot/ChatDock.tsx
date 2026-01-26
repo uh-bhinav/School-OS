@@ -7,10 +7,25 @@ import TooltipHelp from "./TooltipHelp";
 import CloseIcon from "@mui/icons-material/Close";
 import MinimizeIcon from "@mui/icons-material/Minimize";
 import { motion } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { getChatRoleFromPath } from "@/app/services/chatService";
 
 export default function ChatDock() {
   const { setOpen, sidebarOpen, setInputFocused, activeId, sessions, createSession } = useChatStore();
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  // Check if we're on a Super Admin route
+  useEffect(() => {
+    const checkRole = () => {
+      const role = getChatRoleFromPath();
+      setIsSuperAdmin(role === "super_admin");
+    };
+    checkRole();
+
+    // Listen for navigation changes
+    window.addEventListener("popstate", checkRole);
+    return () => window.removeEventListener("popstate", checkRole);
+  }, []);
 
   // Ensure there's always an active session when chat opens
   useEffect(() => {
@@ -80,10 +95,15 @@ export default function ChatDock() {
               style={{ paddingLeft: sidebarOpen ? "280px" : "3rem" }}
             >
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <div className={`w-2 h-2 rounded-full animate-pulse ${isSuperAdmin ? 'bg-purple-500' : 'bg-green-500'}`}></div>
                 <h2 className="font-semibold text-lg md:text-xl text-gray-800 dark:text-gray-100">
-                  SchoolOS Assistant
+                  {isSuperAdmin ? "Super Admin Assistant" : "SchoolOS Assistant"}
                 </h2>
+                {isSuperAdmin && (
+                  <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">
+                    Group
+                  </span>
+                )}
                 <TooltipHelp />
               </div>
               <div className="flex gap-1">

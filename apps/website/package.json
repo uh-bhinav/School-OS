@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "export": "next build && cd out && zip -r ~/Desktop/school-os-production.zip . && echo 'Production zip created at ~/Desktop/school-os-production.zip'"
   },
   "dependencies": {
     "lucide-react": "^0.555.0",

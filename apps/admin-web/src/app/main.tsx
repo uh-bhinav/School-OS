@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeRoot } from "./providers/ThemeProvider";
 import { AuthRoot } from "./providers/AuthProvider";
@@ -13,6 +13,7 @@ import AttendanceRoute from "./routes/academics/attendance/AttendanceRoute";
 import TimetableRoute from "./routes/academics/timetable/TimetableRoute";
 import ProxyAssignmentPage from "./routes/academics/timetable/ProxyAssignmentPage";
 import ExamsRoute from "./routes/academics/exams/ExamsRoute";
+import { ExamSubjectsPage, QuestionCOMappingPage, QuestionMarksEntryPage } from "./routes/academics/exams/subjects";
 import MarksRoute from "./routes/academics/marks/MarksRoute";
 import MarksPage from "./routes/academics/marks/MarksPage";
 import LeaderboardsPage from "./routes/academics/leaderboards/LeaderboardsPage";
@@ -26,6 +27,8 @@ import ClubsPage from "./routes/academics/clubs/ClubsPage";
 import AchievementsPage from "./routes/academics/achievements/AchievementsPage";
 import { LeaveManagementRoute, LeaveProxyAssignmentPage } from "./routes/academics/leaveManagement";
 import TasksPage from "./routes/academics/tasks/TasksPage";
+import { SubjectsPage, SubjectDetailPage } from "./routes/academics/subjects";
+import { COAttainmentPage } from "./routes/academics/obe";
 import AnnouncementsPage from "./routes/announcements";
 import CommunicationsPage from "./routes/communications";
 import FeeManagementPage from "./routes/finance";
@@ -43,7 +46,7 @@ import AlbumDetailPage from "./routes/albums/AlbumDetailPage";
 import ProductsPage from "./routes/media/products/ProductsPage";
 import EventsPage from "./routes/events";
 import EventDetailPage from "./routes/events/EventDetailPage";
-import { Shell, Protected } from "./components/Shell";
+import { Shell, Protected, SuperAdminProtected } from "./components/Shell";
 import { runAuthMigration } from "./utils/authCleanup";
 import { logDemoModeStatus } from "./mockDataProviders";
 
@@ -68,6 +71,26 @@ import BudgetPettyCashPage from "./routes/finance/budgets/BudgetPettyCashPage";
 import BudgetReportsPage from "./routes/finance/budgets/BudgetReportsPage";
 import BudgetSettingsPage from "./routes/finance/budgets/BudgetSettingsPage";
 import BudgetAuditLogPage from "./routes/finance/budgets/BudgetAuditLogPage";
+
+// ROLE-AWARE LOGIN: Super Admin landing page
+import GroupOverview from "./routes/group-overview/GroupOverview";
+import GroupOverviewPage from "./routes/group-overview/GroupOverviewPage";
+import { SuperAdminShell } from "./components/SuperAdminShell";
+
+// Super Admin Schools pages
+import { SchoolsPage, SchoolDetailPage } from "./routes/schools";
+
+// Super Admin Academics pages (Group Level)
+import { AttendanceHealthPage, CurriculumPacingPage } from "./routes/group-overview/academics";
+
+// Super Admin Financial Health pages (Group Level)
+import { FeeCollectionPage, DuesAgingPage, CapacityForecastPage } from "./routes/group-overview/financial";
+
+// Super Admin Compliance & Risk pages (Group Level)
+import { ComplianceOverviewPage, CertificatesRenewalsPage, RegulatoryAlertsPage } from "./routes/group-overview/compliance";
+
+// Super Admin Communication pages (Group Level)
+import { ParentEngagementPage, EffectivenessSummaryPage } from "./routes/group-overview/communication";
 
 // ============================================================================
 // AUTH MIGRATION - Clean up stale auth state from previous sessions
@@ -129,6 +152,93 @@ const router = createBrowserRouter([
     path: "/auth/signup",
     element: <SignupPrincipal />,
   },
+  // ========================================================================
+  // ROLE-AWARE LOGIN: Super Admin Routes with SuperAdminShell
+  // Protected by SuperAdminProtected - only super_admin role can access
+  // Uses separate shell, fully isolated from principal dashboard
+  // ========================================================================
+  {
+    path: "/group-overview",
+    element: (
+      <SuperAdminProtected>
+        <SuperAdminShell />
+      </SuperAdminProtected>
+    ),
+    children: [
+      {
+        index: true,
+        element: <GroupOverviewPage />,
+      },
+      {
+        path: "schools",
+        element: <SchoolsPage />,
+      },
+      {
+        path: "schools/:schoolId",
+        element: <SchoolDetailPage />,
+      },
+      {
+        path: "academics",
+        element: <Navigate to="/group-overview/academics/attendance" replace />,
+      },
+      {
+        path: "academics/attendance",
+        element: <AttendanceHealthPage />,
+      },
+      {
+        path: "academics/curriculum-pacing",
+        element: <CurriculumPacingPage />,
+      },
+      {
+        path: "financial",
+        element: <Navigate to="/group-overview/financial/fee-collection" replace />,
+      },
+      {
+        path: "financial/fee-collection",
+        element: <FeeCollectionPage />,
+      },
+      {
+        path: "financial/dues-aging",
+        element: <DuesAgingPage />,
+      },
+      {
+        path: "financial/capacity-forecast",
+        element: <CapacityForecastPage />,
+      },
+      {
+        path: "compliance",
+        element: <ComplianceOverviewPage />,
+      },
+      {
+        path: "compliance/certificates",
+        element: <CertificatesRenewalsPage />,
+      },
+      {
+        path: "compliance/alerts",
+        element: <RegulatoryAlertsPage />,
+      },
+      {
+        path: "compliance-risk",
+        element: <Navigate to="/group-overview/compliance" replace />,
+      },
+      {
+        path: "communication",
+        element: <Navigate to="/group-overview/communication/parent-engagement" replace />,
+      },
+      {
+        path: "communication/parent-engagement",
+        element: <ParentEngagementPage />,
+      },
+      {
+        path: "communication/effectiveness",
+        element: <EffectivenessSummaryPage />,
+      },
+      {
+        path: "settings",
+        element: <GroupOverview />, // Placeholder - will be GroupSettingsPage
+      },
+    ],
+  },
   {
     path: "/",
     element: (
@@ -156,6 +266,18 @@ const router = createBrowserRouter([
       {
         path: "academics/exams",
         element: <ExamsRoute />,
+      },
+      {
+        path: "academics/exams/:examId/subjects",
+        element: <ExamSubjectsPage />,
+      },
+      {
+        path: "academics/exams/:examId/subjects/:subjectExamId/questions",
+        element: <QuestionCOMappingPage />,
+      },
+      {
+        path: "academics/exams/:examId/subjects/:subjectExamId/marks",
+        element: <QuestionMarksEntryPage />,
       },
       {
         path: "academics/marks",
@@ -198,6 +320,18 @@ const router = createBrowserRouter([
       {
         path: "academics/clubs",
         element: <ClubsPage />,
+      },
+      {
+        path: "academics/subjects",
+        element: <SubjectsPage />,
+      },
+      {
+        path: "academics/subjects/:subjectId",
+        element: <SubjectDetailPage />,
+      },
+      {
+        path: "academics/co-attainment",
+        element: <COAttainmentPage />,
       },
       {
         path: "academics/achievements",
@@ -367,27 +501,49 @@ const router = createBrowserRouter([
 ]);
 
 // ============================================================================
-// START THE APP - MSW COMPLETELY REMOVED
+// START THE APP - HYBRID MODE
 // ============================================================================
-// ✅ No more MSW initialization
-// ✅ Direct app startup - no async wrapper needed
-// ✅ Clean bootstrap sequence
+// ✅ Real Backend: Auth, Session, School Config, School Identity
+// ✅ MSW Mocks: Subjects, Exams, Marks, COs, Attainment (academic data)
+// ✅ This allows stable auth while demoing academic features
 // ============================================================================
 
-console.log("🚀 Starting SchoolOS Admin Panel...");
-console.log("� Mode:", import.meta.env.DEV ? "Development" : "Production");
-console.log("� API Base:", import.meta.env.VITE_API_BASE_URL || "No base URL (will use relative paths)");
+async function startApp() {
+  console.log("🚀 Starting SchoolOS Admin Panel...");
+  console.log("🔧 Mode:", import.meta.env.DEV ? "Development" : "Production");
+  console.log("🌐 API Base:", import.meta.env.VITE_API_BASE_URL || "No base URL (will use relative paths)");
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthRoot>
-        <ThemeRoot>
-          <RouterProvider router={router} />
-        </ThemeRoot>
-      </AuthRoot>
-      {/* ✅ ChatProvider at the end for global chatbot overlay */}
-      <ChatProvider />
-    </QueryClientProvider>
-  </React.StrictMode>
-);
+  // Start MSW in browser for ACADEMIC DATA ONLY (subjects, exams, marks, COs)
+  // Auth, session, and config use real backend
+  if (typeof window !== "undefined" && import.meta.env.DEV) {
+    try {
+      console.log("🔄 Initializing Mock Service Worker for academic data...");
+      const { worker } = await import("./mocks/browser");
+      await worker.start({
+        onUnhandledRequest: "bypass", // Unhandled requests go to real backend
+        serviceWorker: {
+          url: "/mockServiceWorker.js",
+        },
+      });
+      console.log("✅ MSW Ready - Academic data uses mocks, Auth/Config use real backend");
+    } catch (error) {
+      console.warn("⚠️ MSW failed to start, all requests will use real backend:", error);
+    }
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <AuthRoot>
+          <ThemeRoot>
+            <RouterProvider router={router} />
+          </ThemeRoot>
+        </AuthRoot>
+        {/* ✅ ChatProvider at the end for global chatbot overlay */}
+        <ChatProvider />
+      </QueryClientProvider>
+    </React.StrictMode>
+  );
+}
+
+startApp();

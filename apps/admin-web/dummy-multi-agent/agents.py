@@ -538,7 +538,7 @@ USER QUERY: {user_message}
 Provide an accurate, helpful response based on the data above."""
 
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(system_prompt)
 
         return {"message": f"{emoji} {response.text}", "agent_id": agent_id}

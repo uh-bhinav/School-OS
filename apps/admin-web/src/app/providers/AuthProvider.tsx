@@ -24,14 +24,37 @@
 // - On ALL auth events: Sync session to Zustand store via setSession()
 // - axios interceptor handles reactive refresh on 401 errors
 // - Multi-tab sync via localStorage events
+//
+// DEMO MODE:
+// - When VITE_DEMO_MODE=true, bypasses Supabase auth completely
+// - Sets mock user/profile for immediate dashboard access
+// - Super Admin auth still works normally (real Supabase auth)
 // ============================================================================
 
 import { PropsWithChildren, useEffect, useRef } from "react";
 import { supabase } from "../services/supabase";
 import { useAuthStore } from "../stores/useAuthStore";
 
+// Check if demo mode is enabled
+function isDemoMode(): boolean {
+  return import.meta.env.VITE_DEMO_MODE === 'true';
+}
+
+// Demo mode mock profile data
+const DEMO_PROFILE = {
+  user_id: "demo-user-001",
+  school_id: 1,
+  first_name: "Demo",
+  last_name: "Principal",
+  email: "demo@school.com",
+  roles: ["admin"],
+  is_active: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 export function AuthRoot({ children }: PropsWithChildren) {
-  const { clear, fetchProfile, setSession } = useAuthStore();
+  const { clear, fetchProfile, setSession, setAuth } = useAuthStore();
   const hasBootstrapped = useRef(false);
   const refreshTimerRef = useRef<number | null>(null);
 
@@ -99,6 +122,43 @@ export function AuthRoot({ children }: PropsWithChildren) {
     }
 
     hasBootstrapped.current = true;
+
+    // ========================================================================
+    // DEMO MODE: Bypass Supabase auth, set mock user directly
+    // ========================================================================
+    if (isDemoMode()) {
+      console.log("[AUTH PROVIDER] 🎭 DEMO MODE: Bypassing Supabase auth");
+
+      // Set mock auth state directly
+      setAuth({
+        userId: DEMO_PROFILE.user_id,
+        schoolId: DEMO_PROFILE.school_id,
+        role: "admin",
+        currentAcademicYearId: 1,
+      });
+
+      // Set a mock session (no real token needed in demo mode)
+      setSession({
+        access_token: "demo-token",
+        refresh_token: "demo-refresh",
+        expires_at: Math.floor(Date.now() / 1000) + 86400, // 24 hours
+        expires_in: 86400,
+        token_type: "bearer",
+        user: {
+          id: DEMO_PROFILE.user_id,
+          email: DEMO_PROFILE.email,
+          aud: "authenticated",
+          role: "authenticated",
+          app_metadata: {},
+          user_metadata: {},
+          created_at: DEMO_PROFILE.created_at,
+        },
+      } as any);
+
+      console.log("[AUTH PROVIDER] 🎭 DEMO MODE: Mock auth state set successfully");
+      return; // Skip real auth setup in demo mode
+    }
+
     console.log("[AUTH PROVIDER] 🔐 Initializing auth listener (ONCE)");
 
     // ========================================================================

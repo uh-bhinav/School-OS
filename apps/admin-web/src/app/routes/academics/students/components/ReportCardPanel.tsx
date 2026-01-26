@@ -99,119 +99,236 @@ export default function ReportCardPanel({ studentId }: ReportCardPanelProps) {
 
       {/* Report Card Dialog */}
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {selectedCard?.exam_name} - Report Card
-        </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ p: 0 }}>
           {selectedCard && (
-            <Box>
-              {/* Header Info */}
-              <Box sx={{ mb: 3, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
-                <Typography variant="body2">
-                  <strong>Class:</strong> {selectedCard.class_name} - {selectedCard.section}
+            <Box sx={{ p: 4, bgcolor: "white" }}>
+              {/* School Header */}
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #1976d2", pb: 2, mb: 3 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  {/* School Logo Placeholder */}
+                  <Box
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      border: "2px solid #1976d2",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      bgcolor: "#f5f5f5",
+                    }}
+                  >
+                    <Typography variant="caption" color="text.secondary" textAlign="center">
+                      SCHOOL
+                      <br />
+                      LOGO
+                    </Typography>
+                  </Box>
+
+                  <Box>
+                    <Typography variant="h5" fontWeight="bold" color="primary">
+                      DEMO SCHOOL NAME
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Affiliated To: CBSE Board / Affiliation No: 1234567890
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Ph +91 1234567890, Email: info@yourschool.com
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Visit us: www.yourschoolwebsite.com
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Student Photo Placeholder */}
+                <Box
+                  sx={{
+                    width: 80,
+                    height: 100,
+                    border: "2px solid #1976d2",
+                    borderRadius: 1,
+                    overflow: "hidden",
+                    bgcolor: "#f5f5f5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary" textAlign="center">
+                    Student
+                    <br />
+                    Photo
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Report Title */}
+              <Box sx={{ textAlign: "center", mb: 2 }}>
+                <Typography variant="h6" fontWeight="bold">
+                  Academic Report
                 </Typography>
                 <Typography variant="body2">
-                  <strong>Term:</strong> {selectedCard.term}
+                  Academic Session: 2025-2026
                 </Typography>
-                <Typography variant="body2">
-                  <strong>Generated On:</strong> {new Date(selectedCard.generated_date).toLocaleDateString()}
+                <Typography variant="body2" fontWeight="bold">
+                  {selectedCard.class_name} - {selectedCard.section}
                 </Typography>
               </Box>
 
-              {/* Subject-wise Marks */}
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
-                Subject-wise Performance
+              {/* Student Details */}
+              <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, mb: 3, p: 2, bgcolor: "#f5f5f5", borderRadius: 1 }}>
+                <Box>
+                  <Typography variant="body2">
+                    <strong>Name of Student:</strong> DEMO STUDENT
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Mother's Name:</strong> DEMO MOTHER
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Father's Name:</strong> DEMO FATHER
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Address:</strong> Demo Address
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2">
+                    <strong>Roll No.:</strong> 001
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Admission No:</strong> 123
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Date of Birth:</strong> 01/01/2015
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Subject-wise Marks Table */}
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+                Scholastic Areas - {selectedCard.term}
               </Typography>
-              <Table size="small" sx={{ mb: 3 }}>
+              <Table size="small" sx={{ mb: 3, border: "1px solid #e0e0e0" }}>
                 <TableHead>
-                  <TableRow>
-                    <TableCell>Subject</TableCell>
-                    <TableCell align="right">Marks</TableCell>
-                    <TableCell align="right">Max Marks</TableCell>
-                    <TableCell align="right">%</TableCell>
-                    <TableCell>Grade</TableCell>
-                    <TableCell>Teacher</TableCell>
+                  <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                    <TableCell sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Subject</TableCell>
+                    <TableCell align="center" sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Half Yearly</TableCell>
+                    <TableCell align="center" sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Total</TableCell>
+                    <TableCell align="center" sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Overall</TableCell>
+                    <TableCell align="center" sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Grade</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {selectedCard.subjects.map((subject, index) => (
                     <TableRow key={index}>
-                      <TableCell>{subject.subject_name}</TableCell>
-                      <TableCell align="right">{subject.marks_obtained}</TableCell>
-                      <TableCell align="right">{subject.max_marks}</TableCell>
-                      <TableCell align="right">{subject.percentage}%</TableCell>
-                      <TableCell>{subject.grade}</TableCell>
-                      <TableCell>{subject.teacher_name}</TableCell>
+                      <TableCell sx={{ border: "1px solid #e0e0e0" }}>{subject.subject_name}</TableCell>
+                      <TableCell align="center" sx={{ border: "1px solid #e0e0e0" }}>{subject.marks_obtained}</TableCell>
+                      <TableCell align="center" sx={{ border: "1px solid #e0e0e0" }}>{subject.marks_obtained}</TableCell>
+                      <TableCell align="center" sx={{ border: "1px solid #e0e0e0" }}>{subject.marks_obtained}</TableCell>
+                      <TableCell align="center" sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>{subject.grade}</TableCell>
                     </TableRow>
                   ))}
-                  <TableRow sx={{ bgcolor: "grey.100" }}>
-                    <TableCell><strong>Total</strong></TableCell>
-                    <TableCell align="right"><strong>{selectedCard.subjects.reduce((sum, s) => sum + s.marks_obtained, 0)}</strong></TableCell>
-                    <TableCell align="right"><strong>{selectedCard.subjects.reduce((sum, s) => sum + s.max_marks, 0)}</strong></TableCell>
-                    <TableCell align="right"><strong>{selectedCard.overall_percentage}%</strong></TableCell>
-                    <TableCell><strong>{selectedCard.overall_grade}</strong></TableCell>
-                    <TableCell></TableCell>
+                  <TableRow sx={{ bgcolor: "#ffecb3" }}>
+                    <TableCell sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Attendance</TableCell>
+                    <TableCell align="center" sx={{ border: "1px solid #e0e0e0" }}>
+                      {selectedCard.attendance_summary.present_days}/{selectedCard.attendance_summary.total_days}
+                    </TableCell>
+                    <TableCell sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Total Marks</TableCell>
+                    <TableCell align="center" sx={{ border: "1px solid #e0e0e0" }}>
+                      {selectedCard.subjects.reduce((sum, s) => sum + s.marks_obtained, 0)}/{selectedCard.subjects.reduce((sum, s) => sum + s.max_marks, 0)}
+                    </TableCell>
+                    <TableCell sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Percentage</TableCell>
+                    <TableCell align="center" sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>{selectedCard.overall_percentage}%</TableCell>
+                    <TableCell sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Grade</TableCell>
+                    <TableCell align="center" sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>{selectedCard.overall_grade}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
 
-              {/* Co-Scholastic Grades */}
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
-                Co-Scholastic Activities
+              {/* Co-Scholastic Activities */}
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+                CO-SCHOLASTIC: (3 POINT GRADING SCALE A,B,C)
               </Typography>
-              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 1, mb: 3 }}>
-                {selectedCard.co_scholastic.map((activity, index) => (
-                  <Box key={index} sx={{ p: 1, bgcolor: "grey.50", borderRadius: 1 }}>
-                    <Typography variant="body2" fontWeight="bold">{activity.category}</Typography>
-                    <Typography variant="body2" color="primary">Grade: {activity.grade}</Typography>
+              <Table size="small" sx={{ mb: 3, border: "1px solid #e0e0e0" }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                    <TableCell sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Activity</TableCell>
+                    <TableCell align="center" sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Term-I</TableCell>
+                    <TableCell align="center" sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>Term-II</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {selectedCard.co_scholastic.map((activity, index) => (
+                    <TableRow key={index}>
+                      <TableCell sx={{ border: "1px solid #e0e0e0" }}>{activity.category}</TableCell>
+                      <TableCell align="center" sx={{ border: "1px solid #e0e0e0", fontWeight: "bold" }}>{activity.grade}</TableCell>
+                      <TableCell align="center" sx={{ border: "1px solid #e0e0e0" }}></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Signatures */}
+              <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4, pt: 2, borderTop: "1px solid #e0e0e0" }}>
+                <Box sx={{ textAlign: "center" }}>
+                  <Box sx={{ borderTop: "1px solid #000", pt: 1, width: 150, mt: 8 }}>
+                    <Typography variant="caption">Sign. of Class Teacher</Typography>
                   </Box>
-                ))}
+                </Box>
+                <Box sx={{ textAlign: "center" }}>
+                  <Box sx={{ borderTop: "1px solid #000", pt: 1, width: 150, mt: 8 }}>
+                    <Typography variant="caption">Sign. Of Principal</Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ textAlign: "center" }}>
+                  <Box sx={{ borderTop: "1px solid #000", pt: 1, width: 150, mt: 8 }}>
+                    <Typography variant="caption">Sign. of Manager</Typography>
+                  </Box>
+                </Box>
               </Box>
 
-              {/* Attendance Summary */}
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
-                Attendance Summary
-              </Typography>
-              <Box sx={{ mb: 3, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
-                <Typography variant="body2">
-                  Total Days: <strong>{selectedCard.attendance_summary.total_days}</strong>
+              {/* Grading Scale */}
+              <Box sx={{ mt: 3, p: 2, bgcolor: "#f5f5f5", borderRadius: 1 }}>
+                <Typography variant="caption" fontWeight="bold">
+                  Grading scale for scholastic areas: Grades are awarded on a 8-point grading scale as follows:
                 </Typography>
-                <Typography variant="body2">
-                  Present: <strong>{selectedCard.attendance_summary.present_days}</strong>
-                </Typography>
-                <Typography variant="body2">
-                  Absent: <strong>{selectedCard.attendance_summary.absent_days}</strong>
-                </Typography>
-                <Typography variant="body2">
-                  Percentage: <strong>{selectedCard.attendance_summary.percentage}%</strong>
-                </Typography>
+                <Table size="small" sx={{ mt: 1 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontSize: "0.7rem", p: 0.5 }}>Marks Range (%)</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>91-100</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>81-90</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>71-80</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>61-70</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>51-60</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>41-50</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>32-40</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell sx={{ fontSize: "0.7rem", p: 0.5 }}>Grade</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>A+</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>A</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>B+</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>B</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>C+</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>C</TableCell>
+                      <TableCell align="center" sx={{ fontSize: "0.7rem", p: 0.5 }}>D</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               </Box>
 
-              {/* Remarks */}
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
-                Remarks
-              </Typography>
-              <Box sx={{ mb: 2, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
-                <Typography variant="body2">
-                  <strong>Class Teacher:</strong> {selectedCard.teacher_remarks}
-                </Typography>
-                {selectedCard.principal_remarks && (
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    <strong>Principal:</strong> {selectedCard.principal_remarks}
-                  </Typography>
-                )}
-              </Box>
-
-              {/* Promotion Status */}
-              <Box sx={{ p: 2, bgcolor: selectedCard.promotion_status === "Promoted" ? "success.light" : "warning.light", borderRadius: 1 }}>
-                <Typography variant="body1" fontWeight="bold">
-                  Status: {selectedCard.promotion_status}
-                </Typography>
-                {selectedCard.next_class && (
-                  <Typography variant="body2">
-                    Promoted to: {selectedCard.next_class}
-                  </Typography>
-                )}
+              {/* Download Buttons */}
+              <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 3 }}>
+                <Button variant="outlined" onClick={handleCloseDialog}>
+                  Close
+                </Button>
+                <Button variant="contained" startIcon={<Download />}>
+                  Download PDF
+                </Button>
               </Box>
             </Box>
           )}

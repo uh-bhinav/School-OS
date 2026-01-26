@@ -129,3 +129,107 @@
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ============================================
+   Markdown Content Styles
+   ============================================ */
+
+.markdown-content {
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+/* Ensure proper spacing between markdown elements */
+.markdown-content > *:first-child {
+  margin-top: 0 !important;
+}
+
+.markdown-content > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Table styling - clean professional look */
+.markdown-content table {
+  font-size: 0.875rem;
+}
+
+.markdown-content th {
+  white-space: nowrap;
+}
+
+.markdown-content td {
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Code block scroll */
+.markdown-content pre {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937;
+}
+
+.markdown-content pre::-webkit-scrollbar {
+  height: 6px;
+}
+
+.markdown-content pre::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.markdown-content pre::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 3px;
+}
+
+/* Inline code in lists */
+.markdown-content li code {
+  font-size: 0.85em;
+}
+
+/* Links */
+.markdown-content a {
+  text-decoration: none;
+}
+
+.markdown-content a:hover {
+  text-decoration: underline;
+}
+
+/* Nested lists */
+.markdown-content ul ul,
+.markdown-content ol ol,
+.markdown-content ul ol,
+.markdown-content ol ul {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  margin-left: 1rem;
+}
+
+/* ============================================
+   Recording Indicator Styles
+   ============================================ */
+
+@keyframes recordingPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+.recording-dot {
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: recordingPulse 1.5s ease-in-out infinite;
+}
+
+.recording-timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: #6b7280;
+}

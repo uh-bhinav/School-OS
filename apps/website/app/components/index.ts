@@ -32,3 +32,4 @@ export * from './sections/footer';
 
 // Modal Components
 export * from './modals/get-in-touch-modal';
+export * from './modals/support-modal';

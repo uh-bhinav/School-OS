@@ -5,3 +5,4 @@
 
 export * from './financeService';
 export * from './types';
+export * from './fee-templates';
