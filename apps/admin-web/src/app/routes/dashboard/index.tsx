@@ -389,9 +389,15 @@ export default function Dashboard() {
                   outerRadius={110}
                   paddingAngle={3}
                   dataKey="value"
-                  label={(entry: any) => `${entry.name}: ${entry.percentage.toFixed(1)}%`}
+                  label={({ name, percentage }: { name?: string; percentage?: number }) => {
+                    // Truncate long names and show percentage
+                    const gradeName = name || '';
+                    const pct = typeof percentage === 'number' ? percentage : 0;
+                    const displayName = gradeName.length > 12 ? `${gradeName.substring(0, 10)}…` : gradeName;
+                    return `${displayName} (${pct.toFixed(1)}%)`;
+                  }}
                   labelLine={{ stroke: theme.palette.text.secondary, strokeWidth: 1 }}
-                  style={{ fontFamily: 'Ubuntu', fontSize: 12 }}
+                  style={{ fontFamily: 'Ubuntu', fontSize: 11 }}
                 >
                   {chartDistributionData.map((entry, index) => (
                     <Cell
@@ -409,8 +415,26 @@ export default function Dashboard() {
                     borderRadius: 12,
                     fontFamily: 'Ubuntu',
                     boxShadow: theme.shadows[8],
+                    padding: '12px 16px',
+                    minWidth: 150,
                   }}
-                  formatter={(value: number) => [`${value} students`, '']}
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload[0]) return null;
+                    const data = payload[0].payload;
+                    return (
+                      <Box sx={{ p: 0 }}>
+                        <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5, color: data.color }}>
+                          {data.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.primary">
+                          {data.value} students
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {data.percentage.toFixed(1)}% of total
+                        </Typography>
+                      </Box>
+                    );
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>

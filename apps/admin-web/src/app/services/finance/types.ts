@@ -418,3 +418,59 @@ export interface StudentInfo {
   email?: string;
   phone?: string;
 }
+
+// ============================================================================
+// BULK INVOICE GENERATION - Enhanced Types for New Wizard
+// ============================================================================
+
+export interface WizardFeeComponent {
+  component_id: number;
+  component_name: string;
+  description?: string;
+  amount: number;
+  is_mandatory: boolean;
+  category: string;
+}
+
+export interface WizardFeeTemplate {
+  template_id: number;
+  template_name: string;
+  description?: string;
+  frequency: 'Monthly' | 'Quarterly' | 'Annual';
+  academic_period: string;
+  total_amount: number;
+  components: WizardFeeComponent[];
+  is_active: boolean;
+}
+
+export interface ClassFeeMapping {
+  class_id: number;
+  class_name: string;
+  student_count: number;
+  has_template_mapping: boolean;
+  template_id?: number;
+}
+
+export interface StudentOverride {
+  student_id: number;
+  student_name: string;
+  override_type: 'scholarship' | 'discount' | 'custom_amount';
+  discount_percentage?: number;
+  custom_amount?: number;
+  reason: string;
+}
+
+export interface BulkInvoiceRequest {
+  template_id: number;
+  class_ids: number[];
+  due_date: string;
+}
+
+export interface BulkInvoicePreview {
+  total_invoices: number;
+  students_with_overrides: number;
+  students_with_discounts: number;
+  total_amount_min: number;
+  total_amount_max: number;
+  warnings: string[];
+}

@@ -4,9 +4,19 @@ import { timetableHandlers } from "./timetable.handlers";
 import { examsHandlers } from "./exams.handlers";
 import { marksHandlers } from "./marks.handlers";
 import { agentHandlers } from "./agent.handlers";
+import { obeHandlers } from "./obe.handlers";
 
-// v1.0.0 config for school_id=2 (Springfield)
-const springfield = {
+// ============================================================================
+// MSW HANDLERS - ACADEMIC DATA ONLY
+// ============================================================================
+// IMPORTANT: Auth, Session, and School Config are NOT mocked
+// They use the real backend (FastAPI + Supabase)
+// School identity (name, branding) comes from real /api/v1/schools/:id
+// Only academic data (dashboard metrics, subjects, exams, marks, COs) is mocked
+// ============================================================================
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _springfield = {
   version: "1.0.0",
   identity: { display_name: "Widia Poorna Prajna School" },
   branding: {
@@ -178,8 +188,15 @@ export const dashboardHandlers = [
 ];
 
 // Export all handlers
+// ============================================================================
+// IMPORTANT: Auth, Session, and School Config are NOT mocked here
+// They use the real backend (FastAPI + Supabase)
+// Only academic data (subjects, exams, marks, COs) is mocked
+// ============================================================================
 export const handlers = [
-  http.get("*/schools/2/configuration", () => HttpResponse.json(springfield)),
+  // NOTE: School config/school API is NOT mocked - uses real backend
+  // http.get("*/schools/2/configuration", ...) - REMOVED
+  // http.get("*/schools/:id", ...) - REMOVED
   http.post("*/onboarding/principal-signup", () => HttpResponse.json({ ok: true })),
   ...dashboardHandlers,
   ...attendanceHandlers,
@@ -187,4 +204,5 @@ export const handlers = [
   ...examsHandlers,
   ...marksHandlers,
   ...agentHandlers,
+  ...obeHandlers,
 ];

@@ -1,0 +1,369 @@
+# backend/app/api/v1/endpoints/orders.py
+"""
+Order API Endpoints.
+
+These endpoints handle order creation, viewing, and management.
+The /checkout endpoint is the MOST CRITICAL endpoint in the e-commerce module.
+
+Security:
+- All endpoints require authentication
+- Parents can only access their own orders
+- Admins can access all orders in their school
+"""
+
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.security import get_current_user_profile, get_db, require_role
+from app.models.profile import Profile
+from app.schemas.enums import OrderStatus
+from app.schemas.order_schema import (
+    OrderCancel,
+    OrderCreateFromCart,
+    OrderOut,
+    OrderStatistics,
+    OrderUpdate,
+)
+from app.schemas.payment_schema import PaymentInitiateRequest
+from app.services.order_service import OrderService
+from app.services.payment_service import PaymentService
+
+router = APIRouter(
+    prefix="/orders",
+    tags=["Orders"],
+)
+
+
+# ============================================================================
+# PARENT/USER ENDPOINTS
+# ============================================================================
+
+
+@router.post(
+    "/checkout",
+    status_code=status.HTTP_201_CREATED,
+)
+async def checkout(
+    checkout_data: OrderCreateFromCart,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    UNIFIED CHECKOUT: Creates order + initiates payment in single atomic flow.
+
+    This is the PRIMARY e-commerce flow and the most critical endpoint.
+
+    CRITICAL BUSINESS LOGIC:
+    - Step 1: Converts cart contents to permanent order (atomic transaction with stock locking)
+    - Step 2: Immediately initiates payment via unified payment engine
+    - Step 3: Returns order + payment details for Razorpay frontend integration
+
+    Transaction Flow:
+    1. Cart → Order (status: pending_payment)
+       - Validates student ownership
+       - Locks products (SELECT FOR UPDATE)
+       - Re-validates stock & product status
+       - Creates order record
+       - Creates order_items (snapshot of prices)
+       - Decrements product stock
+       - Clears cart
+       - Commits transaction
+
+    2. Order → Payment (status: pending, creates Razorpay order)
+       - Fetches school's Razorpay credentials
+       - Calls Razorpay Orders API
+       - Creates internal payment record
+       - Links payment to order
+       - Commits transaction
+
+    3. Response → Frontend launches Razorpay Checkout UI
+       - Frontend receives razorpay_order_id, razorpay_key_id, amount
+       - Parent completes payment in Razorpay modal
+       - Frontend calls POST /api/v1/payments/verify
+       - Backend verifies signature → Updates Payment + Order status
+
+    Request Body:
+    - student_id: Student for whom order is being placed
+    - delivery_notes: Optional delivery instructions
+
+    Returns:
+    Unified JSON response containing:
+    - Order details: order_id, order_number, total_amount, status
+    - Payment credentials: razorpay_order_id, razorpay_key_id, amount
+    - Metadata: internal_payment_id, school_name, description
+
+    Raises:
+    - 400: If cart is empty, insufficient stock, or product inactive
+    - 403: If student doesn't belong to parent
+    - 404: If student not found
+    - 503: If payment gateway not configured
+    """
+    # Step 1: Create order from cart (atomic transaction with stock locking)
+    order_service = OrderService(db)
+    db_order = await order_service.create_order_from_cart(
+        checkout_data=checkout_data,
+        current_profile=current_profile,
+    )
+
+    # Step 2: Initiate payment via unified payment engine
+    payment_service = PaymentService(db)
+    payment_request = PaymentInitiateRequest(invoice_id=None, order_id=db_order.order_id)  # E-commerce orders don't use invoices
+
+    payment_response = await payment_service.initiate_payment(request_data=payment_request, user_id=str(current_profile.user_id))
+
+    # Step 3: Return unified response (order + payment details)
+    return {
+        "success": True,
+        "message": "Order created successfully. Please complete payment.",
+        # Order details
+        "order_id": db_order.order_id,
+        "order_number": db_order.order_number,
+        "total_amount": str(db_order.total_amount),
+        "status": db_order.status.value,
+        # Payment details (for Razorpay frontend integration)
+        "razorpay_order_id": payment_response["razorpay_order_id"],
+        "razorpay_key_id": payment_response["razorpay_key_id"],
+        "amount": payment_response["amount"],
+        "internal_payment_id": payment_response["internal_payment_id"],
+        "school_name": payment_response["school_name"],
+        "description": payment_response["description"],
+    }
+
+
+@router.get(
+    "/",
+    response_model=list[OrderOut],
+)
+async def get_my_orders(
+    student_id: Optional[int] = Query(None, description="Filter by student ID"),
+    status_filter: Optional[OrderStatus] = Query(None, alias="status", description="Filter by order status"),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get all orders for current parent user.
+
+    Query Parameters:
+    - student_id: Optional filter by student
+    - status: Optional filter by order status
+
+    Returns:
+    - List of orders with items and student details
+    """
+    service = OrderService(db)
+    return await service.get_user_orders(
+        user_id=current_profile.user_id,
+        student_id=student_id,
+        status=status_filter,
+    )
+
+
+@router.get(
+    "/{order_id}",
+    response_model=OrderOut,
+)
+async def get_order_details(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get detailed information for a specific order.
+
+    Security:
+    - Parents can only view their own orders
+    - Order must belong to current user
+
+    Returns:
+    - Complete order details with items, student, payment info
+    """
+    service = OrderService(db)
+    return await service.get_order_by_id_for_user(
+        order_id=order_id,
+        user_id=current_profile.user_id,
+        is_admin=False,
+    )
+
+
+@router.post(
+    "/{order_id}/cancel",
+    response_model=OrderOut,
+)
+async def cancel_order(
+    order_id: int,
+    cancel_data: OrderCancel,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Cancel an order (Parent or Admin).
+
+    Business Rules:
+    - Can only cancel orders with status: pending_payment, processing
+    - Cannot cancel shipped/delivered orders
+    - Stock is restored
+
+    Request Body:
+    - reason: Mandatory cancellation reason
+    - refund_payment: Whether to initiate refund (if payment captured)
+
+    Returns:
+    - Cancelled order
+    """
+    service = OrderService(db)
+
+    return await service.cancel_order(
+        order_id=order_id,
+        user_id=current_profile.user_id,
+        is_admin=False,
+        cancel_data=cancel_data,
+        cancelled_by_user_id=current_profile.user_id,
+    )
+
+
+# ============================================================================
+# ADMIN ENDPOINTS (Specific paths MUST come before path parameters!)
+# ============================================================================
+
+
+@router.get(
+    "/admin/statistics",
+    response_model=OrderStatistics,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def get_order_statistics(
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get aggregated order statistics for admin dashboard.
+
+    Returns:
+    - Total orders
+    - Count by status
+    - Total revenue
+    - Pending revenue
+    - Average order value
+    """
+    service = OrderService(db)
+    stats = await service.get_order_statistics(
+        school_id=current_profile.school_id,
+    )
+
+    return OrderStatistics(**stats)
+
+
+@router.get(
+    "/admin/all",
+    response_model=list[OrderOut],
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def admin_get_all_orders(
+    student_id: Optional[int] = Query(None),
+    status_filter: Optional[OrderStatus] = Query(None, alias="status"),
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get all orders for school (Admin only).
+
+    Query Parameters:
+    - student_id: Optional filter by student
+    - status: Optional filter by order status
+
+    Returns:
+    - List of all orders in school
+    """
+    service = OrderService(db)
+    return await service.get_school_orders(
+        school_id=current_profile.school_id,
+        student_id=student_id,
+        status=status_filter,
+    )
+
+
+@router.get(
+    "/admin/{order_id}",
+    response_model=OrderOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def admin_get_order(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Get order details (Admin only).
+
+    Admins can view any order in their school.
+    """
+    service = OrderService(db)
+    return await service.get_order_by_id_for_user(
+        order_id=order_id,
+        user_id=current_profile.user_id,
+        is_admin=True,
+    )
+
+
+@router.patch(
+    "/admin/{order_id}",
+    response_model=OrderOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def admin_update_order(
+    order_id: int,
+    order_update: OrderUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Update order status and metadata (Admin only).
+
+    Valid Status Transitions:
+    - pending_payment → processing (after payment)
+    - processing → shipped
+    - shipped → delivered
+    - Any non-shipped → cancelled
+
+    Request Body:
+    - status: New order status
+    - tracking_number: Shipping tracking number
+    - admin_notes: Internal notes
+    """
+    service = OrderService(db)
+
+    return await service.update_order(
+        order_id=order_id,
+        user_id=current_profile.user_id,
+        is_admin=True,
+        order_update=order_update,
+    )
+
+
+@router.post(
+    "/admin/{order_id}/cancel",
+    response_model=OrderOut,
+    dependencies=[Depends(require_role("Admin"))],
+)
+async def admin_cancel_order(
+    order_id: int,
+    cancel_data: OrderCancel,
+    db: AsyncSession = Depends(get_db),
+    current_profile: Profile = Depends(get_current_user_profile),
+):
+    """
+    Cancel an order (Admin).
+
+    Admins can cancel any order in their school.
+    """
+    service = OrderService(db)
+
+    return await service.cancel_order(
+        order_id=order_id,
+        user_id=current_profile.user_id,
+        is_admin=True,
+        cancel_data=cancel_data,
+        cancelled_by_user_id=current_profile.user_id,
+    )

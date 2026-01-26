@@ -54,11 +54,11 @@ export const Navbar = ({ opacity, onNavigate, onGetInTouch }: NavbarProps) => {
           </button>
 
           {/* Login */}
-          <Link href="/login-placeholder">
+          <a href="http://localhost:5173/auth/login" target="_blank" rel="noopener noreferrer">
             <button className="rounded-full bg-slate-100 px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 active:scale-95">
               Login
             </button>
-          </Link>
+          </a>
         </div>
 
         {/* Mobile Menu Button */}
@@ -90,11 +90,11 @@ export const Navbar = ({ opacity, onNavigate, onGetInTouch }: NavbarProps) => {
               Get In Touch
             </button>
 
-            <Link href="/login-placeholder" onClick={() => setMobileMenuOpen(false)}>
+            <a href="http://localhost:5173/auth/login" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)}>
               <button className="w-full text-left px-4 py-3 text-slate-700 font-semibold hover:bg-slate-50 rounded-lg transition">
                 Login
               </button>
-            </Link>
+            </a>
           </div>
         </div>
       )}

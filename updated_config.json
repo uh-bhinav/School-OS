@@ -1,0 +1,249 @@
+{
+  "ui": {
+    "badges": {
+      "beta": [
+        "timetable"
+      ]
+    },
+    "landing": {
+      "Admin": "dashboard",
+      "Parent": "announcements",
+      "Student": "timetable",
+      "Teacher": "attendance"
+    },
+    "nav_order": [
+      "dashboard",
+      "attendance",
+      "timetable",
+      "exams",
+      "marks",
+      "announcements",
+      "communications",
+      "fee-management",
+      "events",
+      "reports",
+      "settings"
+    ]
+  },
+  "meta": {
+    "created_at": "2025-01-05T10:00:00Z",
+    "created_by": "system",
+    "updated_at": "2025-11-27T10:00:00Z",
+    "updated_by": "system"
+  },
+  "limits": {
+    "storage_gb": 10,
+    "max_classes": 20,
+    "max_students": 1000,
+    "max_subjects": 30,
+    "max_teachers": 50
+  },
+  "locale": {
+    "currency": "INR",
+    "language": "en",
+    "timezone": "Asia/Kolkata",
+    "date_format": "DD/MM/YYYY",
+    "time_format": "12h",
+    "number_format": {
+      "grouping": "lakh"
+    }
+  },
+  "modules": {
+    "settings": {
+      "fee": {
+        "late_fee_amount": 100,
+        "late_fee_enabled": true,
+        "grace_period_days": 5
+      },
+      "exams": {
+        "default_passing_marks": 40,
+        "show_rank_to_students": true,
+        "allow_negative_marking": false
+      },
+      "marks": {
+        "grading_system": "percentage",
+        "max_marks_default": 100,
+        "allow_teacher_edit_window_days": 7
+      },
+      "attendance": {
+        "allow_late_marking": true,
+        "late_threshold_minutes": 15,
+        "require_remarks_for_absence": true
+      },
+      "events": {
+        "enable_photo_upload": true,
+        "auto_create_albums": true,
+        "max_upload_mb": 50
+      }
+    },
+    "available": [
+      {
+        "key": "library",
+        "label": "Library Management",
+        "contact": {
+          "email": "sales@schoolos.in",
+          "phone": null
+        },
+        "video_url": null,
+        "price_hint": "₹5,000/year",
+        "short_desc": "Track books, issue/return management",
+        "learn_more_url": null
+      },
+      {
+        "key": "transport",
+        "label": "Transport Management",
+        "contact": {
+          "email": "sales@schoolos.in",
+          "phone": null
+        },
+        "video_url": null,
+        "price_hint": "₹8,000/year",
+        "short_desc": "Bus routes, GPS tracking, student pickup",
+        "learn_more_url": null
+      },
+      {
+        "key": "hr",
+        "label": "HR & Payroll",
+        "contact": {
+          "email": "sales@schoolos.in",
+          "phone": null
+        },
+        "video_url": null,
+        "price_hint": "₹12,000/year",
+        "short_desc": "Staff management, attendance, salary",
+        "learn_more_url": null
+      }
+    ],
+    "subscribed": [
+      "attendance",
+      "timetable",
+      "exams",
+      "marks",
+      "announcements",
+      "communications",
+      "fee-management",
+      "events"
+    ],
+    "dependencies": {
+      "marks": [
+        "exams",
+        "subjects"
+      ],
+      "timetable": [
+        "subjects",
+        "classes"
+      ],
+      "fee-management": [
+        "students"
+      ],
+      "events": [
+        "classes",
+        "teachers"
+      ]
+    },
+    "catalog_version": "2025.1"
+  },
+  "support": {
+    "email": "support@schoolos.in",
+    "phone": "+91-9876543210",
+    "chat_enabled": true,
+    "ticket_system_url": "https://support.schoolos.in"
+  },
+  "version": "1.0.0",
+  "branding": {
+    "logo": {
+      "primary_url": "https://placehold.co/200x80/2563eb/white?text=GMPS",
+      "dark_mode_variant_url": null
+    },
+    "assets": {
+      "favicon_url": "https://placehold.co/32x32/2563eb/white?text=G",
+      "mobile_splash_url": null
+    },
+    "colors": {
+      "error": "#ef4444",
+      "primary": "#2563eb",
+      "success": "#10b981",
+      "surface": "#ffffff",
+      "warning": "#f59e0b",
+      "secondary": "#10b981",
+      "surface_variant": "#f3f4f6",
+      "primary_contrast": "#ffffff"
+    },
+    "layout": {
+      "density": "comfortable",
+      "corner_style": "rounded"
+    },
+    "typography": {
+      "base_scale": 1,
+      "font_family": "Inter, system-ui, -apple-system, sans-serif"
+    }
+  },
+  "identity": {
+    "subdomain": "Tapasyavidyanikethan ",
+    "school_code": "TVPS001",
+    "display_name": "Tapasya Vidyanikethan",
+    "external_ids": {
+      "emis": null,
+      "legacy": null
+    }
+  },
+  "onboarding": {
+    "steps": [
+      {
+        "key": "school_info",
+        "done": true,
+        "weight": 20
+      },
+      {
+        "key": "add_classes",
+        "done": true,
+        "weight": 20
+      },
+      {
+        "key": "add_subjects",
+        "done": true,
+        "weight": 15
+      },
+      {
+        "key": "add_teachers",
+        "done": true,
+        "weight": 15
+      },
+      {
+        "key": "add_students",
+        "done": true,
+        "weight": 20
+      },
+      {
+        "key": "configure_academic_year",
+        "done": true,
+        "weight": 10
+      }
+    ],
+    "status": "complete",
+    "checklist_notes": "Onboarding completed on 2025-01-10"
+  },
+  "integrations": {
+    "sms": {
+      "enabled": false,
+      "provider": null
+    },
+    "email": {
+      "enabled": true,
+      "provider": "sendgrid"
+    },
+    "payment_gateway": {
+      "razorpay": {
+        "key_id": "rzp_test_xxxxx",
+        "enabled": true
+      }
+    }
+  },
+  "feature_flags": {
+    "enable_chatbot": true,
+    "enable_mobile_app": true,
+    "enable_ai_insights": false,
+    "enable_parent_portal": true,
+    "enable_student_portal": true
+  }
+}

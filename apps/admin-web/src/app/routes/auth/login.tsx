@@ -10,7 +10,7 @@
  * - Smooth animations
  */
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../services/supabase";
 import {
   Box,
@@ -37,6 +37,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { InlineLoader } from "../../components/AppLoader";
 import { useConfigStore } from "../../stores/useConfigStore";
+import { useAuthStore } from "../../stores/useAuthStore";
 
 // Validation schema using Yup
 const loginSchema = Yup.object({
@@ -51,14 +52,26 @@ const loginSchema = Yup.object({
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const cfg = useConfigStore((s) => s.config);
+  const { fetchProfile, setSession } = useAuthStore();
+  const authListenerCleanup = useRef<(() => void) | null>(null);
 
   const logo = cfg?.branding.logo.primary_url;
   const schoolName = cfg?.identity?.display_name ?? "School OS";
   const primaryColor = cfg?.branding.colors.primary ?? "#E87722";
+
+  // Cleanup auth listener on unmount
+  useEffect(() => {
+    return () => {
+      if (authListenerCleanup.current) {
+        authListenerCleanup.current();
+      }
+    };
+  }, []);
 
   // Formik configuration
   const formik = useFormik({
@@ -69,21 +82,127 @@ export default function Login() {
     validationSchema: loginSchema,
     onSubmit: async (values) => {
       setError(null);
+      setIsLoggingIn(true);
+
+      // Variable to store resolved role for navigation decision
+      let resolvedRole: string | undefined;
 
       try {
+        // Set up a one-time listener for SIGNED_IN event
+        // This ensures we wait for the auth state to be fully processed
+        const authPromise = new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error("Login timeout - auth state not received"));
+          }, 10000); // 10 second timeout
+
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+              if (event === "SIGNED_IN" && session) {
+                clearTimeout(timeout);
+                subscription.unsubscribe();
+
+                try {
+                  // Update session in store
+                  setSession(session);
+
+                  // Fetch profile before navigating
+                  console.log("[LOGIN] 📥 Fetching profile before navigation...");
+                  const profile = await fetchProfile(true);
+
+                  // ROLE-AWARE LOGIN: Log profile and extract role for routing decision
+                  console.log("[LOGIN] 📋 Profile object:", {
+                    user_id: profile.user_id,
+                    school_id: profile.school_id,
+                    first_name: profile.first_name,
+                    last_name: profile.last_name,
+                    roles: profile.roles.map(r => r.role_definition.role_name),
+                  });
+
+                  // Get resolved role from auth store (set by fetchProfile)
+                  resolvedRole = useAuthStore.getState().role;
+                  console.log("[LOGIN] 🎯 Resolved role:", resolvedRole);
+
+                  // Validate role exists
+                  if (!resolvedRole) {
+                    console.error("[LOGIN] ❌ No role found in profile");
+                    reject(new Error("Your account does not have a valid role assigned. Please contact your administrator."));
+                    return;
+                  }
+
+                  console.log("[LOGIN] ✅ Profile loaded successfully");
+                  resolve();
+                } catch (profileError) {
+                  console.error("[LOGIN] ❌ Profile fetch failed:", profileError);
+                  reject(profileError);
+                }
+              }
+            }
+          );
+
+          authListenerCleanup.current = () => {
+            clearTimeout(timeout);
+            subscription.unsubscribe();
+          };
+        });
+
+        // Attempt sign in
         const { error: authError } = await supabase.auth.signInWithPassword({
           email: values.email,
           password: values.password,
         });
 
         if (authError) {
+          // Clean up listener if sign-in failed
+          if (authListenerCleanup.current) {
+            authListenerCleanup.current();
+            authListenerCleanup.current = null;
+          }
           setError(authError.message);
-        } else {
-          navigate("/", { replace: true });
+          setIsLoggingIn(false);
+          return;
         }
-      } catch (err) {
-        setError("An unexpected error occurred");
-        console.error("Login error:", err);
+
+        // Wait for auth state to be fully processed
+        await authPromise;
+
+        // ========================================================================
+        // ROLE-AWARE NAVIGATION: Route based on user role
+        // ========================================================================
+        let navigationTarget: string;
+
+        if (resolvedRole === "super_admin") {
+          navigationTarget = "/group-overview";
+          console.log("[LOGIN] 🚀 Navigation target: /group-overview (super_admin)");
+        } else if (resolvedRole === "admin") {
+          navigationTarget = "/";
+          console.log("[LOGIN] 🚀 Navigation target: / (admin/principal dashboard)");
+        } else {
+          // Unknown or unsupported role for this admin panel
+          console.warn("[LOGIN] ⚠️ Unsupported role for admin panel:", resolvedRole);
+          setError(`Access denied. Role '${resolvedRole}' is not authorized to access this admin panel.`);
+          // Sign out the user
+          await supabase.auth.signOut();
+          setIsLoggingIn(false);
+          return;
+        }
+
+        // Navigate to role-appropriate destination
+        navigate(navigationTarget, { replace: true });
+      } catch (err: any) {
+        setError(err.message || "An unexpected error occurred");
+        console.error("[LOGIN] ❌ Login error:", err);
+        // Ensure user is signed out on error to prevent stuck state
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error("[LOGIN] ❌ Sign out after error failed:", signOutError);
+        }
+      } finally {
+        setIsLoggingIn(false);
+        if (authListenerCleanup.current) {
+          authListenerCleanup.current();
+          authListenerCleanup.current = null;
+        }
       }
     },
   });
@@ -332,8 +451,8 @@ export default function Login() {
               fullWidth
               variant="contained"
               size="large"
-              disabled={formik.isSubmitting}
-              startIcon={formik.isSubmitting && <InlineLoader />}
+              disabled={formik.isSubmitting || isLoggingIn}
+              startIcon={(formik.isSubmitting || isLoggingIn) && <InlineLoader />}
               sx={{
                 py: 1.5,
                 fontSize: "1.1rem",
@@ -344,7 +463,7 @@ export default function Login() {
                 },
               }}
             >
-              {formik.isSubmitting ? "Signing in..." : "Sign In"}
+              {formik.isSubmitting || isLoggingIn ? "Signing in..." : "Sign In"}
             </Button>
           </form>
 

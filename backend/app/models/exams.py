@@ -1,0 +1,40 @@
+# backend/app/models/exams.py
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, Numeric, String
+from sqlalchemy.orm import relationship
+
+from app.db.base_class import Base
+
+
+class Exam(Base):
+    __tablename__ = "exams"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.school_id"), nullable=False)
+    exam_name = Column(String)
+    exam_type_id = Column(Integer, ForeignKey("exam_types.exam_type_id"))
+    start_date = Column(Date)
+    end_date = Column(Date)
+    marks = Column(Numeric(10, 2))
+    academic_year_id = Column(Integer, ForeignKey("academic_years.id"))
+
+    # CRITICAL FIX: Soft Delete field required by the service logic
+    is_active = Column(Boolean, default=True)
+
+    # Relationships
+    school = relationship("School")
+    exam_type = relationship("ExamType")
+    academic_year = relationship("AcademicYear")
+    marks_records = relationship("Mark", back_populates="exam")
+
+    def __init__(self, **kwargs):
+        if "total_marks" in kwargs and "marks" not in kwargs:
+            kwargs["marks"] = kwargs.pop("total_marks")
+        super().__init__(**kwargs)
+
+    @property
+    def total_marks(self):
+        return self.marks
+
+    @total_marks.setter
+    def total_marks(self, value):
+        self.marks = value

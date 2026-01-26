@@ -3,7 +3,7 @@ import { Box, Typography, Button, Alert, Paper } from "@mui/material";
 import FiltersBar from "../../../components/exams/FiltersBar";
 import KPICards from "../../../components/exams/KPICards";
 import ExamList from "../../../components/exams/ExamList";
-import AddEditExamDialog from "../../../components/exams/AddEditExamDialog";
+import ExamPeriodScheduler from "../../../components/exams/ExamPeriodScheduler";
 import ExportMenu from "../../../components/exams/ExportMenu";
 import Legend from "../../../components/exams/Legend";
 import { useExams, useExamKPI, useExamTypes } from "../../../services/exams.hooks";
@@ -99,7 +99,7 @@ export default function ExamsPage() {
             bgcolor: "#0B5F5A",
             "&:hover": { bgcolor: "#094a46" },
           }}>
-            Add Exam
+            Schedule Exam Period
           </Button>
         </Box>
 
@@ -108,7 +108,7 @@ export default function ExamsPage() {
 
       <Legend />
 
-      <AddEditExamDialog
+      <ExamPeriodScheduler
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         filters={filters}

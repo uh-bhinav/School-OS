@@ -1,0 +1,63 @@
+# .github/workflows/ci-cd.yml
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - phase2
+  pull_request:
+    branches:
+      - main
+      - develop
+      - phase2
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
+
+      - name: Lint with Ruff
+        run: poetry run ruff check app
+
+      - name: Format with Black
+        run: poetry run black app
+
+      - name: Run tests
+        env:
+          SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.TEST_SUPABASE_KEY }}
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          APP_ENCRYPTION_KEY: ${{ secrets.APP_ENCRYPTION_KEY }}
+
+
+        run: |
+          poetry run pytest || EXIT_CODE=$?
+          if [ "${EXIT_CODE}" = "5" ]; then
+            echo "No tests found - skipping test step"
+            exit 0
+          elif [ -n "${EXIT_CODE}" ]; then
+            exit ${EXIT_CODE}
+          fi

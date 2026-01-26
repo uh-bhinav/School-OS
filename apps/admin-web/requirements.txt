@@ -154,4 +154,8 @@ Werkzeug==3.0.1
 wrapt==1.17.3
 yarl==1.22.0
 yfinance==0.2.56
+<<<<<<< HEAD
 zipp==3.23.0
+=======
+zipp==3.23.0
+>>>>>>> 0c0a5425361058b1ee2c8b9a7089dbe897a75f5f

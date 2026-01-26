@@ -35,6 +35,7 @@ import { invoiceService } from '../../../services/finance';
 import { useFinanceStore } from '../../../stores/finance';
 import type { Invoice, InvoiceStatus, BulkInvoiceCreate } from '../../../services/finance/types';
 import { MOCK_CLASSES } from '../../../mockDataProviders/finance';
+import BulkInvoiceWizard from '../../../components/finance/BulkInvoiceWizard';
 
 const STATUS_COLORS: Record<InvoiceStatus, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
   draft: 'default',
@@ -288,42 +289,14 @@ export default function InvoicesPage() {
         </TableContainer>
       </Card>
 
-      <Dialog open={bulkDialogOpen} onClose={() => setBulkDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Generate Bulk Invoices</DialogTitle>
-        <DialogContent>
-          <Stack spacing={3} sx={{ mt: 2 }}>
-            <TextField
-              select
-              label="Select Class"
-              value={bulkForm.class_id || ''}
-              onChange={(e) => setBulkForm({ ...bulkForm, class_id: Number(e.target.value) })}
-              fullWidth
-              required
-            >
-              {MOCK_CLASSES.map((cls) => (
-                <MenuItem key={cls.class_id} value={cls.class_id}>
-                  {cls.class_name} ({cls.student_count} students)
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Due Date"
-              type="date"
-              value={bulkForm.due_date}
-              onChange={(e) => setBulkForm({ ...bulkForm, due_date: e.target.value })}
-              fullWidth
-              required
-              InputLabelProps={{ shrink: true }}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBulkDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleGenerateBulk} disabled={!bulkForm.class_id || !bulkForm.due_date}>
-            Generate Invoices
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* New Bulk Invoice Wizard */}
+      <BulkInvoiceWizard
+        open={bulkDialogOpen}
+        onClose={() => setBulkDialogOpen(false)}
+        onSuccess={loadInvoices}
+      />
+
+      {/* Old Simple Dialog - Removed */}
 
       <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="md" fullWidth>
         {selectedInvoice && (

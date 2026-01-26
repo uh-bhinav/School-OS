@@ -27,6 +27,10 @@ export { mockProxyProvider } from "./mockProxy";
 export { mockLeaveManagementProvider } from "./mockLeaveManagement";
 export { mockTasksProvider } from "./mockTasks";
 
+// Super Admin mock data providers
+export { mockSuperAdminProvider } from "./mockSuperAdmin";
+export { mockComplianceProvider } from "./mockCompliance";
+
 // ============================================================================
 // DEMO MODE UTILITIES
 // ============================================================================

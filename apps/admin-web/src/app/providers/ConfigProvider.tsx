@@ -1,14 +1,14 @@
 // ============================================================================
-// CONFIG PROVIDER - FIXED FOR STRICT AUTH-GATED LOADING + TOKEN REFRESH
+// CONFIG PROVIDER - LOADS CONFIG ONCE PER SESSION
 // ============================================================================
 // CRITICAL RULES:
 // 1. Only runs INSIDE Protected route (after auth check passes)
 // 2. Only runs when schoolId exists in auth store
-// 3. Only runs when valid Supabase session exists
-// 4. Re-fetches config when session refreshes (sessionVersion changes)
-// 5. Never retries on 401/403 errors (handled by HTTP interceptor)
-// 6. Shows clear error messages with retry/logout options
-// 7. Gracefully handles timeout by refreshing session first
+// 3. Loads config ONCE and caches it - NO refetch on token refresh
+// 4. Token refresh does NOT trigger config reload (performance)
+// 5. Only manual Retry button triggers refetch
+// 6. Config failure does NOT log user out
+// 7. Shows clear error messages with retry/logout options
 // ============================================================================
 
 import { PropsWithChildren, useEffect, useState, useRef, useCallback } from "react";
@@ -22,7 +22,8 @@ import { supabase } from "../services/supabase";
 const MAX_AUTO_RETRIES = 2;
 
 export function ConfigRoot({ children }: PropsWithChildren) {
-  const { schoolId, sessionVersion, isSessionValid } = useAuthStore();
+  const { schoolId, isSessionValid } = useAuthStore();
+  const existingConfig = useConfigStore((s) => s.config);
   const setConfig = useConfigStore((s) => s.set);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +32,10 @@ export function ConfigRoot({ children }: PropsWithChildren) {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
-  // Track if we've already fetched for this session version
-  const lastFetchedSessionVersion = useRef<number>(-1);
+  // Track if we've already fetched for this schoolId
+  const lastFetchedSchoolId = useRef<number | null>(null);
+  // Track if we've already attempted a session refresh during this load
+  const refreshAttempted = useRef(false);
 
   // Helper to show toast without blocking
   const showInfoToast = useCallback((message: string) => {
@@ -51,40 +54,66 @@ export function ConfigRoot({ children }: PropsWithChildren) {
     }
 
     // ============================================================================
-    // GUARD: Skip if already fetched for this session version (unless manual retry)
+    // GUARD: If config already exists in store AND same school, skip fetch
+    // This is the key optimization - config loads ONCE and stays loaded
     // ============================================================================
     if (
-      lastFetchedSessionVersion.current === sessionVersion &&
+      existingConfig &&
+      lastFetchedSchoolId.current === schoolId &&
       retryCount === 0 &&
       autoRetryCount === 0
     ) {
-      console.log("[CONFIG PROVIDER] ⏭️ Already fetched for this session version");
+      console.log("[CONFIG PROVIDER] ⏭️ Config already loaded for this school, skipping fetch");
+      if (!ready) setReady(true);
       return;
     }
 
-    console.log(`[CONFIG PROVIDER] 🔧 Loading config for school_id: ${schoolId} (session v${sessionVersion})`);
+    console.log(`[CONFIG PROVIDER] 🔧 Loading config for school_id: ${schoolId}`);
+
+    // Check if demo mode is enabled
+    const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
 
     const loadConfig = async () => {
       try {
+        // ============================================================================
+        // DEMO MODE: Skip session validation
+        // ============================================================================
+        if (isDemoMode) {
+          console.log("[CONFIG PROVIDER] 🎭 DEMO MODE: Skipping session validation");
+          const cfg = await fetchSchoolConfig(schoolId);
+          setConfig(cfg);
+          setError(null);
+          setAutoRetryCount(0);
+          lastFetchedSchoolId.current = schoolId;
+          console.log(`[CONFIG PROVIDER] ✅ Config loaded (demo mode):`, cfg.identity?.display_name);
+          return;
+        }
+
         // ============================================================================
         // GUARD: Verify we have a valid session before making API call
         // ============================================================================
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session) {
-          // Try to refresh session before giving up
-          console.log("[CONFIG PROVIDER] ⚠️ No session found - attempting refresh...");
+          // Try to refresh session only ONCE per load to avoid spamming auth endpoint
+          if (!refreshAttempted.current) {
+            refreshAttempted.current = true;
+            console.log("[CONFIG PROVIDER] ⚠️ No session found - attempting one-time refresh...");
 
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
 
-          if (refreshError || !refreshData.session) {
-            throw new Error("Session expired - please log in again");
+            if (refreshError || !refreshData.session) {
+              throw new Error("Session expired - please log in again");
+            }
+
+            console.log("[CONFIG PROVIDER] ✅ Session refreshed successfully");
+            // Session refresh will trigger onAuthStateChange → setSession → sessionVersion bump
+            // This effect will re-run with the new session
+            return;
           }
 
-          console.log("[CONFIG PROVIDER] ✅ Session refreshed successfully");
-          // Session refresh will trigger onAuthStateChange → setSession → sessionVersion bump
-          // This effect will re-run with the new session
-          return;
+          // If we've already attempted refresh, don't try again in this run
+          throw new Error("No session available");
         }
 
         // Check if session is close to expiry
@@ -106,7 +135,7 @@ export function ConfigRoot({ children }: PropsWithChildren) {
         setConfig(cfg);
         setError(null);
         setAutoRetryCount(0); // Reset auto-retry count on success
-        lastFetchedSessionVersion.current = sessionVersion;
+        lastFetchedSchoolId.current = schoolId;
         console.log(`[CONFIG PROVIDER] ✅ Config loaded:`, cfg.identity?.display_name);
 
       } catch (err: any) {
@@ -135,15 +164,11 @@ export function ConfigRoot({ children }: PropsWithChildren) {
           } else if (status === 403) {
             errorMessage = `Access denied to school #${schoolId}. Please check your permissions.`;
           } else if (status === 401 || is401) {
-            errorMessage = `Authentication expired. Redirecting to login...`;
-            // Let HTTP interceptor handle logout/redirect
-            // Don't show error screen, just wait for redirect
-            setTimeout(() => {
-              if (!window.location.pathname.includes('/auth/login')) {
-                useAuthStore.getState().logout();
-                window.location.href = "/auth/login";
-              }
-            }, 1500);
+            // IMPORTANT: Per product rules do NOT auto-logout the user on config fetch failures.
+            // Showing an explicit message and letting the user re-authenticate manually
+            // prevents churn and avoids spamming the auth backend with repeated sign-outs.
+            errorMessage = `Authentication problem when fetching configuration. Your session may have expired — please sign out and sign in again if the problem persists.`;
+            console.warn('[CONFIG PROVIDER] Received 401 when fetching config; NOT auto-logging out per policy');
           } else if (status >= 500) {
             errorMessage = `Server error (${status}). Please try again later.`;
           }
@@ -160,7 +185,10 @@ export function ConfigRoot({ children }: PropsWithChildren) {
     };
 
     loadConfig();
-  }, [schoolId, setConfig, retryCount, sessionVersion, autoRetryCount, isSessionValid, showInfoToast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schoolId, retryCount, autoRetryCount, existingConfig]);
+  // NOTE: Removed sessionVersion from deps - config should NOT reload on token refresh
+  // setConfig, isSessionValid, showInfoToast are stable references
 
   // ============================================================================
   // GUARD: If no schoolId, show error (shouldn't happen in Protected route)
