@@ -7,6 +7,19 @@
   }
 }
 
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-only {
+    visibility: visible;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}
+
 /* Custom utilities */
 @layer utilities {
   .scrollbar-thin::-webkit-scrollbar {

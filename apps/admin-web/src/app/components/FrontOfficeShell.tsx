@@ -41,6 +41,7 @@ const frontOfficeNav = [
   { label: "Service Requests", icon: <Build />, path: "/frontoffice/serviceRequest" },
   { label: "Principal Calendar", icon: <Event />, path: "/frontoffice/principalCalendar" },
   { label: "Communication", icon: <Campaign />, path: "/frontoffice/communication" },
+  { label: "Gate Pass Management", icon: <Assignment />, path: "/frontoffice/gate-pass-management" },
 ];
 
 export function FrontOfficeShell() {
