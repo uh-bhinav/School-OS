@@ -102,7 +102,7 @@ def get_llm(tier: LLMTier = "power"):
 
                         logger.info("Initializing power tier LLM: Google Gemini 1.5 Flash")
                         return ChatGoogleGenerativeAI(
-                            model="gemini-1.5-flash",
+                            model="gemini-2.5-flash",
                             google_api_key=google_api_key,
                             temperature=0.3,
                             max_tokens=4096,
