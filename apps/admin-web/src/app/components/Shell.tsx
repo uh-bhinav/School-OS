@@ -252,7 +252,6 @@ const navigationItems: NavItem[] = [
     path: '/academics',
     children: [
       { key: 'attendance', label: 'Attendance', icon: <CalendarToday fontSize="small" />, path: '/academics/attendance', module: 'attendance' },
-      { key: 'timetable', label: 'Timetable', icon: <Assignment fontSize="small" />, path: '/academics/timetable', module: 'timetable' },
       { key: 'timetable-generator', label: 'AI Timetable Generator', icon: <SettingsIcon fontSize="small" />, path: '/academics/timetable/generate', module: 'timetable' },
       { key: 'exams', label: 'Exams', icon: <BarChart fontSize="small" />, path: '/academics/exams', module: 'exams' },
       { key: 'marks', label: 'Marks', icon: <Assignment fontSize="small" />, path: '/academics/marks', module: 'marks' },

@@ -10,8 +10,6 @@ import Login from "./routes/auth/login";
 import SignupPrincipal from "./routes/auth/SignupPrincipal";
 import Dashboard from "./routes/dashboard";
 import AttendanceRoute from "./routes/academics/attendance/AttendanceRoute";
-import TimetableRoute from "./routes/academics/timetable/TimetableRoute";
-import ProxyAssignmentPage from "./routes/academics/timetable/ProxyAssignmentPage";
 
 // Timetable Generator feature imports
 import {
@@ -262,14 +260,6 @@ const router = createBrowserRouter([
       {
         path: "academics/attendance",
         element: <AttendanceRoute />,
-      },
-      {
-        path: "academics/timetable",
-        element: <TimetableRoute />,
-      },
-      {
-        path: "academics/timetable/proxy",
-        element: <ProxyAssignmentPage />,
       },
       // ======================================================================
       // TIMETABLE GENERATOR ROUTES (OR-Tools based constraint solver)
