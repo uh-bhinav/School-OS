@@ -12,6 +12,14 @@ import Dashboard from "./routes/dashboard";
 import AttendanceRoute from "./routes/academics/attendance/AttendanceRoute";
 import TimetableRoute from "./routes/academics/timetable/TimetableRoute";
 import ProxyAssignmentPage from "./routes/academics/timetable/ProxyAssignmentPage";
+
+// Timetable Generator feature imports
+import {
+  GeneratePage as TimetableGeneratePage,
+  ConstraintsPage as TimetableConstraintsPage,
+  ResultsPage as TimetableResultsPage,
+  RecentJobsPage as TimetableRecentJobsPage,
+} from "./features/timetable";
 import ExamsRoute from "./routes/academics/exams/ExamsRoute";
 import { ExamSubjectsPage, QuestionCOMappingPage, QuestionMarksEntryPage } from "./routes/academics/exams/subjects";
 import MarksRoute from "./routes/academics/marks/MarksRoute";
@@ -262,6 +270,25 @@ const router = createBrowserRouter([
       {
         path: "academics/timetable/proxy",
         element: <ProxyAssignmentPage />,
+      },
+      // ======================================================================
+      // TIMETABLE GENERATOR ROUTES (OR-Tools based constraint solver)
+      // ======================================================================
+      {
+        path: "academics/timetable/generate",
+        element: <TimetableGeneratePage />,
+      },
+      {
+        path: "academics/timetable/constraints",
+        element: <TimetableConstraintsPage />,
+      },
+      {
+        path: "academics/timetable/results/:jobId",
+        element: <TimetableResultsPage />,
+      },
+      {
+        path: "academics/timetable/history",
+        element: <TimetableRecentJobsPage />,
       },
       {
         path: "academics/exams",

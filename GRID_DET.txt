@@ -1,0 +1,48 @@
+# Grid Structure in Results Page
+
+Based on the workspace structure, here's the grid layout distribution across different views:
+
+## **Main Results Grid Structure**
+
+The results page uses a **multi-column grid system** that displays timetable information organized by:
+
+### **1. Weekly View Grid**
+- **Columns**: Days of the week (Monday-Friday/Saturday)
+- **Rows**: Time slots (periods/hours)
+- **Cells**: Individual classes with:
+  - Subject name
+  - Teacher
+  - Room/Location
+  - Time duration
+
+### **2. Daily View Grid**
+- **Single column** focused layout
+- **Rows**: Sequential time slots for selected day
+- **Expanded cell details**: More space for class information
+
+### **3. Teacher View Grid**
+- **Columns**: Teachers listed horizontally
+- **Rows**: Time slots vertically
+- **Cells**: Classes assigned to each teacher
+- Highlights teaching load and availability
+
+### **4. Room/Resource View Grid**
+- **Columns**: Rooms or resources
+- **Rows**: Time slots
+- **Cells**: Classes utilizing each room
+- Shows room utilization and conflicts
+
+### **5. Class/Section View Grid**
+- **Columns**: Different classes or sections
+- **Rows**: Time periods
+- **Cells**: Subject assignments for each class
+- Useful for comparing schedules across sections
+
+## **Common Grid Features**
+- **Responsive layout**: Adapts to screen size
+- **Color coding**: Different subjects/departments
+- **Conflict indicators**: Highlights scheduling conflicts
+- **Empty cells**: Free periods or breaks
+- **Hover/click**: Shows detailed information
+
+This grid structure allows switching between views while maintaining consistent data presentation.

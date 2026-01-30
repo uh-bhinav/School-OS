@@ -212,19 +212,29 @@ function generateRealisticSchedule(
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
+
+/**
+ * Normalizes any date to the Monday of its week (ISO format YYYY-MM-DD)
+ * This matches the logic in TimetablePage.tsx
+ */
+function toMondayISO(d: Date): string {
+  const date = new Date(d);
+  const day = date.getDay(); // 0..6 (Sun=0)
+  const diff = day === 0 ? -6 : 1 - day; // Shift to Monday
+  const mon = new Date(date);
+  mon.setDate(date.getDate() + diff);
+  mon.setHours(0, 0, 0, 0);
+  return mon.toISOString().slice(0, 10);
+}
+
 function initializeMockTimetable() {
   if (mockTimetableEntries.length > 0) return;
 
   const classIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const sections = ["A", "B"];
 
-  // Get current week's Monday (same calculation as in component)
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + diff);
-  const weekStart = monday.toISOString().split("T")[0];
+  // Get current week's Monday using the same function as component
+  const weekStart = toMondayISO(new Date());
 
   classIds.forEach((classId) => {
     sections.forEach((section) => {

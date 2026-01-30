@@ -1,28 +1,27 @@
 import { useMemo, useState } from "react";
-import { Box, Paper, Typography, Button, Alert, IconButton, Tooltip } from "@mui/material";
+import { Box, Paper, Typography, Button, Alert, Tooltip } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import DownloadIcon from "@mui/icons-material/Download";
-import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
-import NavigateNextIcon from "@mui/icons-material/NavigateNext";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 
 import FiltersBar from "../../../components/timetable/FiltersBar";
 import KPICards from "../../../components/timetable/KPICards";
 import Legend from "../../../components/timetable/Legend";
-import GridView from "../../../components/timetable/GridView";
+import ViewSelector from "../../../components/timetable/ViewSelector";
+import { TimetableViewGrid } from "../../../components/timetable/TimetableViewGrid";
+import CellDetailsModal from "../../../components/timetable/CellDetailsModal";
 import PublishBar from "../../../components/timetable/PublishBar";
-import SwapDialog from "../../../components/timetable/SwapDialog";
 import ExportDialog from "../../../components/timetable/ExportDialog";
-import GenerateDialog from "../../../components/timetable/GenerateDialog";
 import HowToUsePopover from "../../../components/timetable/HowToUsePopover";
 import TimetableErrorBoundary from "../../../components/timetable/TimetableErrorBoundary";
 import TeacherAbsenceBanner from "../../../components/timetable/TeacherAbsenceBanner";
 import TeacherAbsentModal from "../../../components/timetable/TeacherAbsentModal";
 
-import { useTimetableGrid, useTimetableKPIs, useGenerateTimetable } from "../../../services/timetable.hooks";
+import { useTimetableGrid, useTimetableKPIs } from "../../../services/timetable.hooks";
 import { useAbsentTeachers } from "../../../services/proxy.hooks";
+import { useTimetableViewStore } from "../../../stores/useTimetableViewStore";
+import { useProxyStore } from "../../../stores/useProxyStore";
 import type { AbsentTeacher } from "../../../services/proxy.api";
+import type { TimetableEntry, Period, DayOfWeek } from "../../../services/timetable.schema";
 
 /**
  * Normalizes any date to the Monday of its week (ISO format YYYY-MM-DD)
@@ -48,32 +47,37 @@ function toMondayISO(d: string | Date): string {
   }
 }
 
-/**
- * Add/subtract weeks from a Monday date
- */
-function addWeeks(mondayISO: string, weeks: number): string {
-  const date = new Date(mondayISO);
-  date.setDate(date.getDate() + weeks * 7);
-  return toMondayISO(date);
-}
-
 const CLASSES = Array.from({ length: 12 }, (_, i) => i + 1);
 const SECTIONS = ["A", "B", "C", "D"];
 
 export default function TimetablePage() {
   const [filters, setFilters] = useState({
-    academic_year_id: 2025,
+    academic_year_id: 1,
     class_id: 8,
     section: "A",
     week_start: toMondayISO(new Date()),
   });
 
-  const [showSwapDialog, setShowSwapDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [showAbsentModal, setShowAbsentModal] = useState(false);
   const [selectedAbsence, setSelectedAbsence] = useState<AbsentTeacher | null>(null);
   const [dismissedBanner, setDismissedBanner] = useState(false);
+
+  // Cell details modal state
+  const [cellDetailsOpen, setCellDetailsOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<Period | null>(null);
+
+  // Get view state from store
+  const {
+    currentView,
+    highlightFreePeriods,
+    showRoomNumbers,
+  } = useTimetableViewStore();
+
+  // Get proxy assignments from store
+  const { assignments: proxyAssignments } = useProxyStore();
 
   // Get today's date for absence check
   const today = new Date().toISOString().split("T")[0];
@@ -105,7 +109,6 @@ export default function TimetablePage() {
     refetch,
   } = useTimetableGrid(filters);
   const { data: kpis } = useTimetableKPIs(filters);
-  const genMut = useGenerateTimetable();
 
   const periods = useMemo(
     () =>
@@ -117,50 +120,96 @@ export default function TimetablePage() {
         { period_no: 5, start_time: "13:00", end_time: "13:45" },
         { period_no: 6, start_time: "13:50", end_time: "14:35" },
         { period_no: 7, start_time: "14:40", end_time: "15:25" },
+        { period_no: 8, start_time: "15:30", end_time: "16:15" },
       ],
     [grid]
   );
 
-  function navigateWeek(direction: number) {
-    setFilters((f) => ({
-      ...f,
-      week_start: addWeeks(f.week_start, direction),
-    }));
-  }
+  // Build class list for ViewSelector
+  const classOptions = useMemo(() => {
+    return CLASSES.map((c) => ({ id: String(c), name: `Class ${c}` }));
+  }, []);
 
-  async function handleGenerate(constraints?: {
-    customConstraints: Array<{
-      id: string;
-      description: string;
-      priority: 1 | 2 | 3;
-    }>;
-    teacherConstraints: {
-      maxClassesPerDay: number;
-      maxClassesPerWeek: number;
-      minClassesPerDay: number;
-      minClassesPerWeek: number;
-      prioritizeCoreSubjects: boolean;
-      coreSubjectNames: string[];
+  // Build teacher list from entries
+  const teacherOptions = useMemo(() => {
+    if (!grid?.entries) return [];
+    const teachers = new Map<number, { id: string; name: string; subject?: string }>();
+    grid.entries.forEach((entry) => {
+      if (!teachers.has(entry.teacher_id)) {
+        teachers.set(entry.teacher_id, {
+          id: String(entry.teacher_id),
+          name: entry.teacher_name,
+          subject: entry.subject_name,
+        });
+      }
+    });
+    return Array.from(teachers.values());
+  }, [grid?.entries]);
+
+  // Build resource list from entries (rooms)
+  const resourceOptions = useMemo(() => {
+    if (!grid?.entries) return [];
+    const resources = new Map<number, { id: string; name: string; type?: string }>();
+    grid.entries.forEach((entry) => {
+      if (entry.room_id && entry.room_name && !resources.has(entry.room_id)) {
+        resources.set(entry.room_id, {
+          id: String(entry.room_id),
+          name: entry.room_name,
+          type: "Room",
+        });
+      }
+    });
+    return Array.from(resources.values());
+  }, [grid?.entries]);
+
+  // Handle cell click to show details
+  const handleCellClick = (entry: TimetableEntry, day: DayOfWeek, periodNo: number) => {
+    setSelectedEntry(entry);
+    setSelectedDay(day);
+    const period = periods.find((p) => p.period_no === periodNo) || null;
+    setSelectedPeriod(period);
+    setCellDetailsOpen(true);
+  };
+
+  // Handle assigning substitute from cell details modal
+  const handleAssignSubstituteFromModal = (entry: TimetableEntry) => {
+    setCellDetailsOpen(false);
+    // Find the period time
+    const periodObj = periods.find((p) => p.period_no === entry.period_no);
+    const periodTime = periodObj ? `${periodObj.start_time} - ${periodObj.end_time}` : "";
+
+    // Create an absence object for the modal
+    const absence: AbsentTeacher = {
+      teacherId: entry.teacher_id,
+      teacherName: entry.teacher_name,
+      subject: entry.subject_name,
+      subjectId: entry.subject_id,
+      classId: entry.class_id,
+      section: entry.section,
+      date: today,
+      day: entry.day,
+      periodNo: entry.period_no,
+      periodTime,
+      entryId: entry.id,
+      reason: "",
     };
-  }) {
-    try {
-      await genMut.mutateAsync({
-        academic_year_id: filters.academic_year_id,
-        class_id: filters.class_id,
-        section: filters.section,
-        week_start: filters.week_start,
-        // Pass constraints to backend (will be used when backend is integrated)
-        constraints: constraints?.customConstraints,
-        teacher_constraints: constraints?.teacherConstraints,
-      });
-      // Close the dialog
-      setShowGenerateDialog(false);
-      // Refetch the grid to show newly generated entries
-      await refetch();
-    } catch (error) {
-      console.error("Failed to generate timetable:", error);
-    }
-  }
+    setSelectedAbsence(absence);
+    setShowAbsentModal(true);
+  };
+
+  // Get proxy assignment for selected entry
+  const getSelectedProxyAssignment = () => {
+    if (!selectedEntry) return undefined;
+    return proxyAssignments.find(
+      (a) => a.entryId === selectedEntry.id && a.date === today
+    );
+  };
+
+  // Check if selected entry has conflict
+  const hasSelectedConflict = useMemo(() => {
+    if (!selectedEntry || !grid?.conflicts) return false;
+    return grid.conflicts.some((c) => c.entry_ids.includes(selectedEntry.id));
+  }, [selectedEntry, grid?.conflicts]);
 
   return (
     <TimetableErrorBoundary>
@@ -217,6 +266,15 @@ export default function TimetablePage() {
           roomUtilPct={kpis?.room_util_pct ?? 0}
         />
 
+        {/* View Selector */}
+        <ViewSelector
+          classes={classOptions}
+          sections={SECTIONS}
+          teachers={teacherOptions}
+          resources={resourceOptions}
+          onEntityChange={() => refetch()}
+        />
+
         {/* Main Grid */}
         <Paper
           elevation={0}
@@ -226,69 +284,30 @@ export default function TimetablePage() {
             border: (theme) => `1px solid ${theme.palette.divider}`,
           }}
         >
-          {/* Week Navigation Header */}
+          {/* Header with Actions */}
           <Box
             sx={{
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent: "flex-end",
               alignItems: "center",
               mb: 2,
-              flexWrap: "wrap",
-              gap: 2,
+              gap: 1,
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Tooltip title="Previous week">
-                <IconButton onClick={() => navigateWeek(-1)} size="small">
-                  <NavigateBeforeIcon />
-                </IconButton>
-              </Tooltip>
-              <Typography variant="h6" fontWeight={600}>
-                Week of {filters.week_start}
-              </Typography>
-              <Tooltip title="Next week">
-                <IconButton onClick={() => navigateWeek(1)} size="small">
-                  <NavigateNextIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-              <Tooltip title="AI-powered timetable generation">
-                <Button
-                  variant="outlined"
-                  startIcon={<AutoAwesomeIcon />}
-                  onClick={() => setShowGenerateDialog(true)}
-                  disabled={genMut.isPending}
-                  color="primary"
-                >
-                  Generate
-                </Button>
-              </Tooltip>
-              <Tooltip title="Swap two periods">
-                <Button
-                  variant="outlined"
-                  startIcon={<SwapHorizIcon />}
-                  onClick={() => setShowSwapDialog(true)}
-                >
-                  Swap
-                </Button>
-              </Tooltip>
-              <Tooltip title="Export or print timetable">
-                <Button
-                  variant="outlined"
-                  startIcon={<DownloadIcon />}
-                  onClick={() => setShowExportDialog(true)}
-                >
-                  Export
-                </Button>
-              </Tooltip>
-              <Tooltip title="Refresh data">
-                <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => refetch()}>
-                  Refresh
-                </Button>
-              </Tooltip>
-            </Box>
+            <Tooltip title="Export or print timetable">
+              <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={() => setShowExportDialog(true)}
+              >
+                Export
+              </Button>
+            </Tooltip>
+            <Tooltip title="Refresh data">
+              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => refetch()}>
+                Refresh
+              </Button>
+            </Tooltip>
           </Box>
 
           {/* Legend */}
@@ -302,17 +321,21 @@ export default function TimetablePage() {
               </Typography>
             </Box>
           ) : (
-            <GridView
+            <TimetableViewGrid
               periods={periods}
               entries={grid?.entries ?? []}
-              filters={filters}
               conflicts={grid?.conflicts}
+              viewType={currentView}
+              highlightFreePeriods={highlightFreePeriods}
+              showRoomNumbers={showRoomNumbers}
+              proxyAssignments={proxyAssignments}
+              onCellClick={handleCellClick}
+              showSaturday={false}
             />
           )}
         </Paper>
 
         {/* Dialogs */}
-        <SwapDialog open={showSwapDialog} onClose={() => setShowSwapDialog(false)} />
         <ExportDialog
           open={showExportDialog}
           onClose={() => setShowExportDialog(false)}
@@ -320,16 +343,22 @@ export default function TimetablePage() {
           entries={grid?.entries ?? []}
           periods={periods}
         />
-        <GenerateDialog
-          open={showGenerateDialog}
-          onClose={() => setShowGenerateDialog(false)}
-          onConfirm={handleGenerate}
-          filters={filters}
-        />
         <TeacherAbsentModal
           open={showAbsentModal}
           onClose={handleCloseAbsentModal}
           absence={selectedAbsence}
+        />
+
+        {/* Cell Details Modal */}
+        <CellDetailsModal
+          open={cellDetailsOpen}
+          onClose={() => setCellDetailsOpen(false)}
+          entry={selectedEntry}
+          day={selectedDay}
+          period={selectedPeriod}
+          proxyAssignment={getSelectedProxyAssignment()}
+          hasConflict={hasSelectedConflict}
+          onAssignSubstitute={handleAssignSubstituteFromModal}
         />
 
         {/* Floating Help Button */}
