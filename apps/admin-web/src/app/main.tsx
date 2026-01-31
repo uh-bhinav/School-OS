@@ -44,7 +44,7 @@ import PrincipalCalendarPage from "./routes/frontoffice/principalCalendar";
 import FrontOfficeCommunication from "./routes/frontoffice/communication";
 import AdmissionsPipeline from './routes/frontoffice/admission-pipline';
 import RootRedirect from "./routes/RootRedirect";
-import GatePassManagement from './pages/gatePassManagement';
+import GatePassManagement from './pages/GatePassManagement';
 
 
 

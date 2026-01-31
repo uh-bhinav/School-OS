@@ -88,6 +88,12 @@ export default function Dashboard() {
   const isAdmin = role === 'admin';
   const isReady = !!schoolId && isAdmin;
 
+  const metricsQuery = useDashboardMetrics(schoolId!, isReady);
+  const revenueQuery = useRevenueData(schoolId!, isReady);
+  const distributionQuery = useStudentDistribution(schoolId!, isReady);
+  const attendanceQuery = useAttendanceByGrade(schoolId!, isReady);
+  const moduleUsageQuery = useModuleUsage(schoolId!, isReady);
+
   // ✅ ADD DEBUGGING
   console.log('[DASHBOARD] Profile:', profile);
   console.log('[DASHBOARD] School ID:', schoolId);

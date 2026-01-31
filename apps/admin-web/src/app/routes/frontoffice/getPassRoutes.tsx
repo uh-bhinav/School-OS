@@ -1,7 +1,7 @@
 import React from 'react';
 import { RouteObject } from 'react-router-dom';
 import { FrontOfficeShell }  from '../../components/FrontOfficeShell';
-import GatePassManagement from '../../pages/gatePassManagement';
+import GatePassManagement from '../../pages/GatePassManagement';
 
 const gatePassRoutes: RouteObject[] = [
   {
