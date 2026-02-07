@@ -27,7 +27,7 @@ export const EmpoweringSection = () => {
 
     // Stakeholder Data
     const users = [
-        { role: "Ex-Principal", img: "/sridar_rao.png", color: "border-purple-500" },
+        { role: "Former-Principal, Widia Poornaprajna School", img: "/sridar_rao.png", color: "border-purple-500" },
         { role: "Math Teacher", img: "/ramesh.png", color: "border-blue-500" },
         { role: "Student", img: "/manan.png", color: "border-green-500" },
         { role: "Admin Staff", img: "/Anitha.png", color: "border-orange-500" },

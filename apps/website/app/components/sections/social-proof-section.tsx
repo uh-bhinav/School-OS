@@ -48,7 +48,7 @@ export const SocialProofSection = () => {
         },
         {
             name: "K S Sridhar",
-            role: "Ex-Principal, Widia Poornapragna School",
+            role: "Former-Principal, Widia Poornaprajna School",
             text: "AcadionAI cut our timetable preparation from 3 days to 10 minutes. What used to block our admin team now finishes in a single click.",
             img: "/sridar_rao.png"
         }

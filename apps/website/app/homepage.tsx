@@ -10,6 +10,7 @@ import { EmpoweringSection } from './components/sections/empowering-section';
 import { IntegrateAutomateSection } from './components/sections/integrate-automate-section';
 import { SocialProofSection } from './components/sections/social-proof-section';
 import { FAQSection } from './components/sections/faq-section';
+import { GallerySection } from './components/sections/gallery-section';
 import { FooterCTA } from './components/sections/footer-cta';
 import { Footer } from './components/sections/footer';
 
@@ -46,7 +47,10 @@ export default function HomePage() {
       {/* --- SECTION 8: FAQ --- */}
       <FAQSection />
 
-      {/* --- SECTION 9: Footer CTA --- */}
+      {/* --- SECTION 9: Gallery --- */}
+      <GallerySection />
+
+      {/* --- SECTION 10: Footer CTA --- */}
       <FooterCTA />
 
       {/* --- SECTION 10: Footer --- */}
