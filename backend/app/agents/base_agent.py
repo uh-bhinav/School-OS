@@ -6,7 +6,7 @@ from typing import Annotated, TypedDict
 
 from langchain_core.messages import BaseMessage, ToolMessage
 from langgraph.graph import END, StateGraph
-from langgraph.prebuilt import ToolExecutor, ToolInvocation
+# from langgraph.prebuilt import ToolExecutor, ToolInvocation  # Deprecated in newer langgraph versions
 
 from app.agents.utils.llm_router import get_llm
 
@@ -37,7 +37,8 @@ class BaseAgent:
         """
         self.tools = tools
         self.llm_tier = llm_tier
-        self.tool_executor = ToolExecutor(tools) if tools else None
+        # self.tool_executor = ToolExecutor(tools) if tools else None  # Temporarily disabled
+        self.tool_executor = None
         self.model = get_llm(llm_tier).bind_tools(tools) if tools else get_llm(llm_tier)
         self.graph = self._build_graph()
 

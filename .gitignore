@@ -7,6 +7,10 @@
 .env.test
 .env.*.local
 
+# Firebase credentials (contains sensitive service account keys)
+firebase-credentials.json
+**/firebase-credentials.json
+
 # Keep these for easy onboarding (demo mode enabled by default)
 !.env.example
 !.env.development

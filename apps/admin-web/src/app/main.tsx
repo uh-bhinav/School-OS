@@ -30,6 +30,7 @@ import TasksPage from "./routes/academics/tasks/TasksPage";
 import { SubjectsPage, SubjectDetailPage } from "./routes/academics/subjects";
 import { COAttainmentPage } from "./routes/academics/obe";
 import AnnouncementsPage from "./routes/announcements";
+import VoiceAnnouncementsPage from "./routes/announcements/voice-announcements";
 import CommunicationsPage from "./routes/communications";
 import FeeManagementPage from "./routes/finance";
 import InvoicesPage from "./routes/finance/invoices/InvoicesPage";
@@ -352,6 +353,10 @@ const router = createBrowserRouter([
       {
         path: "announcements",
         element: <AnnouncementsPage />,
+      },
+      {
+        path: "announcements/voice",
+        element: <VoiceAnnouncementsPage />,
       },
       {
         path: "communications",

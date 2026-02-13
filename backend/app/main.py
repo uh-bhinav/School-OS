@@ -6,6 +6,8 @@ import sys
 from contextlib import asynccontextmanager
 
 import sentry_sdk
+import firebase_admin
+from firebase_admin import credentials
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
@@ -17,7 +19,7 @@ from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.agents.api import router as agents_router
+# from app.agents.api import router as agents_router  # Temporarily disabled - LLM config missing
 
 # Import your existing v1 API router and the new agents router
 from app.api.v1.api import api_router
@@ -77,6 +79,18 @@ async def lifespan(app: FastAPI):
     # Initialize Supabase client (NEW)
     await init_supabase_client()
     print("✅ Supabase client initialized")
+
+    # Initialize Firebase Admin SDK for FCM
+    try:
+        cred_path = os.path.join(os.path.dirname(__file__), "..", "firebase-credentials.json")
+        if os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+            print("✅ Firebase Admin SDK initialized")
+        else:
+            print(f"⚠️ Firebase credentials not found at {cred_path}")
+    except Exception as e:
+        print(f"⚠️ Firebase initialization failed: {e}")
 
     print("✅ Application startup complete")
 
@@ -183,8 +197,8 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 logger.info(f"Main API router registered at {settings.API_V1_STR}")
 
 # Include the agents router - it already has prefix="/agents" defined
-app.include_router(agents_router)
-logger.info("Agents router registered at /agents")
+# app.include_router(agents_router)  # Temporarily disabled - LLM config missing
+# logger.info("Agents router registered at /agents")
 
 
 # ============================================================================

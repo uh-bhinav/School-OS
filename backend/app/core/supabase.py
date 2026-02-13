@@ -49,9 +49,9 @@ async def close_supabase_client() -> None:
     global _supabase_client
 
     if _supabase_client is not None:
-        await _supabase_client.close()
+        # AsyncClient doesn't have a close() method, just clear the reference
         _supabase_client = None
-        print("✅ Supabase client closed")
+        print("✅ Supabase client cleared")
 
 
 def get_supabase_client() -> Client:

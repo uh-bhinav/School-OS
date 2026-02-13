@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     albums,
     announcements,
     attendance_records,
+    auth,  # <-- Backend-only authentication
     carts,
     classes,
     clubs,
@@ -28,6 +29,7 @@ from app.api.v1.endpoints import (
     media,
     orders,
     payment_gateway,
+    voice_announcements,  # <-- Voice announcement calls
     payments,
     periods,
     products,
@@ -48,6 +50,9 @@ from app.api.v1.endpoints import (
 )
 
 api_router = APIRouter()
+
+# Authentication
+api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 
 # Include all the individual routers into the main v1 router
 api_router.include_router(schools.router, prefix="/schools", tags=["Schools"])
@@ -161,3 +166,11 @@ api_router.include_router(clubs.router, prefix="/clubs", tags=["Clubs"])
 
 # Speech-to-text transcription (local Whisper)
 api_router.include_router(transcribe.router, prefix="/speech", tags=["Speech-to-Text"])
+
+# Voice announcements (call-style notifications)
+api_router.include_router(
+    voice_announcements.router, 
+    prefix="/voice-announcements", 
+    tags=["Voice Announcements"]
+)
+

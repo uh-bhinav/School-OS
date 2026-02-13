@@ -33,6 +33,7 @@ import {
   Notifications as NotificationsIcon,
   Delete as DeleteIcon,
   CheckCircle as CheckCircleIcon,
+  Campaign as CampaignIcon,
 } from "@mui/icons-material";
 import {
   useCommunicationsList,
@@ -41,6 +42,7 @@ import {
   useDeleteCommunication,
 } from "../../services/communications.hooks";
 import type { CommunicationCreate } from "../../services/communications.api";
+import { VoiceAnnouncementCreator } from "../../components/announcements";
 
 // ============================================================================
 // STATUS CONFIGURATION
@@ -67,6 +69,7 @@ const messageTypeIcons = {
 export default function CommunicationsPage() {
   const [page] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
   const [formData, setFormData] = useState<CommunicationCreate>({
     subject: "",
     message: "",
@@ -99,11 +102,34 @@ export default function CommunicationsPage() {
   };
 
   const handleSubmit = async () => {
+    // If voice-call is selected, open voice announcement dialog instead
+    if (formData.message_type === "voice-call") {
+      handleCloseDialog();
+      setVoiceDialogOpen(true);
+      return;
+    }
+    
     try {
       await sendMutation.mutateAsync(formData);
       handleCloseDialog();
     } catch (err) {
       console.error("Failed to send communication:", err);
+    }
+  };
+
+  const handleMessageTypeChange = (messageType: CommunicationCreate["message_type"]) => {
+    // If voice-call is selected, automatically set recipient to teacher
+    if (messageType === "voice-call") {
+      setFormData({
+        ...formData,
+        message_type: messageType,
+        recipient_role: "teacher",
+      });
+    } else {
+      setFormData({
+        ...formData,
+        message_type: messageType,
+      });
     }
   };
 
@@ -263,16 +289,14 @@ export default function CommunicationsPage() {
                 value={formData.message_type}
                 label="Message Type"
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    message_type: e.target.value as CommunicationCreate["message_type"],
-                  })
+                  handleMessageTypeChange(e.target.value as CommunicationCreate["message_type"])
                 }
               >
                 <MenuItem value="in-app">In-App Notification</MenuItem>
                 <MenuItem value="email">Email</MenuItem>
                 <MenuItem value="sms">SMS</MenuItem>
                 <MenuItem value="push">Push Notification</MenuItem>
+                <MenuItem value="voice-call">Voice Call Notification</MenuItem>
               </Select>
             </FormControl>
             <FormControl fullWidth>
@@ -283,6 +307,7 @@ export default function CommunicationsPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, recipient_role: e.target.value as any })
                 }
+                disabled={formData.message_type === "voice-call"}
               >
                 <MenuItem value="all">All Users</MenuItem>
                 <MenuItem value="admin">Admins Only</MenuItem>
@@ -290,6 +315,11 @@ export default function CommunicationsPage() {
                 <MenuItem value="student">Students Only</MenuItem>
                 <MenuItem value="parent">Parents Only</MenuItem>
               </Select>
+              {formData.message_type === "voice-call" && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                  Voice calls are only available for teachers
+                </Typography>
+              )}
             </FormControl>
           </Stack>
         </DialogContent>
@@ -299,12 +329,18 @@ export default function CommunicationsPage() {
             variant="contained"
             onClick={handleSubmit}
             disabled={sendMutation.isPending}
-            startIcon={<EmailIcon />}
+            startIcon={formData.message_type === "voice-call" ? <CampaignIcon /> : <EmailIcon />}
           >
-            Send Message
+            {formData.message_type === "voice-call" ? "Record Voice Call" : "Send Message"}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Voice Announcement Creator Dialog */}
+      <VoiceAnnouncementCreator
+        open={voiceDialogOpen}
+        onClose={() => setVoiceDialogOpen(false)}
+      />
     </Box>
   );
 }

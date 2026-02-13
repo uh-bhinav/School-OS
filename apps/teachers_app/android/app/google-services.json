@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "729835587240",
+    "project_id": "acadionai",
+    "storage_bucket": "acadionai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:729835587240:android:724654b25e271a658f649d",
+        "android_client_info": {
+          "package_name": "com.schoolos.teachers_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQXxeNil-xVF6zc4nlnSQQbfcis21TjBo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

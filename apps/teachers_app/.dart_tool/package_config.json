@@ -2,10 +2,10 @@
   "configVersion": 2,
   "packages": [
     {
-      "name": "archive",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/archive-4.0.7",
+      "name": "_flutterfire_internals",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/_flutterfire_internals-1.3.35",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.2"
     },
     {
       "name": "args",
@@ -16,6 +16,12 @@
     {
       "name": "async",
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/async-2.13.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "audio_session",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/audio_session-0.1.25",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -32,22 +38,16 @@
       "languageVersion": "3.4"
     },
     {
-      "name": "checked_yaml",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/checked_yaml-2.0.4",
-      "packageUri": "lib/",
-      "languageVersion": "3.8"
-    },
-    {
-      "name": "cli_util",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/cli_util-0.4.2",
-      "packageUri": "lib/",
-      "languageVersion": "3.4"
-    },
-    {
       "name": "clock",
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/clock-1.1.2",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "code_assets",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/code_assets-1.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
     },
     {
       "name": "collection",
@@ -68,6 +68,18 @@
       "languageVersion": "3.1"
     },
     {
+      "name": "dbus",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/dbus-0.7.12",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    },
+    {
+      "name": "equatable",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/equatable-2.0.8",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "fake_async",
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/fake_async-1.3.3",
       "packageUri": "lib/",
@@ -75,9 +87,63 @@
     },
     {
       "name": "ffi",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/ffi-2.1.4",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/ffi-2.1.5",
       "packageUri": "lib/",
       "languageVersion": "3.7"
+    },
+    {
+      "name": "file",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/file-7.0.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "firebase_core",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/firebase_core-2.32.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
+      "name": "firebase_core_platform_interface",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/firebase_core_platform_interface-5.4.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_core_web",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/firebase_core_web-2.24.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "firebase_messaging",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/firebase_messaging-14.7.10",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
+      "name": "firebase_messaging_platform_interface",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/firebase_messaging_platform_interface-4.5.37",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
+      "name": "firebase_messaging_web",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/firebase_messaging_web-3.5.18",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
+      "name": "fixnum",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/fixnum-1.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
+      "name": "fl_chart",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/fl_chart-0.65.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
     },
     {
       "name": "flutter",
@@ -86,16 +152,28 @@
       "languageVersion": "3.8"
     },
     {
-      "name": "flutter_launcher_icons",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/flutter_launcher_icons-0.13.1",
-      "packageUri": "lib/",
-      "languageVersion": "2.18"
-    },
-    {
       "name": "flutter_lints",
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/flutter_lints-3.0.2",
       "packageUri": "lib/",
       "languageVersion": "3.1"
+    },
+    {
+      "name": "flutter_local_notifications",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/flutter_local_notifications-17.2.4",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    },
+    {
+      "name": "flutter_local_notifications_linux",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/flutter_local_notifications_linux-4.0.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    },
+    {
+      "name": "flutter_local_notifications_platform_interface",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/flutter_local_notifications_platform_interface-7.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
     },
     {
       "name": "flutter_test",
@@ -104,10 +182,28 @@
       "languageVersion": "3.8"
     },
     {
-      "name": "google_fonts",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/google_fonts-6.3.2",
+      "name": "flutter_web_plugins",
+      "rootUri": "file:///usr/local/share/flutter/packages/flutter_web_plugins",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.8"
+    },
+    {
+      "name": "glob",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/glob-2.1.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "google_fonts",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/google_fonts-6.3.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "hooks",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/hooks-1.0.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
     },
     {
       "name": "http",
@@ -122,16 +218,34 @@
       "languageVersion": "3.4"
     },
     {
-      "name": "image",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/image-4.5.4",
+      "name": "intl",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/intl-0.18.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "js",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/js-0.6.7",
+      "packageUri": "lib/",
+      "languageVersion": "2.19"
+    },
+    {
+      "name": "just_audio",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/just_audio-0.9.46",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
     {
-      "name": "json_annotation",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/json_annotation-4.9.0",
+      "name": "just_audio_platform_interface",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/just_audio_platform_interface-4.6.0",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "2.17"
+    },
+    {
+      "name": "just_audio_web",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/just_audio_web-0.4.16",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
     },
     {
       "name": "leak_tracker",
@@ -158,6 +272,12 @@
       "languageVersion": "3.0"
     },
     {
+      "name": "logging",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/logging-1.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "matcher",
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/matcher-0.12.17",
       "packageUri": "lib/",
@@ -171,9 +291,15 @@
     },
     {
       "name": "meta",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/meta-1.16.0",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/meta-1.17.0",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "native_toolchain_c",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/native_toolchain_c-0.17.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
     },
     {
       "name": "nested",
@@ -183,9 +309,9 @@
     },
     {
       "name": "objective_c",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/objective_c-9.1.0",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/objective_c-9.3.0",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "3.10"
     },
     {
       "name": "path",
@@ -207,9 +333,9 @@
     },
     {
       "name": "path_provider_foundation",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/path_provider_foundation-2.5.0",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/path_provider_foundation-2.6.0",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.10"
     },
     {
       "name": "path_provider_linux",
@@ -248,12 +374,6 @@
       "languageVersion": "3.0"
     },
     {
-      "name": "posix",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/posix-6.0.3",
-      "packageUri": "lib/",
-      "languageVersion": "3.0"
-    },
-    {
       "name": "provider",
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/provider-6.1.5+1",
       "packageUri": "lib/",
@@ -266,6 +386,60 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "rxdart",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/rxdart-0.28.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "shared_preferences",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/shared_preferences-2.5.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "shared_preferences_android",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.20",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "shared_preferences_foundation",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "shared_preferences_linux",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/shared_preferences_linux-2.4.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "shared_preferences_platform_interface",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/shared_preferences_platform_interface-2.4.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "shared_preferences_web",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/shared_preferences_web-2.4.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "shared_preferences_windows",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/shared_preferences_windows-2.4.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "simple_gesture_detector",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/simple_gesture_detector-0.2.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "sky_engine",
       "rootUri": "file:///usr/local/share/flutter/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
@@ -273,7 +447,7 @@
     },
     {
       "name": "source_span",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/source_span-1.10.1",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/source_span-1.10.2",
       "packageUri": "lib/",
       "languageVersion": "3.1"
     },
@@ -296,6 +470,18 @@
       "languageVersion": "3.1"
     },
     {
+      "name": "synchronized",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/synchronized-3.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
+      "name": "table_calendar",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/table_calendar-3.0.9",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "term_glyph",
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/term_glyph-1.2.2",
       "packageUri": "lib/",
@@ -303,15 +489,27 @@
     },
     {
       "name": "test_api",
-      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/test_api-0.7.6",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/test_api-0.7.7",
       "packageUri": "lib/",
       "languageVersion": "3.5"
+    },
+    {
+      "name": "timezone",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/timezone-0.9.4",
+      "packageUri": "lib/",
+      "languageVersion": "2.19"
     },
     {
       "name": "typed_data",
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/typed_data-1.4.0",
       "packageUri": "lib/",
       "languageVersion": "3.5"
+    },
+    {
+      "name": "uuid",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/uuid-4.5.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
     },
     {
       "name": "vector_math",
@@ -350,15 +548,15 @@
       "languageVersion": "3.4"
     },
     {
-      "name": "flutter_teacher_app",
+      "name": "teachers_app",
       "rootUri": "../",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.9.0",
+  "generatorVersion": "3.10.8",
   "flutterRoot": "file:///usr/local/share/flutter",
-  "flutterVersion": "3.35.2",
+  "flutterVersion": "3.38.9",
   "pubCache": "file:///Users/apple/.pub-cache"
 }
