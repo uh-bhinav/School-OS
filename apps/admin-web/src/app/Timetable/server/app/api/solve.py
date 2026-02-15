@@ -264,6 +264,10 @@ def _build_solver_input_from_sample_data() -> dict:
                 "block_length": s["block_length"] if s["block_required"] else 2,
                 "requires_resource": s["resource_type"] is not None,
                 "resource_type": s["resource_type"],
+                # Language tier for synchronization:
+                # Tier 1: First Language (e.g., English) - fixed for all students
+                # Tier 2+: Second/Third Language - students choose one, share slots
+                "language_tier": s.get("language_tier"),
             }
         )
 
@@ -278,15 +282,17 @@ def _build_solver_input_from_sample_data() -> dict:
             if m["section_id"] == c["section_id"]:
                 subject_teacher_map[m["subject_code"]] = m["teacher_id"]
 
-        # Get language block info
+        # Get language block info (2-language model: each section has ONE tier-2 lang)
         for lg in SAMPLE_LANGUAGE_GROUPS:
             if lg["section_id"] == c["section_id"]:
-                language_subjects = ["HINDI", "KANNADA", "SANSKRIT"]
-                language_teachers = [
-                    lg["hindi_teacher"],
-                    lg["kannada_teacher"],
-                    lg["sanskrit_teacher"],
-                ]
+                language_subjects = []
+                language_teachers = []
+                if lg.get("hindi_teacher"):
+                    language_subjects.append("HINDI")
+                    language_teachers.append(lg["hindi_teacher"])
+                if lg.get("kannada_teacher"):
+                    language_subjects.append("KANNADA")
+                    language_teachers.append(lg["kannada_teacher"])
                 break
 
         classes.append(
@@ -351,6 +357,47 @@ def _build_solver_input_from_sample_data() -> dict:
         "max_consecutive_default": SAMPLE_CONSTRAINTS_CONFIG.get(
             "max_consecutive_default", 3
         ),
+        # Pass soft weights so the solver can use them
+        # Map from SAMPLE_CONSTRAINTS_CONFIG keys to solver soft constraint names
+        # All 12 soft constraints with medium priority (5) by default
+        "soft_weights": {
+            "core_morning": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_core_morning", 5
+            ),
+            "class_teacher_period_1": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_class_teacher_period_1", 5
+            ),
+            "no_subject_twice_daily": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_no_subject_twice_daily", 5
+            ),
+            "resource_capacity": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_resource_capacity", 5
+            ),
+            "teacher_balance": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_teacher_balance", 5
+            ),
+            "minimize_gaps": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_minimize_gaps", 5
+            ),
+            "leisure_afternoon": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_leisure_afternoon", 5
+            ),
+            "avoid_pe_period_1": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_avoid_pe_period_1", 5
+            ),
+            "subject_distribution": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_subject_distribution", 5
+            ),
+            "teacher_free_period": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_teacher_free_period", 5
+            ),
+            "fair_slot_distribution": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_fair_slot_distribution", 5
+            ),
+            "specialist_priority": SAMPLE_CONSTRAINTS_CONFIG.get(
+                "soft_weight_specialist_priority", 5
+            ),
+        },
     }
 
     return {

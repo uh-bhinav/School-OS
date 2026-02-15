@@ -36,17 +36,21 @@ interface HallTicketProps {
   hallTicketNumber: string;
   downloadDateTime: string;
   ipAddress?: string;
+  className?: string;
+  section?: string;
 }
 
 export default function HallTicket({
   student,
   school,
   examPeriod,
-  examCenter,
+  examCenter: _examCenter,
   subjects,
   hallTicketNumber,
   downloadDateTime,
   ipAddress,
+  className,
+  section,
 }: HallTicketProps) {
   return (
     <Paper
@@ -56,6 +60,8 @@ export default function HallTicket({
         p: 3,
         bgcolor: "white",
         boxShadow: 3,
+        position: "relative",
+        overflow: "hidden",
         "@media print": {
           boxShadow: "none",
           m: 0,
@@ -63,6 +69,24 @@ export default function HallTicket({
         },
       }}
     >
+      {/* School Seal Watermark */}
+      <Box
+        sx={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          opacity: 0.04,
+          fontSize: "200px",
+          fontWeight: 900,
+          color: "#1976d2",
+          pointerEvents: "none",
+          whiteSpace: "nowrap",
+          zIndex: 0,
+        }}
+      >
+        {school.name.substring(0, 3).toUpperCase()}
+      </Box>
       {/* Header */}
       <Box
         sx={{
@@ -177,6 +201,34 @@ export default function HallTicket({
             Mother's Name
           </Typography>
           <Typography variant="body2">: {student.motherName}</Typography>
+
+          {className && (
+            <>
+              <Typography variant="body2" fontWeight="bold">
+                Class
+              </Typography>
+              <Typography variant="body2">: {className}</Typography>
+            </>
+          )}
+
+          {section && (
+            <>
+              <Typography variant="body2" fontWeight="bold">
+                Section
+              </Typography>
+              <Typography variant="body2">: {section}</Typography>
+            </>
+          )}
+
+          <Typography variant="body2" fontWeight="bold">
+            Academic Year
+          </Typography>
+          <Typography variant="body2">: {examPeriod.academicYear}</Typography>
+
+          <Typography variant="body2" fontWeight="bold">
+            Exam Period
+          </Typography>
+          <Typography variant="body2">: {examPeriod.name}</Typography>
         </Box>
       </Box>
 
@@ -250,10 +302,15 @@ export default function HallTicket({
       </Box>
 
       {/* Signature Box */}
-      <Box sx={{ mt: 4, display: "flex", justifyContent: "space-between" }}>
+      <Box sx={{ mt: 4, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <Box sx={{ textAlign: "center" }}>
+          <Box sx={{ width: 180, height: 40, mb: 0.5, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+            <Typography variant="caption" sx={{ fontStyle: "italic", color: "#666", fontFamily: "'Brush Script MT', cursive", fontSize: 18 }}>
+              Principal
+            </Typography>
+          </Box>
           <Box sx={{ borderTop: "1px solid #000", pt: 1, width: 200 }}>
-            <Typography variant="caption">Principal's Signature</Typography>
+            <Typography variant="caption">Principal's Signature & Seal</Typography>
           </Box>
         </Box>
         <Box sx={{ textAlign: "center" }}>
@@ -261,6 +318,13 @@ export default function HallTicket({
             <Typography variant="caption">Student's Signature</Typography>
           </Box>
         </Box>
+      </Box>
+
+      {/* Footer */}
+      <Box sx={{ mt: 3, textAlign: "center", borderTop: "1px solid #e0e0e0", pt: 1 }}>
+        <Typography variant="caption" color="text.secondary">
+          Downloaded on: {downloadDateTime} {ipAddress ? `| IP: ${ipAddress}` : ""}
+        </Typography>
       </Box>
     </Paper>
   );

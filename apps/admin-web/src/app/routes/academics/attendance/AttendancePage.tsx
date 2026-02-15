@@ -18,17 +18,42 @@ import {
 } from "../../../services/attendance.hooks";
 
 export default function AttendancePage() {
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
   const [filters, setFiltersState] = useState({
     academic_year_id: undefined as number|undefined,
     class_id: 8 as number|undefined,
     section_id: undefined as number|undefined,
-    date: new Date().toISOString().slice(0,10)
+    date: todayStr,
+    date_from: undefined as string|undefined,
+    date_to: undefined as string|undefined,
+    month: undefined as string|undefined,
+    filter_mode: "date" as "date"|"month"|"range",
   });
   const setFilters = (p: any) => setFiltersState(s => ({ ...s, ...p }));
 
-  const { data: list, isLoading, error, refetch } = useAttendanceList({ class_id: filters.class_id, date: filters.date, page:1, page_size:300 });
+  // Safe date helpers that won't crash on invalid input
+  const safeDate = (d: string): string => {
+    try {
+      if (!d) return todayStr;
+      const parts = d.split("-");
+      if (parts.length !== 3) return todayStr;
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10);
+      const day = parseInt(parts[2], 10);
+      if (!year || year < 2000 || year > 2099 || !month || month < 1 || month > 12 || !day || day < 1 || day > 31) return todayStr;
+      const date = new Date(year, month - 1, day);
+      if (isNaN(date.getTime())) return todayStr;
+      return d;
+    } catch { return todayStr; }
+  };
+
+  const validDate = safeDate(filters.date);
+
+  const { data: list, isLoading, error, refetch } = useAttendanceList({ class_id: filters.class_id, date: validDate, page:1, page_size:300 });
   const { data: weekly } = useWeeklySummary(filters.class_id ?? 0, undefined);
-  const { data: range } = useClassRange(filters.class_id ?? 0, getMonthStart(filters.date), filters.date);
+  const { data: range } = useClassRange(filters.class_id ?? 0, safeGetMonthStart(validDate), validDate);
 
   const [editRow, setEditRow] = useState<any|null>(null);
   const updateMut = useUpdateAttendance();
@@ -39,9 +64,13 @@ export default function AttendancePage() {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const bulkMut = useBulkAttendance();
 
-  const rows = useMemo(()=> (list?.items ?? []).map(r => ({
-    id: r.attendance_id, student_id: r.student_id, student_name: resolveName(r.student_id),
-    status: r.status, remarks: r.remarks ?? ""
+  const rows = useMemo(()=> (list?.items ?? []).map((r, idx) => ({
+    id: r.attendance_id, sl_no: idx + 1, student_id: r.student_id,
+    enrollment_no: resolveEnrollment(r.student_id),
+    student_name: resolveName(r.student_id),
+    father_name: resolveFatherName(r.student_id),
+    status: r.status, remarks: r.remarks ?? "",
+    date: r.date
   })), [list]);
 
   const presentPct = useMemo(()=>{
@@ -68,15 +97,25 @@ export default function AttendancePage() {
 
   const handleExport = () => {
     if (!list?.items.length) return;
-    const csv = [
-      ["Student ID", "Student Name", "Status", "Remarks", "Date"].join(","),
-      ...list.items.map(r => [r.student_id, resolveName(r.student_id), r.status, r.remarks || "", r.date].join(","))
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    // Build Excel-compatible CSV with the SATS-like format
+    const header = ["Sl.No", "Enrollment Number", "Student Name", "Father Name", "Status", "Present Days", "Date"].join(",");
+    const dataRows = list.items.map((r, idx) => [
+      idx + 1,
+      resolveEnrollment(r.student_id),
+      resolveName(r.student_id),
+      resolveFatherName(r.student_id),
+      r.status,
+      r.status === "PRESENT" || r.status === "LATE" ? 1 : 0,
+      r.date
+    ].join(","));
+    const csv = [header, ...dataRows].join("\n");
+    // Use Excel-compatible format with BOM for proper Excel opening
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csv], { type: "application/vnd.ms-excel;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `attendance-${filters.date}.csv`;
+    a.download = `attendance-${filters.date}.xls`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -247,4 +286,17 @@ export default function AttendancePage() {
 
 // Helpers (replace with your real resolvers)
 function resolveName(student_id:number){ return `Student ${student_id}`; }
-function getMonthStart(d:string){ const x = new Date(d); x.setDate(1); return x.toISOString().slice(0,10); }
+function resolveFatherName(student_id:number){ return `Parent of Student ${student_id}`; }
+function resolveEnrollment(student_id:number){ return `ENR${String(student_id).padStart(6, '0')}`; }
+function safeGetMonthStart(d:string){
+  try {
+    const parts = d.split("-");
+    if (parts.length !== 3) return d;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    if (!year || year < 2000 || year > 2099 || !month || month < 1 || month > 12) return d;
+    return `${year}-${String(month).padStart(2,'0')}-01`;
+  } catch {
+    return d;
+  }
+}

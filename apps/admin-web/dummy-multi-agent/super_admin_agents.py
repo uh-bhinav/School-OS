@@ -2,7 +2,8 @@
 Super Admin Agents - Multi-Agent System for Group-Level School Management
 ==========================================================================
 Provides group-level insights across multiple schools for Super Administrators.
-All agents are READ-ONLY and return text-only responses.
+All agents are READ-ONLY and return text-only responses with optional visualizations.
+Response templating system for concise, scannable outputs.
 
 AGENTS:
 1. group_overview_agent      - High-level health summary across all schools
@@ -14,9 +15,65 @@ AGENTS:
 """
 
 import os
+import re
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 import google.generativeai as genai
+
+# Import graph helpers for visualization support
+try:
+    from .graph_helpers import (
+        should_generate_graph,
+        build_graph_payload,
+        generate_chart_safe,
+        # Template utilities
+        USE_RESPONSE_TEMPLATES,
+        TEMPLATES_ENABLED,
+        apply_template_to_message,
+    )
+
+    GRAPH_ENABLED = True
+except ImportError:
+    try:
+        # Fallback for direct execution
+        from graph_helpers import (
+            should_generate_graph,
+            build_graph_payload,
+            generate_chart_safe,
+            USE_RESPONSE_TEMPLATES,
+            TEMPLATES_ENABLED,
+            apply_template_to_message,
+        )
+
+        GRAPH_ENABLED = True
+    except ImportError:
+        GRAPH_ENABLED = False
+        USE_RESPONSE_TEMPLATES = False
+        TEMPLATES_ENABLED = False
+        logging.warning("Graph helpers not available. Chart generation disabled.")
+
+# Import Response Governor for strict output control
+try:
+    from .response_governor import (
+        QueryAnalyzer,
+        govern_response,
+    )
+
+    GOVERNOR_ENABLED = True
+except ImportError:
+    try:
+        from response_governor import (
+            QueryAnalyzer,
+            govern_response,
+        )
+
+        GOVERNOR_ENABLED = True
+    except ImportError:
+        GOVERNOR_ENABLED = False
+        logging.warning("Response Governor not available. Using legacy templating.")
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 env_path = Path(__file__).parent / "manager" / ".env"
@@ -130,16 +187,13 @@ SUPER_ADMIN_AGENTS = {
 SCHOOLS HEALTH SUMMARY:
 {SCHOOLS_HEALTH_SUMMARY}""",
         "emoji": "🏫",
-        "prompt_addition": """
-You are the Group Overview Agent for a Super Admin managing multiple schools.
-Focus on:
-- Total number of schools and their distribution by status (Active, Warning, Suspended)
-- Total students and staff across all schools
-- At-risk schools requiring attention
-- High-level health summary across the group
-- Quick wins and critical alerts
-
-Provide executive-level insights suitable for a Super Admin dashboard.""",
+        "prompt_addition": """Focus on: school count by status, total students/staff, at-risk schools, health alerts.""",
+        "graph_config": {
+            "supports_charts": True,
+            "default_chart_type": "pie",
+            "value_field": "overall_health_score",
+            "category_field": "school_name",
+        },
     },
     "group_finance_agent": {
         "keywords": [
@@ -155,20 +209,18 @@ Provide executive-level insights suitable for a Super Admin dashboard.""",
             "outstanding",
             "cash flow",
             "budget",
+            "collection trend",
+            "revenue comparison",
         ],
         "data": GROUP_FINANCE_DATA,
         "emoji": "💰",
-        "prompt_addition": """
-You are the Group Finance Agent for a Super Admin.
-Focus on:
-- Total revenue across all schools
-- Fee collection rates and trends
-- Schools with high pending dues or overdue amounts
-- Year-over-year growth comparison
-- Financial stress indicators
-- Schools needing collection intervention
-
-Provide actionable financial insights with specific numbers and percentages.""",
+        "prompt_addition": """Focus on: total revenue, collection rates, schools with high dues, YoY growth.""",
+        "graph_config": {
+            "supports_charts": True,
+            "default_chart_type": "bar",
+            "value_field": "collected_amount",
+            "category_field": "school_name",
+        },
     },
     "group_attendance_agent": {
         "keywords": [
@@ -181,20 +233,18 @@ Provide actionable financial insights with specific numbers and percentages.""",
             "at risk",
             "attendance health",
             "attendance risk",
+            "attendance trend",
+            "attendance comparison",
         ],
         "data": GROUP_ATTENDANCE_DATA,
         "emoji": "📊",
-        "prompt_addition": """
-You are the Group Attendance Agent for a Super Admin.
-Focus on:
-- Average attendance across all schools
-- Schools with attendance below acceptable threshold (85%)
-- Chronic absenteeism patterns
-- Attendance trends (improving/declining)
-- Risk levels and interventions needed
-- Best and worst performing classes
-
-Highlight schools requiring immediate attention.""",
+        "prompt_addition": """Focus on: avg attendance, schools below 85%, chronic absentees, risk levels.""",
+        "graph_config": {
+            "supports_charts": True,
+            "default_chart_type": "horizontal_bar",
+            "value_field": "avg_attendance_pct",
+            "category_field": "school_name",
+        },
     },
     "compliance_risk_agent": {
         "keywords": [
@@ -212,17 +262,13 @@ Highlight schools requiring immediate attention.""",
         ],
         "data": COMPLIANCE_RISK_DATA,
         "emoji": "⚠️",
-        "prompt_addition": """
-You are the Compliance & Risk Agent for a Super Admin.
-Focus on:
-- Schools with expired or expiring licenses
-- Failed or pending audits
-- Critical compliance violations
-- Certificate status (fire safety, health, building)
-- Legal risks and liability concerns
-- Immediate actions required
-
-Prioritize issues by severity and urgency.""",
+        "prompt_addition": """Focus on: expired licenses, failed audits, violations, certificate status.""",
+        "graph_config": {
+            "supports_charts": True,
+            "default_chart_type": "horizontal_bar",
+            "value_field": "pending_violations",
+            "category_field": "school_name",
+        },
     },
     "group_communication_agent": {
         "keywords": [
@@ -239,17 +285,13 @@ Prioritize issues by severity and urgency.""",
         ],
         "data": COMMUNICATION_DATA,
         "emoji": "📱",
-        "prompt_addition": """
-You are the Group Communication Agent for a Super Admin.
-Focus on:
-- Message delivery success rates
-- Parent app adoption across schools
-- Communication engagement scores
-- Schools with poor parent reachability
-- SMS credit status
-- Email bounce rates and issues
-
-Identify schools needing communication infrastructure improvements.""",
+        "prompt_addition": """Focus on: delivery rates, parent app adoption, engagement scores.""",
+        "graph_config": {
+            "supports_charts": True,
+            "default_chart_type": "bar",
+            "value_field": "read_rate",
+            "category_field": "school_name",
+        },
     },
     "schools_overview_agent": {
         "keywords": [
@@ -277,17 +319,13 @@ FINANCIAL DATA:
 ATTENDANCE DATA:
 {GROUP_ATTENDANCE_DATA}""",
         "emoji": "🏆",
-        "prompt_addition": """
-You are the Schools Overview Agent for a Super Admin.
-Focus on:
-- Per-school status and health flags
-- School rankings by various metrics
-- Comparative analysis between schools
-- Tier distribution (Premium, Standard, Basic)
-- Individual school deep-dives when requested
-- Performance benchmarking
-
-Provide both high-level rankings and specific school details when asked.""",
+        "prompt_addition": """Focus on: school rankings, comparisons, tier distribution, performance benchmarking.""",
+        "graph_config": {
+            "supports_charts": True,
+            "default_chart_type": "horizontal_bar",
+            "value_field": "overall_health_score",
+            "category_field": "school_name",
+        },
     },
 }
 
@@ -324,11 +362,10 @@ async def get_super_admin_agent_response(user_message: str, history: list) -> di
         history: Conversation history for context
 
     Returns:
-        dict: {"message": str, "agent_id": str}
+        dict: {"message": str, "agent_id": str, "chart": optional}
     """
-
     # Build conversation context
-    context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history[-6:]])
+    _context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history[-6:]])
     query_lower = user_message.lower()
 
     # Detect agent
@@ -350,25 +387,11 @@ async def get_super_admin_agent_response(user_message: str, history: list) -> di
         for word in greeting_words
     ):
         return {
-            "message": """👋 **Hello! I'm your Super Admin Group Management Assistant.**
+            "message": """👋 Hello! I'm your Super Admin Group Assistant.
 
-I provide group-level insights across all your schools. Here's what I can help with:
+I help with: 🏫 Overview | 💰 Finance | 📊 Attendance | ⚠️ Compliance | 📱 Communication | 🏆 Rankings
 
-🏫 **Group Overview** - Total schools, students, health summary
-💰 **Financial Health** - Revenue, collections, dues across schools
-📊 **Attendance Health** - Attendance trends, at-risk schools
-⚠️ **Compliance & Risk** - Licenses, audits, violations
-📱 **Communication** - Message delivery, parent engagement
-🏆 **Schools Overview** - Rankings, comparisons, individual school details
-
-**Try asking:**
-- "Give me a group overview"
-- "Which schools have poor financial health?"
-- "Show schools with attendance below 80%"
-- "Are there any compliance issues?"
-- "Rank schools by overall performance"
-
-What would you like to know about your school group?""",
+Try: "Group overview" or "Which schools have poor attendance?" """,
             "agent_id": "group_overview_agent",
         }
 
@@ -376,41 +399,277 @@ What would you like to know about your school group?""",
     relevant_data = config["data"]
     emoji = config["emoji"]
     prompt_addition = config["prompt_addition"]
+    graph_config = config.get("graph_config", {})
 
-    system_prompt = f"""You are a Super Admin assistant for a school management group.
-You have access to data across multiple schools and provide group-level insights.
-Your responses should be executive-level, actionable, and data-driven.
+    # Check if visualization is requested
+    needs_graph = False
+    chart_result = None
 
-CURRENT DATA:
+    if GRAPH_ENABLED and graph_config.get("supports_charts", False):
+        needs_graph = should_generate_graph(user_message)
+
+    # If graph is needed, add instructions to extract chart data
+    chart_instruction = ""
+    if needs_graph:
+        chart_instruction = """
+
+CHART DATA (MANDATORY FOR THIS QUERY):
+Provide chart data as JSON at the END of your text response:
+<CHART_DATA>
+{"chart_type": "bar", "title": "Title Here", "labels": ["Label1","Label2"], "values": [10,20]}
+</CHART_DATA>
+
+Chart types: line, bar, pie, horizontal_bar. Max 10 data points."""
+
+    system_prompt = f"""You are a school group data assistant. Output ONLY data, never commentary.
+
+DATA:
 {relevant_data}
 
-INSTRUCTIONS:
 {prompt_addition}
 
-FORMATTING RULES:
-1. Use emojis to make responses friendly and readable
-2. Format lists with bullet points
-3. Use tables where appropriate for comparisons
-4. Highlight critical issues with ⚠️ or 🚨
-5. Include specific numbers, percentages, and school names
-6. Be concise but thorough
-7. Prioritize actionable insights
-8. When comparing, show rankings or percentages
+STRICT OUTPUT RULES:
+1. MAX 5 bullet points, each under 12 words
+2. NO greetings, NO "here is", NO "based on the data"
+3. NEVER write diagrams, flowcharts, mermaid, or ASCII art
+4. NEVER use ```code blocks``` for any visual representation
+5. Start with the most important fact
+6. Use bullet format: • Item: Value
+7. Critical issues only: prefix with ALERT:
+{chart_instruction}
 
-RECENT CONVERSATION:
-{context}
-
-USER QUERY: {user_message}
-
-Provide an accurate, executive-level response based on the data above."""
+QUERY: {user_message}"""
 
     try:
         model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(system_prompt)
+        response_text = response.text
 
-        return {"message": f"{emoji} {response.text}", "agent_id": agent_id}
+        # Extract chart data if present and generate chart
+        if needs_graph and GRAPH_ENABLED:
+            chart_result = _extract_and_generate_super_admin_chart(
+                response_text, agent_id
+            )
+            # Remove chart data tags from response text
+            response_text = re.sub(
+                r"<CHART_DATA>.*?</CHART_DATA>", "", response_text, flags=re.DOTALL
+            ).strip()
+
+        # Apply Response Governor for strict output control (if enabled)
+        if GOVERNOR_ENABLED:
+            # Analyze query to determine if graph is required
+            analyzer = QueryAnalyzer()
+            query_info = analyzer.analyze(user_message)
+
+            # If query requires graph but none generated, try fallback chart generation
+            if query_info["requires_graph"] and not chart_result and GRAPH_ENABLED:
+                logger.info(
+                    f"Governor: Query requires graph, trying fallback for {agent_id}"
+                )
+                chart_result = _generate_fallback_super_admin_chart(
+                    response_text, user_message, agent_id
+                )
+
+            # Apply governor enforcement
+            governed_response = govern_response(
+                raw_response=response_text,
+                query=user_message,
+                agent_id=agent_id,
+                chart=chart_result,
+            )
+
+            # Build final response with governed format
+            result = {
+                "message": governed_response["message"],
+                "agent_id": agent_id,
+                "formatted": governed_response.get("formatted"),
+                "governed": True,  # Mark as governor-processed
+            }
+
+            if governed_response.get("chart"):
+                result["chart"] = governed_response["chart"]
+            if governed_response.get("bullets"):
+                result["bullets"] = governed_response["bullets"]
+
+            return result
+
+        # Fallback: Apply response templates if enabled (legacy path)
+        elif USE_RESPONSE_TEMPLATES and TEMPLATES_ENABLED:
+            template_result = apply_template_to_message(
+                message=response_text,
+                query=user_message,
+                agent_id=agent_id,
+                chart=chart_result,
+            )
+
+            # Build final response with templated format
+            result = {
+                "message": f"{emoji} {template_result['message']}",
+                "agent_id": agent_id,
+                "formatted": template_result.get("formatted"),
+            }
+
+            if template_result.get("chart"):
+                result["chart"] = template_result["chart"]
+        else:
+            # Fallback to raw response
+            result = {"message": f"{emoji} {response_text}", "agent_id": agent_id}
+
+            if chart_result:
+                result["chart"] = chart_result
+
+        return result
+
     except Exception as e:
+        logger.exception(f"Super admin agent response error: {e}")
         return {
             "message": f"❌ I encountered an error: {str(e)}\n\nPlease ensure GOOGLE_API_KEY is set in the .env file.",
             "agent_id": "error",
         }
+
+
+def _extract_and_generate_super_admin_chart(
+    response_text: str, agent_id: str
+) -> dict | None:
+    """
+    Extract chart data from LLM response and generate chart for super admin agents.
+
+    Args:
+        response_text: Full LLM response text
+        agent_id: ID of the agent for logging
+
+    Returns:
+        Chart result dict or None if extraction/generation fails
+    """
+    import json
+
+    try:
+        # Extract chart data from tags
+        match = re.search(
+            r"<CHART_DATA>\s*(.*?)\s*</CHART_DATA>", response_text, re.DOTALL
+        )
+        if not match:
+            logger.debug(f"No chart data found in {agent_id} response")
+            return None
+
+        chart_json = match.group(1).strip()
+        chart_data = json.loads(chart_json)
+
+        # Build payload for graph tool
+        payload = build_graph_payload(
+            agent_type=agent_id.replace("_agent", ""),
+            intent=chart_data.get("chart_type", "comparison"),
+            labels=chart_data.get("labels", []),
+            values=chart_data.get("values", []),
+            title=chart_data.get("title", ""),
+            x_label=chart_data.get("x_label", ""),
+            y_label=chart_data.get("y_label", ""),
+            chart_type=chart_data.get("chart_type", "bar"),
+        )
+
+        # Generate chart
+        result, error = generate_chart_safe(payload)
+
+        if error:
+            logger.error(f"Chart generation failed for {agent_id}: {error}")
+            return None
+
+        return {
+            "base64_image": result.get("base64_image"),
+            "chart_type": result.get("chart_type"),
+            "title": chart_data.get("title", ""),
+        }
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse chart JSON from {agent_id}: {e}")
+        return None
+    except Exception as e:
+        logger.exception(f"Chart extraction error for {agent_id}: {e}")
+        return None
+
+
+def _generate_fallback_super_admin_chart(
+    response_text: str, query: str, agent_id: str
+) -> dict | None:
+    """
+    Generate a chart from response text when LLM didn't provide structured chart data.
+    Extracts numbers and labels from bullet points to create a visualization.
+
+    Args:
+        response_text: The agent's text response
+        query: Original user query
+        agent_id: Agent identifier
+
+    Returns:
+        Chart result dict or None if generation fails
+    """
+    try:
+        # Extract name:value or name - value patterns from response
+        patterns = [
+            r"•\s*([^:]+):\s*(\d+(?:\.\d+)?)",  # • Name: 95
+            r"•\s*([^–-]+)\s*[-–]\s*(\d+(?:\.\d+)?)",  # • Name - 95
+            r"(\w+(?:\s+\w+)*)\s*:\s*(\d+(?:\.\d+)?)",  # Name: 95
+            r"(\w+(?:\s+\w+)*)\s+scored?\s+(\d+(?:\.\d+)?)",  # Name scored 95
+        ]
+
+        labels = []
+        values = []
+
+        for pattern in patterns:
+            matches = re.findall(pattern, response_text)
+            if matches and len(matches) >= 2:
+                for match in matches[:10]:  # Limit to 10 items
+                    label = match[0].strip()
+                    try:
+                        value = float(match[1])
+                        if label and len(label) < 30:  # Reasonable label length
+                            labels.append(label)
+                            values.append(value)
+                    except ValueError:
+                        continue
+                break  # Use first successful pattern
+
+        if len(labels) < 2:
+            logger.debug(f"Not enough data points extracted for chart: {len(labels)}")
+            return None
+
+        # Determine chart type based on query
+        chart_type = "bar"
+        if "trend" in query.lower() or "over time" in query.lower():
+            chart_type = "line"
+        elif "ranking" in query.lower() or "top" in query.lower():
+            chart_type = "horizontal_bar"
+        elif "distribution" in query.lower() or "breakdown" in query.lower():
+            chart_type = "pie"
+
+        # Generate title from query
+        title_words = query.split()[:6]
+        title = " ".join(word.title() for word in title_words)
+
+        # Build payload
+        payload = build_graph_payload(
+            agent_type=agent_id.replace("_agent", ""),
+            intent="comparison",
+            labels=labels,
+            values=values,
+            title=title,
+            chart_type=chart_type,
+        )
+
+        # Generate chart
+        result, error = generate_chart_safe(payload)
+
+        if error:
+            logger.error(f"Fallback chart generation failed: {error}")
+            return None
+
+        logger.info(f"Successfully generated fallback chart for {agent_id}")
+        return {
+            "base64_image": result.get("base64_image"),
+            "chart_type": result.get("chart_type"),
+            "title": title,
+        }
+
+    except Exception as e:
+        logger.exception(f"Fallback chart generation error: {e}")
+        return None

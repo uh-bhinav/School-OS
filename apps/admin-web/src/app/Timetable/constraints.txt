@@ -1,82 +1,2428 @@
-TIMETABLE CONSTRAINT LIST
+################################################################################
+################################################################################
+##                                                                            ##
+##        SCHOOL-OS TIMETABLE SOLVER - CONSTRAINT SYSTEM EXPLAINED            ##
+##                                                                            ##
+##        How the solver views, applies, and optimizes constraints            ##
+##                                                                            ##
+################################################################################
+################################################################################
 
-HARD CONSTRAINTS (Non-Negotiable - Solver Must Satisfy)
-1. Global Time Grid
-* School start_time and end_time are fixed and immutable
-* Period durations and count per weekday/Saturday are user-configurable
-* Period 0 (Assembly/Prayer): Optional via toggle; if enabled, reserved for assembly—no academic sessions allowed
-* Period 0 is NOT counted toward teacher's min/max daily period requirements
-* Saturday is half-day: max 4 periods (vs 8 on weekdays)
-* Recess and lunch are fixed blocks—no academic scheduling allowed
-* Lunch break must be configurable in school settings
-2. Teacher Single Assignment
-* A teacher can teach only ONE class/section per period (no double-booking)
-* Teacher cannot exceed max_periods_per_day
-* Teacher must meet min_periods_per_day (excluding Period 0)
-* Teacher cannot exceed max_consecutive_periods (default = 3) without a break (recess/lunch/free period)
-* Weekly load must be balanced: cannot have 7 periods Monday and 2 periods Tuesday
-3. Section/Class Rules
-* Each section can have only ONE subject scheduled per period
-* Every section must have a designated class teacher
-* Optional Hard Constraint (Toggle ON by default): Class teacher gets Period 1 every day with their own section
-* If toggled OFF, class teacher should still get minimum 2 periods/week with their section
-4. Subject-Teacher Lock-in
-* Once a teacher is assigned to teach Subject X for Section Y, the SAME teacher handles ALL periods of Subject X for Section Y throughout the year
-* Algorithm must not split one subject across multiple teachers for the same section
-* This is derived from Class-Section → Subject-Teacher mapping (stored as section property)
-5. Language Block Synchronization
-* Optional Hard Constraint (Toggle ON by default)
-* When a "language block" (e.g., "1st Language" or "3rd Language") is scheduled for a section:
-    * ALL language teachers for that section must be simultaneously free
-    * Example: If Grade 8A has "2nd Language" at Tuesday P4, then Teacher_Hindi_8A, Teacher_Kannada_8A, Teacher_Sanskrit_8A, Teacher_French_8A must ALL be free and assigned to that block
-    * None of these teachers can be assigned elsewhere during that period
-* Students dynamically split into language groups; timetable shows only "1st Language" / "2nd Language" / "3rd Language"
-6. Lab Double-Block Integrity
-* Subjects flagged as requiring N consecutive periods (e.g., labs need 2) must get contiguous slots
-* Lab blocks cannot bridge recess/lunch (e.g., Period 3 + Lunch is invalid)
-* Lab blocks cannot straddle breaks
-7. Special Room/Resource Allocation
-* Labs, sports grounds, music rooms, yoga rooms, etc. are limited resources
-* Global setting: User defines max simultaneous capacity per resource type (e.g., "2 Computer Labs")
-* Solver must ensure no more than N sections scheduled for resource-requiring subjects simultaneously
-* If no capacity limit specified → assume unlimited (conducted in home classroom)
-8. Weekly Subject Load Requirements
-* Each subject must receive its min_periods_per_week and max_periods_per_week (e.g., Maths: 6-7, Languages: 5-6, PE: 1-2)
-* All periods for all subjects for all sections must fit within the week
-9. Substitution Reserve
-* At any given period, minimum N_free_teachers_per_period (configurable, e.g., 3-5) must be kept free as substitute/proxy teachers
-10. Teacher Availability Constraints
-* Respect explicit teacher unavailability windows:
-    * Day restrictions: e.g., Drawing teacher available only Mon/Thu/Sat
-    * Time restrictions: e.g., Yoga teacher available only till 12:00 PM
-    * Default for regular teachers: Mon-Sat, full school hours
-* Blocked periods cannot be assigned to that teacher
+Last Updated: February 2026
+Version: 1.0
 
-SOFT CONSTRAINTS (Preferences - Minimize Violations)
-1. Core Subject Placement (Morning Rule)
-* Prefer core subjects (Maths, Science, Physics, Chemistry) in Periods 1, 2, or 3 (pre-lunch)
-* Avoid core subjects immediately after lunch ("post-lunch dip" period)
-2. Subject Distribution & Balance
-* Distribute heavy subjects (Maths, Science) evenly across the week—avoid clustering
-* Space out similar subjects across different days
-* Balance "heavy textbook" subjects with "light textbook" subjects daily (reduce bag weight)
-* Try to have at least one "thinking break" between consecutive Maths periods across the week
-3. Teacher Wellbeing
-* Minimize variance in teacher load across the week
-* Minimize idle gaps in teacher's daily schedule (avoid: Period 1, Free, Free, Period 5, 6, 7)
-* If teacher works full Saturday load, give lighter Monday morning
-* Give each teacher at least one free period daily for preparation
-4. Student Energy Management
-* Schedule leisure subjects (PE, Art, Music, Library) in latter half of the day
-* Avoid PE in Period 1 (cold/damp grounds) or immediately after lunch (health/digestion)
-* Place physically active subjects just before/after breaks (for transitions/clothing changes)
-* Post-lunch slots (Period 6+) should prioritize Languages, History, Labs over purely theoretical core subjects
-5. Academic Effectiveness
-* Language subjects ideally not on same day as language block (avoid linguistic overload)
-* Value Education, Library, Computer Science distributed—not clustered on one day
-6. Fair Distribution of Undesirable Slots
-* Rotate "bad slots" (e.g., Friday Period 8, Saturday Period 4) fairly among teachers
-* No single teacher stuck with same undesirable slot every week
-7. Optional Toggle - Same Subject Twice Daily
-* User can enable: Prevent same subject twice in a day (except lab double-blocks)
-* Default: OFF (allowing same subject twice daily)
+This document explains in detail how the timetable solver works - including
+how it understands the data, applies constraints, handles language blocks,
+and uses weights to optimize the final timetable.
+
+================================================================================
+                           TABLE OF CONTENTS
+================================================================================
+
+    PART 1: SOLVER FUNDAMENTALS
+        1.1 What is CP-SAT?
+        1.2 Decision Variables (How the solver thinks)
+        1.3 Two-Phase Solving Pipeline
+
+    PART 2: INHERENT/CORE CONSTRAINTS (Always Enforced)
+        2.1 No Double-Booking for Classes
+        2.2 No Double-Booking for Teachers
+        2.3 Teacher Can Teach Multiple Subjects
+        2.4 Teacher-Subject-Class Permanence
+        2.5 Subject Frequency Requirements
+
+    PART 3: HARD CONSTRAINTS (Toggleable via UI)
+        3.1 Language Block Synchronization
+        3.2 Class Teacher in Period 1
+        3.3 No Subject Twice Daily
+        3.4 Core Subjects in Morning
+        3.5 Subject Frequency Bounds
+        3.6 Teacher Load Bounds
+        3.7 Block Period Integrity
+        3.8 Resource Capacity Limits
+
+    PART 4: LANGUAGE BLOCKS (Deep Dive)
+        4.1 What is a Language Block?
+        4.2 How Data is Structured
+        4.3 How the Solver Handles It
+        4.4 Common Pitfalls
+
+    PART 5: SOFT CONSTRAINTS & WEIGHTS
+        5.1 What are Soft Constraints?
+        5.2 How Weights Work
+        5.3 Complete List of Soft Constraints
+        5.4 Weight Tuning Guide
+
+    PART 6: OVERRIDES
+        6.1 Teacher Availability Overrides
+        6.2 Class Overrides
+        6.3 Subject Time Restrictions
+        6.4 How Overrides are Applied
+
+    PART 7: SOLVER INTERNALS
+        7.1 Building the Model
+        7.2 Solving Process
+        7.3 Relaxation Strategy
+
+    PART 8: MISSING / UNDOCUMENTED CONSTRAINTS (Appended)
+        8.1 Max Consecutive Periods (HARD_RELAXABLE)
+        8.2 Substitution Reserve (HARD_RELAXABLE)
+        8.3 Teacher Availability / Blocked Periods (HARD_CORE)
+        8.4 Prayer/Assembly Period Exclusion (Implicit Core)
+        8.5 No Free Periods / Class Period Filling (Policy)
+        8.6 Language Teacher Specialization (Sub-Constraint)
+
+    PART 9: SOFT CONSTRAINTS - DETAILED IMPLEMENTATION GUIDE
+        9.1  Core Morning Preference
+        9.2  Teacher Load Balance Preference
+        9.3  Minimize Idle Gaps Preference
+        9.4  Leisure Afternoon Preference
+        9.5  Avoid PE in Period 1 and After Lunch
+        9.6  Subject Distribution Preference
+        9.7  Teacher Free Period Preference
+        9.8  Fair Undesirable Slot Distribution
+        9.9  Specialist Teacher Priority
+        9.10 Class Teacher Period 1 - Soft Version
+        9.11 No Subject Twice Daily - Soft Version
+        9.12 Resource Capacity - Soft Version
+
+    PART 10: CORRECTED RELAXATION ORDER & CLASSIFICATION
+        10.1 Corrected Relaxation Order
+        10.2 Corrected Full Constraint Classification Table
+        10.3 Three-Tier System Explained
+
+    PART 11: LANGUAGE FREQUENCY IN SYNCHRONIZED BLOCKS
+        11.1 How Subject Frequency Works with Language Blocks
+
+    PART 12: AUTO-DETECTION & FALLBACK BEHAVIOR
+        12.1 Language Tier Auto-Detection
+        12.2 Section-Level Language Block Configuration
+
+================================================================================
+================================================================================
+                    PART 1: SOLVER FUNDAMENTALS
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1.1 WHAT IS CP-SAT?                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  The timetable solver uses Google OR-Tools CP-SAT (Constraint Programming  │
+│  with SAT solving). Think of it as a super-smart sudoku solver that can    │
+│  handle thousands of rules simultaneously.                                  │
+│                                                                             │
+│  KEY CONCEPTS:                                                              │
+│                                                                             │
+│  1. VARIABLES: Things the solver decides                                    │
+│     → Should Math be in Period 1 for Class 8A on Monday? (YES/NO)          │
+│     → Should Teacher T001 teach Period 3 for Class 10B? (YES/NO)           │
+│                                                                             │
+│  2. CONSTRAINTS: Rules that MUST be followed (or SHOULD be preferred)       │
+│     → T001 cannot be in two places at once (MUST)                           │
+│     → Core subjects prefer morning slots (SHOULD)                           │
+│                                                                             │
+│  3. OBJECTIVE FUNCTION: What the solver tries to minimize                   │
+│     → Total penalty score from violated soft constraints                    │
+│     → Lower score = better timetable                                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1.2 DECISION VARIABLES (How the Solver Thinks)                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  The solver creates BINARY (YES/NO) variables for every possible           │
+│  assignment. These are the building blocks of the timetable.               │
+│                                                                             │
+│  PRIMARY VARIABLE: X[section][day][period][subject] = 0 or 1               │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  Example variables for Class 8A:                                            │
+│                                                                             │
+│  X[8A][Mon][1][MATH] = ?    "Is Math scheduled for 8A on Monday Period 1?" │
+│  X[8A][Mon][1][ENG]  = ?    "Is English scheduled for 8A on Monday P1?"    │
+│  X[8A][Mon][2][MATH] = ?    "Is Math scheduled for 8A on Monday Period 2?" │
+│  X[8A][Tue][1][MATH] = ?    "Is Math scheduled for 8A on Tuesday P1?"      │
+│  ... and so on for EVERY combination                                       │
+│                                                                             │
+│  If the solver sets X[8A][Mon][1][MATH] = 1, it means:                      │
+│  "Yes, Class 8A has Mathematics in Period 1 on Monday"                      │
+│                                                                             │
+│  BLOCK START VARIABLES: B[section][subject][day][period] = 0 or 1          │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  For subjects requiring consecutive periods (like labs):                    │
+│  B[8A][PHY_LAB][Mon][3] = 1 means "Physics Lab block starts at Period 3"   │
+│                                                                             │
+│  SCALE EXAMPLE:                                                             │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  12 sections × 6 days × 8 periods × 15 subjects = 8,640 variables!         │
+│  The solver evaluates BILLIONS of combinations to find the best one.       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1.3 TWO-PHASE SOLVING PIPELINE                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  The solver uses a two-phase approach to GUARANTEE a result:               │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  PHASE 1: FEASIBILITY (Find ANY valid timetable)                    │   │
+│  │                                                                     │   │
+│  │  • Uses only HARD_CORE constraints (no double-booking, etc.)        │   │
+│  │  • Ignores soft constraints completely                              │   │
+│  │  • Goal: Just find SOMETHING that works                             │   │
+│  │  • If fails: Auto-relaxes constraints in priority order             │   │
+│  │                                                                     │   │
+│  │  Time: ~40% of total time limit                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                           │                                                 │
+│                           ▼                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  PHASE 2: OPTIMIZATION (Make the timetable GOOD)                    │   │
+│  │                                                                     │   │
+│  │  • Starts from Phase 1 solution                                     │   │
+│  │  • Adds ALL soft constraints with weights                           │   │
+│  │  • Goal: Minimize total penalty score                               │   │
+│  │  • Returns best solution found (even if time runs out)              │   │
+│  │                                                                     │   │
+│  │  Time: ~60% of total time limit                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  WHY TWO PHASES?                                                            │
+│  • A bad timetable is better than NO timetable                              │
+│  • Phase 1 guarantees you get SOMETHING                                     │
+│  • Phase 2 improves it as much as time allows                               │
+│  • If Phase 2 makes it worse, we return Phase 1 solution                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+              PART 2: INHERENT/CORE CONSTRAINTS (Always Enforced)
+================================================================================
+================================================================================
+
+These constraints are ALWAYS active and CANNOT be disabled. They represent
+the fundamental laws of physics/logic that make a timetable valid.
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  2.1 NO DOUBLE-BOOKING FOR CLASSES                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  RULE: A class section can only have ONE subject per period                 │
+│                                                                             │
+│  LOGIC: Class 8A cannot simultaneously have Math AND English in Period 1    │
+│                                                                             │
+│  HOW SOLVER IMPLEMENTS IT:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each section, for each day, for each period:                           │
+│                                                                             │
+│    SUM(all subjects assigned to this slot) ≤ 1                              │
+│                                                                             │
+│  Mathematically:                                                            │
+│    X[8A][Mon][1][MATH] + X[8A][Mon][1][ENG] + X[8A][Mon][1][SCI] + ... ≤ 1 │
+│                                                                             │
+│  This means AT MOST one of these can be 1 (true).                           │
+│                                                                             │
+│  CODE LOCATION: add_section_single_subject_constraint()                     │
+│                                                                             │
+│  EXAMPLE:                                                                   │
+│  ✗ INVALID: 8A has MATH and ENG both in Monday Period 1                    │
+│  ✓ VALID:   8A has MATH in Monday Period 1, ENG in Monday Period 2         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  2.2 NO DOUBLE-BOOKING FOR TEACHERS                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  RULE: A teacher can only teach ONE class at any given time                 │
+│                                                                             │
+│  LOGIC: Teacher T001 cannot teach 8A Math and 9B Math at the same time     │
+│                                                                             │
+│  HOW SOLVER IMPLEMENTS IT:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  Step 1: Build teacher assignment map                                       │
+│          T001 → [(8A, MATH), (9A, MATH), (10A, MATH)]                       │
+│          T002 → [(8A, ENG), (8B, ENG), (9A, ENG)]                           │
+│                                                                             │
+│  Step 2: For each teacher, for each time slot:                              │
+│          SUM(assignments for this teacher at this time) ≤ 1                 │
+│                                                                             │
+│  Mathematically for T001 on Monday Period 1:                                │
+│    X[8A][Mon][1][MATH] + X[9A][Mon][1][MATH] + X[10A][Mon][1][MATH] ≤ 1    │
+│                                                                             │
+│  Step 3: Also enforce availability                                          │
+│          If T001 is blocked on Monday Period 3:                             │
+│          X[8A][Mon][3][MATH] = 0  (forced to false)                         │
+│          X[9A][Mon][3][MATH] = 0                                            │
+│          X[10A][Mon][3][MATH] = 0                                           │
+│                                                                             │
+│  CODE LOCATION: add_teacher_single_assignment_constraint()                  │
+│                                                                             │
+│  EXAMPLE:                                                                   │
+│  ✗ INVALID: T001 teaches 8A Math AND 9A Math both on Monday Period 1       │
+│  ✓ VALID:   T001 teaches 8A Math on Monday P1, 9A Math on Monday P2        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  2.3 TEACHER CAN TEACH MULTIPLE SUBJECTS                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  RULE: A single teacher CAN be assigned to teach different subjects         │
+│        to the same class OR different classes.                              │
+│                                                                             │
+│  HOW IT WORKS:                                                              │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  This is NOT a constraint - it's enabled by the data structure.             │
+│                                                                             │
+│  In the CLASS-SUBJECT-TEACHER MAP, you can have:                            │
+│                                                                             │
+│  section_id │ subject_id │ teacher_id                                       │
+│  ───────────┼────────────┼──────────────                                    │
+│  8A         │ SCI        │ T005        ← T005 teaches Science to 8A        │
+│  8A         │ PHY_LAB    │ T005        ← T005 ALSO teaches Physics Lab     │
+│  9A         │ SCI        │ T005        ← T005 ALSO teaches Science to 9A   │
+│                                                                             │
+│  The solver sees T005 assigned to:                                          │
+│  - (8A, SCI), (8A, PHY_LAB), (9A, SCI)                                      │
+│                                                                             │
+│  And ensures T005 is never double-booked across ANY of these assignments.  │
+│                                                                             │
+│  VALIDATION: Teacher must have subject in "subjects_can_teach" list         │
+│  If T005.subjects_can_teach = ["SCI", "PHY_LAB", "CHEM_LAB"]               │
+│  Then T005 can be assigned to Science, Physics Lab, or Chemistry Lab       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  2.4 TEACHER-SUBJECT-CLASS PERMANENCE (Academic Year Binding)               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  RULE: Once a teacher is assigned to teach a subject to a class,            │
+│        that assignment remains for the entire academic year.                │
+│                                                                             │
+│  HOW IT WORKS:                                                              │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  This is NOT enforced by the solver - it's enforced by DATA INPUT.          │
+│                                                                             │
+│  The CLASS-SUBJECT-TEACHER MAP (Sheet 4) defines:                           │
+│  "Who teaches what to whom"                                                 │
+│                                                                             │
+│  section_id │ subject_id │ teacher_id                                       │
+│  ───────────┼────────────┼──────────────                                    │
+│  8A         │ MATH       │ T001        ← T001 teaches Math to 8A ALL YEAR  │
+│                                                                             │
+│  The solver NEVER changes this mapping. It only decides WHEN T001           │
+│  teaches Math to 8A (which day, which period).                              │
+│                                                                             │
+│  IMPLICATION:                                                               │
+│  - If T001 is sick, you need a SUBSTITUTION mechanism                       │
+│  - The timetable generator doesn't rotate teachers                          │
+│  - Same teacher teaches same subject to same class throughout the year      │
+│                                                                             │
+│  CHANGING ASSIGNMENTS:                                                      │
+│  To change who teaches what, you must:                                      │
+│  1. Update the CLASS-SUBJECT-TEACHER MAP data                               │
+│  2. Re-run the timetable generator                                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  2.5 SUBJECT FREQUENCY REQUIREMENTS                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  RULE: Each subject must receive its required periods per week              │
+│                                                                             │
+│  DATA SOURCE: Subject's min_per_week and max_per_week fields               │
+│                                                                             │
+│  HOW SOLVER IMPLEMENTS IT:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  For each section, for each subject:                                        │
+│    min_per_week ≤ SUM(all periods this subject is scheduled) ≤ max_per_week│
+│                                                                             │
+│  Example for Math in 8A (min=6, max=6):                                     │
+│                                                                             │
+│    X[8A][Mon][1][MATH] + X[8A][Mon][2][MATH] + X[8A][Mon][3][MATH] + ...   │
+│    + X[8A][Tue][1][MATH] + X[8A][Tue][2][MATH] + ...                       │
+│    + X[8A][Sat][4][MATH]                                                   │
+│    = total_math_periods                                                     │
+│                                                                             │
+│    6 ≤ total_math_periods ≤ 6    (must be exactly 6 periods)               │
+│                                                                             │
+│  CODE LOCATION: add_subject_frequency_constraint()                          │
+│                                                                             │
+│  WHY min AND max?                                                           │
+│  • min_per_week = 5: Subject MUST have at least 5 periods                   │
+│  • max_per_week = 6: Subject CAN have up to 6 periods (buffer)              │
+│  • This gives solver flexibility to fill remaining slots                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                 PART 3: HARD CONSTRAINTS (Toggleable via UI)
+================================================================================
+================================================================================
+
+These constraints are enabled/disabled via the Constraints page toggles.
+When ENABLED, they MUST be satisfied (solver fails if it can't).
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CONSTRAINT CLASSIFICATION (Updated February 2026)                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌────────────────────────────────────┬─────────┬───────────────────────┐  │
+│  │ Constraint                         │ Type    │ Priority/Weight       │  │
+│  ├────────────────────────────────────┼─────────┼───────────────────────┤  │
+│  │ Teacher No Double-Booking          │ CORE    │ Cannot relax          │  │
+│  │ Class Single Subject per Period    │ CORE    │ Cannot relax          │  │
+│  │ Subject Frequency Requirements     │ CORE    │ Cannot relax          │  │
+│  │ Substitution Reserve               │ HARD    │ Priority 1 (1st)      │  │
+│  │ Max Consecutive Periods            │ HARD    │ Priority 2            │  │
+│  │ Teacher Daily Load Limits          │ HARD    │ Priority 3            │  │
+│  │ Teacher Weekly Balance             │ HARD    │ Priority 4            │  │
+│  │ Block Period Integrity             │ HARD    │ Priority 5            │  │
+│  │ Language Block Synchronization     │ HARD    │ Priority 99 (LAST!)   │  │
+│  │ Class Teacher in Period 1          │ SOFT    │ Weight 6              │  │
+│  │ No Subject Twice Daily             │ SOFT    │ Weight 4              │  │
+│  │ Core Subjects in Morning           │ SOFT    │ Weight 3              │  │
+│  │ Resource Capacity Limits           │ SOFT    │ Weight 5              │  │
+│  └────────────────────────────────────┴─────────┴───────────────────────┘  │
+│                                                                             │
+│  RELAXATION PRIORITY (for HARD constraints):                                │
+│  If solver can't find a solution, it automatically relaxes constraints     │
+│  in priority order (lowest number first). Language Sync is LAST (99)       │
+│  because it's CRITICAL for Indian schools with language groupings.         │
+│                                                                             │
+│  SOFT CONSTRAINTS (Moved from HARD for flexibility):                        │
+│  - Class Teacher in Period 1: Now a preference, not a requirement          │
+│  - No Subject Twice Daily: Now a preference, not a requirement             │
+│  - Core Morning: Now a preference, not a requirement                       │
+│  - Resource Capacity: Now soft limits with penalties                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  3.1 LANGUAGE BLOCK SYNCHRONIZATION (STRICT)                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ⚠️ THIS IS A CRITICAL CONSTRAINT FOR INDIAN SCHOOLS                        │
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  Ensures all language teachers for the SAME TIER (1st/2nd/3rd language)    │
+│  are scheduled SIMULTANEOUSLY so students can split into language groups.   │
+│                                                                             │
+│  LANGUAGE TIERS (Indian School System):                                     │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  • Tier 1 (First Language): Often English (fixed for all students)          │
+│  • Tier 2 (Second Language): Options like Kannada, Hindi, Sanskrit          │
+│  • Tier 3 (Third Language): Options like French, German, Hindi, Kannada    │
+│                                                                             │
+│  HOW IT WORKS:                                                              │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  1. Groups sections by grade                                                │
+│  2. For each grade, identifies languages by tier                            │
+│  3. Creates STRICT synchronization: If section A has Kannada at Period 3,  │
+│     then section B MUST have Sanskrit at Period 3 (for same tier)           │
+│                                                                             │
+│  LANGUAGE TEACHER SPECIALIZATION:                                           │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Language teachers are SPECIALISTS in Indian schools:                       │
+│  • A Sanskrit teacher ONLY teaches Sanskrit (never Hindi or Kannada)        │
+│  • They MAY teach other non-language subjects (History, Geography, etc.)    │
+│  • A single teacher can NEVER teach more than one language                  │
+│                                                                             │
+│  CONFIG KEY: language_sync_enabled (default: TRUE)                          │
+│  CODE: add_strict_language_sync_constraint()                                │
+│                                                                             │
+│  ⚠️ RELAXATION: This is ONLY relaxed as an ABSOLUTE LAST RESORT.            │
+│  If relaxed, students may not be able to split into language groups.        │
+│  A detailed warning is displayed when this happens.                         │
+│                                                                             │
+│  (See PART 4 for complete language block explanation)                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  3.2 CLASS TEACHER IN PERIOD 1 (NOW SOFT)                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  PREFERS (but doesn't require) class teacher in Period 1 with their class. │
+│                                                                             │
+│  CHANGE FROM PREVIOUS VERSION:                                              │
+│  This was previously a HARD constraint that could cause infeasibility.     │
+│  Now it's a SOFT constraint with weight 6 (moderate preference).           │
+│                                                                             │
+│  The solver will TRY to schedule class teachers in Period 1, but if        │
+│  there are conflicts, it will schedule them in other periods instead.      │
+│                                                                             │
+│  CONFIG KEY: class_teacher_period_1 (default: TRUE)                         │
+│  SOFT WEIGHT: 6 (configurable via soft_weights.class_teacher_period_1)      │
+│  CODE: add_class_teacher_period_1_soft_preference()                         │                              │
+│                                                                             │
+│  COMMON ISSUE:                                                              │
+│  If class teacher only teaches one subject with few periods, this can      │
+│  cause infeasibility (e.g., Art teacher as class teacher = problem).       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  3.3 NO SUBJECT TWICE DAILY                                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  Prevents the same subject from appearing twice on the same day.            │
+│  Exception: Lab blocks (which need consecutive periods by design).          │
+│                                                                             │
+│  HOW SOLVER IMPLEMENTS IT:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  For each section, for each non-block subject, for each day:               │
+│    SUM(all periods for this subject on this day) ≤ 1                        │
+│                                                                             │
+│  Example for MATH in 8A on Monday:                                          │
+│    X[8A][Mon][1][MATH] + X[8A][Mon][2][MATH] + ... + X[8A][Mon][8][MATH] ≤ 1│
+│                                                                             │
+│  EXEMPTIONS:                                                                │
+│  Subjects with requires_block=TRUE are excluded (labs need 2 consecutive). │
+│                                                                             │
+│  CONFIG KEY: no_subject_twice_daily                                         │
+│  CODE: add_no_subject_twice_daily_constraint()                              │
+│                                                                             │
+│  TRADE-OFF:                                                                 │
+│  • PRO: Better distribution, less fatigue for students                      │
+│  • CON: Harder to schedule subjects with many periods per week              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  3.4 CORE SUBJECTS IN MORNING (Hard Constraint Mode)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  When enabled as HARD constraint, forces core subjects (Math, Science,      │
+│  English, Social Studies) to be scheduled before lunch break.               │
+│                                                                             │
+│  HOW SOLVER IMPLEMENTS IT:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  For core subjects, forbid assignment to periods after lunch:               │
+│    X[section][day][period][core_subject] = 0                                │
+│    for all periods where is_after_lunch = TRUE                              │
+│                                                                             │
+│  NOTE: This is usually used as a SOFT constraint (preference) rather than  │
+│  a hard constraint, as strict enforcement can cause infeasibility.          │
+│                                                                             │
+│  IDENTIFICATION OF CORE SUBJECTS:                                           │
+│  Subject category = "core" in the Subjects data                             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  3.5 SUBJECT FREQUENCY BOUNDS                                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  Enforces min_per_week and max_per_week for each subject.                   │
+│                                                                             │
+│  THIS IS A CORE CONSTRAINT - Always enabled, cannot be disabled.            │
+│                                                                             │
+│  (Same as 2.5 above - included here for completeness)                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  3.6 TEACHER LOAD BOUNDS                                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  Enforces min/max periods per day and per week for each teacher.            │
+│  Also enforces load BALANCE (max-min daily ≤ variance threshold).           │
+│                                                                             │
+│  DATA SOURCE:                                                               │
+│  • Teacher's min_periods_day, max_periods_day                               │
+│  • Teacher's min_periods_week, max_periods_week                             │
+│  • Constraint's max_daily_load_variance (default: 3)                        │
+│                                                                             │
+│  HOW SOLVER IMPLEMENTS IT:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  Step 1: Count daily load                                                   │
+│          daily_load_Mon = SUM(all T001 assignments on Monday)               │
+│          daily_load_Tue = SUM(all T001 assignments on Tuesday)              │
+│          ...                                                                │
+│                                                                             │
+│  Step 2: Enforce daily bounds                                               │
+│          daily_load_Mon ≤ max_periods_day (e.g., ≤ 6)                       │
+│                                                                             │
+│  Step 3: Enforce weekly bounds                                              │
+│          SUM(all daily loads) ≥ min_periods_week                            │
+│          SUM(all daily loads) ≤ max_periods_week                            │
+│                                                                             │
+│  Step 4: Enforce balance                                                    │
+│          MAX(daily_loads) - MIN(daily_loads) ≤ max_daily_load_variance      │
+│          (Prevents 7 periods Mon, 2 periods Tue scenario)                   │
+│                                                                             │
+│  CONFIG KEY: relax_teacher_daily_load, relax_weekly_balance                 │
+│  CODE: add_teacher_load_bounds_constraint()                                 │
+│                                                                             │
+│  ⚠️ PERIOD 0 (assembly/prayer) is EXCLUDED from load calculations           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  3.7 BLOCK PERIOD INTEGRITY                                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  Ensures subjects requiring consecutive periods (labs) get contiguous       │
+│  slots that DON'T bridge breaks (recess or lunch).                          │
+│                                                                             │
+│  DATA SOURCE:                                                               │
+│  • Subject's requires_block = TRUE                                          │
+│  • Subject's block_length (typically 2 for labs)                            │
+│                                                                             │
+│  HOW SOLVER IMPLEMENTS IT:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  Step 1: Identify block start positions                                     │
+│          B[8A][PHY_LAB][Mon][3] = 1 means "block starts at Period 3"        │
+│                                                                             │
+│  Step 2: Validate block can fit                                             │
+│          If block_length=2 and trying to start at Period 3:                 │
+│          Check that Period 3 and Period 4 exist                             │
+│          Check that no recess/lunch between Period 3 and 4                  │
+│                                                                             │
+│  Step 3: If block starts, all consecutive slots must have subject           │
+│          If B[8A][PHY_LAB][Mon][3] = 1:                                     │
+│          Then X[8A][Mon][3][PHY_LAB] = 1 AND X[8A][Mon][4][PHY_LAB] = 1     │
+│                                                                             │
+│  Step 4: Ensure minimum blocks per week                                     │
+│          SUM(all block start vars) ≥ blocks_needed                          │
+│          (If PHY_LAB needs 2 periods/week, need at least 1 block)           │
+│                                                                             │
+│  CONFIG KEY: relax_block_periods                                            │
+│  CODE: add_block_period_constraint()                                        │
+│                                                                             │
+│  EXAMPLE:                                                                   │
+│  ✗ INVALID: Physics Lab Period 4-5 when lunch is after Period 4            │
+│  ✓ VALID:   Physics Lab Period 5-6 (both after lunch, consecutive)         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  3.8 RESOURCE CAPACITY LIMITS                                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  Prevents more sections than capacity from using a resource simultaneously. │
+│                                                                             │
+│  DATA SOURCE:                                                               │
+│  • Resource's max_simultaneous_capacity                                     │
+│  • Subject's requires_resource = TRUE and resource_type                     │
+│                                                                             │
+│  HOW SOLVER IMPLEMENTS IT:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  Step 1: Map subjects to resources                                          │
+│          PHY_LAB → "Physics Lab" resource (capacity 1)                      │
+│          PE → "Sports Ground" resource (capacity 3)                         │
+│                                                                             │
+│  Step 2: For each time slot, count resource usage                           │
+│          SUM(all sections using "Physics Lab" at Monday P3) ≤ 1            │
+│          SUM(all sections using "Sports Ground" at Monday P7) ≤ 3          │
+│                                                                             │
+│  CODE: add_resource_capacity_constraint()                                   │
+│                                                                             │
+│  EXAMPLE:                                                                   │
+│  • Physics Lab has capacity 1                                               │
+│  • 8A, 9A, 10A all need Physics Lab                                         │
+│  • They CANNOT all have Physics Lab at the same time                        │
+│  • Solver schedules them in different periods                               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                    PART 4: LANGUAGE BLOCKS (Deep Dive)
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  4.1 WHAT IS A LANGUAGE BLOCK? (Indian School Context)                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  INDIAN SCHOOL LANGUAGE STRUCTURE:                                          │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Indian schools typically have a three-language formula:                    │
+│                                                                             │
+│  TIER 1 (First Language):                                                   │
+│    Usually English, fixed for all students in the school.                   │
+│    All students attend the same English class.                              │
+│                                                                             │
+│  TIER 2 (Second Language):                                                  │
+│    Students CHOOSE one from options like:                                   │
+│    - Kannada (state language)                                               │
+│    - Hindi (national language)                                              │
+│    - Sanskrit (classical language)                                          │
+│    - Tamil, Telugu, Malayalam, etc. (regional languages)                    │
+│                                                                             │
+│  TIER 3 (Third Language):                                                   │
+│    Students CHOOSE one from options like:                                   │
+│    - French, German, Spanish (foreign languages)                            │
+│    - Hindi (if not taken as second language)                                │
+│    - Kannada (if not taken as second language)                              │
+│                                                                             │
+│  DURING LANGUAGE PERIOD:                                                    │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  When a "second language" period is scheduled, the class SPLITS:            │
+│  • Kannada group → goes to Kannada teacher                                  │
+│  • Hindi group → goes to Hindi teacher                                      │
+│  • Sanskrit group → goes to Sanskrit teacher                                │
+│                                                                             │
+│  This means ALL language teachers for that tier must be FREE simultaneously.│
+│                                                                             │
+│  VISUAL EXAMPLE:                                                            │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                            │
+│  Normal Subject (Math):                                                    │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │  Class 8A (all 40 students)  ──────►  T001 (Math Teacher)            │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  Language Block (Second Language):                                         │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │  8A Hindi group (15)   + 8B Hindi (12)   ──────►  T007 (Hindi)       │  │
+│  │  8A Kannada group (15) + 8B Kannada (15) ──────►  T008 (Kannada)     │  │
+│  │  8A Sanskrit group (10)+ 8B Sanskrit (13)──────►  T009 (Sanskrit)    │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  ALL THREE happen SIMULTANEOUSLY at the same period across sections.        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  4.2 HOW LANGUAGE BLOCK DATA IS STRUCTURED (New Format)                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  IN SUBJECTS DATA:                                                          │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  subject_id │ name     │ category │ is_language │ language_tier            │
+│  ───────────┼──────────┼──────────┼─────────────┼─────────────────────────  │
+│  ENGLISH    │ English  │ language │ TRUE        │ 1                        │
+│  KANNADA    │ Kannada  │ language │ TRUE        │ 2                        │
+│  HINDI      │ Hindi    │ language │ TRUE        │ 2                        │
+│  SANSKRIT   │ Sanskrit │ language │ TRUE        │ 2                        │
+│  FRENCH     │ French   │ language │ TRUE        │ 3                        │
+│                                                                             │
+│  language_tier:                                                             │
+│    1 = First Language (e.g., English)                                       │
+│    2 = Second Language (e.g., Kannada/Hindi/Sanskrit options)               │
+│    3 = Third Language (e.g., French/German options)                         │
+│                                                                             │
+│  IN TEACHERS DATA:                                                          │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  teacher_id │ name        │ is_language_specialist │ primary_language       │
+│  ───────────┼─────────────┼────────────────────────┼─────────────────────── │
+│  T007       │ Anita Singh │ TRUE                   │ HINDI                  │
+│  T008       │ Mohan Gowda │ TRUE                   │ KANNADA                │
+│  T009       │ Lakshmi P   │ TRUE                   │ SANSKRIT               │
+│                                                                             │
+│  is_language_specialist: TRUE means teacher ONLY teaches this language      │
+│  (but may teach other NON-language subjects like History, Geography)        │
+│                                                                             │
+│  IN CLASSES DATA:                                                           │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  section_id │ grade │ language_block_enabled │ language_tier_config         │
+│  ───────────┼───────┼────────────────────────┼───────────────────────────── │
+│  8A         │ 8     │ TRUE                   │ {"2": ["KANNADA","SANSKRIT"]}│
+│  8B         │ 8     │ TRUE                   │ {"2": ["HINDI","KANNADA"]}   │
+│                                                                             │
+│  language_tier_config: Maps tier number to available language options       │
+│  for that section. Sections in same grade with same tier are synchronized. │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  4.3 HOW THE SOLVER HANDLES LANGUAGE BLOCKS (Strict Implementation)         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  APPROACH: STRICT SYNCHRONIZATION (Updated February 2026)                   │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  The solver now implements STRICT language block synchronization:           │
+│                                                                             │
+│  1. IDENTIFIES LANGUAGE SUBJECTS BY TIER                                    │
+│     Scans subjects for is_language=TRUE and language_tier values            │
+│     Groups them: Tier 1: [ENGLISH], Tier 2: [KANNADA, HINDI, SANSKRIT]     │
+│                                                                             │
+│  2. GROUPS SECTIONS BY GRADE                                                │
+│     All sections in the same grade share language block timing              │
+│     Example: 8A, 8B, 8C all synchronized for Tier 2 languages               │
+│                                                                             │
+│  3. CREATES LINKING CONSTRAINTS                                             │
+│     For sections in same grade with same tier:                              │
+│     IF 8A has KANNADA in Period 3, THEN 8B MUST have HINDI in Period 3     │
+│                                                                             │
+│     Mathematically:                                                         │
+│     X[8A][Mon][3][KANNADA] == X[8B][Mon][3][HINDI]                          │
+│                                                                             │
+│  4. ENFORCES TEACHER SPECIALIZATION                                         │
+│     Language teachers teach ONLY ONE language (no cross-teaching)           │
+│     A Sanskrit teacher never teaches Hindi or Kannada                       │
+│                                                                             │
+│  WHY STRICT NOW WORKS:                                                      │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Previous issues with strict sync were caused by:                           │
+│  - Other constraints blocking feasibility                                   │
+│  - Insufficient language teacher capacity                                   │
+│                                                                             │
+│  The new implementation:                                                    │
+│  - Moves several constraints to SOFT (class teacher P1, no twice daily)    │
+│  - Makes language sync the LAST constraint to relax (priority 99)          │
+│  - Provides clear error messages if relaxation is needed                   │
+│                                                                             │
+│  WHAT HAPPENS IF LANGUAGE SYNC IS RELAXED:                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  1. A detailed WARNING is shown explaining the impact                       │
+│  2. Language periods may NOT be synchronized across sections                │
+│  3. Students may not be able to split into language groups                  │
+│  4. Admin should review teacher assignments and try again                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  4.4 COMMON LANGUAGE BLOCK ISSUES AND SOLUTIONS                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ISSUE 1: Not enough language teachers                                      │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Problem: Only 2 teachers for 3 language options                            │
+│  Impact:  Cannot synchronize all languages simultaneously                   │
+│  Solution: Hire additional language teachers OR reduce language options    │
+│                                                                             │
+│  ISSUE 2: Language teacher also teaches other subjects                      │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Problem: T007 teaches Hindi AND History AND Geography                      │
+│  Impact:  When T007 has History, Hindi block cannot happen                  │
+│  Solution: Limit non-language subjects for language teachers               │
+│            Ensure non-language subjects don't conflict with language slots │
+│                                                                             │
+│  ISSUE 3: Teacher availability conflicts                                    │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Problem: T008 (Kannada) is unavailable Tuesday, but T009 (Sanskrit) is    │
+│  Impact:  Cannot synchronize Kannada and Sanskrit on Tuesday               │
+│  Solution: Ensure all language teachers have matching availability         │
+│                                                                             │
+│  ISSUE 4: Unequal section counts across languages                           │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Problem: T007 (Hindi) teaches 2 sections, T009 (Sanskrit) teaches 6       │
+│  Impact:  Load imbalance makes synchronization difficult                   │
+│  Solution: Balance language teacher assignments across sections             │
+│                                                                             │
+│  ISSUE 5: Missing language tier configuration                               │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Problem: language_tier not set on subjects                                 │
+│  Impact:  Solver auto-detects tier from name (may be wrong)                │
+│  Solution: Explicitly set language_tier for all language subjects          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                    PART 5: SOFT CONSTRAINTS & WEIGHTS
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  5.1 WHAT ARE SOFT CONSTRAINTS?                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  HARD constraints MUST be satisfied or the solver fails.                    │
+│  SOFT constraints are PREFERENCES that the solver TRIES to satisfy.         │
+│                                                                             │
+│  If a soft constraint is violated, the timetable is still VALID,           │
+│  it just has a higher "penalty score" (less optimal).                       │
+│                                                                             │
+│  EXAMPLE:                                                                   │
+│  "Core subjects should be in the morning" = SOFT constraint                 │
+│  → If Math is scheduled after lunch, timetable is still valid              │
+│  → But the solver PREFERS morning slots for Math                            │
+│  → If forced to choose, it might put Math after lunch                       │
+│                                                                             │
+│  OBJECTIVE FUNCTION:                                                        │
+│  The solver tries to MINIMIZE the total penalty score.                      │
+│  Total Score = Σ(weight × violation_count) for all soft constraints        │
+│                                                                             │
+│  Lower score = Better timetable                                             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  5.2 HOW WEIGHTS WORK                                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Each soft constraint has a WEIGHT (0-20):                                  │
+│  • Weight 0 = Disabled (constraint ignored)                                 │
+│  • Weight 1-5 = Low priority (nice to have)                                 │
+│  • Weight 6-10 = Medium priority (important)                                │
+│  • Weight 11-15 = High priority (very important)                            │
+│  • Weight 16-20 = Critical (almost like a hard constraint)                  │
+│                                                                             │
+│  THE MATH:                                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  For each soft constraint violation, the solver adds:                       │
+│  penalty = weight × violation_variable                                      │
+│                                                                             │
+│  Example: "Core Morning Preference" with weight=3                           │
+│  If Math is scheduled after lunch 5 times across all sections:             │
+│  penalty_contribution = 3 × 5 = 15                                          │
+│                                                                             │
+│  Example: "Teacher Load Balance" with weight=10                             │
+│  If T001 has variance of 4 (7 periods Mon, 3 periods Tue):                 │
+│  penalty_contribution = 10 × 4 = 40                                         │
+│                                                                             │
+│  The solver tries to minimize the SUM of all penalties.                     │
+│                                                                             │
+│  TRADE-OFFS:                                                                │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Higher weight for A means solver will sacrifice B to satisfy A.            │
+│                                                                             │
+│  If teacher_balance=10 and core_morning=3:                                  │
+│  Solver will put Math after lunch if it helps balance teacher loads,        │
+│  because 10 > 3.                                                            │
+│                                                                             │
+│  If you set core_morning=15:                                                │
+│  Now 15 > 10, so solver prioritizes morning Math over teacher balance.     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  5.3 COMPLETE LIST OF SOFT CONSTRAINTS (Updated February 2026)              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  CONSTRAINTS MOVED FROM HARD TO SOFT (High Priority: 15-20):                │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  These were previously hard constraints but now are soft preferences.       │
+│  Set their weights high (15-20) if they're important to your school.        │
+│                                                                             │
+│  ┌─────────────────────────────────────┬────────┬──────────────────────────┐│
+│  │ Constraint                          │ Default│ What it does             ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Class Teacher Period 1              │ 15     │ Class teacher takes P1   ││
+│  │                                     │        │ for attendance/announce  ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ No Subject Twice Daily              │ 15     │ Avoid same subject twice ││
+│  │                                     │        │ in one day (except labs) ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Resource Capacity                   │ 18     │ Respect lab/ground max   ││
+│  │                                     │        │ simultaneous usage       ││
+│  └─────────────────────────────────────┴────────┴──────────────────────────┘│
+│                                                                             │
+│  SCHEDULING PREFERENCES (Medium Priority: 10-15):                           │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  ┌─────────────────────────────────────┬────────┬──────────────────────────┐│
+│  │ Constraint                          │ Default│ What it does             ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Core Morning Preference             │ 12     │ Schedule Math, Science,  ││
+│  │                                     │        │ English before lunch     ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Teacher Load Balance                │ 10     │ Even daily load across   ││
+│  │                                     │        │ the week for teachers    ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Minimize Idle Gaps                  │ 10     │ Reduce free periods      ││
+│  │                                     │        │ between classes          ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Subject Distribution                │ 10     │ Spread heavy subjects    ││
+│  │                                     │        │ across the week          ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Specialist Priority                 │ 8      │ Prioritize scheduling    ││
+│  │                                     │        │ specialist/rare teachers ││
+│  └─────────────────────────────────────┴────────┴──────────────────────────┘│
+│                                                                             │
+│  LOWER PRIORITY PREFERENCES (5-10):                                         │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  ┌─────────────────────────────────────┬────────┬──────────────────────────┐│
+│  │ Constraint                          │ Default│ What it does             ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Leisure Afternoon                   │ 5      │ Schedule PE, Art, Music  ││
+│  │                                     │        │ in afternoon slots       ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Avoid PE in Period 1                │ 5      │ Don't start day with     ││
+│  │                                     │        │ physical activity        ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Avoid PE After Lunch                │ 5      │ Give students time to    ││
+│  │                                     │        │ digest before PE         ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Teacher Free Period                 │ 5      │ Give each teacher at     ││
+│  │                                     │        │ least 1 free period/day  ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Fair Slot Distribution              │ 5      │ Distribute undesirable   ││
+│  │                                     │        │ slots (Friday P8) fairly ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Math Thinking Break                 │ 3      │ Avoid back-to-back       ││
+│  │                                     │        │ heavy thinking subjects  ││
+│  ├─────────────────────────────────────┼────────┼──────────────────────────┤│
+│  │ Language Spread                     │ 3      │ Distribute language      ││
+│  │                                     │        │ periods across week      ││
+│  └─────────────────────────────────────┴────────┴──────────────────────────┘│
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  5.4 SWEET SPOT CALCULATION GUIDE                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🎯 HOW MANY CONSTRAINTS IN EACH WEIGHT RANGE?                              │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  For optimal solver performance and quality results:                        │
+│                                                                             │
+│  ┌─────────────────┬─────────────┬─────────────────────────────────────────┐│
+│  │ Weight Range    │ Recommended │ Purpose                                 ││
+│  ├─────────────────┼─────────────┼─────────────────────────────────────────┤│
+│  │ 15-20 (High)    │ 2-4 max     │ Critical preferences (moved from hard)  ││
+│  │                 │             │ These REALLY matter to your school      ││
+│  ├─────────────────┼─────────────┼─────────────────────────────────────────┤│
+│  │ 10-15 (Medium)  │ 4-6         │ Important preferences                   ││
+│  │                 │             │ Core scheduling quality factors         ││
+│  ├─────────────────┼─────────────┼─────────────────────────────────────────┤│
+│  │ 5-10 (Low)      │ 5-8         │ Nice-to-have preferences                ││
+│  │                 │             │ Improve quality when possible           ││
+│  ├─────────────────┼─────────────┼─────────────────────────────────────────┤│
+│  │ 0-5 (Minimal)   │ 0-3         │ Rarely matters or disabled              ││
+│  │                 │             │ Set to 0 to ignore completely           ││
+│  └─────────────────┴─────────────┴─────────────────────────────────────────┘│
+│                                                                             │
+│  ⚠️ COMMON MISTAKES TO AVOID:                                               │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  ❌ DON'T: Set ALL constraints to 20                                        │
+│     → Solver can't distinguish priorities, results in poor optimization     │
+│                                                                             │
+│  ❌ DON'T: Set more than 4 constraints in the 15-20 range                   │
+│     → Too many "critical" preferences conflicts with each other             │
+│                                                                             │
+│  ❌ DON'T: Set 10+ constraints at the same exact weight                     │
+│     → Creates ties that slow down optimization                              │
+│                                                                             │
+│  ✅ DO: Use the full 0-20 range with varied weights                         │
+│  ✅ DO: Keep truly critical preferences (2-3) at 15-20                      │
+│  ✅ DO: Spread the rest across 5-15 range                                   │
+│                                                                             │
+│  EXAMPLE BALANCED CONFIGURATION:                                            │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Weight 18: Resource Capacity (1 constraint)                                │
+│  Weight 15: Class Teacher P1, No Subject Twice (2 constraints)              │
+│  Weight 12: Core Morning (1 constraint)                                     │
+│  Weight 10: Teacher Balance, Minimize Gaps, Subject Distribution (3)        │
+│  Weight 8:  Specialist Priority (1 constraint)                              │
+│  Weight 5:  Leisure Afternoon, PE preferences, Fair Distribution (4)        │
+│  Weight 3:  Thinking Break, Language Spread (2 constraints)                 │
+│                                                                             │
+│  Total: 14 constraints well-distributed = optimal solver behavior           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  5.5 WEIGHT TUNING GUIDE                                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  SCENARIO 1: Teachers complain about uneven workloads                       │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Action: Increase "Teacher Load Balance" weight (10 → 15)                   │
+│  Effect: Solver prioritizes even daily distribution                         │
+│                                                                             │
+│  SCENARIO 2: Students seem tired in morning Math                            │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Action: Decrease "Core Morning Preference" weight (12 → 5)                 │
+│  Effect: Solver won't fight as hard to put Math in morning                  │
+│                                                                             │
+│  SCENARIO 3: Too many gaps in teacher schedules                             │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Action: Increase "Minimize Idle Gaps" weight (10 → 15)                     │
+│  Effect: Solver tries harder to give teachers contiguous periods            │
+│                                                                             │
+│  SCENARIO 4: Art/Music teacher always gets last period                      │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Action: Increase "Fair Slot Distribution" weight (5 → 12)                  │
+│  Effect: Undesirable slots spread more evenly across teachers              │
+│                                                                             │
+│  SCENARIO 5: Sanskrit teacher (1 period/week) often left out                │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Action: Increase "Specialist Priority" weight (8 → 15)                     │
+│  Effect: Solver schedules rare subjects first before filling others         │
+│                                                                             │
+│  GENERAL TIPS:                                                              │
+│  • Start with defaults, observe results, adjust gradually                   │
+│  • Don't set everything to max weight (cancels out)                         │
+│  • Weight 0 = completely disabled (useful for testing)                      │
+│  • Max weight (20) = almost like a hard constraint                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                         PART 6: OVERRIDES
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  6.1 TEACHER AVAILABILITY OVERRIDES                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE:                                                                   │
+│  Set individual teacher availability - block specific periods.              │
+│                                                                             │
+│  UI LOCATION: Constraints page → "Teacher Availability Overrides"           │
+│                                                                             │
+│  EXAMPLE FROM SCREENSHOT:                                                   │
+│  • Rajesh Kumar (MATH) - 0 periods blocked                                  │
+│  • Priya Sharma (MATH) - 0 periods blocked                                  │
+│  • Amit Verma (MATH) - 0 periods blocked                                    │
+│                                                                             │
+│  HOW TO USE (Click "Edit"):                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  You can block specific slots for a teacher:                                │
+│  • "Block Mon P1-P2" - Teacher unavailable Monday periods 1-2               │
+│  • "Block Fri P7-P8" - Teacher leaves early Friday                          │
+│  • "Block Wed ALL" - Teacher on weekly duty elsewhere                       │
+│                                                                             │
+│  DATA STRUCTURE:                                                            │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  teacher.availability = {                                                   │
+│    "Mon": {                                                                 │
+│      "available": true,                                                     │
+│      "blocked_periods": [1, 2]  ← Periods 1 and 2 blocked                   │
+│    },                                                                       │
+│    "Fri": {                                                                 │
+│      "available": true,                                                     │
+│      "blocked_periods": [7, 8]                                              │
+│    },                                                                       │
+│    "Wed": {                                                                 │
+│      "available": false  ← Entire day blocked                               │
+│    }                                                                        │
+│  }                                                                          │
+│                                                                             │
+│  ALTERNATIVE FORMAT (time-based):                                           │
+│  "Mon": {                                                                   │
+│    "from_time": "09:00",                                                    │
+│    "to_time": "14:00"                                                       │
+│  }                                                                          │
+│  (Teacher only available 9 AM to 2 PM on Monday)                            │
+│                                                                             │
+│  HOW SOLVER USES THIS:                                                      │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  In build_availability_mask() function:                                     │
+│  For each period, check if teacher is available.                            │
+│  If unavailable: X[section][day][period][subject] = 0 (forced false)        │
+│                                                                             │
+│  This is a HARD constraint - solver CANNOT assign teacher when blocked.    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  6.2 CLASS OVERRIDES                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE:                                                                   │
+│  Configure per-class settings like language blocks and subject mappings.   │
+│                                                                             │
+│  UI LOCATION: Constraints page → "Class Overrides"                          │
+│                                                                             │
+│  EXAMPLE FROM SCREENSHOT:                                                   │
+│  • Grade 6 - A: 10 subjects, Language block enabled                         │
+│  • Grade 6 - B: 10 subjects, Language block enabled                         │
+│  • Grade 7 - A: 10 subjects, Language block enabled                         │
+│  • Grade 7 - B: (details not shown)                                         │
+│                                                                             │
+│  WHAT CAN BE CONFIGURED (Click "Edit"):                                     │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  1. LANGUAGE BLOCK TOGGLE                                                   │
+│     • Enable/disable language block for this specific class                 │
+│     • When enabled, language teachers are synchronized                      │
+│                                                                             │
+│  2. LANGUAGE TEACHERS LIST                                                  │
+│     • Which teachers form the language block                                │
+│     • ["T007", "T008", "T009"] = Hindi, Kannada, Sanskrit teachers          │
+│                                                                             │
+│  3. SUBJECT MAPPINGS                                                        │
+│     • Which subjects this class takes                                       │
+│     • Can add/remove subjects from default                                  │
+│                                                                             │
+│  4. CLASS TEACHER ASSIGNMENT                                                │
+│     • Who is the class teacher for Period 1 constraint                      │
+│                                                                             │
+│  HOW SOLVER USES THIS:                                                      │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  For language blocks:                                                       │
+│  if class.language_block_enabled:                                           │
+│      language_teachers = class.language_teachers                            │
+│      # Apply synchronization constraint for these teachers                  │
+│                                                                             │
+│  For subject mappings:                                                      │
+│  subjects_for_class = class.subject_teacher_map.keys()                      │
+│  # Only create variables for subjects this class actually has              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  6.3 SUBJECT TIME RESTRICTIONS                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE:                                                                   │
+│  Configure when specific subjects can be scheduled.                         │
+│                                                                             │
+│  UI LOCATION: Constraints page → "Subject Time Restrictions"                │
+│                                                                             │
+│  EXAMPLE FROM SCREENSHOT:                                                   │
+│  • Mathematics (core): 6-7 periods/week, Prefers morning slots              │
+│  • Science (core): 5-6 periods/week, Prefers morning slots                  │
+│  • English (language): 5-6 periods/week                                     │
+│  • Social Studies (core): 4-5 periods/week, Prefers morning slots           │
+│  • Hindi (language): 4-5 periods/week                                       │
+│  • Kannada (language): 4-5 periods/week                                     │
+│  • Sanskrit (language): (shown but cut off)                                 │
+│  • Physics Lab (lab): (shown but cut off)                                   │
+│  • Chemistry Lab (lab): (shown but cut off)                                 │
+│                                                                             │
+│  RESTRICTION TYPES:                                                         │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  1. MORNING PREFERENCE (Soft)                                               │
+│     "Prefers morning slots" = Schedule before lunch when possible           │
+│     Implemented as soft constraint with weight                              │
+│                                                                             │
+│  2. AFTERNOON ONLY (Hard or Soft)                                           │
+│     "Only afternoon" = Schedule only after lunch                            │
+│     Can be hard (must) or soft (prefer)                                     │
+│                                                                             │
+│  3. SPECIFIC DAYS (Hard)                                                    │
+│     "Only Mon-Wed 9-12am" = Limited to specific days and times              │
+│     Example: Yoga instructor only comes Mon/Wed/Fri mornings               │
+│                                                                             │
+│  4. AVOID PERIODS (Soft)                                                    │
+│     "Avoid last period" = Discourage scheduling at end of day               │
+│                                                                             │
+│  DATA STRUCTURE:                                                            │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  subject.time_restrictions = {                                              │
+│    "prefer_morning": true,           ← Soft constraint                      │
+│    "morning_weight": 3,              ← Weight for morning preference        │
+│    "allowed_days": ["Mon", "Wed"],   ← Hard restriction                     │
+│    "allowed_periods": [3, 4, 5],     ← Hard restriction                     │
+│    "avoid_periods": [1, 8]           ← Soft constraint                      │
+│  }                                                                          │
+│                                                                             │
+│  HOW SOLVER USES THIS:                                                      │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  For hard restrictions (allowed_days, allowed_periods):                     │
+│  Force X = 0 for all forbidden slots                                        │
+│                                                                             │
+│  For soft restrictions (prefer_morning, avoid_periods):                     │
+│  Add penalty variables to objective function                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  6.4 HOW OVERRIDES ARE APPLIED                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PROCESSING ORDER:                                                          │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  1. PREPROCESS PHASE                                                        │
+│     ├── Generate period grid from school config                             │
+│     ├── Build teacher availability masks (with overrides applied)           │
+│     ├── Build section-subject-teacher mapping (with class overrides)        │
+│     └── Validate feasibility                                                │
+│                                                                             │
+│  2. MODEL BUILD PHASE                                                       │
+│     ├── Create decision variables                                           │
+│     ├── Apply inherent constraints                                          │
+│     ├── Apply hard constraints (from toggles + overrides)                   │
+│     └── Apply soft constraints (with weights)                               │
+│                                                                             │
+│  3. SOLVE PHASE                                                             │
+│     ├── Phase 1: Find feasibility                                           │
+│     ├── Auto-relax if needed                                                │
+│     └── Phase 2: Optimize                                                   │
+│                                                                             │
+│  OVERRIDE PRIORITY:                                                         │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  Specific override > General setting > Default                              │
+│                                                                             │
+│  Example:                                                                   │
+│  • Default max_periods_day = 6 for all teachers                             │
+│  • General setting: max_periods_day = 5 for part-time teachers              │
+│  • Override: T007 max_periods_day = 4 (specific teacher)                    │
+│                                                                             │
+│  T007 will use max_periods_day = 4                                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                       PART 7: SOLVER INTERNALS
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  7.1 BUILDING THE MODEL                                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  STEP-BY-STEP MODEL BUILD:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  1. INITIALIZE                                                              │
+│     model = cp_model.CpModel()  # Empty model                               │
+│     variables = {}              # Store all decision variables              │
+│     penalties = []              # Track soft constraint penalties           │
+│                                                                             │
+│  2. CREATE VARIABLES                                                        │
+│     For each section:                                                       │
+│       For each day:                                                         │
+│         For each period:                                                    │
+│           For each subject this section has:                                │
+│             X[section][day][period][subject] = NewBoolVar(...)              │
+│                                                                             │
+│     For lab subjects, also create block start variables B[...]              │
+│                                                                             │
+│  3. ADD HARD CONSTRAINTS                                                    │
+│     add_section_single_subject_constraint()    # No class double-book       │
+│     add_teacher_single_assignment_constraint() # No teacher double-book     │
+│     add_subject_frequency_constraint()         # Subject min/max weekly     │
+│     add_resource_capacity_constraint()         # Lab capacity limits        │
+│     ... (other hard constraints based on config)                            │
+│                                                                             │
+│  4. ADD SOFT CONSTRAINTS                                                    │
+│     For each enabled soft constraint:                                       │
+│       penalties.extend(add_<constraint_name>_preference())                  │
+│                                                                             │
+│  5. SET OBJECTIVE                                                           │
+│     model.Minimize(sum(penalties))                                          │
+│                                                                             │
+│  CODE LOCATION: TimetableSolver.build_model() in model.py                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  7.2 SOLVING PROCESS                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT HAPPENS DURING SOLVE:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  1. CP-SAT SOLVER INITIALIZATION                                            │
+│     solver = cp_model.CpSolver()                                            │
+│     solver.parameters.max_time_in_seconds = time_limit                      │
+│                                                                             │
+│  2. SEARCH PROCESS                                                          │
+│     The solver explores the solution space:                                 │
+│     • Propagation: Eliminate obviously impossible assignments               │
+│     • Search: Try assigning values to variables                             │
+│     • Backtrack: If constraint violated, undo and try different             │
+│     • Learning: Remember what doesn't work to avoid repeating               │
+│                                                                             │
+│  3. SOLUTION STATUS                                                         │
+│     OPTIMAL    = Best possible solution found, proven optimal               │
+│     FEASIBLE   = Valid solution found, may not be optimal (timeout)         │
+│     INFEASIBLE = No solution exists (constraints too tight)                 │
+│     UNKNOWN    = Couldn't determine (very rare)                             │
+│                                                                             │
+│  4. EXTRACT SOLUTION                                                        │
+│     For each variable:                                                      │
+│       if solver.Value(X[section][day][period][subject]) == 1:               │
+│         # This subject is scheduled at this slot                            │
+│         add to timetable output                                             │
+│                                                                             │
+│  SOLVE TIME BREAKDOWN (for 120-second limit):                               │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  Phase 1 (Feasibility): ~40% = 48 seconds                                   │
+│  Phase 2 (Optimization): ~60% = 72 seconds                                  │
+│                                                                             │
+│  The solver will return the BEST solution found when time runs out,         │
+│  even if it hasn't proven optimality.                                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  7.3 RELAXATION STRATEGY                                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  IF PHASE 1 FAILS (No feasible solution):                                   │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  The solver automatically relaxes constraints in priority order:            │
+│                                                                             │
+│  ITERATION 1: Relax "Language Block Sync" (priority 1)                      │
+│  ├── Disable language_sync_constraint()                                     │
+│  ├── Try solve again                                                        │
+│  └── If still fails → continue to iteration 2                               │
+│                                                                             │
+│  ITERATION 2: Relax "Class Teacher Period 1" (priority 2)                   │
+│  ├── Disable class_teacher_period_1_constraint()                            │
+│  ├── Try solve again                                                        │
+│  └── If still fails → continue to iteration 3                               │
+│                                                                             │
+│  ITERATION 3: Relax "No Subject Twice Daily" (priority 3)                   │
+│  ... and so on                                                              │
+│                                                                             │
+│  RELAXATION ORDER (from constraint_types.py):                               │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  1. Language Sync         ← First to relax (most restrictive)               │
+│  2. Class Teacher P1                                                        │
+│  3. No Subject Twice                                                        │
+│  4. Core Morning (hard)                                                     │
+│  5. Teacher Load Bounds                                                     │
+│  6. Block Period Integrity                                                  │
+│  7. Max Consecutive       ← Last to relax                                   │
+│                                                                             │
+│  NEVER RELAXED (HARD_CORE):                                                 │
+│  • Teacher single assignment (no double-booking)                            │
+│  • Section single subject (no class double-booking)                         │
+│  • Subject frequency (min/max periods)                                      │
+│  • Resource capacity                                                        │
+│                                                                             │
+│  If still infeasible after all relaxations:                                 │
+│  → Return error with diagnostics                                            │
+│  → Usually indicates data problem (not enough teachers, impossible load)    │
+│                                                                             │
+│  CODE LOCATION: TwoPhaseSolver._solve_with_relaxation()                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                          QUICK REFERENCE CARD
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CONSTRAINT CATEGORIES SUMMARY                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  HARD_CORE (Always On, Never Relaxed):                                      │
+│  ├── No class double-booking                                                │
+│  ├── No teacher double-booking                                              │
+│  ├── Subject frequency bounds                                               │
+│  ├── Teacher availability (blocked periods)                                 │
+│  └── Resource capacity limits                                               │
+│                                                                             │
+│  HARD_RELAXABLE (Toggleable, Auto-relaxed if needed):                       │
+│  ├── Language block synchronization                                         │
+│  ├── Class teacher in Period 1                                              │
+│  ├── No subject twice daily                                                 │
+│  ├── Teacher load bounds                                                    │
+│  ├── Block period integrity                                                 │
+│  └── Max consecutive periods                                                │
+│                                                                             │
+│  SOFT (Weighted Preferences):                                               │
+│  ├── Teacher load balance (default: 10)                                     │
+│  ├── Minimize idle gaps (default: 5)                                        │
+│  ├── Core morning preference (default: 3)                                   │
+│  ├── Leisure afternoon (default: 2)                                         │
+│  ├── Avoid PE in Period 1 (default: 4)                                      │
+│  ├── Subject distribution (default: 5)                                      │
+│  ├── Teacher free period (default: 2)                                       │
+│  ├── Fair slot distribution (default: 5)                                    │
+│  └── Specialist priority (default: 8)                                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TROUBLESHOOTING GUIDE                                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PROBLEM: Solver fails with "INFEASIBLE"                                    │
+│  CAUSES:                                                                    │
+│  • Teacher overloaded (sum of assignments > max_periods_week)               │
+│  • Too few teachers for required periods                                    │
+│  • Resource capacity too low for sections needing it                        │
+│  FIX: Check capacity analysis, add teachers, reduce subject periods         │
+│                                                                             │
+│  PROBLEM: Language blocks not synchronized                                  │
+│  CAUSES:                                                                    │
+│  • Language sync constraint relaxed due to infeasibility                    │
+│  • Language teachers have mismatched loads                                  │
+│  FIX: Balance language teacher assignments, reduce non-language load        │
+│                                                                             │
+│  PROBLEM: Teacher has too many gaps                                         │
+│  CAUSES:                                                                    │
+│  • "Minimize Idle Gaps" weight too low                                      │
+│  • Conflicting constraints forcing gaps                                     │
+│  FIX: Increase minimize_gaps weight to 10+                                  │
+│                                                                             │
+│  PROBLEM: Math always scheduled after lunch                                 │
+│  CAUSES:                                                                    │
+│  • "Core Morning Preference" weight too low                                 │
+│  • Teacher availability forcing afternoon                                   │
+│  FIX: Increase core_morning weight, check teacher availability              │
+│                                                                             │
+│  PROBLEM: Specialist teacher (Music) has no periods                         │
+│  CAUSES:                                                                    │
+│  • Subject not in class-subject-teacher map                                 │
+│  • min_per_week = 0 for the subject                                         │
+│  FIX: Verify mapping exists, set min_per_week ≥ 1                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+        PART 8: MISSING / UNDOCUMENTED CONSTRAINTS (Appended)
+================================================================================
+================================================================================
+
+The following constraints are implemented in the solver code but were not
+fully documented in the original sections above. Each is explained in detail.
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  8.1 MAX CONSECUTIVE PERIODS (HARD_RELAXABLE)                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  Prevents a teacher from teaching more than N consecutive periods           │
+│  without a break (recess or lunch).                                         │
+│                                                                             │
+│  DATA SOURCE:                                                               │
+│  • constraints_config.max_consecutive_default (default: 3)                  │
+│  • Per-teacher override: teacher.max_consecutive_periods                    │
+│  • Setting to 99 effectively disables this constraint                       │
+│                                                                             │
+│  HOW SOLVER IMPLEMENTS IT:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  For each teacher, for each day:                                            │
+│  1. Sort periods in order                                                   │
+│  2. Slide a window of size (max_consecutive + 1) across the day             │
+│  3. If the window does NOT span a break (recess/lunch):                     │
+│       SUM(teacher assignments in window) ≤ max_consecutive                  │
+│                                                                             │
+│  Example with max_consecutive=3 for Teacher T001 on Monday:                 │
+│  Window [P1, P2, P3, P4]: SUM(T001 assignments in P1-P4) ≤ 3              │
+│  Window [P2, P3, P4, P5]: SUM(T001 assignments in P2-P5) ≤ 3              │
+│                                                                             │
+│  If recess falls between P4 and P5, the window [P3,P4,P5,P6] is SKIPPED   │
+│  because the break naturally resets the consecutive count.                  │
+│                                                                             │
+│  CONFIG KEY: max_consecutive_default (set to 99 to disable)                 │
+│  RELAXATION PRIORITY: 2 (relaxed early if infeasible)                       │
+│  CODE: add_max_consecutive_constraint()                                     │
+│                                                                             │
+│  EXAMPLE:                                                                   │
+│  ✗ INVALID: T001 teaches P1, P2, P3, P4 with no break (max=3)             │
+│  ✓ VALID:   T001 teaches P1, P2, P3, free P4, teaches P5                  │
+│  ✓ VALID:   T001 teaches P3, P4, [RECESS], P5, P6 (break resets)          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  8.2 SUBSTITUTION RESERVE (HARD_RELAXABLE)                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  At every period throughout the day, ensures at least N teachers            │
+│  are UNASSIGNED and free, available as substitutes if a teacher             │
+│  is absent.                                                                 │
+│                                                                             │
+│  DATA SOURCE:                                                               │
+│  • constraints_config.substitution_reserve_count (default: 0 = disabled)    │
+│                                                                             │
+│  HOW SOLVER IMPLEMENTS IT:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  For each day, for each period:                                             │
+│  1. Create an "is_assigned" indicator for each teacher                      │
+│     is_assigned[T] = 1 if teacher T is teaching ANY class this period       │
+│  2. Count total assigned teachers:                                          │
+│     assigned_count = SUM(is_assigned for all teachers)                      │
+│  3. Enforce reserve:                                                        │
+│     assigned_count ≤ total_teachers - reserve_count                         │
+│                                                                             │
+│  Mathematically:                                                            │
+│  SUM(is_assigned[T] for all T) ≤ |Teachers| - reserve_count                │
+│                                                                             │
+│  Example with 20 teachers and reserve_count=2:                              │
+│  At most 18 teachers can be assigned at any given period.                   │
+│  2 teachers must always be free (for substitution duty).                    │
+│                                                                             │
+│  CONFIG KEY: substitution_reserve_count (0 = disabled, >0 = enabled)        │
+│  RELAXATION PRIORITY: 1 (first to relax - least impactful on quality)       │
+│  DEFAULT: Disabled (0)                                                      │
+│  CODE: add_substitution_reserve_constraint()                                │
+│                                                                             │
+│  ⚠️ NOTE: This can significantly restrict the solver, especially in small   │
+│  schools with few teachers. Only enable if your school has enough staff.    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  8.3 TEACHER AVAILABILITY / BLOCKED PERIODS (HARD_CORE)                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  Prevents the solver from assigning a teacher to ANY class during           │
+│  periods when the teacher is unavailable (blocked).                         │
+│                                                                             │
+│  This is a HARD_CORE constraint - it CANNOT be relaxed or disabled.         │
+│  It is enforced INSIDE add_teacher_single_assignment_constraint().          │
+│                                                                             │
+│  DATA SOURCE:                                                               │
+│  • Teacher's availability field (see Part 6.1 for data structure)           │
+│  • Processed by build_all_availability_masks() in preprocess.py             │
+│                                                                             │
+│  HOW SOLVER IMPLEMENTS IT:                                                  │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  Step 1: Build availability mask for each teacher                           │
+│          availability_mask[(day, period)] = True/False                       │
+│                                                                             │
+│  Step 2: For each teacher, for each time slot:                              │
+│          If availability_mask[(day, period)] == False:                       │
+│              Force ALL assignment variables for this teacher to 0            │
+│              X[section][day][period][subject] = 0                            │
+│              for ALL (section, subject) pairs this teacher is assigned to   │
+│                                                                             │
+│  Example: Teacher T001 is blocked on Wednesday:                             │
+│  X[8A][Wed][1][MATH] = 0                                                   │
+│  X[9A][Wed][1][MATH] = 0                                                   │
+│  X[10A][Wed][1][MATH] = 0                                                  │
+│  ... (all of T001's assignments on Wednesday forced to 0)                   │
+│                                                                             │
+│  CODE: Part of add_teacher_single_assignment_constraint()                   │
+│  PREPROCESS: build_all_availability_masks() in preprocess.py                │
+│                                                                             │
+│  IMPACT ON OTHER CONSTRAINTS:                                               │
+│  - Can make language sync harder (if language teacher is partially blocked) │
+│  - Can make subject frequency harder (if only one teacher for a subject)   │
+│  - Reduces the "capacity" of a teacher for load calculations               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  8.4 PRAYER/ASSEMBLY PERIOD EXCLUSION (IMPLICIT CORE)                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  Period 0 (prayer/morning assembly) is treated specially:                   │
+│  - It IS included in the period grid (variables exist for it)               │
+│  - It is EXCLUDED from teacher load calculations                            │
+│  - Teachers are "present" during prayer but it doesn't count as teaching   │
+│  - The solver creates variables for Period 0 but they're typically          │
+│    not assigned any subject (prayer is not a "subject")                     │
+│                                                                             │
+│  DATA SOURCE:                                                               │
+│  • school.prayer_enabled (default: True)                                    │
+│  • school.prayer_duration_minutes (default: 15)                             │
+│  • Period slots with is_prayer=True or period==0                            │
+│                                                                             │
+│  HOW IT AFFECTS CONSTRAINTS:                                                │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  1. TEACHER LOAD BOUNDS:                                                    │
+│     Period 0 is SKIPPED when counting daily/weekly teaching load.           │
+│     Code: "if period == 0 or period_slot.get('is_prayer', False): continue" │
+│                                                                             │
+│  2. LANGUAGE SYNC:                                                          │
+│     Period 0 is SKIPPED for language synchronization.                       │
+│     Language blocks don't apply during prayer/assembly.                      │
+│                                                                             │
+│  3. SUBJECT FREQUENCY:                                                      │
+│     Period 0 slots can technically have a subject variable = 1,             │
+│     but typically no subject is assigned to prayer time.                    │
+│                                                                             │
+│  WHY THIS MATTERS:                                                          │
+│  If Period 0 were counted toward teacher load, it would inflate their      │
+│  daily count by 1 every day, potentially triggering max_periods_day limits │
+│  prematurely. The exclusion ensures teaching load only reflects actual     │
+│  academic instruction time.                                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  8.5 NO FREE PERIODS / CLASS PERIOD FILLING (POLICY CONSTRAINT)             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  Ensures that CLASSES (not teachers) have all academic periods filled       │
+│  with scheduled subjects.                                                   │
+│                                                                             │
+│  CURRENT IMPLEMENTATION: NO-OP (Soft enforcement via subject frequency)     │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  This constraint was previously a hard constraint that over-constrained     │
+│  the solver. It has been redesigned as follows:                             │
+│                                                                             │
+│  1. The subject_frequency_constraint ensures subjects meet their            │
+│     min_per_week requirements, which fills most slots.                      │
+│  2. The single-subject constraint ensures ≤ 1 subject per period.           │
+│  3. Together, these allow proper filling while still permitting             │
+│     free/study periods when subject totals don't fill all slots.            │
+│                                                                             │
+│  IMPORTANT DISTINCTION:                                                     │
+│  • CLASSES may have study periods/library time (free periods OK)            │
+│  • TEACHERS are EXPECTED to have free periods (for prep, substitution)      │
+│                                                                             │
+│  CONFIG KEY: no_free_periods (default: False)                               │
+│  When enabled: Logs policy but relies on subject frequency for filling      │
+│                                                                             │
+│  CODE: add_no_free_periods_constraint() - currently a logging-only function │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  8.6 LANGUAGE TEACHER SPECIALIZATION (SUB-CONSTRAINT)                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT IT DOES:                                                              │
+│  Enforces that a language teacher teaches ONLY ONE language.                │
+│  This is a sub-constraint enforced within the language sync system.         │
+│                                                                             │
+│  RULE: A Sanskrit teacher can teach Sanskrit + non-language subjects         │
+│        (like History, Geography), but NEVER Hindi or Kannada.               │
+│                                                                             │
+│  HOW IT WORKS:                                                              │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  1. Identifies all language subjects across all tiers                       │
+│  2. Builds a mapping: teacher_id → set of language subject_ids              │
+│  3. If a teacher is assigned to MORE THAN ONE language subject:             │
+│     → A WARNING is logged                                                   │
+│     → The solver will try to make it work but it's not recommended          │
+│     → Admin should fix the teacher assignments                              │
+│                                                                             │
+│  VALIDATION (Data-Level, Not Solver-Level):                                 │
+│  This is primarily enforced at the DATA VALIDATION level, not as a          │
+│  solver constraint. The solver trusts the input data:                       │
+│  • If T007 is assigned to both HINDI and KANNADA in the data, the solver   │
+│    will try to schedule both (but cannot put them at the same time due      │
+│    to teacher single-assignment constraint).                                │
+│  • The correct fix is to ensure the class-subject-teacher mapping only      │
+│    assigns each language teacher to one language.                            │
+│                                                                             │
+│  CODE: _enforce_language_teacher_specialization()                           │
+│  Called from: add_strict_language_sync_constraint()                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+     PART 9: SOFT CONSTRAINTS - DETAILED IMPLEMENTATION GUIDE
+================================================================================
+================================================================================
+
+Part 5 listed the soft constraints in tables. This section provides the
+full implementation detail for EVERY soft constraint, including exactly
+how each penalty is calculated by the solver.
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.1 CORE MORNING PREFERENCE (SOFT)                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Prefer core subjects (Math, Science, English, Social Studies)     │
+│           in morning periods (before lunch).                                │
+│                                                                             │
+│  IDENTIFICATION: Subject is "core" if subject.category == "core"            │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each section, for each core subject:                                   │
+│    For each period AFTER LUNCH:                                             │
+│      If core subject is assigned here → penalty += weight                   │
+│                                                                             │
+│  Mathematically:                                                            │
+│  penalty_var = 1 if X[section][day][period][core_subj] == 1                 │
+│                AND period.is_after_lunch == True                            │
+│  Total penalty += weight × penalty_var                                      │
+│                                                                             │
+│  DEFAULT WEIGHT: 3                                                          │
+│  CONFIG KEY: soft_weights.core_morning                                      │
+│  CODE: add_core_morning_preference()                                        │
+│                                                                             │
+│  EXAMPLE:                                                                   │
+│  Weight=3, Math scheduled after lunch 5 times across all sections           │
+│  → Penalty contribution = 3 × 5 = 15 added to objective function           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.2 TEACHER LOAD BALANCE PREFERENCE (SOFT)                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Minimize the variance in each teacher's daily teaching load       │
+│           across the week. Prevents scenarios like 7 periods Monday,        │
+│           2 periods Tuesday.                                                │
+│                                                                             │
+│  NOTE: This is SEPARATE from the HARD teacher load bounds constraint        │
+│  (which enforces absolute min/max). This soft constraint penalizes          │
+│  UNEVENNESS even within valid bounds.                                       │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each teacher:                                                          │
+│    1. Compute daily_load for each day (count of assigned periods)           │
+│    2. Find max_daily_load = MAX(daily_load across all days)                 │
+│    3. Find min_daily_load = MIN(daily_load across all days)                 │
+│    4. variance = max_daily_load - min_daily_load                            │
+│    5. penalty += weight × variance                                          │
+│                                                                             │
+│  Example: T001 has loads [5, 4, 6, 5, 3, 4] across Mon-Sat                 │
+│  max=6, min=3, variance=3                                                   │
+│  penalty = weight × 3                                                       │
+│                                                                             │
+│  DEFAULT WEIGHT: 10                                                         │
+│  CONFIG KEY: soft_weights.teacher_balance                                   │
+│  CODE: add_teacher_balance_preference()                                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.3 MINIMIZE IDLE GAPS PREFERENCE (SOFT)                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Minimize idle (free) periods BETWEEN teaching periods for         │
+│           teachers. A "gap" is a free period where the teacher has          │
+│           teaching BEFORE and AFTER it.                                     │
+│                                                                             │
+│  HOW A GAP IS DETECTED:                                                     │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each teacher, for each day, for each INTERNAL period:                  │
+│    gap = (teacher teaches in previous period)                               │
+│       AND (teacher is FREE in current period)                               │
+│       AND (teacher teaches in next period)                                  │
+│                                                                             │
+│  Example: T001 schedule on Monday: [TEACH, TEACH, FREE, TEACH, TEACH]      │
+│  Period 3 (FREE) is a GAP because T001 teaches P2 and P4.                  │
+│  Period 5 (FREE) is NOT a gap if T001 doesn't teach P6.                    │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each detected gap:                                                     │
+│    is_gap = has_prev AND has_next AND is_free (all boolean indicators)      │
+│    penalty += weight × is_gap                                               │
+│                                                                             │
+│  DEFAULT WEIGHT: 5                                                          │
+│  CONFIG KEY: soft_weights.minimize_gaps                                     │
+│  CODE: add_minimize_gaps_preference()                                       │
+│                                                                             │
+│  WHY IT MATTERS:                                                            │
+│  Teachers with gaps have "dead time" where they must remain on campus       │
+│  but aren't teaching. Minimizing gaps leads to more compact schedules.      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.4 LEISURE AFTERNOON PREFERENCE (SOFT)                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Prefer scheduling leisure subjects (PE, Art, Music, Dance,        │
+│           Craft) in AFTERNOON periods rather than morning.                  │
+│                                                                             │
+│  IDENTIFICATION: Subject is "leisure" if subject.category == "leisure"      │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each section, for each leisure subject:                                │
+│    For each MORNING period (period ≤ 3):                                    │
+│      If leisure subject is assigned here → penalty += weight                │
+│                                                                             │
+│  Note: This is the INVERSE of core_morning - it penalizes leisure           │
+│  subjects in morning slots, encouraging them to fill afternoon slots.       │
+│                                                                             │
+│  DEFAULT WEIGHT: 2                                                          │
+│  CONFIG KEY: soft_weights.leisure_afternoon                                 │
+│  CODE: add_leisure_afternoon_preference()                                   │
+│                                                                             │
+│  TRADE-OFF WITH CORE MORNING:                                               │
+│  These two constraints work together: core subjects get pushed to           │
+│  morning, leisure subjects get pushed to afternoon. But if core_morning     │
+│  weight is high (12) and leisure_afternoon is low (2), the solver will      │
+│  prioritize getting core subjects into morning over pushing leisure out.    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.5 AVOID PE IN PERIOD 1 AND AFTER LUNCH (SOFT)                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Avoid scheduling Physical Education (PE) in two specific          │
+│           problematic slots:                                                │
+│           1. Period 1 (students arrive and shouldn't start with exercise)   │
+│           2. Immediately after lunch (digestion concerns)                   │
+│                                                                             │
+│  IDENTIFICATION: Subject is PE if:                                          │
+│  • subject.name contains "PE" or "PHYSICAL" (case-insensitive)              │
+│  • subject.subject_id is "PE" or "PHYSICAL_EDUCATION"                       │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each section, for each PE subject:                                     │
+│    If PE assigned to Period 1 → penalty += weight                           │
+│    If PE assigned to period with is_after_lunch=True → penalty += weight    │
+│                                                                             │
+│  So PE in Period 1 gets ONE penalty, and PE after lunch gets ANOTHER.       │
+│  Both are independent checks.                                               │
+│                                                                             │
+│  DEFAULT WEIGHT: 4                                                          │
+│  CONFIG KEY: soft_weights.avoid_pe_period_1                                 │
+│  CODE: add_avoid_pe_period_1_preference()                                   │
+│                                                                             │
+│  BEST SLOTS FOR PE:                                                         │
+│  Based on this constraint, PE is best in periods 2-4 (morning but not P1)  │
+│  or late afternoon (P6+, well after lunch).                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.6 SUBJECT DISTRIBUTION PREFERENCE (SOFT)                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Distribute heavy/core subjects evenly across the week.            │
+│           Prevents clustering (e.g., 4 Math periods on Monday).             │
+│                                                                             │
+│  APPLIES TO: Core subjects (category == "core") with 5+ periods/week       │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For subjects with min_per_week >= 5:                                       │
+│    For each day:                                                            │
+│      Count assignments of this subject on this day                          │
+│      If count > 2:                                                          │
+│        excess = count - 2                                                   │
+│        penalty += weight × excess                                           │
+│                                                                             │
+│  Example: Math (6 periods/week) appears 4 times on Monday                   │
+│  excess = 4 - 2 = 2                                                         │
+│  penalty = weight × 2                                                       │
+│                                                                             │
+│  The "2" threshold means the solver tolerates up to 2 of the same          │
+│  subject per day before penalizing, which accommodates subjects that        │
+│  have many periods (6-7/week across 6 days ≈ 1-2 per day).                 │
+│                                                                             │
+│  DEFAULT WEIGHT: 3                                                          │
+│  CONFIG KEY: soft_weights.subject_distribution                              │
+│  CODE: add_subject_distribution_preference()                                │
+│                                                                             │
+│  NOTE: This works alongside no_subject_twice_daily (which penalizes >1),    │
+│  but this constraint has a higher threshold (>2) and only applies to       │
+│  heavy subjects. They complement each other.                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.7 TEACHER FREE PERIOD PREFERENCE (SOFT)                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Ensure each teacher has at least one free period per day          │
+│           for preparation, grading, or coordination.                        │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each teacher, for each day:                                            │
+│    Count total teaching periods this day                                    │
+│    num_periods = total academic periods in the day                          │
+│    If teaching_count >= num_periods:                                        │
+│      all_busy = 1 (teacher has NO free period)                              │
+│      penalty += weight × all_busy                                           │
+│                                                                             │
+│  A teacher is "all busy" if they teach EVERY SINGLE period in the day.     │
+│  Having even one free period avoids the penalty.                            │
+│                                                                             │
+│  DEFAULT WEIGHT: 2                                                          │
+│  CONFIG KEY: soft_weights.teacher_free_period                               │
+│  CODE: add_teacher_free_period_preference()                                 │
+│                                                                             │
+│  INTERACTION WITH OTHER CONSTRAINTS:                                        │
+│  • Works with minimize_gaps to give teachers useful (not scattered) free    │
+│    time                                                                     │
+│  • Works with teacher_load_bounds which sets absolute max periods/day       │
+│  • If max_periods_day < total_periods_in_day, this constraint is            │
+│    automatically satisfied (teacher MUST have free periods)                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.8 FAIR UNDESIRABLE SLOT DISTRIBUTION (SOFT)                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Distribute undesirable time slots (last period of each day,       │
+│           Friday/Saturday last periods) fairly among teachers so no         │
+│           single teacher always gets the "worst" slots.                     │
+│                                                                             │
+│  WHAT COUNTS AS UNDESIRABLE:                                                │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  1. The LAST PERIOD of every day (1× penalty)                               │
+│  2. The LAST PERIOD of Friday and Saturday (2× penalty - double-counted)    │
+│     These are the worst because students/teachers are least focused.        │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  1. Count undesirable slot assignments per teacher                          │
+│  2. Find MAX count across all teachers                                      │
+│  3. Find MIN count across all teachers                                      │
+│  4. unfairness = MAX - MIN                                                  │
+│  5. penalty += weight × unfairness                                          │
+│                                                                             │
+│  Example:                                                                   │
+│  T001 has 5 undesirable slots, T002 has 1 undesirable slot                 │
+│  unfairness = 5 - 1 = 4                                                     │
+│  penalty = weight × 4                                                       │
+│                                                                             │
+│  The solver tries to equalize the distribution, not eliminate it.            │
+│                                                                             │
+│  DEFAULT WEIGHT: 5                                                          │
+│  CONFIG KEY: soft_weights.fair_slot_distribution                            │
+│  CODE: add_fair_slot_distribution_preference()                              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.9 SPECIALIST TEACHER PRIORITY (SOFT)                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Prioritize scheduling for specialist/rare subject teachers        │
+│           who typically have few periods per week but teach across           │
+│           many sections. Ensures they aren't "squeezed out" by the          │
+│           optimizer.                                                        │
+│                                                                             │
+│  WHO IS A SPECIALIST?                                                       │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  A teacher is identified as a specialist if ANY of:                         │
+│  • teacher.is_specialist == True                                            │
+│  • They teach a subject with is_specialist == True                          │
+│  • They teach a subject with category in:                                   │
+│    ["language", "arts", "music", "special"]                                 │
+│  • They teach a subject whose name contains:                                │
+│    "sanskrit", "french", "german", "spanish", "music", "art",              │
+│    "dance", "craft", "drawing", "painting", "instrumental"                  │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each specialist teacher:                                               │
+│    1. Calculate total_required = SUM(min_per_week for each specialist       │
+│       subject × section count)                                              │
+│    2. Count actual_scheduled = SUM(assignment variables across all slots)   │
+│    3. shortfall = total_required - actual_scheduled                         │
+│    4. penalty += weight × shortfall                                         │
+│                                                                             │
+│  Example: Sanskrit teacher needs 12 periods across 6 sections               │
+│  If only 10 periods get scheduled: shortfall = 2                            │
+│  penalty = weight × 2                                                       │
+│                                                                             │
+│  DEFAULT WEIGHT: 8                                                          │
+│  CONFIG KEY: soft_weights.specialist_priority                               │
+│  CODE: add_specialist_teacher_priority()                                    │
+│                                                                             │
+│  WHY HIGH DEFAULT WEIGHT (8)?                                               │
+│  Specialist subjects often have very few periods (1-2/week per section).   │
+│  Without prioritization, the solver may "sacrifice" these periods to        │
+│  optimize other constraints. A higher weight ensures specialists get        │
+│  their minimum periods scheduled reliably.                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.10 CLASS TEACHER PERIOD 1 - SOFT VERSION (SOFT)                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Prefer (but don't require) that the class teacher teaches         │
+│           their own section in Period 1 each day.                           │
+│                                                                             │
+│  BACKGROUND:                                                                │
+│  This was previously a HARD constraint (must be satisfied). It was moved    │
+│  to SOFT because:                                                           │
+│  • Art/Music teachers as class teachers have very few periods → impossible  │
+│  • Class teachers who teach only 1 subject can't fill P1 every day         │
+│  • This was the #1 cause of infeasibility in Phase 1                        │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each section with a class_teacher_id:                                  │
+│    Find all subjects this class teacher teaches to this section             │
+│    For each day:                                                            │
+│      Get Period 1 variables for those subjects                              │
+│      not_in_p1 = 1 if NONE of those subjects are in Period 1               │
+│      penalty += weight × not_in_p1                                          │
+│                                                                             │
+│  DEFAULT WEIGHT: 6                                                          │
+│  CONFIG KEY: soft_weights.class_teacher_period_1                            │
+│  CODE: add_class_teacher_period_1_soft_preference()                         │
+│                                                                             │
+│  HARD VERSION STILL EXISTS:                                                 │
+│  The original hard constraint (add_class_teacher_period_1_constraint)       │
+│  is still in the code but is NOT called by default. It could be invoked    │
+│  if a school absolutely requires this to be mandatory.                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.11 NO SUBJECT TWICE DAILY - SOFT VERSION (SOFT)                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Prefer not scheduling the same non-block subject more than        │
+│           once per day per section.                                         │
+│                                                                             │
+│  EXEMPTIONS: Subjects with requires_block=True are excluded (labs need      │
+│              multiple consecutive periods by design).                        │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each section, for each non-block subject, for each day:               │
+│    Count assignments of this subject today                                  │
+│    If count > 1:                                                            │
+│      excess = count - 1                                                     │
+│      penalty += weight × excess                                             │
+│                                                                             │
+│  Example: Math appears 3 times on Monday for section 8A                     │
+│  excess = 3 - 1 = 2                                                         │
+│  penalty = weight × 2                                                       │
+│                                                                             │
+│  DEFAULT WEIGHT: 4                                                          │
+│  CONFIG KEY: soft_weights.no_subject_twice_daily                            │
+│  CODE: add_no_subject_twice_daily_soft_preference()                         │
+│                                                                             │
+│  HARD VERSION STILL EXISTS:                                                 │
+│  The original hard constraint (add_no_subject_twice_daily_constraint)       │
+│  uses a strict ≤ 1 per day rule. It is NOT called by default but           │
+│  remains available in the codebase.                                         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9.12 RESOURCE CAPACITY - SOFT VERSION (SOFT)                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PURPOSE: Penalize (but don't prevent) exceeding resource capacity          │
+│           limits. This allows the solver to find solutions even when        │
+│           resources are tight.                                              │
+│                                                                             │
+│  APPLIES TO: Subjects with requires_resource=True and resource_type set     │
+│  (e.g., Physics Lab, Chemistry Lab, Sports Ground, Computer Lab)            │
+│                                                                             │
+│  HOW PENALTY IS CALCULATED:                                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  For each resource type, for each time slot:                                │
+│    Count sections using this resource at this time                          │
+│    If count > capacity:                                                     │
+│      excess = count - capacity                                              │
+│      penalty += weight × excess                                             │
+│                                                                             │
+│  Example: Physics Lab (capacity=1), 3 sections want it at Monday P3        │
+│  excess = 3 - 1 = 2                                                         │
+│  penalty = weight × 2                                                       │
+│                                                                             │
+│  DEFAULT WEIGHT: 5                                                          │
+│  CONFIG KEY: soft_weights.resource_capacity                                 │
+│  CODE: add_resource_capacity_soft_preference()                              │
+│                                                                             │
+│  HARD VERSION STILL EXISTS:                                                 │
+│  add_resource_capacity_constraint() is still in the codebase and enforces  │
+│  strict capacity limits. It's registered as HARD_CORE in constraint_types  │
+│  but the soft version is now used by default in practice.                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+      PART 10: CORRECTED RELAXATION ORDER & CONSTRAINT CLASSIFICATION
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  10.1 CORRECTED RELAXATION ORDER (from constraint_types.py)                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ⚠️ NOTE: The relaxation order in Part 7.3 was INCORRECT.                    │
+│  The actual relaxation order (lower priority = relaxed FIRST):              │
+│                                                                             │
+│  ┌───────┬────────────────────────────────┬──────────────────────────────┐  │
+│  │ Order │ Constraint                     │ Why Relaxed at This Order    │  │
+│  ├───────┼────────────────────────────────┼──────────────────────────────┤  │
+│  │ 1st   │ Substitution Reserve (P=1)     │ Least impact on quality      │  │
+│  │       │                                │ Students unaffected          │  │
+│  ├───────┼────────────────────────────────┼──────────────────────────────┤  │
+│  │ 2nd   │ Max Consecutive Periods (P=2)  │ Teachers may teach 4+ in    │  │
+│  │       │                                │ a row, but timetable works   │  │
+│  ├───────┼────────────────────────────────┼──────────────────────────────┤  │
+│  │ 3rd   │ Teacher Daily Load (P=3)       │ Teacher may exceed daily max │  │
+│  │       │                                │ but weekly total is OK       │  │
+│  ├───────┼────────────────────────────────┼──────────────────────────────┤  │
+│  │ 4th   │ Teacher Weekly Balance (P=4)   │ Teacher may have uneven days │  │
+│  │       │                                │ (7 Mon, 2 Tue) but works    │  │
+│  ├───────┼────────────────────────────────┼──────────────────────────────┤  │
+│  │ 5th   │ Block Period Integrity (P=5)   │ Labs may not be consecutive  │  │
+│  │       │                                │ Impacts lab quality          │  │
+│  ├───────┼────────────────────────────────┼──────────────────────────────┤  │
+│  │ LAST  │ Language Block Sync (P=99)     │ ONLY as absolute last resort │  │
+│  │       │                                │ Students can't split into    │  │
+│  │       │                                │ language groups if relaxed   │  │
+│  └───────┴────────────────────────────────┴──────────────────────────────┘  │
+│                                                                             │
+│  KEY CHANGES FROM ORIGINAL PART 7.3:                                        │
+│  • Language Sync is relaxed LAST (priority 99), NOT first                   │
+│  • Class Teacher P1 is now SOFT (not in relaxation chain at all)            │
+│  • No Subject Twice Daily is now SOFT (not in relaxation chain)             │
+│  • Core Morning is now SOFT (not in relaxation chain)                       │
+│  • Substitution Reserve is relaxed FIRST (least impact)                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  10.2 CORRECTED FULL CONSTRAINT CLASSIFICATION TABLE                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────────────────────────┬───────────────┬────────────────────┐  │
+│  │ Constraint                       │ Type          │ Priority/Weight    │  │
+│  ├──────────────────────────────────┼───────────────┼────────────────────┤  │
+│  │ Class Single Subject per Period  │ HARD_CORE     │ Cannot relax       │  │
+│  │ Teacher No Double-Booking        │ HARD_CORE     │ Cannot relax       │  │
+│  │ Teacher Availability             │ HARD_CORE     │ Cannot relax       │  │
+│  │ Subject Frequency Requirements   │ HARD_CORE     │ Cannot relax       │  │
+│  │ Resource Capacity (hard version) │ HARD_CORE     │ Cannot relax       │  │
+│  ├──────────────────────────────────┼───────────────┼────────────────────┤  │
+│  │ Substitution Reserve             │ HARD_RELAXABLE│ Priority 1 (1st)   │  │
+│  │ Max Consecutive Periods          │ HARD_RELAXABLE│ Priority 2         │  │
+│  │ Teacher Daily Load Limits        │ HARD_RELAXABLE│ Priority 3         │  │
+│  │ Teacher Weekly Load Balance      │ HARD_RELAXABLE│ Priority 4         │  │
+│  │ Block Period Integrity           │ HARD_RELAXABLE│ Priority 5         │  │
+│  │ Language Block Synchronization   │ HARD_RELAXABLE│ Priority 99 (LAST) │  │
+│  ├──────────────────────────────────┼───────────────┼────────────────────┤  │
+│  │ Core Subjects in Morning         │ SOFT          │ Weight 3           │  │
+│  │ Teacher Load Balance             │ SOFT          │ Weight 10          │  │
+│  │ Minimize Idle Gaps               │ SOFT          │ Weight 5           │  │
+│  │ Leisure in Afternoon             │ SOFT          │ Weight 2           │  │
+│  │ Avoid PE in Period 1 / Lunch     │ SOFT          │ Weight 4           │  │
+│  │ Subject Distribution             │ SOFT          │ Weight 3           │  │
+│  │ Teacher Free Period              │ SOFT          │ Weight 2           │  │
+│  │ Fair Slot Distribution           │ SOFT          │ Weight 5           │  │
+│  │ Specialist Teacher Priority      │ SOFT          │ Weight 8           │  │
+│  │ Class Teacher in Period 1        │ SOFT          │ Weight 6           │  │
+│  │ No Subject Twice Daily           │ SOFT          │ Weight 4           │  │
+│  │ Resource Capacity (soft version) │ SOFT          │ Weight 5           │  │
+│  └──────────────────────────────────┴───────────────┴────────────────────┘  │
+│                                                                             │
+│  TOTAL: 5 HARD_CORE + 6 HARD_RELAXABLE + 12 SOFT = 23 constraints          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  10.3 THREE-TIER SYSTEM EXPLAINED                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  HARD_CORE: "Laws of physics" - mathematically essential                    │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  • Cannot be violated under ANY circumstances                               │
+│  • Cannot be disabled via UI or config                                      │
+│  • If these can't be satisfied, the problem is genuinely infeasible         │
+│  • Example: A teacher literally cannot be in two rooms at once              │
+│                                                                             │
+│  HARD_RELAXABLE: "School policy" - important but flexible                   │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  • Enabled by default but can be auto-relaxed if solver can't find          │
+│    feasibility                                                              │
+│  • Relaxed in priority order (lowest priority number first)                 │
+│  • Each relaxation is logged with a clear warning message                   │
+│  • The solver always tries WITHOUT relaxation first                         │
+│  • Example: Teacher max consecutive can be relaxed if needed               │
+│                                                                             │
+│  SOFT: "Preferences" - quality optimization                                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  • NEVER cause infeasibility (by definition)                                │
+│  • Implemented as penalty variables in the objective function               │
+│  • Each has a configurable weight (0 = disabled, higher = more important)  │
+│  • Solver minimizes total weighted penalty score                            │
+│  • Example: We PREFER core subjects in morning but it's not mandatory      │
+│                                                                             │
+│  PHASE 1 vs PHASE 2:                                                        │
+│  • Phase 1: HARD_CORE + HARD_RELAXABLE only (find any valid timetable)     │
+│  • Phase 2: All constraints including SOFT (optimize quality)               │
+│  • Phase 1 uses ~30% of time, Phase 2 uses ~70% of time                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+            PART 11: LANGUAGE FREQUENCY IN SYNCHRONIZED BLOCKS
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  11.1 HOW SUBJECT FREQUENCY WORKS WITH LANGUAGE BLOCKS                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  SPECIAL HANDLING: When language_block_enabled=True for a section,          │
+│  the subject frequency constraint for tier-2+ languages uses a special     │
+│  "anchor" approach.                                                         │
+│                                                                             │
+│  THE PROBLEM:                                                               │
+│  In a language block, Kannada, Hindi, and Sanskrit all share the SAME      │
+│  time slots (they're taught simultaneously to different student groups).    │
+│  If we apply frequency constraints independently to each, the solver       │
+│  might try to give them different numbers of periods - but they MUST       │
+│  have the same count (because they're synchronized).                        │
+│                                                                             │
+│  THE SOLUTION: Anchor Subject                                               │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  1. Group tier-2+ subjects for each section                                 │
+│  2. Pick the FIRST subject in the group as the "anchor"                     │
+│  3. Apply frequency constraint ONLY to the anchor                           │
+│  4. The sync constraint ensures all other subjects in the tier              │
+│     automatically get the same number of periods                            │
+│                                                                             │
+│  Example:                                                                   │
+│  Section 8A, Tier 2: [KANNADA, HINDI, SANSKRIT]                             │
+│  Anchor: KANNADA                                                            │
+│  Frequency constraint: 4 ≤ KANNADA_periods ≤ 5                             │
+│  Sync constraint: HINDI_periods == KANNADA_periods                          │
+│                   SANSKRIT_periods == KANNADA_periods                        │
+│  Result: All three languages get 4-5 periods automatically.                │
+│                                                                             │
+│  This avoids the solver having 3× the frequency constraints for what       │
+│  is essentially one scheduling decision (when does the "language block"    │
+│  happen?).                                                                  │
+│                                                                             │
+│  CODE: Inside add_subject_frequency_constraint() - special branch for      │
+│        language_block_enabled sections with tier >= 2                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+           PART 12: AUTO-DETECTION & FALLBACK BEHAVIOR
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  12.1 LANGUAGE TIER AUTO-DETECTION                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  If language_tier is not explicitly set on a subject, the solver            │
+│  auto-detects it from the subject name:                                     │
+│                                                                             │
+│  ┌─────────────────────────────────────┬─────────────────────────────────┐  │
+│  │ Name contains...                    │ Assigned Tier                   │  │
+│  ├─────────────────────────────────────┼─────────────────────────────────┤  │
+│  │ "english", "first"                  │ Tier 1 (First Language)         │  │
+│  ├─────────────────────────────────────┼─────────────────────────────────┤  │
+│  │ "kannada", "hindi", "sanskrit",     │ Tier 2 (Second Language)        │  │
+│  │ "second", "tamil", "telugu",        │                                 │  │
+│  │ "malayalam", "marathi", "bengali",  │                                 │  │
+│  │ "gujarati"                          │                                 │  │
+│  ├─────────────────────────────────────┼─────────────────────────────────┤  │
+│  │ "french", "german", "spanish",      │ Tier 3 (Third Language)         │  │
+│  │ "third", "japanese", "chinese",     │                                 │  │
+│  │ "arabic", "russian"                 │                                 │  │
+│  ├─────────────────────────────────────┼─────────────────────────────────┤  │
+│  │ Other/unrecognized                  │ Tier 2 (default fallback)       │  │
+│  └─────────────────────────────────────┴─────────────────────────────────┘  │
+│                                                                             │
+│  LANGUAGE SUBJECT DETECTION:                                                │
+│  A subject is considered a "language" if ANY of:                            │
+│  • subject.is_language == True                                              │
+│  • subject.category == "language"                                           │
+│  • subject.is_language_block == True                                        │
+│                                                                             │
+│  ⚠️ RECOMMENDATION: Always explicitly set language_tier on language          │
+│  subjects to avoid misclassification from auto-detection.                   │
+│                                                                             │
+│  CODE: Inside add_strict_language_sync_constraint()                         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  12.2 SECTION-LEVEL LANGUAGE BLOCK CONFIGURATION                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Individual sections can opt out of language synchronization:               │
+│                                                                             │
+│  section.language_block_enabled = False                                      │
+│  → This section is EXCLUDED from language sync grouping                     │
+│  → It still gets its language subjects but they're scheduled independently  │
+│                                                                             │
+│  DEFAULT: True (all sections participate in language block sync)             │
+│                                                                             │
+│  SINGLE-SECTION GRADES:                                                     │
+│  If a grade has only ONE section, language sync is automatically SKIPPED    │
+│  for that grade (nothing to synchronize with). This is handled silently.    │
+│                                                                             │
+│  LANGUAGE TIER CONFIG FALLBACK:                                             │
+│  If section.language_tier_config is NOT set, the solver falls back to       │
+│  checking the subject_teacher_map for any tier subjects from the global     │
+│  subject list. This means older data formats still work.                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+               CORRECTED & UPDATED QUICK REFERENCE CARD
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  COMPLETE CONSTRAINT LIST (23 Total)                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  HARD_CORE (5) — Always On, Never Relaxed:                                  │
+│  ├── 1. No class double-booking (≤ 1 subject per period per section)        │
+│  ├── 2. No teacher double-booking (≤ 1 class per period per teacher)        │
+│  ├── 3. Teacher availability (blocked periods enforced)                     │
+│  ├── 4. Subject frequency bounds (min/max periods per week)                 │
+│  └── 5. Resource capacity limits (hard version, in registry)                │
+│                                                                             │
+│  HARD_RELAXABLE (6) — Auto-relaxed in priority order if needed:             │
+│  ├── 1. Substitution reserve (keep N teachers free) [P=1]                   │
+│  ├── 2. Max consecutive periods (teacher break rule) [P=2]                  │
+│  ├── 3. Teacher daily load limits (max periods/day) [P=3]                   │
+│  ├── 4. Teacher weekly load balance (even daily loads) [P=4]                │
+│  ├── 5. Block period integrity (consecutive lab slots) [P=5]                │
+│  └── 6. Language block synchronization (tier sync) [P=99]                   │
+│                                                                             │
+│  SOFT (12) — Weighted preferences, never block feasibility:                 │
+│  ├── 1.  Core subjects in morning           (default weight: 3)             │
+│  ├── 2.  Teacher load balance               (default weight: 10)            │
+│  ├── 3.  Minimize idle gaps                 (default weight: 5)             │
+│  ├── 4.  Leisure in afternoon               (default weight: 2)             │
+│  ├── 5.  Avoid PE in Period 1 / after lunch (default weight: 4)             │
+│  ├── 6.  Subject distribution               (default weight: 3)             │
+│  ├── 7.  Teacher free period daily          (default weight: 2)             │
+│  ├── 8.  Fair undesirable slot distribution (default weight: 5)             │
+│  ├── 9.  Specialist teacher priority        (default weight: 8)             │
+│  ├── 10. Class teacher in Period 1 (soft)   (default weight: 6)             │
+│  ├── 11. No subject twice daily (soft)      (default weight: 4)             │
+│  └── 12. Resource capacity (soft)           (default weight: 5)             │
+│                                                                             │
+│  IMPLICIT / POLICY:                                                         │
+│  ├── Prayer/assembly period exclusion (Period 0 not counted in loads)       │
+│  ├── No free periods policy (handled by subject frequency filling)          │
+│  ├── Language teacher specialization (data validation + warning)            │
+│  └── Language tier auto-detection (fallback for missing tier data)          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                              END OF DOCUMENT
+================================================================================

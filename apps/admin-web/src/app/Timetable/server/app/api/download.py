@@ -17,20 +17,29 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Sample data - Vidya Mandir High School
+# =============================================================================
+# CAPACITY CALCULATION:
+#   Weekdays Mon-Fri: 5 days × 8 periods = 40 academic slots
+#   Saturday: 1 day × 4 periods = 4 academic slots
+#   TOTAL: 44 academic slots per section per week
+#
+# This number was chosen carefully so that subject frequencies can exactly
+# fill all slots, eliminating free periods entirely.
+# =============================================================================
 SAMPLE_SCHOOL = {
     "school_id": 1,
     "name": "Vidya Mandir High School",
     "academic_year": "2025-2026",
-    "start_time": "08:00",
+    "start_time": "08:30",
     "end_time": "15:30",
     "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-    "periods_per_weekday": 9,
+    "periods_per_weekday": 8,
     "saturday_periods": 4,
     "period_duration_minutes": 45,
     "prayer_enabled": True,
     "prayer_duration_minutes": 30,
-    "lunch_period_index": 5,
-    "lunch_after_period": 5,
+    "lunch_period_index": 4,
+    "lunch_after_period": 4,
     "lunch_duration_minutes": 40,
     "recess_period_indices": [3],
     "recess_after_every_n_periods": 3,
@@ -38,91 +47,93 @@ SAMPLE_SCHOOL = {
 }
 
 SAMPLE_PERIODS = [
+    # Period 0: Assembly/Prayer (08:30 - 09:00)
     {
         "period_index": 0,
-        "start_time": "08:00",
-        "end_time": "08:30",
+        "start_time": "08:30",
+        "end_time": "09:00",
         "duration_minutes": 30,
         "is_prayer": True,
         "is_recess": False,
         "is_lunch": False,
     },
+    # Period 1 (09:00 - 09:45)
     {
         "period_index": 1,
-        "start_time": "08:30",
-        "end_time": "09:15",
+        "start_time": "09:00",
+        "end_time": "09:45",
         "duration_minutes": 45,
         "is_prayer": False,
         "is_recess": False,
         "is_lunch": False,
     },
+    # Period 2 (09:45 - 10:30)
     {
         "period_index": 2,
-        "start_time": "09:15",
-        "end_time": "10:00",
+        "start_time": "09:45",
+        "end_time": "10:30",
         "duration_minutes": 45,
         "is_prayer": False,
         "is_recess": False,
         "is_lunch": False,
     },
+    # Period 3 (10:30 - 11:15)
     {
         "period_index": 3,
-        "start_time": "10:00",
-        "end_time": "10:20",
-        "duration_minutes": 20,
+        "start_time": "10:30",
+        "end_time": "11:15",
+        "duration_minutes": 45,
         "is_prayer": False,
-        "is_recess": True,
+        "is_recess": False,
         "is_lunch": False,
     },
+    # RECESS (11:15 - 11:35) — 20 minutes after Period 3
+    # Period 4 (11:35 - 12:20)
     {
         "period_index": 4,
-        "start_time": "10:20",
-        "end_time": "11:05",
+        "start_time": "11:35",
+        "end_time": "12:20",
         "duration_minutes": 45,
         "is_prayer": False,
         "is_recess": False,
         "is_lunch": False,
     },
+    # LUNCH BREAK (12:20 - 13:00) — 40 minutes after Period 4
+    # Period 5 (13:00 - 13:45)
     {
         "period_index": 5,
-        "start_time": "11:05",
-        "end_time": "11:50",
+        "start_time": "13:00",
+        "end_time": "13:45",
         "duration_minutes": 45,
         "is_prayer": False,
         "is_recess": False,
         "is_lunch": False,
     },
+    # Period 6 (13:45 - 14:30)
     {
         "period_index": 6,
-        "start_time": "11:50",
-        "end_time": "12:30",
-        "duration_minutes": 40,
+        "start_time": "13:45",
+        "end_time": "14:30",
+        "duration_minutes": 45,
         "is_prayer": False,
         "is_recess": False,
-        "is_lunch": True,
+        "is_lunch": False,
     },
+    # Period 7 (14:30 - 15:15)
     {
         "period_index": 7,
-        "start_time": "12:30",
-        "end_time": "13:15",
+        "start_time": "14:30",
+        "end_time": "15:15",
         "duration_minutes": 45,
         "is_prayer": False,
         "is_recess": False,
         "is_lunch": False,
     },
+    # Period 8 (15:15 - 16:00)
     {
         "period_index": 8,
-        "start_time": "13:15",
-        "end_time": "14:00",
-        "duration_minutes": 45,
-        "is_prayer": False,
-        "is_recess": False,
-        "is_lunch": False,
-    },
-    {
-        "period_index": 9,
-        "start_time": "14:00",
-        "end_time": "14:45",
+        "start_time": "15:15",
+        "end_time": "16:00",
         "duration_minutes": 45,
         "is_prayer": False,
         "is_recess": False,
@@ -131,508 +142,646 @@ SAMPLE_PERIODS = [
 ]
 
 SAMPLE_TEACHERS = [
-    # Mathematics Teachers (4 teachers for 10 classes)
+    # ==========================================================================
+    # TEACHER CAPACITY CALCULATION (all hard constraints ON):
+    # - 10 sections × 44 slots = 440 total teaching slots needed per week
+    # - With language tier-2 sync (3 langs share slots):
+    #   10 sections × 44 effective slots = 440 teaching slots
+    #   (Language teachers teach simultaneously so they need 3× capacity
+    #    for those 5 slots per section, but each only covers 2 sections)
+    #
+    # TEACHER ASSIGNMENT STRATEGY:
+    # - Max 2 sections per language teacher set (for sync feasibility)
+    # - Core subject teachers: ~2-3 sections each
+    # - max_periods_day=7, max_consecutive=3
+    # - max_daily_load_variance=3 (hard constraint)
+    # ==========================================================================
+    # =========================================================================
+    # MATHEMATICS TEACHERS (5 teachers for 10 classes, 2 sections each)
+    # Each section needs 7 math periods/week → 5 teachers × ~14 periods = 70
+    # =========================================================================
     {
         "teacher_id": "T001",
         "name": "Rajesh Kumar",
         "subjects_can_teach": ["MATH"],
-        "min_periods_day": 0,
+        "min_periods_day": 1,
         "max_periods_day": 7,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T002",
         "name": "Priya Sharma",
         "subjects_can_teach": ["MATH"],
-        "min_periods_day": 0,
+        "min_periods_day": 1,
         "max_periods_day": 7,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T003",
         "name": "Amit Verma",
         "subjects_can_teach": ["MATH"],
-        "min_periods_day": 0,
+        "min_periods_day": 1,
         "max_periods_day": 7,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T004",
         "name": "Sunita Agarwal",
         "subjects_can_teach": ["MATH"],
-        "min_periods_day": 0,
+        "min_periods_day": 1,
         "max_periods_day": 7,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
-    # Science Teachers (4 teachers for 10 classes)
     {
         "teacher_id": "T005",
-        "name": "Suresh Reddy",
-        "subjects_can_teach": ["SCI", "PHY_LAB"],
-        "min_periods_day": 0,
+        "name": "Dinesh Pandey",
+        "subjects_can_teach": ["MATH"],
+        "min_periods_day": 1,
         "max_periods_day": 7,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
+    # =========================================================================
+    # SCIENCE TEACHERS (5 teachers for 10 classes)
+    # Grades 6-7: 6 SCI periods/section, Grades 8-10: 6 SCI + 2 PHY_LAB + 2 CHEM_LAB
+    # Some science teachers also handle labs
+    # =========================================================================
     {
         "teacher_id": "T006",
-        "name": "Lakshmi Nair",
+        "name": "Suresh Reddy",
         "subjects_can_teach": ["SCI", "PHY_LAB"],
-        "min_periods_day": 0,
+        "min_periods_day": 1,
         "max_periods_day": 7,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T007",
-        "name": "Raghav Menon",
-        "subjects_can_teach": ["SCI", "CHEM_LAB"],
-        "min_periods_day": 0,
+        "name": "Lakshmi Nair",
+        "subjects_can_teach": ["SCI", "PHY_LAB"],
+        "min_periods_day": 1,
         "max_periods_day": 7,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T008",
-        "name": "Deepa Krishnan",
+        "name": "Raghav Menon",
         "subjects_can_teach": ["SCI", "CHEM_LAB"],
-        "min_periods_day": 0,
+        "min_periods_day": 1,
         "max_periods_day": 7,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
-    # English Teachers (4 teachers for 10 classes)
     {
         "teacher_id": "T009",
-        "name": "Anita Desai",
-        "subjects_can_teach": ["ENG"],
-        "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 45,
+        "name": "Deepa Krishnan",
+        "subjects_can_teach": ["SCI", "CHEM_LAB"],
+        "min_periods_day": 1,
+        "max_periods_day": 7,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T010",
-        "name": "Meena Patel",
-        "subjects_can_teach": ["ENG"],
-        "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 45,
+        "name": "Vinod Sharma",
+        "subjects_can_teach": ["SCI"],
+        "min_periods_day": 1,
+        "max_periods_day": 7,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
+    # =========================================================================
+    # ENGLISH TEACHERS (4 teachers for 10 classes)
+    # 6 ENG periods/section → 4 teachers × ~15 periods = 60
+    # =========================================================================
     {
         "teacher_id": "T011",
-        "name": "Rahul Saxena",
+        "name": "Anita Desai",
         "subjects_can_teach": ["ENG"],
-        "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 45,
+        "min_periods_day": 1,
+        "max_periods_day": 7,
+        "min_periods_week": 12,
+        "max_periods_week": 38,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T012",
-        "name": "Neelam Gupta",
+        "name": "Meena Patel",
         "subjects_can_teach": ["ENG"],
-        "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 45,
+        "min_periods_day": 1,
+        "max_periods_day": 7,
+        "min_periods_week": 12,
+        "max_periods_week": 38,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
-    # Social Studies Teachers (3 teachers for 10 classes)
     {
         "teacher_id": "T013",
-        "name": "Vijay Singh",
-        "subjects_can_teach": ["SST"],
-        "min_periods_day": 0,
+        "name": "Rahul Saxena",
+        "subjects_can_teach": ["ENG"],
+        "min_periods_day": 1,
         "max_periods_day": 7,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "min_periods_week": 12,
+        "max_periods_week": 38,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T014",
-        "name": "Geeta Rao",
-        "subjects_can_teach": ["SST"],
-        "min_periods_day": 0,
+        "name": "Neelam Gupta",
+        "subjects_can_teach": ["ENG"],
+        "min_periods_day": 1,
         "max_periods_day": 7,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "min_periods_week": 12,
+        "max_periods_week": 38,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
+    # =========================================================================
+    # SOCIAL STUDIES TEACHERS (4 teachers for 10 classes)
+    # 5 SST periods/section → 4 teachers × ~12.5 periods = 50
+    # =========================================================================
     {
         "teacher_id": "T015",
-        "name": "Prakash Jha",
+        "name": "Vijay Singh",
         "subjects_can_teach": ["SST"],
-        "min_periods_day": 0,
+        "min_periods_day": 1,
         "max_periods_day": 7,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
-    # Hindi Teachers (4 teachers - 2 classes each max for language block compatibility)
     {
         "teacher_id": "T016",
-        "name": "Arun Kumar",
-        "subjects_can_teach": ["HINDI"],
-        "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
+        "name": "Geeta Rao",
+        "subjects_can_teach": ["SST"],
+        "min_periods_day": 1,
+        "max_periods_day": 7,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T017",
-        "name": "Suman Devi",
-        "subjects_can_teach": ["HINDI"],
-        "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
+        "name": "Prakash Jha",
+        "subjects_can_teach": ["SST"],
+        "min_periods_day": 1,
+        "max_periods_day": 7,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T018",
-        "name": "Ramesh Tiwari",
-        "subjects_can_teach": ["HINDI"],
-        "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
+        "name": "Savita Kumari",
+        "subjects_can_teach": ["SST"],
+        "min_periods_day": 1,
+        "max_periods_day": 7,
+        "min_periods_week": 10,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
-    {
-        "teacher_id": "T033",
-        "name": "Anita Singh",
-        "subjects_can_teach": ["HINDI"],
-        "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
-        "max_consecutive_periods": 3,
-        "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
-    },
-    # Kannada Teachers (4 teachers - 2 classes each max for language block compatibility)
+    # =========================================================================
+    # LANGUAGE SPECIALIST TEACHERS (TIER 2: Second Language — Hindi / Kannada)
+    # 6 teachers total: each teacher serves exactly ONE section per grade.
+    # Teachers T019/T020 serve grades 6+8, T022/T023 serve grades 7+9,
+    # T031/T032 serve grade 10 only.
+    #   T019 (Hindi):   6A(5) + 8A(5) = 10 periods/week
+    #   T020 (Kannada): 6B(5) + 8B(5) = 10 periods/week
+    #   T022 (Hindi):   7A(5) + 9A(5) = 10 periods/week
+    #   T023 (Kannada): 7B(5) + 9B(5) = 10 periods/week
+    #   T031 (Hindi):   10A(5)         =  5 periods/week
+    #   T032 (Kannada): 10B(5)         =  5 periods/week
+    # =========================================================================
     {
         "teacher_id": "T019",
-        "name": "Kavita Menon",
-        "subjects_can_teach": ["KANNADA"],
+        "name": "Arun Kumar",
+        "subjects_can_teach": ["HINDI"],
+        "is_language_specialist": True,
+        "primary_language": "HINDI",
         "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
+        "max_periods_day": 7,
+        "min_periods_week": 8,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T020",
-        "name": "Ravi Hegde",
+        "name": "Kavita Menon",
         "subjects_can_teach": ["KANNADA"],
+        "is_language_specialist": True,
+        "primary_language": "KANNADA",
         "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
+        "max_periods_day": 7,
+        "min_periods_week": 8,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
-    {
-        "teacher_id": "T021",
-        "name": "Shobha Shetty",
-        "subjects_can_teach": ["KANNADA"],
-        "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
-        "max_consecutive_periods": 3,
-        "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
-    },
-    {
-        "teacher_id": "T034",
-        "name": "Mohan Gowda",
-        "subjects_can_teach": ["KANNADA"],
-        "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
-        "max_consecutive_periods": 3,
-        "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
-    },
-    # Sanskrit Teachers (4 teachers - 2 classes each max for language block compatibility)
     {
         "teacher_id": "T022",
-        "name": "Deepak Verma",
-        "subjects_can_teach": ["SANSKRIT"],
+        "name": "Suman Devi",
+        "subjects_can_teach": ["HINDI"],
+        "is_language_specialist": True,
+        "primary_language": "HINDI",
         "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
+        "max_periods_day": 7,
+        "min_periods_week": 8,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
         "teacher_id": "T023",
-        "name": "Padma Sharma",
-        "subjects_can_teach": ["SANSKRIT"],
+        "name": "Ravi Hegde",
+        "subjects_can_teach": ["KANNADA"],
+        "is_language_specialist": True,
+        "primary_language": "KANNADA",
         "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
+        "max_periods_day": 7,
+        "min_periods_week": 8,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
-        "teacher_id": "T024",
-        "name": "Gopal Iyer",
-        "subjects_can_teach": ["SANSKRIT"],
+        "teacher_id": "T031",
+        "name": "Pradeep Mishra",
+        "subjects_can_teach": ["HINDI"],
+        "is_language_specialist": True,
+        "primary_language": "HINDI",
         "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
+        "max_periods_day": 7,
+        "min_periods_week": 4,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
-        "teacher_id": "T035",
-        "name": "Lakshmi Pandit",
-        "subjects_can_teach": ["SANSKRIT"],
+        "teacher_id": "T032",
+        "name": "Vidya Bhat",
+        "subjects_can_teach": ["KANNADA"],
+        "is_language_specialist": True,
+        "primary_language": "KANNADA",
         "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 50,
+        "max_periods_day": 7,
+        "min_periods_week": 4,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
-    # PE Teachers (3 teachers for 10 classes)
+    # =========================================================================
+    # PE TEACHERS (3 teachers for 10 classes)
+    # 3 PE periods/section → 3 teachers × ~10 periods = 30
+    # =========================================================================
     {
-        "teacher_id": "T025",
+        "teacher_id": "T034",
         "name": "Rohit Bhatt",
         "subjects_can_teach": ["PE"],
         "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "max_periods_day": 7,
+        "min_periods_week": 8,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
-        "teacher_id": "T026",
+        "teacher_id": "T035",
         "name": "Nisha Kapoor",
         "subjects_can_teach": ["PE"],
         "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "max_periods_day": 7,
+        "min_periods_week": 8,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
-        "teacher_id": "T027",
+        "teacher_id": "T036",
         "name": "Vikram Chauhan",
         "subjects_can_teach": ["PE"],
         "min_periods_day": 0,
-        "max_periods_day": 8,
-        "min_periods_week": 0,
-        "max_periods_week": 40,
+        "max_periods_day": 7,
+        "min_periods_week": 6,
+        "max_periods_week": 36,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
-    # Computer Teachers (3 teachers for 10 classes)
+    # =========================================================================
+    # COMPUTER TEACHERS (3 teachers for 10 classes)
+    # 3 COMP periods/section → 3 teachers × ~10 periods = 30
+    # =========================================================================
     {
-        "teacher_id": "T028",
+        "teacher_id": "T037",
         "name": "Neha Gupta",
         "subjects_can_teach": ["COMP"],
         "min_periods_day": 0,
         "max_periods_day": 6,
-        "min_periods_week": 0,
-        "max_periods_week": 35,
+        "min_periods_week": 8,
+        "max_periods_week": 34,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
-        "teacher_id": "T029",
+        "teacher_id": "T038",
         "name": "Manoj Kumar",
         "subjects_can_teach": ["COMP"],
         "min_periods_day": 0,
         "max_periods_day": 6,
-        "min_periods_week": 0,
-        "max_periods_week": 35,
+        "min_periods_week": 8,
+        "max_periods_week": 34,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
-        "teacher_id": "T030",
+        "teacher_id": "T039",
         "name": "Swati Joshi",
         "subjects_can_teach": ["COMP"],
         "min_periods_day": 0,
         "max_periods_day": 6,
-        "min_periods_week": 0,
-        "max_periods_week": 35,
+        "min_periods_week": 6,
+        "max_periods_week": 34,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
-    # Art Teachers (2 teachers for 10 classes)
+    # =========================================================================
+    # ART TEACHERS (2 teachers for 10 classes)
+    # 2 ART periods/section → 2 teachers × ~10 periods = 20
+    # =========================================================================
     {
-        "teacher_id": "T031",
+        "teacher_id": "T040",
         "name": "Kiran Das",
         "subjects_can_teach": ["ART"],
         "min_periods_day": 0,
         "max_periods_day": 6,
-        "min_periods_week": 0,
+        "min_periods_week": 6,
         "max_periods_week": 30,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
     },
     {
-        "teacher_id": "T032",
+        "teacher_id": "T041",
         "name": "Pooja Mathur",
         "subjects_can_teach": ["ART"],
         "min_periods_day": 0,
         "max_periods_day": 6,
-        "min_periods_week": 0,
+        "min_periods_week": 6,
         "max_periods_week": 30,
         "max_consecutive_periods": 3,
         "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        "availability_time": "08:00-15:30",
+        "availability_time": "08:30-16:00",
+    },
+    # =========================================================================
+    # MORAL SCIENCE / VALUE EDUCATION TEACHERS (2 teachers, NEW)
+    # 2 MORAL periods/section → 2 teachers × ~10 periods = 20
+    # =========================================================================
+    {
+        "teacher_id": "T042",
+        "name": "Shanti Devi",
+        "subjects_can_teach": ["MORAL"],
+        "min_periods_day": 0,
+        "max_periods_day": 6,
+        "min_periods_week": 6,
+        "max_periods_week": 30,
+        "max_consecutive_periods": 3,
+        "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        "availability_time": "08:30-16:00",
+    },
+    {
+        "teacher_id": "T043",
+        "name": "Raman Pillai",
+        "subjects_can_teach": ["MORAL"],
+        "min_periods_day": 0,
+        "max_periods_day": 6,
+        "min_periods_week": 6,
+        "max_periods_week": 30,
+        "max_consecutive_periods": 3,
+        "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        "availability_time": "08:30-16:00",
+    },
+    # =========================================================================
+    # GK / GENERAL KNOWLEDGE TEACHERS (2 teachers, NEW)
+    # Grades 6-7: 3 GK periods, Grades 8-10: 2 GK periods
+    # 2 teachers × ~12 periods = 24
+    # =========================================================================
+    {
+        "teacher_id": "T044",
+        "name": "Arjun Nair",
+        "subjects_can_teach": ["GK"],
+        "min_periods_day": 0,
+        "max_periods_day": 6,
+        "min_periods_week": 6,
+        "max_periods_week": 30,
+        "max_consecutive_periods": 3,
+        "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        "availability_time": "08:30-16:00",
+    },
+    {
+        "teacher_id": "T045",
+        "name": "Meghna Roy",
+        "subjects_can_teach": ["GK"],
+        "min_periods_day": 0,
+        "max_periods_day": 6,
+        "min_periods_week": 6,
+        "max_periods_week": 30,
+        "max_consecutive_periods": 3,
+        "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        "availability_time": "08:30-16:00",
+    },
+    # =========================================================================
+    # LIBRARY TEACHERS (2 teachers, NEW — Grades 6-7 only)
+    # 4 LIB periods/section × 4 sections = 16 periods total
+    # =========================================================================
+    {
+        "teacher_id": "T046",
+        "name": "Sunanda Rao",
+        "subjects_can_teach": ["LIB"],
+        "min_periods_day": 0,
+        "max_periods_day": 6,
+        "min_periods_week": 4,
+        "max_periods_week": 24,
+        "max_consecutive_periods": 3,
+        "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        "availability_time": "08:30-16:00",
+    },
+    {
+        "teacher_id": "T047",
+        "name": "Rajendra Prasad",
+        "subjects_can_teach": ["LIB"],
+        "min_periods_day": 0,
+        "max_periods_day": 6,
+        "min_periods_week": 4,
+        "max_periods_week": 24,
+        "max_consecutive_periods": 3,
+        "availability_days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        "availability_time": "08:30-16:00",
     },
 ]
 
 SAMPLE_SUBJECTS = [
+    # =========================================================================
+    # SLOT BUDGET PER SECTION (44 academic slots/week = 5×8 + 1×4):
+    #
+    # LANGUAGE TIER SYNCHRONIZATION (language_block_enabled=True):
+    # - Tier 1 (First Language): English — fixed for all, counts fully
+    # - Tier 2 (Second Language): Hindi/Kannada/Sanskrit — students choose ONE
+    #   When enabled, tier-2 subjects share the SAME time slot
+    #   (taught simultaneously to different student groups)
+    #   So only max(tier-2 freq) = 5 slots consumed, not 15
+    #
+    # FREQUENCY PLAN — all sections sum to exactly 44:
+    #
+    # Subject       | All   | Gr6-7 only | Gr8-10 only
+    # --------------|-------|------------|------------
+    # MATH          |  6    |            |
+    # ENG (T1)      |  6    |            |
+    # SCI           |  6    |            |
+    # SST           |  5    |            |
+    # HINDI (T2)    |  5    |            |
+    # KANNADA (T2)  |  5    |            |
+    # PE            |  3    |            |
+    # COMP          |  3    |            |
+    # ART           |  2    |            |
+    # MORAL         |  2    |            |
+    # GK            |  2    |            |
+    # LIB           |       |   4        |
+    # PHY_LAB       |       |            |   2
+    # CHEM_LAB      |       |            |   2
+    # --------------|-------|------------|------------
+    # Effective     | 40    | +4 = 44    | +4 = 44
+    # (tier-2 counted once = 5)
+    #
+    # NOTE: Max subject frequency = 6 (MATH/SCI/ENG).
+    #   6 periods over 6 school days → at most 1/day.
+    #   This ensures no_subject_twice_daily hard constraint is satisfiable.
+    # =========================================================================
     {
         "subject_code": "MATH",
         "name": "Mathematics",
         "category": "core",
         "min_weekly": 6,
-        "max_weekly": 7,
+        "max_weekly": 6,
         "block_required": False,
         "block_length": 0,
         "resource_type": None,
+        "language_tier": None,
     },
     {
         "subject_code": "SCI",
         "name": "Science",
         "category": "core",
-        "min_weekly": 5,
+        "min_weekly": 6,
         "max_weekly": 6,
         "block_required": False,
         "block_length": 0,
         "resource_type": None,
+        "language_tier": None,
     },
     {
         "subject_code": "ENG",
         "name": "English",
         "category": "language",
-        "min_weekly": 5,
+        "min_weekly": 6,
         "max_weekly": 6,
         "block_required": False,
         "block_length": 0,
         "resource_type": None,
+        "language_tier": 1,  # TIER 1: First Language — fixed for all students
     },
     {
         "subject_code": "SST",
         "name": "Social Studies",
         "category": "core",
-        "min_weekly": 4,
+        "min_weekly": 5,
         "max_weekly": 5,
         "block_required": False,
         "block_length": 0,
         "resource_type": None,
+        "language_tier": None,
     },
     {
         "subject_code": "HINDI",
         "name": "Hindi",
         "category": "language",
-        "min_weekly": 4,
+        "min_weekly": 5,
         "max_weekly": 5,
         "block_required": False,
         "block_length": 0,
         "resource_type": None,
+        "language_tier": 2,  # TIER 2: Second Language — students choose one
     },
     {
         "subject_code": "KANNADA",
         "name": "Kannada",
         "category": "language",
-        "min_weekly": 4,
+        "min_weekly": 5,
         "max_weekly": 5,
         "block_required": False,
         "block_length": 0,
         "resource_type": None,
-    },
-    {
-        "subject_code": "SANSKRIT",
-        "name": "Sanskrit",
-        "category": "language",
-        "min_weekly": 4,
-        "max_weekly": 5,
-        "block_required": False,
-        "block_length": 0,
-        "resource_type": None,
+        "language_tier": 2,  # TIER 2: Second Language — students choose one
     },
     {
         "subject_code": "PHY_LAB",
@@ -643,6 +792,7 @@ SAMPLE_SUBJECTS = [
         "block_required": True,
         "block_length": 2,
         "resource_type": "Physics Lab",
+        "language_tier": None,
     },
     {
         "subject_code": "CHEM_LAB",
@@ -653,46 +803,88 @@ SAMPLE_SUBJECTS = [
         "block_required": True,
         "block_length": 2,
         "resource_type": "Chemistry Lab",
+        "language_tier": None,
     },
     {
         "subject_code": "COMP",
         "name": "Computer Science",
         "category": "leisure",
-        "min_weekly": 2,
+        "min_weekly": 3,
         "max_weekly": 3,
         "block_required": False,
         "block_length": 0,
         "resource_type": "Computer Lab",
+        "language_tier": None,
     },
     {
         "subject_code": "PE",
         "name": "Physical Education",
         "category": "leisure",
-        "min_weekly": 2,
-        "max_weekly": 2,
+        "min_weekly": 3,
+        "max_weekly": 3,
         "block_required": False,
         "block_length": 0,
         "resource_type": "Sports Ground",
+        "language_tier": None,
     },
     {
         "subject_code": "ART",
         "name": "Art & Craft",
         "category": "leisure",
-        "min_weekly": 1,
+        "min_weekly": 2,
         "max_weekly": 2,
         "block_required": False,
         "block_length": 0,
         "resource_type": None,
+        "language_tier": None,
+    },
+    {
+        "subject_code": "MORAL",
+        "name": "Moral Science",
+        "category": "core",
+        "min_weekly": 2,
+        "max_weekly": 2,
+        "block_required": False,
+        "block_length": 0,
+        "resource_type": None,
+        "language_tier": None,
+    },
+    {
+        "subject_code": "GK",
+        "name": "General Knowledge",
+        "category": "core",
+        "min_weekly": 2,
+        "max_weekly": 2,
+        "block_required": False,
+        "block_length": 0,
+        "resource_type": None,
+        "language_tier": None,
+    },
+    {
+        "subject_code": "LIB",
+        "name": "Library",
+        "category": "leisure",
+        "min_weekly": 4,
+        "max_weekly": 4,
+        "block_required": False,
+        "block_length": 0,
+        "resource_type": None,
+        "language_tier": None,
     },
 ]
+# NOTE: With language_block_enabled=True, tier-2 languages share slots.
+# Feasibility is calculated per section, counting only max(tier-2) once.
+# See SAMPLE_SUBJECTS header comment for detailed calculation.
 
 SAMPLE_CLASSES = [
+    # Class teacher must be one of the teachers assigned to this section
+    # (required by class_teacher_period_1 hard constraint)
     {
         "section_id": "6A",
         "grade": 6,
         "section": "A",
         "student_count": 35,
-        "class_teacher_id": "T001",
+        "class_teacher_id": "T001",  # Math teacher for 6A
         "language_block_enabled": True,
         "language_structure": "2nd_lang_fixed:ENGLISH",
     },
@@ -701,7 +893,7 @@ SAMPLE_CLASSES = [
         "grade": 6,
         "section": "B",
         "student_count": 38,
-        "class_teacher_id": "T002",
+        "class_teacher_id": "T002",  # Math teacher for 6B
         "language_block_enabled": True,
         "language_structure": "2nd_lang_fixed:ENGLISH",
     },
@@ -710,7 +902,7 @@ SAMPLE_CLASSES = [
         "grade": 7,
         "section": "A",
         "student_count": 40,
-        "class_teacher_id": "T005",
+        "class_teacher_id": "T006",  # Science teacher for 7A
         "language_block_enabled": True,
         "language_structure": "2nd_lang_fixed:ENGLISH",
     },
@@ -719,7 +911,7 @@ SAMPLE_CLASSES = [
         "grade": 7,
         "section": "B",
         "student_count": 37,
-        "class_teacher_id": "T006",
+        "class_teacher_id": "T007",  # Science teacher for 7B
         "language_block_enabled": True,
         "language_structure": "2nd_lang_fixed:ENGLISH",
     },
@@ -728,7 +920,7 @@ SAMPLE_CLASSES = [
         "grade": 8,
         "section": "A",
         "student_count": 42,
-        "class_teacher_id": "T009",
+        "class_teacher_id": "T011",  # English teacher for 8A
         "language_block_enabled": True,
         "language_structure": "2nd_lang_fixed:ENGLISH",
     },
@@ -737,7 +929,7 @@ SAMPLE_CLASSES = [
         "grade": 8,
         "section": "B",
         "student_count": 39,
-        "class_teacher_id": "T010",
+        "class_teacher_id": "T012",  # English teacher for 8B
         "language_block_enabled": True,
         "language_structure": "2nd_lang_fixed:ENGLISH",
     },
@@ -746,7 +938,7 @@ SAMPLE_CLASSES = [
         "grade": 9,
         "section": "A",
         "student_count": 35,
-        "class_teacher_id": "T013",
+        "class_teacher_id": "T017",  # SST teacher for 9A
         "language_block_enabled": True,
         "language_structure": "2nd_lang_fixed:ENGLISH",
     },
@@ -755,7 +947,7 @@ SAMPLE_CLASSES = [
         "grade": 9,
         "section": "B",
         "student_count": 33,
-        "class_teacher_id": "T014",
+        "class_teacher_id": "T018",  # SST teacher for 9B
         "language_block_enabled": True,
         "language_structure": "2nd_lang_fixed:ENGLISH",
     },
@@ -764,7 +956,7 @@ SAMPLE_CLASSES = [
         "grade": 10,
         "section": "A",
         "student_count": 30,
-        "class_teacher_id": "T003",
+        "class_teacher_id": "T003",  # Math teacher for 10A
         "language_block_enabled": True,
         "language_structure": "2nd_lang_fixed:ENGLISH",
     },
@@ -773,14 +965,41 @@ SAMPLE_CLASSES = [
         "grade": 10,
         "section": "B",
         "student_count": 28,
-        "class_teacher_id": "T004",
+        "class_teacher_id": "T004",  # Math teacher for 10B
         "language_block_enabled": True,
         "language_structure": "2nd_lang_fixed:ENGLISH",
     },
 ]
 
 SAMPLE_MAPPINGS = [
-    # 6A - Set 1: Hindi T016, Kannada T019, Sanskrit T022
+    # =========================================================================
+    # TEACHER → SECTION ASSIGNMENT MAP (with new teacher IDs T001-T047)
+    #
+    # TEACHER ASSIGNMENT GRID:
+    # Subject   | 6A   | 6B   | 7A   | 7B   | 8A   | 8B   | 9A   | 9B   | 10A  | 10B
+    # ----------|------|------|------|------|------|------|------|------|------|------
+    # MATH      | T001 | T002 | T001 | T002 | T003 | T004 | T005 | T005 | T003 | T004
+    # SCI       | T006 | T007 | T006 | T007 | T008 | T009 | T008 | T009 | T010 | T010
+    # ENG       | T011 | T012 | T013 | T014 | T011 | T012 | T013 | T014 | T013 | T014
+    # SST       | T015 | T016 | T017 | T018 | T015 | T016 | T017 | T018 | T017 | T018
+    # HINDI     | T019 |  —   | T022 |  —   | T019 |  —   | T022 |  —   | T031 |  —
+    # KANNADA   |  —   | T020 |  —   | T023 |  —   | T020 |  —   | T023 |  —   | T032
+    # PE        | T034 | T035 | T034 | T035 | T034 | T035 | T036 | T036 | T036 | T036
+    # COMP      | T037 | T038 | T037 | T038 | T037 | T038 | T039 | T039 | T039 | T039
+    # ART       | T040 | T041 | T040 | T041 | T040 | T041 | T040 | T041 | T040 | T041
+    # MORAL     | T042 | T043 | T042 | T043 | T042 | T043 | T042 | T043 | T042 | T043
+    # GK        | T044 | T045 | T044 | T045 | T044 | T045 | T044 | T045 | T044 | T045
+    # LIB       | T046 | T047 | T046 | T047 |  —   |  —   |  —   |  —   |  —   |  —
+    # PHY_LAB   |  —   |  —   |  —   |  —   | T006 | T007 | T006 | T007 | T006 | T007
+    # CHEM_LAB  |  —   |  —   |  —   |  —   | T008 | T009 | T008 | T009 | T008 | T009
+    #
+    # Language model: each section gets ONE tier-2 language (A=HINDI, B=KANNADA).
+    # Language sync constraint aligns them to the same time slots within each grade.
+    #
+    # Class teachers: 6A→T001, 6B→T002, 7A→T006, 7B→T007,
+    #                 8A→T011, 8B→T012, 9A→T017, 9B→T018, 10A→T003, 10B→T004
+    # =========================================================================
+    # ---- 6A ---- (Grade 6, no labs, has LIB)
     {
         "section_id": "6A",
         "subject_code": "MATH",
@@ -790,58 +1009,64 @@ SAMPLE_MAPPINGS = [
     {
         "section_id": "6A",
         "subject_code": "SCI",
-        "teacher_id": "T005",
+        "teacher_id": "T006",
         "is_class_teacher": False,
     },
     {
         "section_id": "6A",
         "subject_code": "ENG",
-        "teacher_id": "T009",
+        "teacher_id": "T011",
         "is_class_teacher": False,
     },
     {
         "section_id": "6A",
         "subject_code": "SST",
-        "teacher_id": "T013",
+        "teacher_id": "T015",
         "is_class_teacher": False,
     },
     {
         "section_id": "6A",
         "subject_code": "HINDI",
-        "teacher_id": "T016",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "6A",
-        "subject_code": "KANNADA",
         "teacher_id": "T019",
         "is_class_teacher": False,
     },
     {
         "section_id": "6A",
-        "subject_code": "SANSKRIT",
-        "teacher_id": "T022",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "6A",
         "subject_code": "PE",
-        "teacher_id": "T025",
+        "teacher_id": "T034",
         "is_class_teacher": False,
     },
     {
         "section_id": "6A",
         "subject_code": "COMP",
-        "teacher_id": "T028",
+        "teacher_id": "T037",
         "is_class_teacher": False,
     },
     {
         "section_id": "6A",
         "subject_code": "ART",
-        "teacher_id": "T031",
+        "teacher_id": "T040",
         "is_class_teacher": False,
     },
-    # 6B - Set 1: Hindi T016, Kannada T019, Sanskrit T022
+    {
+        "section_id": "6A",
+        "subject_code": "MORAL",
+        "teacher_id": "T042",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "6A",
+        "subject_code": "GK",
+        "teacher_id": "T044",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "6A",
+        "subject_code": "LIB",
+        "teacher_id": "T046",
+        "is_class_teacher": False,
+    },
+    # ---- 6B ---- (Grade 6, no labs, has LIB)
     {
         "section_id": "6B",
         "subject_code": "MATH",
@@ -851,58 +1076,64 @@ SAMPLE_MAPPINGS = [
     {
         "section_id": "6B",
         "subject_code": "SCI",
-        "teacher_id": "T006",
+        "teacher_id": "T007",
         "is_class_teacher": False,
     },
     {
         "section_id": "6B",
         "subject_code": "ENG",
-        "teacher_id": "T010",
+        "teacher_id": "T012",
         "is_class_teacher": False,
     },
     {
         "section_id": "6B",
         "subject_code": "SST",
-        "teacher_id": "T014",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "6B",
-        "subject_code": "HINDI",
         "teacher_id": "T016",
         "is_class_teacher": False,
     },
     {
         "section_id": "6B",
         "subject_code": "KANNADA",
-        "teacher_id": "T019",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "6B",
-        "subject_code": "SANSKRIT",
-        "teacher_id": "T022",
+        "teacher_id": "T020",
         "is_class_teacher": False,
     },
     {
         "section_id": "6B",
         "subject_code": "PE",
-        "teacher_id": "T026",
+        "teacher_id": "T035",
         "is_class_teacher": False,
     },
     {
         "section_id": "6B",
         "subject_code": "COMP",
-        "teacher_id": "T029",
+        "teacher_id": "T038",
         "is_class_teacher": False,
     },
     {
         "section_id": "6B",
         "subject_code": "ART",
-        "teacher_id": "T032",
+        "teacher_id": "T041",
         "is_class_teacher": False,
     },
-    # 7A - Set 2: Hindi T017, Kannada T020, Sanskrit T023
+    {
+        "section_id": "6B",
+        "subject_code": "MORAL",
+        "teacher_id": "T043",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "6B",
+        "subject_code": "GK",
+        "teacher_id": "T045",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "6B",
+        "subject_code": "LIB",
+        "teacher_id": "T047",
+        "is_class_teacher": False,
+    },
+    # ---- 7A ---- (Grade 7, no labs, has LIB)
     {
         "section_id": "7A",
         "subject_code": "MATH",
@@ -912,58 +1143,64 @@ SAMPLE_MAPPINGS = [
     {
         "section_id": "7A",
         "subject_code": "SCI",
-        "teacher_id": "T005",
+        "teacher_id": "T006",
         "is_class_teacher": True,
     },
     {
         "section_id": "7A",
         "subject_code": "ENG",
-        "teacher_id": "T009",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "7A",
-        "subject_code": "SST",
         "teacher_id": "T013",
         "is_class_teacher": False,
     },
     {
         "section_id": "7A",
-        "subject_code": "HINDI",
+        "subject_code": "SST",
         "teacher_id": "T017",
         "is_class_teacher": False,
     },
     {
         "section_id": "7A",
-        "subject_code": "KANNADA",
-        "teacher_id": "T020",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "7A",
-        "subject_code": "SANSKRIT",
-        "teacher_id": "T023",
+        "subject_code": "HINDI",
+        "teacher_id": "T022",
         "is_class_teacher": False,
     },
     {
         "section_id": "7A",
         "subject_code": "PE",
-        "teacher_id": "T025",
+        "teacher_id": "T034",
         "is_class_teacher": False,
     },
     {
         "section_id": "7A",
         "subject_code": "COMP",
-        "teacher_id": "T028",
+        "teacher_id": "T037",
         "is_class_teacher": False,
     },
     {
         "section_id": "7A",
         "subject_code": "ART",
-        "teacher_id": "T031",
+        "teacher_id": "T040",
         "is_class_teacher": False,
     },
-    # 7B - Set 2: Hindi T017, Kannada T020, Sanskrit T023
+    {
+        "section_id": "7A",
+        "subject_code": "MORAL",
+        "teacher_id": "T042",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "7A",
+        "subject_code": "GK",
+        "teacher_id": "T044",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "7A",
+        "subject_code": "LIB",
+        "teacher_id": "T046",
+        "is_class_teacher": False,
+    },
+    # ---- 7B ---- (Grade 7, no labs, has LIB)
     {
         "section_id": "7B",
         "subject_code": "MATH",
@@ -973,58 +1210,64 @@ SAMPLE_MAPPINGS = [
     {
         "section_id": "7B",
         "subject_code": "SCI",
-        "teacher_id": "T006",
+        "teacher_id": "T007",
         "is_class_teacher": True,
     },
     {
         "section_id": "7B",
         "subject_code": "ENG",
-        "teacher_id": "T010",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "7B",
-        "subject_code": "SST",
         "teacher_id": "T014",
         "is_class_teacher": False,
     },
     {
         "section_id": "7B",
-        "subject_code": "HINDI",
-        "teacher_id": "T017",
+        "subject_code": "SST",
+        "teacher_id": "T018",
         "is_class_teacher": False,
     },
     {
         "section_id": "7B",
         "subject_code": "KANNADA",
-        "teacher_id": "T020",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "7B",
-        "subject_code": "SANSKRIT",
         "teacher_id": "T023",
         "is_class_teacher": False,
     },
     {
         "section_id": "7B",
         "subject_code": "PE",
-        "teacher_id": "T026",
+        "teacher_id": "T035",
         "is_class_teacher": False,
     },
     {
         "section_id": "7B",
         "subject_code": "COMP",
-        "teacher_id": "T029",
+        "teacher_id": "T038",
         "is_class_teacher": False,
     },
     {
         "section_id": "7B",
         "subject_code": "ART",
-        "teacher_id": "T032",
+        "teacher_id": "T041",
         "is_class_teacher": False,
     },
-    # 8A - Set 3: Hindi T018, Kannada T021, Sanskrit T024
+    {
+        "section_id": "7B",
+        "subject_code": "MORAL",
+        "teacher_id": "T043",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "7B",
+        "subject_code": "GK",
+        "teacher_id": "T045",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "7B",
+        "subject_code": "LIB",
+        "teacher_id": "T047",
+        "is_class_teacher": False,
+    },
+    # ---- 8A ---- (Grade 8, has labs, no LIB)
     {
         "section_id": "8A",
         "subject_code": "MATH",
@@ -1034,13 +1277,13 @@ SAMPLE_MAPPINGS = [
     {
         "section_id": "8A",
         "subject_code": "SCI",
-        "teacher_id": "T007",
+        "teacher_id": "T008",
         "is_class_teacher": False,
     },
     {
         "section_id": "8A",
         "subject_code": "ENG",
-        "teacher_id": "T009",
+        "teacher_id": "T011",
         "is_class_teacher": True,
     },
     {
@@ -1052,46 +1295,52 @@ SAMPLE_MAPPINGS = [
     {
         "section_id": "8A",
         "subject_code": "PHY_LAB",
-        "teacher_id": "T005",
+        "teacher_id": "T006",
         "is_class_teacher": False,
     },
     {
         "section_id": "8A",
         "subject_code": "CHEM_LAB",
-        "teacher_id": "T007",
+        "teacher_id": "T008",
         "is_class_teacher": False,
     },
     {
         "section_id": "8A",
         "subject_code": "HINDI",
-        "teacher_id": "T018",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "8A",
-        "subject_code": "KANNADA",
-        "teacher_id": "T021",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "8A",
-        "subject_code": "SANSKRIT",
-        "teacher_id": "T024",
+        "teacher_id": "T019",
         "is_class_teacher": False,
     },
     {
         "section_id": "8A",
         "subject_code": "PE",
-        "teacher_id": "T027",
+        "teacher_id": "T034",
         "is_class_teacher": False,
     },
     {
         "section_id": "8A",
         "subject_code": "COMP",
-        "teacher_id": "T030",
+        "teacher_id": "T037",
         "is_class_teacher": False,
     },
-    # 8B - Set 3: Hindi T018, Kannada T021, Sanskrit T024
+    {
+        "section_id": "8A",
+        "subject_code": "ART",
+        "teacher_id": "T040",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "8A",
+        "subject_code": "MORAL",
+        "teacher_id": "T042",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "8A",
+        "subject_code": "GK",
+        "teacher_id": "T044",
+        "is_class_teacher": False,
+    },
+    # ---- 8B ---- (Grade 8, has labs, no LIB)
     {
         "section_id": "8B",
         "subject_code": "MATH",
@@ -1101,198 +1350,216 @@ SAMPLE_MAPPINGS = [
     {
         "section_id": "8B",
         "subject_code": "SCI",
-        "teacher_id": "T008",
+        "teacher_id": "T009",
         "is_class_teacher": False,
     },
     {
         "section_id": "8B",
         "subject_code": "ENG",
-        "teacher_id": "T010",
+        "teacher_id": "T012",
         "is_class_teacher": True,
     },
     {
         "section_id": "8B",
         "subject_code": "SST",
-        "teacher_id": "T013",
+        "teacher_id": "T016",
         "is_class_teacher": False,
     },
     {
         "section_id": "8B",
         "subject_code": "PHY_LAB",
-        "teacher_id": "T006",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "8B",
-        "subject_code": "CHEM_LAB",
-        "teacher_id": "T008",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "8B",
-        "subject_code": "HINDI",
-        "teacher_id": "T018",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "8B",
-        "subject_code": "KANNADA",
-        "teacher_id": "T021",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "8B",
-        "subject_code": "SANSKRIT",
-        "teacher_id": "T024",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "8B",
-        "subject_code": "PE",
-        "teacher_id": "T025",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "8B",
-        "subject_code": "COMP",
-        "teacher_id": "T028",
-        "is_class_teacher": False,
-    },
-    # 9A - Set 4: Hindi T033, Kannada T034, Sanskrit T035
-    {
-        "section_id": "9A",
-        "subject_code": "MATH",
-        "teacher_id": "T001",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "9A",
-        "subject_code": "SCI",
-        "teacher_id": "T005",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "9A",
-        "subject_code": "ENG",
-        "teacher_id": "T011",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "9A",
-        "subject_code": "SST",
-        "teacher_id": "T013",
-        "is_class_teacher": True,
-    },
-    {
-        "section_id": "9A",
-        "subject_code": "PHY_LAB",
-        "teacher_id": "T005",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "9A",
-        "subject_code": "CHEM_LAB",
         "teacher_id": "T007",
         "is_class_teacher": False,
     },
     {
-        "section_id": "9A",
-        "subject_code": "HINDI",
-        "teacher_id": "T033",
+        "section_id": "8B",
+        "subject_code": "CHEM_LAB",
+        "teacher_id": "T009",
         "is_class_teacher": False,
     },
     {
-        "section_id": "9A",
+        "section_id": "8B",
         "subject_code": "KANNADA",
-        "teacher_id": "T034",
+        "teacher_id": "T020",
         "is_class_teacher": False,
     },
     {
-        "section_id": "9A",
-        "subject_code": "SANSKRIT",
+        "section_id": "8B",
+        "subject_code": "PE",
         "teacher_id": "T035",
         "is_class_teacher": False,
     },
     {
-        "section_id": "9A",
-        "subject_code": "PE",
-        "teacher_id": "T026",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "9A",
+        "section_id": "8B",
         "subject_code": "COMP",
-        "teacher_id": "T029",
+        "teacher_id": "T038",
         "is_class_teacher": False,
     },
-    # 9B - Set 4: Hindi T033, Kannada T034, Sanskrit T035
     {
-        "section_id": "9B",
+        "section_id": "8B",
+        "subject_code": "ART",
+        "teacher_id": "T041",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "8B",
+        "subject_code": "MORAL",
+        "teacher_id": "T043",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "8B",
+        "subject_code": "GK",
+        "teacher_id": "T045",
+        "is_class_teacher": False,
+    },
+    # ---- 9A ---- (Grade 9, has labs, no LIB)
+    {
+        "section_id": "9A",
         "subject_code": "MATH",
-        "teacher_id": "T002",
+        "teacher_id": "T005",
         "is_class_teacher": False,
     },
     {
-        "section_id": "9B",
+        "section_id": "9A",
         "subject_code": "SCI",
-        "teacher_id": "T006",
+        "teacher_id": "T008",
         "is_class_teacher": False,
     },
     {
-        "section_id": "9B",
+        "section_id": "9A",
         "subject_code": "ENG",
-        "teacher_id": "T012",
+        "teacher_id": "T013",
         "is_class_teacher": False,
     },
     {
-        "section_id": "9B",
+        "section_id": "9A",
         "subject_code": "SST",
-        "teacher_id": "T014",
+        "teacher_id": "T017",
         "is_class_teacher": True,
     },
     {
-        "section_id": "9B",
+        "section_id": "9A",
         "subject_code": "PHY_LAB",
         "teacher_id": "T006",
         "is_class_teacher": False,
     },
     {
-        "section_id": "9B",
+        "section_id": "9A",
         "subject_code": "CHEM_LAB",
         "teacher_id": "T008",
         "is_class_teacher": False,
     },
     {
-        "section_id": "9B",
+        "section_id": "9A",
         "subject_code": "HINDI",
-        "teacher_id": "T033",
+        "teacher_id": "T022",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "9A",
+        "subject_code": "PE",
+        "teacher_id": "T036",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "9A",
+        "subject_code": "COMP",
+        "teacher_id": "T039",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "9A",
+        "subject_code": "ART",
+        "teacher_id": "T040",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "9A",
+        "subject_code": "MORAL",
+        "teacher_id": "T042",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "9A",
+        "subject_code": "GK",
+        "teacher_id": "T044",
+        "is_class_teacher": False,
+    },
+    # ---- 9B ---- (Grade 9, has labs, no LIB)
+    {
+        "section_id": "9B",
+        "subject_code": "MATH",
+        "teacher_id": "T005",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "9B",
+        "subject_code": "SCI",
+        "teacher_id": "T009",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "9B",
+        "subject_code": "ENG",
+        "teacher_id": "T014",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "9B",
+        "subject_code": "SST",
+        "teacher_id": "T018",
+        "is_class_teacher": True,
+    },
+    {
+        "section_id": "9B",
+        "subject_code": "PHY_LAB",
+        "teacher_id": "T007",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "9B",
+        "subject_code": "CHEM_LAB",
+        "teacher_id": "T009",
         "is_class_teacher": False,
     },
     {
         "section_id": "9B",
         "subject_code": "KANNADA",
-        "teacher_id": "T034",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "9B",
-        "subject_code": "SANSKRIT",
-        "teacher_id": "T035",
+        "teacher_id": "T023",
         "is_class_teacher": False,
     },
     {
         "section_id": "9B",
         "subject_code": "PE",
-        "teacher_id": "T027",
+        "teacher_id": "T036",
         "is_class_teacher": False,
     },
     {
         "section_id": "9B",
         "subject_code": "COMP",
-        "teacher_id": "T030",
+        "teacher_id": "T039",
         "is_class_teacher": False,
     },
-    # 10A - Set 4: Hindi T033, Kannada T034, Sanskrit T035
+    {
+        "section_id": "9B",
+        "subject_code": "ART",
+        "teacher_id": "T041",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "9B",
+        "subject_code": "MORAL",
+        "teacher_id": "T043",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "9B",
+        "subject_code": "GK",
+        "teacher_id": "T045",
+        "is_class_teacher": False,
+    },
+    # ---- 10A ---- (Grade 10, has labs, no LIB)
     {
         "section_id": "10A",
         "subject_code": "MATH",
@@ -1302,64 +1569,70 @@ SAMPLE_MAPPINGS = [
     {
         "section_id": "10A",
         "subject_code": "SCI",
-        "teacher_id": "T007",
+        "teacher_id": "T010",
         "is_class_teacher": False,
     },
     {
         "section_id": "10A",
         "subject_code": "ENG",
-        "teacher_id": "T011",
+        "teacher_id": "T013",
         "is_class_teacher": False,
     },
     {
         "section_id": "10A",
         "subject_code": "SST",
-        "teacher_id": "T015",
+        "teacher_id": "T017",
         "is_class_teacher": False,
     },
     {
         "section_id": "10A",
         "subject_code": "PHY_LAB",
-        "teacher_id": "T005",
+        "teacher_id": "T006",
         "is_class_teacher": False,
     },
     {
         "section_id": "10A",
         "subject_code": "CHEM_LAB",
-        "teacher_id": "T007",
+        "teacher_id": "T008",
         "is_class_teacher": False,
     },
     {
         "section_id": "10A",
         "subject_code": "HINDI",
-        "teacher_id": "T033",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "10A",
-        "subject_code": "KANNADA",
-        "teacher_id": "T034",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "10A",
-        "subject_code": "SANSKRIT",
-        "teacher_id": "T035",
+        "teacher_id": "T031",
         "is_class_teacher": False,
     },
     {
         "section_id": "10A",
         "subject_code": "PE",
-        "teacher_id": "T025",
+        "teacher_id": "T036",
         "is_class_teacher": False,
     },
     {
         "section_id": "10A",
         "subject_code": "COMP",
-        "teacher_id": "T028",
+        "teacher_id": "T039",
         "is_class_teacher": False,
     },
-    # 10B - Set 4: Hindi T033, Kannada T034, Sanskrit T035
+    {
+        "section_id": "10A",
+        "subject_code": "ART",
+        "teacher_id": "T040",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "10A",
+        "subject_code": "MORAL",
+        "teacher_id": "T042",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "10A",
+        "subject_code": "GK",
+        "teacher_id": "T044",
+        "is_class_teacher": False,
+    },
+    # ---- 10B ---- (Grade 10, has labs, no LIB)
     {
         "section_id": "10B",
         "subject_code": "MATH",
@@ -1369,61 +1642,67 @@ SAMPLE_MAPPINGS = [
     {
         "section_id": "10B",
         "subject_code": "SCI",
-        "teacher_id": "T008",
+        "teacher_id": "T010",
         "is_class_teacher": False,
     },
     {
         "section_id": "10B",
         "subject_code": "ENG",
-        "teacher_id": "T012",
+        "teacher_id": "T014",
         "is_class_teacher": False,
     },
     {
         "section_id": "10B",
         "subject_code": "SST",
-        "teacher_id": "T015",
+        "teacher_id": "T018",
         "is_class_teacher": False,
     },
     {
         "section_id": "10B",
         "subject_code": "PHY_LAB",
-        "teacher_id": "T006",
+        "teacher_id": "T007",
         "is_class_teacher": False,
     },
     {
         "section_id": "10B",
         "subject_code": "CHEM_LAB",
-        "teacher_id": "T008",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "10B",
-        "subject_code": "HINDI",
-        "teacher_id": "T033",
+        "teacher_id": "T009",
         "is_class_teacher": False,
     },
     {
         "section_id": "10B",
         "subject_code": "KANNADA",
-        "teacher_id": "T034",
-        "is_class_teacher": False,
-    },
-    {
-        "section_id": "10B",
-        "subject_code": "SANSKRIT",
-        "teacher_id": "T035",
+        "teacher_id": "T032",
         "is_class_teacher": False,
     },
     {
         "section_id": "10B",
         "subject_code": "PE",
-        "teacher_id": "T026",
+        "teacher_id": "T036",
         "is_class_teacher": False,
     },
     {
         "section_id": "10B",
         "subject_code": "COMP",
-        "teacher_id": "T029",
+        "teacher_id": "T039",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "10B",
+        "subject_code": "ART",
+        "teacher_id": "T041",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "10B",
+        "subject_code": "MORAL",
+        "teacher_id": "T043",
+        "is_class_teacher": False,
+    },
+    {
+        "section_id": "10B",
+        "subject_code": "GK",
+        "teacher_id": "T045",
         "is_class_teacher": False,
     },
 ]
@@ -1456,99 +1735,112 @@ SAMPLE_RESOURCES = [
 ]
 
 SAMPLE_LANGUAGE_GROUPS = [
-    # Set 1: T016 (Hindi), T019 (Kannada), T022 (Sanskrit) - serves 6A, 6B (only 2 sections)
+    # =========================================================================
+    # 2-language model: A-sections → HINDI only, B-sections → KANNADA only.
+    # Each section has exactly ONE tier-2 language with a UNIQUE teacher, so
+    # language_sync + teacher_single_assignment are both satisfiable.
+    #
+    # The sync constraint aligns the tier-2 language slot within each grade:
+    #   6A(HINDI) ↔ 6B(KANNADA) scheduled at the same (day, period).
+    #
+    # Teachers are shared across 2 grades for utilization:
+    #   T019 → 6A + 8A (Hindi),  T020 → 6B + 8B (Kannada)
+    #   T022 → 7A + 9A (Hindi),  T023 → 7B + 9B (Kannada)
+    #   T031 → 10A (Hindi),      T032 → 10B (Kannada)
+    # =========================================================================
+    # Grade 6
     {
         "section_id": "6A",
         "language_slot": "1st_lang",
-        "hindi_teacher": "T016",
-        "kannada_teacher": "T019",
-        "sanskrit_teacher": "T022",
+        "hindi_teacher": "T019",
+        "kannada_teacher": None,
     },
     {
         "section_id": "6B",
         "language_slot": "1st_lang",
-        "hindi_teacher": "T016",
-        "kannada_teacher": "T019",
-        "sanskrit_teacher": "T022",
+        "hindi_teacher": None,
+        "kannada_teacher": "T020",
     },
-    # Set 2: T017 (Hindi), T020 (Kannada), T023 (Sanskrit) - serves 7A, 7B (only 2 sections)
+    # Grade 7
     {
         "section_id": "7A",
         "language_slot": "1st_lang",
-        "hindi_teacher": "T017",
-        "kannada_teacher": "T020",
-        "sanskrit_teacher": "T023",
+        "hindi_teacher": "T022",
+        "kannada_teacher": None,
     },
     {
         "section_id": "7B",
         "language_slot": "1st_lang",
-        "hindi_teacher": "T017",
-        "kannada_teacher": "T020",
-        "sanskrit_teacher": "T023",
+        "hindi_teacher": None,
+        "kannada_teacher": "T023",
     },
-    # Set 3: T018 (Hindi), T021 (Kannada), T024 (Sanskrit) - serves 8A, 8B (only 2 sections)
+    # Grade 8
     {
         "section_id": "8A",
         "language_slot": "1st_lang",
-        "hindi_teacher": "T018",
-        "kannada_teacher": "T021",
-        "sanskrit_teacher": "T024",
+        "hindi_teacher": "T019",
+        "kannada_teacher": None,
     },
     {
         "section_id": "8B",
         "language_slot": "1st_lang",
-        "hindi_teacher": "T018",
-        "kannada_teacher": "T021",
-        "sanskrit_teacher": "T024",
+        "hindi_teacher": None,
+        "kannada_teacher": "T020",
     },
-    # Set 4: T033 (Hindi), T034 (Kannada), T035 (Sanskrit) - serves 9A, 9B, 10A, 10B (4 sections)
+    # Grade 9
     {
         "section_id": "9A",
         "language_slot": "1st_lang",
-        "hindi_teacher": "T033",
-        "kannada_teacher": "T034",
-        "sanskrit_teacher": "T035",
+        "hindi_teacher": "T022",
+        "kannada_teacher": None,
     },
     {
         "section_id": "9B",
         "language_slot": "1st_lang",
-        "hindi_teacher": "T033",
-        "kannada_teacher": "T034",
-        "sanskrit_teacher": "T035",
+        "hindi_teacher": None,
+        "kannada_teacher": "T023",
     },
+    # Grade 10
     {
         "section_id": "10A",
         "language_slot": "1st_lang",
-        "hindi_teacher": "T033",
-        "kannada_teacher": "T034",
-        "sanskrit_teacher": "T035",
+        "hindi_teacher": "T031",
+        "kannada_teacher": None,
     },
     {
         "section_id": "10B",
         "language_slot": "1st_lang",
-        "hindi_teacher": "T033",
-        "kannada_teacher": "T034",
-        "sanskrit_teacher": "T035",
+        "hindi_teacher": None,
+        "kannada_teacher": "T032",
     },
 ]
 
 SAMPLE_CONSTRAINTS_CONFIG = {
+    # =========================================================================
+    # ALL HARD CONSTRAINTS: ON
+    # ALL SOFT CONSTRAINTS: MEDIUM PRIORITY (weight = 5)
+    # =========================================================================
     "prayer_enabled": True,
-    "language_sync_enabled": False,  # DISABLED by default - strict sync is too constraining
-    "class_teacher_period_1": True,  # ENABLED - Class teacher must take period 1
-    "no_subject_twice_daily": False,  # DISABLED by default - allows Math twice if needed
-    "substitution_reserve_count": 0,  # DISABLED - no reserve requirement by default
-    "core_morning_only": False,  # DISABLED by default - soft constraint handles this
+    "language_sync_enabled": True,  # ON — tier-2 languages share slots
+    "class_teacher_period_1": True,  # ON — class teacher takes period 1
+    "no_subject_twice_daily": True,  # ON — no subject appears twice in one day
+    "substitution_reserve_count": 0,  # 0 reserve slots (no substitute teachers needed)
+    "core_morning_only": False,  # OFF as hard — handled via soft weight below
     "max_consecutive_default": 3,
     "max_daily_load_variance": 3,
-    "soft_weight_core_morning": 10,
-    "soft_weight_teacher_balance": 8,
+    # --- Soft constraint weights (all MEDIUM = 5) ---
+    "soft_weight_core_morning": 5,
+    "soft_weight_class_teacher_period_1": 5,
+    "soft_weight_no_subject_twice_daily": 5,
+    "soft_weight_resource_capacity": 5,
+    "soft_weight_teacher_balance": 5,
     "soft_weight_minimize_gaps": 5,
-    "soft_weight_leisure_afternoon": 3,
-    "soft_weight_avoid_pe_period_1": 4,
-    "soft_weight_subject_distribution": 3,
-    "soft_weight_teacher_free_period": 2,
+    "soft_weight_leisure_afternoon": 5,
+    "soft_weight_avoid_pe_period_1": 5,
+    "soft_weight_subject_distribution": 5,
+    "soft_weight_teacher_free_period": 5,
     "soft_weight_fair_slot_distribution": 5,
+    "soft_weight_specialist_priority": 5,
 }
 
 
@@ -1758,7 +2050,6 @@ def _generate_csv_content():
             "language_slot",
             "hindi_teacher",
             "kannada_teacher",
-            "sanskrit_teacher",
         ]
     )
     for lg in SAMPLE_LANGUAGE_GROUPS:
@@ -1766,9 +2057,8 @@ def _generate_csv_content():
             [
                 lg["section_id"],
                 lg["language_slot"],
-                lg["hindi_teacher"],
-                lg["kannada_teacher"],
-                lg["sanskrit_teacher"],
+                lg.get("hindi_teacher", ""),
+                lg.get("kannada_teacher", ""),
             ]
         )
     sheets["language_groups"] = output.getvalue()
@@ -2247,19 +2537,17 @@ async def download_sample():
             "language_slot",
             "hindi_teacher",
             "kannada_teacher",
-            "sanskrit_teacher",
         ],
         [
             [
                 lg["section_id"],
                 lg["language_slot"],
-                lg["hindi_teacher"],
-                lg["kannada_teacher"],
-                lg["sanskrit_teacher"],
+                lg.get("hindi_teacher", ""),
+                lg.get("kannada_teacher", ""),
             ]
             for lg in SAMPLE_LANGUAGE_GROUPS
         ],
-        [12, 15, 16, 18, 18],
+        [12, 15, 16, 18],
     )
 
     # Constraints Config
@@ -2314,6 +2602,9 @@ async def get_sample_data():
                 "max_consecutive_periods": t["max_consecutive_periods"],
                 "is_class_teacher_of": None,
                 "is_specialist": len(t["availability_days"]) < 6,
+                # Language specialist fields for language block synchronization
+                "is_language_specialist": t.get("is_language_specialist", False),
+                "primary_language": t.get("primary_language"),
                 "availability": {
                     day: {
                         "available": day in t["availability_days"],
@@ -2360,8 +2651,13 @@ async def get_sample_data():
                 "prefer_morning": s["category"] == "core",
                 "avoid_after_lunch": s["category"] == "core",
                 "is_specialist": False,
+                # Language tier for synchronization:
+                # Tier 1: First Language (e.g., English) - fixed for all students
+                # Tier 2: Second Language (Hindi/Kannada/Sanskrit) - students choose one
+                # Tier 3: Third Language (French/German) - students choose one
+                "language_tier": s.get("language_tier"),
                 "is_language_block": s["category"] == "language"
-                and s["subject_code"] not in ["ENG"],
+                and s.get("language_tier", 0) >= 2,  # Tier 2+ requires synchronization
             }
         )
 
@@ -2376,15 +2672,17 @@ async def get_sample_data():
             if m["section_id"] == c["section_id"]:
                 subject_teacher_map[m["subject_code"]] = m["teacher_id"]
 
-        # Get language block info
+        # Get language block info (2-language model: each section has ONE tier-2 lang)
         for lg in SAMPLE_LANGUAGE_GROUPS:
             if lg["section_id"] == c["section_id"]:
-                language_subjects = ["HINDI", "KANNADA", "SANSKRIT"]
-                language_teachers = [
-                    lg["hindi_teacher"],
-                    lg["kannada_teacher"],
-                    lg["sanskrit_teacher"],
-                ]
+                language_subjects = []
+                language_teachers = []
+                if lg.get("hindi_teacher"):
+                    language_subjects.append("HINDI")
+                    language_teachers.append(lg["hindi_teacher"])
+                if lg.get("kannada_teacher"):
+                    language_subjects.append("KANNADA")
+                    language_teachers.append(lg["kannada_teacher"])
                 break
 
         classes.append(

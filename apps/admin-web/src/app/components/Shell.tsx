@@ -251,15 +251,19 @@ const navigationItems: NavItem[] = [
     icon: <SchoolIcon />,
     path: '/academics',
     children: [
-      { key: 'attendance', label: 'Attendance', icon: <CalendarToday fontSize="small" />, path: '/academics/attendance', module: 'attendance' },
-      { key: 'timetable-generator', label: 'AI Timetable Generator', icon: <SettingsIcon fontSize="small" />, path: '/academics/timetable/generate', module: 'timetable' },
+      // ── Setup Phase ──
+      { key: 'subjects', label: 'Subjects', icon: <MenuBook fontSize="small" />, path: '/academics/subjects' },
+      { key: 'classes', label: 'Classes', icon: <SchoolIcon fontSize="small" />, path: '/academics/classes' },
+      { key: 'teachers', label: 'Teachers', icon: <People fontSize="small" />, path: '/academics/teachers' },
+      // ── Assessment Flow ──
       { key: 'exams', label: 'Exams', icon: <BarChart fontSize="small" />, path: '/academics/exams', module: 'exams' },
       { key: 'marks', label: 'Marks', icon: <Assignment fontSize="small" />, path: '/academics/marks', module: 'marks' },
-      { key: 'leaderboards', label: 'Leaderboards', icon: <EmojiEvents fontSize="small" />, path: '/academics/leaderboards' },
-      { key: 'teachers', label: 'Teachers', icon: <People fontSize="small" />, path: '/academics/teachers' },
-      { key: 'classes', label: 'Classes', icon: <SchoolIcon fontSize="small" />, path: '/academics/classes' },
-      { key: 'subjects', label: 'Subjects', icon: <MenuBook fontSize="small" />, path: '/academics/subjects' },
       { key: 'co-attainment', label: 'CO Attainment', icon: <BarChart fontSize="small" />, path: '/academics/co-attainment' },
+      { key: 'results', label: 'Results', icon: <EmojiEvents fontSize="small" />, path: '/academics/results' },
+      { key: 'analytics', label: 'Analytics', icon: <BarChart fontSize="small" />, path: '/academics/analytics' },
+      // ── Other Academics ──
+      { key: 'attendance', label: 'Attendance', icon: <CalendarToday fontSize="small" />, path: '/academics/attendance', module: 'attendance' },
+      { key: 'timetable-generator', label: 'AI Timetable Generator', icon: <SettingsIcon fontSize="small" />, path: '/academics/timetable/generate', module: 'timetable' },
       { key: 'students', label: 'Students', icon: <PersonOutline fontSize="small" />, path: '/academics/students' },
       { key: 'clubs', label: 'Clubs & Activities', icon: <Groups fontSize="small" />, path: '/academics/clubs' },
       { key: 'achievements', label: 'Achievements', icon: <Star fontSize="small" />, path: '/academics/achievements' },
@@ -300,9 +304,9 @@ const navigationItems: NavItem[] = [
     icon: <MoneyIcon />,
     path: '/finance',
     children: [
-      { key: 'fees', label: 'Fees', icon: <MoneyIcon fontSize="small" />, path: '/finance/fees', module: 'fee-management' },
       { key: 'invoices', label: 'Invoices', icon: <Receipt fontSize="small" />, path: '/finance/invoices' },
       { key: 'payments', label: 'Payments', icon: <Payment fontSize="small" />, path: '/finance/payments' },
+      { key: 'vouchers', label: 'Vouchers', icon: <Receipt fontSize="small" />, path: '/finance/vouchers' },
       { key: 'discounts', label: 'Discounts', icon: <LocalOffer fontSize="small" />, path: '/finance/discounts' },
       { key: 'refunds', label: 'Refunds', icon: <Undo fontSize="small" />, path: '/finance/refunds' },
       { key: 'budgets', label: 'Budgets', icon: <AccountBalance fontSize="small" />, path: '/finance/budgets' },

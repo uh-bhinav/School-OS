@@ -140,18 +140,29 @@ const defaultConstraints: Constraints = {
   max_consecutive_default: 4,
   max_daily_load_variance: 4,
 
-  // Soft weights
+  // Soft weights - with Sweet Spot recommendations
+  // High Priority (15-20): Moved from hard constraints
+  // Medium Priority (10-15): Core scheduling preferences
+  // Lower Priority (5-10): Nice-to-have preferences
   soft_weights: {
+    // === MOVED FROM HARD CONSTRAINTS (High Priority: 15-20) ===
+    class_teacher_period_1: 15,
+    no_subject_twice_daily: 15,
+    resource_capacity: 18,
+
+    // === SCHEDULING PREFERENCES (Medium Priority: 10-15) ===
+    core_morning: 12,
+    subject_distribution: 10,
     teacher_balance: 10,
-    minimize_gaps: 5,
-    core_morning: 3,
-    leisure_afternoon: 2,
-    avoid_pe_period_1: 4,
-    avoid_pe_after_lunch: 3,
-    subject_distribution: 5,
-    teacher_free_period: 2,
-    fair_slot_distribution: 5,
+    minimize_gaps: 10,
     specialist_priority: 8,
+
+    // === LOWER PRIORITY PREFERENCES (5-10) ===
+    leisure_afternoon: 5,
+    avoid_pe_period_1: 5,
+    avoid_pe_after_lunch: 5,
+    teacher_free_period: 5,
+    fair_slot_distribution: 5,
     thinking_break_math: 3,
     language_spread: 3,
     saturday_monday_balance: 3,

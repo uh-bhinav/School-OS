@@ -60,6 +60,8 @@ function TabPanel(props: TabPanelProps) {
 }
 
 // Hard constraint definitions
+// ONLY truly essential constraints that MUST be satisfied
+// Language Sync is CRITICAL for Indian schools - relaxed ONLY as absolute last resort
 const HARD_CONSTRAINTS: Array<{
   key: keyof Constraints;
   label: string;
@@ -68,118 +70,130 @@ const HARD_CONSTRAINTS: Array<{
   critical?: boolean;
 }> = [
   {
-    key: 'teacher_load_bounds_enabled',
-    label: 'Teacher Load Bounds',
-    description: 'Enforce min/max periods per day for teachers',
-    icon: <PersonIcon />,
+    key: 'language_sync_enabled',
+    label: 'Language Block Synchronization',
+    description: 'All language teachers for a tier (1st/2nd/3rd language) must be free during language periods. Critical for Indian schools.',
+    icon: <SchoolIcon />,
     critical: true,
   },
   {
     key: 'subject_frequency_enabled',
-    label: 'Subject Frequency',
-    description: 'Enforce min/max periods per week for subjects',
+    label: 'Subject Frequency Bounds',
+    description: 'Enforce min/max periods per week for each subject',
     icon: <SchoolIcon />,
     critical: true,
   },
   {
-    key: 'block_period_integrity',
-    label: 'Block Period Integrity',
-    description: 'Lab and double periods must be consecutive',
-    icon: <BlockIcon />,
-    critical: false,
-  },
-  {
-    key: 'resource_capacity_enabled',
-    label: 'Resource Capacity',
-    description: 'Respect room/lab capacity limits',
-    icon: <AccessTimeIcon />,
-    critical: false,
-  },
-  {
-    key: 'language_sync_enabled',
-    label: 'Language Sync',
-    description: 'Schedule language classes simultaneously across sections',
-    icon: <SchoolIcon />,
-    critical: false,
-  },
-  {
-    key: 'class_teacher_period_1',
-    label: 'Class Teacher Period 1',
-    description: 'Class teacher takes first period of the day',
+    key: 'teacher_load_bounds_enabled',
+    label: 'Teacher Load Bounds',
+    description: 'Enforce min/max periods per day and week for teachers',
     icon: <PersonIcon />,
     critical: false,
   },
   {
-    key: 'no_subject_twice_daily',
-    label: 'No Subject Twice Daily',
-    description: 'Same subject cannot appear twice in one day',
+    key: 'block_period_integrity',
+    label: 'Block Period Integrity',
+    description: 'Lab sessions must have consecutive periods and cannot bridge breaks',
     icon: <BlockIcon />,
-    critical: false,
-  },
-  {
-    key: 'core_morning_only',
-    label: 'Core Subjects Morning Only',
-    description: 'Core subjects scheduled only in morning periods',
-    icon: <AccessTimeIcon />,
     critical: false,
   },
 ];
 
+// NOTE: The following were moved to SOFT CONSTRAINTS:
+// - Class Teacher Period 1 (nice to have, not essential)
+// - No Subject Twice Daily (preference, not requirement)
+// - Core Subjects in Morning (preference, not requirement)
+// - Resource Capacity Limits (handled via optimization)
+
 // Soft weight definitions
+// These are PREFERENCES that improve quality but don't block feasibility
 const SOFT_WEIGHTS: Array<{
   key: keyof SoftWeights;
   label: string;
   description: string;
+  category?: 'high' | 'medium' | 'low';  // For sweet spot guidance
 }> = [
+  // === MOVED FROM HARD CONSTRAINTS (important preferences) ===
   {
-    key: 'teacher_balance',
-    label: 'Teacher Balance',
-    description: 'Distribute workload evenly among teachers',
+    key: 'class_teacher_period_1',
+    label: 'Class Teacher in Period 1',
+    description: 'Class teacher takes first period for attendance/announcements',
+    category: 'high',
   },
   {
-    key: 'minimize_gaps',
-    label: 'Minimize Gaps',
-    description: 'Reduce free periods between classes',
+    key: 'no_subject_twice_daily',
+    label: 'No Subject Twice Daily',
+    description: 'Avoid same subject appearing twice in one day (except labs)',
+    category: 'high',
   },
+  {
+    key: 'resource_capacity',
+    label: 'Resource Capacity Limits',
+    description: 'Respect max simultaneous usage of labs, grounds, etc.',
+    category: 'high',
+  },
+  // === SCHEDULING PREFERENCES ===
   {
     key: 'core_morning',
-    label: 'Core Morning',
-    description: 'Prefer core subjects in morning',
+    label: 'Core Subjects in Morning',
+    description: 'Schedule core subjects (Math, Science, English) before lunch',
+    category: 'medium',
   },
   {
     key: 'leisure_afternoon',
     label: 'Leisure Afternoon',
     description: 'Prefer leisure subjects in afternoon',
+    category: 'low',
   },
   {
     key: 'avoid_pe_period_1',
     label: 'Avoid PE Period 1',
     description: 'Avoid scheduling PE in first period',
+    category: 'low',
   },
   {
     key: 'avoid_pe_after_lunch',
     label: 'Avoid PE After Lunch',
     description: 'Avoid scheduling PE immediately after lunch',
+    category: 'low',
   },
+  // === DISTRIBUTION PREFERENCES ===
   {
     key: 'subject_distribution',
     label: 'Subject Distribution',
     description: 'Spread subjects evenly across the week',
+    category: 'medium',
   },
+  {
+    key: 'teacher_balance',
+    label: 'Teacher Balance',
+    description: 'Distribute workload evenly among teachers',
+    category: 'medium',
+  },
+  {
+    key: 'minimize_gaps',
+    label: 'Minimize Gaps',
+    description: 'Reduce idle periods between classes',
+    category: 'medium',
+  },
+  // === TEACHER PREFERENCES ===
   {
     key: 'teacher_free_period',
     label: 'Teacher Free Period',
-    description: 'Ensure teachers have free periods',
+    description: 'Ensure teachers have at least one free period daily',
+    category: 'low',
   },
   {
     key: 'fair_slot_distribution',
     label: 'Fair Slot Distribution',
-    description: 'Balance early vs late slots fairly',
+    description: 'Balance early vs late slots fairly among teachers',
+    category: 'low',
   },
   {
     key: 'specialist_priority',
     label: 'Specialist Priority',
-    description: 'Prioritize specialist teacher schedules',
+    description: 'Prioritize specialist teacher preferred slots',
+    category: 'medium',
   },
 ];
 
@@ -208,16 +222,24 @@ export function ConstraintsPage() {
 
   const handleSoftWeightChange = (key: keyof SoftWeights, value: number) => {
     const currentWeights: SoftWeights = constraints.soft_weights || {
+      // === MOVED FROM HARD CONSTRAINTS (High Priority: 15-20) ===
+      class_teacher_period_1: 15,
+      no_subject_twice_daily: 15,
+      resource_capacity: 18,
+
+      // === SCHEDULING PREFERENCES (Medium Priority: 10-15) ===
+      core_morning: 12,
+      subject_distribution: 10,
       teacher_balance: 10,
-      minimize_gaps: 5,
-      core_morning: 3,
-      leisure_afternoon: 2,
-      avoid_pe_period_1: 4,
-      avoid_pe_after_lunch: 3,
-      subject_distribution: 5,
-      teacher_free_period: 2,
-      fair_slot_distribution: 5,
+      minimize_gaps: 10,
       specialist_priority: 8,
+
+      // === LOWER PRIORITY PREFERENCES (5-10) ===
+      leisure_afternoon: 5,
+      avoid_pe_period_1: 5,
+      avoid_pe_after_lunch: 5,
+      teacher_free_period: 5,
+      fair_slot_distribution: 5,
       thinking_break_math: 3,
       language_spread: 3,
       saturday_monday_balance: 3,
@@ -586,23 +608,82 @@ interface SoftConstraintsPanelProps {
   onChange: (key: keyof SoftWeights, value: number) => void;
 }
 
+// Sweet Spot Calculation Helper
+function getSweetSpotInfo(category?: 'high' | 'medium' | 'low') {
+  switch (category) {
+    case 'high':
+      return { range: '15-20', color: 'error' as const, tip: 'High Priority - Critical preferences' };
+    case 'medium':
+      return { range: '10-15', color: 'warning' as const, tip: 'Medium Priority - Important preferences' };
+    case 'low':
+      return { range: '5-10', color: 'info' as const, tip: 'Lower Priority - Nice-to-have preferences' };
+    default:
+      return { range: '5-10', color: 'default' as const, tip: 'Default priority' };
+  }
+}
+
 function SoftConstraintsPanel({ weights, onChange }: SoftConstraintsPanelProps) {
+  // Calculate sweet spot distribution
+  const sweetSpotStats = {
+    high: SOFT_WEIGHTS.filter((w) => w.category === 'high').length,
+    medium: SOFT_WEIGHTS.filter((w) => w.category === 'medium').length,
+    low: SOFT_WEIGHTS.filter((w) => w.category === 'low').length,
+  };
+
   return (
     <Box>
-      <Alert severity="info" sx={{ mb: 3 }}>
+      <Alert severity="info" sx={{ mb: 2 }}>
         Soft constraints are preferences. Higher weights make the solver try harder to satisfy them.
       </Alert>
 
+      {/* Sweet Spot Guide */}
+      <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
+        <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+          🎯 Weight Sweet Spot Guide
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
+          <Chip
+            size="small"
+            color="error"
+            label={`15-20: High Priority (${sweetSpotStats.high} constraints)`}
+          />
+          <Chip
+            size="small"
+            color="warning"
+            label={`10-15: Medium Priority (${sweetSpotStats.medium} constraints)`}
+          />
+          <Chip
+            size="small"
+            color="info"
+            label={`5-10: Lower Priority (${sweetSpotStats.low} constraints)`}
+          />
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+          Tip: Keep 2-3 constraints in the high range, 4-5 in medium, and the rest in low for best results.
+        </Typography>
+      </Paper>
+
       <Grid container spacing={3}>
-        {SOFT_WEIGHTS.map(({ key, label, description }) => {
+        {SOFT_WEIGHTS.map(({ key, label, description, category }) => {
           const value = weights[key] ?? 5;
+          const sweetSpot = getSweetSpotInfo(category);
 
           return (
             <Grid size={{ xs: 12, md: 6 }} key={key}>
               <Paper sx={{ p: 3 }}>
-                <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-                  {label}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="subtitle1" fontWeight="medium">
+                    {label}
+                  </Typography>
+                  <Tooltip title={sweetSpot.tip}>
+                    <Chip
+                      size="small"
+                      color={sweetSpot.color}
+                      variant="outlined"
+                      label={`Sweet: ${sweetSpot.range}`}
+                    />
+                  </Tooltip>
+                </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   {description}
                 </Typography>
@@ -615,8 +696,10 @@ function SoftConstraintsPanel({ weights, onChange }: SoftConstraintsPanelProps) 
                     step={1}
                     marks={[
                       { value: 0, label: 'Off' },
-                      { value: 10, label: 'Med' },
-                      { value: 20, label: 'High' },
+                      { value: 5, label: '5' },
+                      { value: 10, label: '10' },
+                      { value: 15, label: '15' },
+                      { value: 20, label: '20' },
                     ]}
                     sx={{ flex: 1 }}
                   />
@@ -625,9 +708,11 @@ function SoftConstraintsPanel({ weights, onChange }: SoftConstraintsPanelProps) 
                     color={
                       value === 0
                         ? 'default'
+                        : value >= 15
+                        ? 'error'
                         : value >= 10
-                        ? 'success'
-                        : 'primary'
+                        ? 'warning'
+                        : 'info'
                     }
                     size="small"
                     sx={{ minWidth: 40, justifyContent: 'center' }}

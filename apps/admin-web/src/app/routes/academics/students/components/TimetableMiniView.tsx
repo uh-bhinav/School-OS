@@ -5,9 +5,10 @@ import { mockTimetableProvider } from "@/app/mockDataProviders";
 interface TimetableMiniViewProps {
   studentId: number;
   classId: number;
+  section: string;
 }
 
-export default function TimetableMiniView({ classId }: TimetableMiniViewProps) {
+export default function TimetableMiniView({ classId, section }: TimetableMiniViewProps) {
   const [timetable, setTimetable] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -22,11 +23,16 @@ export default function TimetableMiniView({ classId }: TimetableMiniViewProps) {
         monday.setDate(today.getDate() + diff);
         const weekStart = monday.toISOString().split("T")[0];
 
+        // Convert student class_id to timetable grade-based class_id
+        // Student class_id formula: (grade - 1) * 2 + (section === "A" ? 1 : 2)
+        // Timetable uses grade number (1-10) as class_id with separate section
+        const gradeClassId = Math.ceil(classId / 2);
+
         // Get class timetable grid
         const data = await mockTimetableProvider.getTimetableGrid({
           academic_year_id: 1,
-          class_id: classId,
-          section: "A",
+          class_id: gradeClassId,
+          section: section,
           week_start: weekStart,
         });
         setTimetable(data);
@@ -37,7 +43,7 @@ export default function TimetableMiniView({ classId }: TimetableMiniViewProps) {
       }
     }
     fetchData();
-  }, [classId]);
+  }, [classId, section]);
 
   if (loading) return <CircularProgress />;
   if (!timetable || !timetable.entries || timetable.entries.length === 0) {

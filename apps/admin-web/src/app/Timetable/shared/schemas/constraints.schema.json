@@ -12,35 +12,35 @@
     },
     "language_sync_enabled": {
       "type": "boolean",
-      "description": "Whether language block synchronization is enforced. When true, ALL language teachers for a section must be free during language periods. Set to false if section does not have multiple language streams.",
+      "description": "CRITICAL: Language block synchronization for Indian schools. When true, ALL language teachers for the same tier (1st/2nd/3rd language) must be available simultaneously during language periods. This enables students to split into language groups (e.g., Hindi/Kannada/Sanskrit). This constraint is relaxed ONLY as an absolute last resort.",
       "default": true
     },
     "class_teacher_period_1": {
       "type": "boolean",
-      "description": "Whether class teacher must have Period 1 with their section daily. Ensures class teacher can take attendance, make announcements.",
+      "description": "SOFT CONSTRAINT: Prefer class teacher to have Period 1 with their section daily. Helps with attendance and announcements but won't block feasibility.",
       "default": true
     },
     "no_subject_twice_daily": {
       "type": "boolean",
-      "description": "Prevent same subject twice in a day (except lab blocks). Set to true for variety; false allows Math in P2 and P7.",
-      "default": false
+      "description": "SOFT CONSTRAINT: Prefer avoiding same subject twice in a day (except lab blocks). Set to true for variety.",
+      "default": true
     },
     "core_morning_only": {
       "type": "boolean",
-      "description": "Prefer core subjects (Math, Science, English) in morning periods P1-P3.",
+      "description": "SOFT CONSTRAINT: Prefer core subjects (Math, Science, English) in morning periods P1-P3.",
       "default": true
     },
     "substitution_reserve_count": {
       "type": "integer",
       "description": "Minimum free teachers per period for emergency substitution coverage.",
       "minimum": 0,
-      "default": 3
+      "default": 0
     },
     "max_consecutive_default": {
       "type": "integer",
       "description": "Default maximum consecutive teaching periods for teachers without explicit setting.",
       "minimum": 1,
-      "maximum": 5,
+      "maximum": 8,
       "default": 3
     },
     "max_daily_load_variance": {
@@ -113,6 +113,24 @@
           "description": "Weight for prioritizing specialist teachers (rare subjects like Sanskrit, Music, Art). Higher weight ensures their limited hours are scheduled.",
           "minimum": 0,
           "default": 8
+        },
+        "class_teacher_period_1": {
+          "type": "integer",
+          "description": "Weight for preferring class teacher in Period 1 with their section.",
+          "minimum": 0,
+          "default": 6
+        },
+        "no_subject_twice_daily": {
+          "type": "integer",
+          "description": "Weight for avoiding same subject twice in a day.",
+          "minimum": 0,
+          "default": 4
+        },
+        "resource_capacity": {
+          "type": "integer",
+          "description": "Weight for penalizing exceeding soft resource capacity limits.",
+          "minimum": 0,
+          "default": 5
         }
       },
       "additionalProperties": false,

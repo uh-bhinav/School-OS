@@ -36,12 +36,23 @@
     },
     "language_block_enabled": {
       "type": "boolean",
-      "description": "Whether language block synchronization is enabled for this section",
+      "description": "Whether language block synchronization is enabled for this section. When enabled, language periods for the same tier are scheduled simultaneously across all sections in the same grade.",
       "default": true
+    },
+    "language_tier_config": {
+      "type": "object",
+      "description": "Configuration for each language tier. Maps tier number (1, 2, 3) to the language subject IDs available for this section. Example: {'2': ['KANNADA', 'SANSKRIT'], '3': ['HINDI', 'FRENCH']}",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "default": {}
     },
     "language_subjects": {
       "type": "array",
-      "description": "List of language subject IDs for language block",
+      "description": "DEPRECATED: Use language_tier_config instead. List of language subject IDs for language block",
       "items": {
         "type": "string"
       },
@@ -49,7 +60,7 @@
     },
     "language_teachers": {
       "type": "array",
-      "description": "List of teacher IDs for language block synchronization",
+      "description": "DEPRECATED: Derived automatically from subject_teacher_map for language subjects. List of teacher IDs for language block synchronization",
       "items": {
         "type": "string"
       },

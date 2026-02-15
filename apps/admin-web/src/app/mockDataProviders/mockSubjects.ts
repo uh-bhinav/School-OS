@@ -140,14 +140,14 @@ export const MOCK_SUBJECT_DETAILS: SubjectDetail[] = [
     total_teachers: 3,
     grades_taught: [6, 7, 8, 9, 10, 11, 12],
     classes: [
-      { class_id: 1, class_name: "Class 6", section: "A", grade: 6, teacher_id: 101, teacher_name: "Mr. Ramesh Kumar", periods_per_week: 6 },
-      { class_id: 2, class_name: "Class 6", section: "B", grade: 6, teacher_id: 101, teacher_name: "Mr. Ramesh Kumar", periods_per_week: 6 },
-      { class_id: 3, class_name: "Class 7", section: "A", grade: 7, teacher_id: 102, teacher_name: "Mrs. Priya Sharma", periods_per_week: 6 },
-      { class_id: 4, class_name: "Class 8", section: "A", grade: 8, teacher_id: 102, teacher_name: "Mrs. Priya Sharma", periods_per_week: 6 },
-      { class_id: 5, class_name: "Class 9", section: "A", grade: 9, teacher_id: 103, teacher_name: "Dr. Suresh Patel", periods_per_week: 7 },
-      { class_id: 6, class_name: "Class 10", section: "A", grade: 10, teacher_id: 103, teacher_name: "Dr. Suresh Patel", periods_per_week: 7 },
-      { class_id: 7, class_name: "Class 11", section: "A", grade: 11, teacher_id: 103, teacher_name: "Dr. Suresh Patel", periods_per_week: 8 },
-      { class_id: 8, class_name: "Class 12", section: "A", grade: 12, teacher_id: 103, teacher_name: "Dr. Suresh Patel", periods_per_week: 8 },
+      { class_id: 1, class_name: "Grade 6", section: "A", grade: 6, teacher_id: 101, teacher_name: "Mr. Ramesh Kumar", periods_per_week: 6 },
+      { class_id: 2, class_name: "Grade 6", section: "B", grade: 6, teacher_id: 101, teacher_name: "Mr. Ramesh Kumar", periods_per_week: 6 },
+      { class_id: 3, class_name: "Grade 7", section: "A", grade: 7, teacher_id: 102, teacher_name: "Mrs. Priya Sharma", periods_per_week: 6 },
+      { class_id: 4, class_name: "Grade 8", section: "A", grade: 8, teacher_id: 102, teacher_name: "Mrs. Priya Sharma", periods_per_week: 6 },
+      { class_id: 5, class_name: "Grade 9", section: "A", grade: 9, teacher_id: 103, teacher_name: "Dr. Suresh Patel", periods_per_week: 7 },
+      { class_id: 6, class_name: "Grade 10", section: "A", grade: 10, teacher_id: 103, teacher_name: "Dr. Suresh Patel", periods_per_week: 7 },
+      { class_id: 7, class_name: "Grade 11", section: "A", grade: 11, teacher_id: 103, teacher_name: "Dr. Suresh Patel", periods_per_week: 8 },
+      { class_id: 8, class_name: "Grade 12", section: "A", grade: 12, teacher_id: 103, teacher_name: "Dr. Suresh Patel", periods_per_week: 8 },
     ],
   },
   {
@@ -158,10 +158,10 @@ export const MOCK_SUBJECT_DETAILS: SubjectDetail[] = [
     total_teachers: 2,
     grades_taught: [9, 10, 11, 12],
     classes: [
-      { class_id: 5, class_name: "Class 9", section: "A", grade: 9, teacher_id: 104, teacher_name: "Mr. Vikram Singh", periods_per_week: 5 },
-      { class_id: 6, class_name: "Class 10", section: "A", grade: 10, teacher_id: 104, teacher_name: "Mr. Vikram Singh", periods_per_week: 5 },
-      { class_id: 7, class_name: "Class 11", section: "A", grade: 11, teacher_id: 105, teacher_name: "Dr. Anita Reddy", periods_per_week: 6 },
-      { class_id: 8, class_name: "Class 12", section: "A", grade: 12, teacher_id: 105, teacher_name: "Dr. Anita Reddy", periods_per_week: 6 },
+      { class_id: 5, class_name: "Grade 9", section: "A", grade: 9, teacher_id: 104, teacher_name: "Mr. Vikram Singh", periods_per_week: 5 },
+      { class_id: 6, class_name: "Grade 10", section: "A", grade: 10, teacher_id: 104, teacher_name: "Mr. Vikram Singh", periods_per_week: 5 },
+      { class_id: 7, class_name: "Grade 11", section: "A", grade: 11, teacher_id: 105, teacher_name: "Dr. Anita Reddy", periods_per_week: 6 },
+      { class_id: 8, class_name: "Grade 12", section: "A", grade: 12, teacher_id: 105, teacher_name: "Dr. Anita Reddy", periods_per_week: 6 },
     ],
   },
   {
@@ -172,10 +172,10 @@ export const MOCK_SUBJECT_DETAILS: SubjectDetail[] = [
     total_teachers: 2,
     grades_taught: [9, 10, 11, 12],
     classes: [
-      { class_id: 5, class_name: "Class 9", section: "A", grade: 9, teacher_id: 106, teacher_name: "Mrs. Lakshmi Iyer", periods_per_week: 5 },
-      { class_id: 6, class_name: "Class 10", section: "A", grade: 10, teacher_id: 106, teacher_name: "Mrs. Lakshmi Iyer", periods_per_week: 5 },
-      { class_id: 7, class_name: "Class 11", section: "A", grade: 11, teacher_id: 107, teacher_name: "Mr. Rajesh Gupta", periods_per_week: 6 },
-      { class_id: 8, class_name: "Class 12", section: "A", grade: 12, teacher_id: 107, teacher_name: "Mr. Rajesh Gupta", periods_per_week: 6 },
+      { class_id: 5, class_name: "Grade 9", section: "A", grade: 9, teacher_id: 106, teacher_name: "Mrs. Lakshmi Iyer", periods_per_week: 5 },
+      { class_id: 6, class_name: "Grade 10", section: "A", grade: 10, teacher_id: 106, teacher_name: "Mrs. Lakshmi Iyer", periods_per_week: 5 },
+      { class_id: 7, class_name: "Grade 11", section: "A", grade: 11, teacher_id: 107, teacher_name: "Mr. Rajesh Gupta", periods_per_week: 6 },
+      { class_id: 8, class_name: "Grade 12", section: "A", grade: 12, teacher_id: 107, teacher_name: "Mr. Rajesh Gupta", periods_per_week: 6 },
     ],
   },
   {
@@ -186,10 +186,10 @@ export const MOCK_SUBJECT_DETAILS: SubjectDetail[] = [
     total_teachers: 1,
     grades_taught: [9, 10, 11, 12],
     classes: [
-      { class_id: 5, class_name: "Class 9", section: "A", grade: 9, teacher_id: 108, teacher_name: "Dr. Meera Nair", periods_per_week: 5 },
-      { class_id: 6, class_name: "Class 10", section: "A", grade: 10, teacher_id: 108, teacher_name: "Dr. Meera Nair", periods_per_week: 5 },
-      { class_id: 7, class_name: "Class 11", section: "A", grade: 11, teacher_id: 108, teacher_name: "Dr. Meera Nair", periods_per_week: 6 },
-      { class_id: 8, class_name: "Class 12", section: "A", grade: 12, teacher_id: 108, teacher_name: "Dr. Meera Nair", periods_per_week: 6 },
+      { class_id: 5, class_name: "Grade 9", section: "A", grade: 9, teacher_id: 108, teacher_name: "Dr. Meera Nair", periods_per_week: 5 },
+      { class_id: 6, class_name: "Grade 10", section: "A", grade: 10, teacher_id: 108, teacher_name: "Dr. Meera Nair", periods_per_week: 5 },
+      { class_id: 7, class_name: "Grade 11", section: "A", grade: 11, teacher_id: 108, teacher_name: "Dr. Meera Nair", periods_per_week: 6 },
+      { class_id: 8, class_name: "Grade 12", section: "A", grade: 12, teacher_id: 108, teacher_name: "Dr. Meera Nair", periods_per_week: 6 },
     ],
   },
   {
@@ -200,9 +200,9 @@ export const MOCK_SUBJECT_DETAILS: SubjectDetail[] = [
     total_teachers: 4,
     grades_taught: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     classes: [
-      { class_id: 1, class_name: "Class 6", section: "A", grade: 6, teacher_id: 109, teacher_name: "Ms. Sarah Johnson", periods_per_week: 6 },
-      { class_id: 5, class_name: "Class 9", section: "A", grade: 9, teacher_id: 110, teacher_name: "Mr. David Brown", periods_per_week: 5 },
-      { class_id: 6, class_name: "Class 10", section: "A", grade: 10, teacher_id: 110, teacher_name: "Mr. David Brown", periods_per_week: 5 },
+      { class_id: 1, class_name: "Grade 6", section: "A", grade: 6, teacher_id: 109, teacher_name: "Ms. Sarah Johnson", periods_per_week: 6 },
+      { class_id: 5, class_name: "Grade 9", section: "A", grade: 9, teacher_id: 110, teacher_name: "Mr. David Brown", periods_per_week: 5 },
+      { class_id: 6, class_name: "Grade 10", section: "A", grade: 10, teacher_id: 110, teacher_name: "Mr. David Brown", periods_per_week: 5 },
     ],
   },
   {
@@ -213,8 +213,8 @@ export const MOCK_SUBJECT_DETAILS: SubjectDetail[] = [
     total_teachers: 2,
     grades_taught: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     classes: [
-      { class_id: 1, class_name: "Class 6", section: "A", grade: 6, teacher_id: 111, teacher_name: "Mrs. Sunita Verma", periods_per_week: 5 },
-      { class_id: 5, class_name: "Class 9", section: "A", grade: 9, teacher_id: 112, teacher_name: "Mr. Anil Mishra", periods_per_week: 4 },
+      { class_id: 1, class_name: "Grade 6", section: "A", grade: 6, teacher_id: 111, teacher_name: "Mrs. Sunita Verma", periods_per_week: 5 },
+      { class_id: 5, class_name: "Grade 9", section: "A", grade: 9, teacher_id: 112, teacher_name: "Mr. Anil Mishra", periods_per_week: 4 },
     ],
   },
   {
@@ -225,8 +225,8 @@ export const MOCK_SUBJECT_DETAILS: SubjectDetail[] = [
     total_teachers: 2,
     grades_taught: [6, 7, 8, 9, 10],
     classes: [
-      { class_id: 1, class_name: "Class 6", section: "A", grade: 6, teacher_id: 113, teacher_name: "Mr. Prakash Rao", periods_per_week: 3 },
-      { class_id: 5, class_name: "Class 9", section: "A", grade: 9, teacher_id: 113, teacher_name: "Mr. Prakash Rao", periods_per_week: 3 },
+      { class_id: 1, class_name: "Grade 6", section: "A", grade: 6, teacher_id: 113, teacher_name: "Mr. Prakash Rao", periods_per_week: 3 },
+      { class_id: 5, class_name: "Grade 9", section: "A", grade: 9, teacher_id: 113, teacher_name: "Mr. Prakash Rao", periods_per_week: 3 },
     ],
   },
   {
@@ -237,8 +237,8 @@ export const MOCK_SUBJECT_DETAILS: SubjectDetail[] = [
     total_teachers: 1,
     grades_taught: [6, 7, 8, 9, 10],
     classes: [
-      { class_id: 1, class_name: "Class 6", section: "A", grade: 6, teacher_id: 114, teacher_name: "Ms. Kavitha Menon", periods_per_week: 3 },
-      { class_id: 5, class_name: "Class 9", section: "A", grade: 9, teacher_id: 114, teacher_name: "Ms. Kavitha Menon", periods_per_week: 3 },
+      { class_id: 1, class_name: "Grade 6", section: "A", grade: 6, teacher_id: 114, teacher_name: "Ms. Kavitha Menon", periods_per_week: 3 },
+      { class_id: 5, class_name: "Grade 9", section: "A", grade: 9, teacher_id: 114, teacher_name: "Ms. Kavitha Menon", periods_per_week: 3 },
     ],
   },
   {
@@ -249,9 +249,9 @@ export const MOCK_SUBJECT_DETAILS: SubjectDetail[] = [
     total_teachers: 2,
     grades_taught: [6, 7, 8, 9, 10, 11, 12],
     classes: [
-      { class_id: 1, class_name: "Class 6", section: "A", grade: 6, teacher_id: 115, teacher_name: "Mr. Arjun Pillai", periods_per_week: 3 },
-      { class_id: 5, class_name: "Class 9", section: "A", grade: 9, teacher_id: 116, teacher_name: "Ms. Deepa Krishnan", periods_per_week: 4 },
-      { class_id: 7, class_name: "Class 11", section: "A", grade: 11, teacher_id: 116, teacher_name: "Ms. Deepa Krishnan", periods_per_week: 5 },
+      { class_id: 1, class_name: "Grade 6", section: "A", grade: 6, teacher_id: 115, teacher_name: "Mr. Arjun Pillai", periods_per_week: 3 },
+      { class_id: 5, class_name: "Grade 9", section: "A", grade: 9, teacher_id: 116, teacher_name: "Ms. Deepa Krishnan", periods_per_week: 4 },
+      { class_id: 7, class_name: "Grade 11", section: "A", grade: 11, teacher_id: 116, teacher_name: "Ms. Deepa Krishnan", periods_per_week: 5 },
     ],
   },
   {

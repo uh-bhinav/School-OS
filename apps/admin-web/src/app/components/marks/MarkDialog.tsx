@@ -196,7 +196,7 @@ export function MarkDialog({ open, onClose, onSubmit, mark, loading }: MarkDialo
                   <MenuItem value="">All Classes</MenuItem>
                   {classes.map((cls: any) => (
                     <MenuItem key={cls.class_id} value={cls.class_id}>
-                      Class {cls.grade_level} {cls.section}
+                      Grade {cls.grade_level} — Section {cls.section}
                     </MenuItem>
                   ))}
                 </TextField>

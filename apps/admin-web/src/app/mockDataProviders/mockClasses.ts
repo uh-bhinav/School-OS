@@ -29,7 +29,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 1,
     school_id: 1,
-    class_name: "Class 1",
+    class_name: "Grade 1",
     section: "A",
     academic_year_id: 1,
     grade_level: 1,
@@ -42,7 +42,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 2,
     school_id: 1,
-    class_name: "Class 1",
+    class_name: "Grade 1",
     section: "B",
     academic_year_id: 1,
     grade_level: 1,
@@ -55,7 +55,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 3,
     school_id: 1,
-    class_name: "Class 2",
+    class_name: "Grade 2",
     section: "A",
     academic_year_id: 1,
     grade_level: 2,
@@ -68,7 +68,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 4,
     school_id: 1,
-    class_name: "Class 2",
+    class_name: "Grade 2",
     section: "B",
     academic_year_id: 1,
     grade_level: 2,
@@ -81,7 +81,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 5,
     school_id: 1,
-    class_name: "Class 3",
+    class_name: "Grade 3",
     section: "A",
     academic_year_id: 1,
     grade_level: 3,
@@ -94,7 +94,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 6,
     school_id: 1,
-    class_name: "Class 3",
+    class_name: "Grade 3",
     section: "B",
     academic_year_id: 1,
     grade_level: 3,
@@ -107,7 +107,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 7,
     school_id: 1,
-    class_name: "Class 4",
+    class_name: "Grade 4",
     section: "A",
     academic_year_id: 1,
     grade_level: 4,
@@ -120,7 +120,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 8,
     school_id: 1,
-    class_name: "Class 4",
+    class_name: "Grade 4",
     section: "B",
     academic_year_id: 1,
     grade_level: 4,
@@ -133,7 +133,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 9,
     school_id: 1,
-    class_name: "Class 5",
+    class_name: "Grade 5",
     section: "A",
     academic_year_id: 1,
     grade_level: 5,
@@ -146,7 +146,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 10,
     school_id: 1,
-    class_name: "Class 5",
+    class_name: "Grade 5",
     section: "B",
     academic_year_id: 1,
     grade_level: 5,
@@ -159,7 +159,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 11,
     school_id: 1,
-    class_name: "Class 6",
+    class_name: "Grade 6",
     section: "A",
     academic_year_id: 1,
     grade_level: 6,
@@ -172,7 +172,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 12,
     school_id: 1,
-    class_name: "Class 6",
+    class_name: "Grade 6",
     section: "B",
     academic_year_id: 1,
     grade_level: 6,
@@ -185,7 +185,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 13,
     school_id: 1,
-    class_name: "Class 7",
+    class_name: "Grade 7",
     section: "A",
     academic_year_id: 1,
     grade_level: 7,
@@ -198,7 +198,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 14,
     school_id: 1,
-    class_name: "Class 7",
+    class_name: "Grade 7",
     section: "B",
     academic_year_id: 1,
     grade_level: 7,
@@ -211,7 +211,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 15,
     school_id: 1,
-    class_name: "Class 8",
+    class_name: "Grade 8",
     section: "A",
     academic_year_id: 1,
     grade_level: 8,
@@ -224,7 +224,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 16,
     school_id: 1,
-    class_name: "Class 8",
+    class_name: "Grade 8",
     section: "B",
     academic_year_id: 1,
     grade_level: 8,
@@ -237,7 +237,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 17,
     school_id: 1,
-    class_name: "Class 9",
+    class_name: "Grade 9",
     section: "A",
     academic_year_id: 1,
     grade_level: 9,
@@ -250,7 +250,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 18,
     school_id: 1,
-    class_name: "Class 9",
+    class_name: "Grade 9",
     section: "B",
     academic_year_id: 1,
     grade_level: 9,
@@ -263,7 +263,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 19,
     school_id: 1,
-    class_name: "Class 10",
+    class_name: "Grade 10",
     section: "A",
     academic_year_id: 1,
     grade_level: 10,
@@ -276,7 +276,7 @@ const MOCK_CLASSES: ClassData[] = [
   {
     class_id: 20,
     school_id: 1,
-    class_name: "Class 10",
+    class_name: "Grade 10",
     section: "B",
     academic_year_id: 1,
     grade_level: 10,

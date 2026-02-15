@@ -86,7 +86,7 @@ export function MarksFilterBar() {
           <MenuItem value="">All Classes</MenuItem>
           {classes.map((cls: any) => (
             <MenuItem key={cls.class_id} value={cls.class_id}>
-              Class {cls.grade_level} {cls.section}
+              Grade {cls.grade_level} — Section {cls.section}
             </MenuItem>
           ))}
         </Select>
@@ -136,8 +136,8 @@ export function MarksFilterBar() {
         >
           <MenuItem value="">All Exams</MenuItem>
           {exams.map((exam: any) => (
-            <MenuItem key={exam.exam_id} value={exam.exam_id}>
-              {exam.exam_name}
+            <MenuItem key={exam.id} value={exam.id}>
+              {exam.title}
             </MenuItem>
           ))}
         </Select>

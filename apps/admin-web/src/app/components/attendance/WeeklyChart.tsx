@@ -98,9 +98,9 @@ export default function WeeklyChart({ data }: { data: WeeklyData[] }) {
               return <Cell key={`cell-${index}`} fill={color} />;
             })}
             <LabelList dataKey="present_pct" position="top" content={(props: any) => {
-              const { x, y, value } = props;
+              const { x, y, width, value } = props;
               return (
-                <text x={x} y={y} dy={-8} fill="currentColor" fontSize={11} fontWeight={600} textAnchor="middle">
+                <text x={x + (width || 0) / 2} y={y} dy={-10} fill="#333" fontSize={12} fontWeight={700} textAnchor="middle">
                   {typeof value === 'number' ? `${value.toFixed(1)}%` : ''}
                 </text>
               );

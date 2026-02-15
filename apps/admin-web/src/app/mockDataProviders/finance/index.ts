@@ -14,6 +14,7 @@ export * from './mockPayments.ts';
 export * from './mockReports.ts';
 export * from './mockStudents.ts';
 export * from './mockClasses.ts';
+export * from './mockVouchers.ts';
 
 // Export provider objects for service layer
 export { mockFeeComponentsProvider } from './mockFeeComponents.ts';
@@ -24,3 +25,4 @@ export { mockDiscountsProvider } from './mockDiscounts.ts';
 export { mockInvoicesProvider } from './mockInvoices.ts';
 export { mockPaymentsProvider } from './mockPayments.ts';
 export { mockReportsProvider } from './mockReports.ts';
+export { mockVouchersProvider } from './mockVouchers.ts';

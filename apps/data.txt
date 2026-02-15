@@ -1,0 +1,1295 @@
+################################################################################
+################################################################################
+##                                                                            ##
+##            SCHOOL-OS ERP - COMPLETE DATA REQUIREMENTS                      ##
+##            Client Onboarding Data Collection Sheet                         ##
+##                                                                            ##
+##            FOR INDIAN EDUCATION SYSTEM (CBSE/ICSE/STATE BOARDS)            ##
+##                                                                            ##
+################################################################################
+################################################################################
+
+Last Updated: February 2026
+Version: 1.0
+
+================================================================================
+                              TABLE OF CONTENTS
+================================================================================
+
+    PART A: CORE SCHOOL SETUP (MANDATORY)
+        Sheet 1:  School Master Data
+        Sheet 2:  Academic Years
+        Sheet 3:  Roles & Permissions
+        Sheet 4:  User Profiles (All Users)
+
+    PART B: ACADEMIC STRUCTURE (MANDATORY)
+        Sheet 5:  Classes/Sections
+        Sheet 6:  Subjects Master
+        Sheet 7:  Streams (For 11th-12th)
+        Sheet 8:  Teachers
+        Sheet 9:  Teacher-Subject Mapping
+        Sheet 10: Class-Subject Mapping
+
+    PART C: STUDENT MANAGEMENT (MANDATORY)
+        Sheet 11: Students
+        Sheet 12: Student Contacts (Parents/Guardians)
+
+    PART D: FEE MANAGEMENT (OPTIONAL - IF USING FEE MODULE)
+        Sheet 13: Fee Components
+        Sheet 14: Fee Templates
+        Sheet 15: Fee Terms (Payment Schedule)
+        Sheet 16: Discounts
+        Sheet 17: Class Fee Structure
+        Sheet 18: Student Fee Assignments
+
+    PART E: EXAMINATIONS (OPTIONAL - IF USING EXAM MODULE)
+        Sheet 19: Exam Types
+        Sheet 20: Holidays (India Calendar)
+
+    PART F: E-COMMERCE (OPTIONAL - IF USING STORE MODULE)
+        Sheet 21: Product Categories
+        Sheet 22: Products
+
+    PART G: TIMETABLE (OPTIONAL - IF USING TIMETABLE MODULE)
+        Sheet 23: Periods Master
+        Sheet 24: Resources (Labs/Grounds)
+        Sheet 25: Class-Subject-Teacher Map (for Timetable)
+        Sheet 26: Language Groups
+
+    PART H: CLUBS & ACTIVITIES (OPTIONAL)
+        Sheet 27: Clubs
+        Sheet 28: Achievement Point Rules
+
+================================================================================
+================================================================================
+                     PART A: CORE SCHOOL SETUP (MANDATORY)
+================================================================================
+================================================================================
+
+These sheets contain foundational data without which the ERP cannot function.
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 1: SCHOOL MASTER DATA                                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  This is typically ONE ROW per school. For multi-school setups, add more.   │
+│                                                                             │
+│  Column Name               │ Type    │ Required │ Example                   │
+│  ──────────────────────────┼─────────┼──────────┼───────────────────────────│
+│  school_id                 │ Integer │ AUTO     │ 1                         │
+│  name                      │ String  │ YES      │ "Delhi Public School"     │
+│  logo_url                  │ URL     │ NO       │ https://...logo.png       │
+│  address                   │ Text    │ YES      │ "Plot 12, Sector 22..."   │
+│  city                      │ String  │ YES      │ "New Delhi"               │
+│  state                     │ String  │ YES      │ "Delhi"                   │
+│  postal_code               │ String  │ YES      │ "110001"                  │
+│  country                   │ String  │ YES      │ "India"                   │
+│  phone_number              │ String  │ YES      │ "+91-11-26853000"         │
+│  email                     │ Email   │ YES      │ "info@dpsdelhi.edu.in"    │
+│  website                   │ URL     │ NO       │ "https://dpsdelhi.edu.in" │
+│  is_active                 │ Boolean │ YES      │ TRUE                      │
+│                                                                             │
+│  --- INDIAN REGULATORY FIELDS ---                                           │
+│  affiliation_board         │ String  │ YES      │ "CBSE" / "ICSE" / "State" │
+│  affiliation_number        │ String  │ YES      │ "2730001"                 │
+│  udise_code                │ String  │ YES      │ "07030100101"             │
+│  trust_name                │ String  │ NO       │ "Delhi Public School Soc" │
+│  trust_registration_no     │ String  │ NO       │ "DL-2019-0001234"         │
+│  principal_name            │ String  │ YES      │ "Dr. Anju Sachdeva"       │
+│  principal_email           │ Email   │ NO       │ "principal@dps.edu.in"    │
+│  principal_phone           │ String  │ NO       │ "+91-9876543210"          │
+│                                                                             │
+│  --- LICENSE & PAYMENT (Internal - Filled by School-OS) ---                 │
+│  license_number            │ String  │ INTERNAL │ "SCHOOLOS-2026-DPS-001"   │
+│  license_key               │ String  │ INTERNAL │ <encrypted>               │
+│  signup_date               │ Date    │ INTERNAL │ "2026-01-15"              │
+│  contract_end_date         │ Date    │ INTERNAL │ "2027-01-14"              │
+│  razorpay_key_id           │ String  │ INTERNAL │ "rzp_live_xxx..."         │
+│  razorpay_key_secret       │ String  │ INTERNAL │ <encrypted>               │
+│  razorpay_webhook_secret   │ String  │ INTERNAL │ <encrypted>               │
+│                                                                             │
+│  AFFILIATION_BOARD VALUES (India):                                          │
+│  • CBSE   - Central Board of Secondary Education                            │
+│  • ICSE   - Indian Certificate of Secondary Education (CISCE)               │
+│  • IB     - International Baccalaureate                                     │
+│  • STATE  - State Board (specify state in notes)                            │
+│  • IGCSE  - Cambridge International                                         │
+│                                                                             │
+│  INDIAN STATE VALUES:                                                       │
+│  Andhra Pradesh, Arunachal Pradesh, Assam, Bihar, Chhattisgarh, Goa,       │
+│  Gujarat, Haryana, Himachal Pradesh, Jharkhand, Karnataka, Kerala,          │
+│  Madhya Pradesh, Maharashtra, Manipur, Meghalaya, Mizoram, Nagaland,        │
+│  Odisha, Punjab, Rajasthan, Sikkim, Tamil Nadu, Telangana, Tripura,         │
+│  Uttar Pradesh, Uttarakhand, West Bengal, Delhi, Jammu & Kashmir, Ladakh,   │
+│  Puducherry, Chandigarh, Andaman & Nicobar, Dadra & Nagar Haveli, Lakshadweep│
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 2: ACADEMIC YEARS                                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  In India, academic year typically runs April-March or June-April.          │
+│  Create one row per academic year your school needs to track.               │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  name                 │ String    │ YES      │ "2025-2026"                  │
+│  start_date           │ Date      │ YES      │ "2025-04-01"                 │
+│  end_date             │ Date      │ YES      │ "2026-03-31"                 │
+│  is_active            │ Boolean   │ YES      │ TRUE (only ONE can be TRUE)  │
+│                                                                             │
+│  EXAMPLE ROWS:                                                              │
+│  id │ school_id │ name      │ start_date  │ end_date    │ is_active         │
+│  ───┼───────────┼───────────┼─────────────┼─────────────┼───────────────────│
+│  1  │ 1         │ 2024-2025 │ 2024-04-01  │ 2025-03-31  │ FALSE             │
+│  2  │ 1         │ 2025-2026 │ 2025-04-01  │ 2026-03-31  │ TRUE              │
+│  3  │ 1         │ 2026-2027 │ 2026-04-01  │ 2027-03-31  │ FALSE             │
+│                                                                             │
+│  NOTE: Only ONE academic year should be is_active=TRUE at a time.           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 3: ROLES DEFINITION                                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Standard roles for Indian school ERP. Typically pre-seeded.                │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  role_id              │ Integer   │ AUTO     │ 1                            │
+│  role_name            │ String    │ YES      │ "Admin"                      │
+│                                                                             │
+│  STANDARD ROLES (Pre-defined):                                              │
+│  role_id │ role_name                                                        │
+│  ────────┼───────────────────────────────────────────────────────────────── │
+│  1       │ Admin          (School administrators, principal, vice-principal)│
+│  2       │ Teacher        (Teaching staff)                                  │
+│  3       │ Student        (Students)                                        │
+│  4       │ Parent         (Parents/Guardians)                               │
+│  5       │ Accountant     (Fee management staff)                            │
+│  6       │ Librarian      (Library staff)                                   │
+│  7       │ Transport      (Transport coordinator)                           │
+│  8       │ NonTeaching    (Non-teaching staff)                              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 4: USER PROFILES (All Users)                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Every person using the system needs a profile. This includes:              │
+│  Teachers, Students, Parents, Administrators, Non-teaching staff.           │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  user_id              │ UUID      │ AUTO     │ <generated>                  │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  first_name           │ String    │ YES      │ "Rajesh"                     │
+│  last_name            │ String    │ YES      │ "Kumar"                      │
+│  email                │ Email     │ YES      │ "rajesh.kumar@email.com"     │
+│  phone_number         │ String    │ NO       │ "+91-9876543210"             │
+│  gender               │ Enum      │ YES      │ "Male" / "Female" / "Other"  │
+│  date_of_birth        │ Date      │ NO       │ "1985-06-15"                 │
+│  is_active            │ Boolean   │ YES      │ TRUE                         │
+│  role_ids             │ String    │ YES      │ "2" or "2,4" (CSV of roles)  │
+│                                                                             │
+│  GENDER VALUES:                                                             │
+│  • Male                                                                     │
+│  • Female                                                                   │
+│  • Other                                                                    │
+│                                                                             │
+│  EXAMPLE ROWS:                                                              │
+│  first_name │ last_name │ email               │ gender │ role_ids          │
+│  ───────────┼───────────┼─────────────────────┼────────┼───────────────────│
+│  Rajesh     │ Kumar     │ rajesh@school.com   │ Male   │ 2      (Teacher)  │
+│  Priya      │ Sharma    │ priya@school.com    │ Female │ 2      (Teacher)  │
+│  Amit       │ Verma     │ amit@school.com     │ Male   │ 1      (Admin)    │
+│  Rohan      │ Singh     │ rohan@gmail.com     │ Male   │ 3      (Student)  │
+│  Sunita     │ Singh     │ sunita@gmail.com    │ Female │ 4      (Parent)   │
+│                                                                             │
+│  NOTE: For parents with multiple children, create ONE profile with role=4.  │
+│  The student_contacts table will link them to their children.               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                    PART B: ACADEMIC STRUCTURE (MANDATORY)
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 5: CLASSES / SECTIONS                                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Each row = one class-section combination (e.g., "8A", "8B", "9A")          │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  class_id             │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  grade_level          │ Integer   │ YES      │ 8                            │
+│  section              │ String    │ YES      │ "A"                          │
+│  class_teacher_id     │ Integer   │ NO       │ 5 (Ref→Teacher)              │
+│  academic_year_id     │ Integer   │ YES      │ 2 (Ref→AcademicYear)         │
+│  is_active            │ Boolean   │ YES      │ TRUE                         │
+│                                                                             │
+│  GRADE LEVELS (India):                                                      │
+│  • Pre-Primary: Nursery=0, LKG=1, UKG=2 (use 0, 1, 2)                       │
+│  • Primary: Classes 1-5                                                     │
+│  • Middle: Classes 6-8                                                      │
+│  • Secondary: Classes 9-10 (Board exams)                                    │
+│  • Senior Secondary: Classes 11-12 (Streams: Science/Commerce/Humanities)   │
+│                                                                             │
+│  EXAMPLE ROWS (For a school with Classes 6-12, 3 sections each):            │
+│  class_id │ grade_level │ section │ class_teacher_id │ academic_year_id     │
+│  ─────────┼─────────────┼─────────┼──────────────────┼──────────────────────│
+│  1        │ 6           │ A       │ 1                │ 2                    │
+│  2        │ 6           │ B       │ 2                │ 2                    │
+│  3        │ 6           │ C       │ 3                │ 2                    │
+│  4        │ 7           │ A       │ 4                │ 2                    │
+│  5        │ 7           │ B       │ 5                │ 2                    │
+│  ...                                                                        │
+│  19       │ 11          │ A (Sci) │ 15               │ 2                    │
+│  20       │ 11          │ B (Com) │ 16               │ 2                    │
+│  21       │ 11          │ C (Hum) │ 17               │ 2                    │
+│                                                                             │
+│  NOTES FOR 11th-12th:                                                       │
+│  • Create separate sections per stream (Science, Commerce, Humanities)      │
+│  • Use Stream sheet to link subjects to sections                            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 6: SUBJECTS MASTER                                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  All subjects taught in the school across all classes.                      │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  subject_id           │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  name                 │ String    │ YES      │ "Mathematics"                │
+│  short_code           │ String    │ YES      │ "MATH"                       │
+│  description          │ Text      │ NO       │ "Mathematics for..."         │
+│  category             │ Enum      │ YES      │ "core"                       │
+│  is_active            │ Boolean   │ YES      │ TRUE                         │
+│                                                                             │
+│  CATEGORY VALUES:                                                           │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  • core       = Main academic subjects (Math, Science, English, SST)        │
+│  • language   = 2nd/3rd language (Hindi, Sanskrit, Regional languages)      │
+│  • leisure    = Non-core (PE, Games, Library, SUPW)                         │
+│  • lab        = Laboratory subjects (Physics Lab, Chemistry Lab, Bio Lab)   │
+│  • arts       = Creative (Art, Music, Dance, Drama)                         │
+│  • special    = Assembly, Moral Science, Value Education                    │
+│  • elective   = Optional subjects (Computer Science, Physical Ed)           │
+│                                                                             │
+│  EXAMPLE ROWS (CBSE Curriculum):                                            │
+│                                                                             │
+│  --- CORE SUBJECTS ---                                                      │
+│  subject_id │ name                 │ short_code │ category                  │
+│  ───────────┼──────────────────────┼────────────┼───────────────────────────│
+│  1          │ Mathematics          │ MATH       │ core                      │
+│  2          │ Science              │ SCI        │ core                      │
+│  3          │ Social Studies       │ SST        │ core                      │
+│  4          │ English              │ ENG        │ core                      │
+│  5          │ Physics              │ PHY        │ core      (Class 11-12)   │
+│  6          │ Chemistry            │ CHEM       │ core      (Class 11-12)   │
+│  7          │ Biology              │ BIO        │ core      (Class 11-12)   │
+│  8          │ Accountancy          │ ACC        │ core      (Commerce)      │
+│  9          │ Business Studies     │ BST        │ core      (Commerce)      │
+│  10         │ Economics            │ ECO        │ core                      │
+│  11         │ History              │ HIST       │ core      (Humanities)    │
+│  12         │ Political Science    │ POL        │ core      (Humanities)    │
+│  13         │ Geography            │ GEO        │ core      (Humanities)    │
+│                                                                             │
+│  --- LANGUAGE SUBJECTS ---                                                  │
+│  subject_id │ name                 │ short_code │ category                  │
+│  ───────────┼──────────────────────┼────────────┼───────────────────────────│
+│  14         │ Hindi                │ HINDI      │ language                  │
+│  15         │ Sanskrit             │ SANSKRIT   │ language                  │
+│  16         │ Kannada              │ KANNADA    │ language  (Karnataka)     │
+│  17         │ Tamil                │ TAMIL      │ language  (Tamil Nadu)    │
+│  18         │ Telugu               │ TELUGU     │ language  (Andhra/TS)     │
+│  19         │ Malayalam            │ MALAYALAM  │ language  (Kerala)        │
+│  20         │ Marathi              │ MARATHI    │ language  (Maharashtra)   │
+│  21         │ Bengali              │ BENGALI    │ language  (West Bengal)   │
+│  22         │ Gujarati             │ GUJARATI   │ language  (Gujarat)       │
+│  23         │ Punjabi              │ PUNJABI    │ language  (Punjab)        │
+│  24         │ French               │ FRENCH     │ language  (Foreign)       │
+│  25         │ German               │ GERMAN     │ language  (Foreign)       │
+│                                                                             │
+│  --- LAB SUBJECTS ---                                                       │
+│  subject_id │ name                 │ short_code │ category                  │
+│  ───────────┼──────────────────────┼────────────┼───────────────────────────│
+│  26         │ Physics Lab          │ PHY_LAB    │ lab                       │
+│  27         │ Chemistry Lab        │ CHEM_LAB   │ lab                       │
+│  28         │ Biology Lab          │ BIO_LAB    │ lab                       │
+│  29         │ Computer Lab         │ COMP_LAB   │ lab                       │
+│                                                                             │
+│  --- LEISURE/ARTS ---                                                       │
+│  subject_id │ name                 │ short_code │ category                  │
+│  ───────────┼──────────────────────┼────────────┼───────────────────────────│
+│  30         │ Physical Education   │ PE         │ leisure                   │
+│  31         │ Art & Craft          │ ART        │ arts                      │
+│  32         │ Music                │ MUSIC      │ arts                      │
+│  33         │ Dance                │ DANCE      │ arts                      │
+│  34         │ Library              │ LIB        │ leisure                   │
+│  35         │ SUPW                 │ SUPW       │ leisure                   │
+│  36         │ Value Education      │ VALUE      │ special                   │
+│  37         │ Computer Science     │ CS         │ elective                  │
+│  38         │ Informatics Practices│ IP         │ elective                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 7: STREAMS (For Classes 11-12 Only)                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Define streams and their subject combinations for 11th-12th.               │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  code                 │ String    │ YES      │ "SCI" / "COM" / "HUM"        │
+│  name                 │ String    │ YES      │ "Science"                    │
+│  subjects             │ String    │ YES      │ CSV of subject_ids           │
+│                                                                             │
+│  TYPICAL INDIAN STREAMS:                                                    │
+│  id │ code │ name                │ subjects (subject_ids CSV)               │
+│  ───┼──────┼─────────────────────┼──────────────────────────────────────────│
+│  1  │ SCI  │ Science (PCM)       │ 5,6,4,1,14     (Phy,Chem,Eng,Math,Hindi) │
+│  2  │ SCB  │ Science (PCB)       │ 5,6,7,4,14     (Phy,Chem,Bio,Eng,Hindi)  │
+│  3  │ SCMB │ Science (PCMB)      │ 5,6,7,1,4,14   (All 4 sciences)          │
+│  4  │ COM  │ Commerce            │ 8,9,10,4,1,14  (Acc,BST,Eco,Eng,Math,Hin)│
+│  5  │ HUM  │ Humanities          │ 11,12,13,4,14  (Hist,PolSci,Geo,Eng,Hin) │
+│                                                                             │
+│  NOTE: The subjects CSV references subject_id from Sheet 6.                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 8: TEACHERS                                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  All teaching staff. Links to Profile via user_id.                          │
+│                                                                             │
+│  Column Name              │ Type    │ Required │ Example                    │
+│  ─────────────────────────┼─────────┼──────────┼────────────────────────────│
+│  teacher_id               │ Integer │ AUTO     │ 1                          │
+│  user_id                  │ UUID    │ YES      │ (Ref→Profile)              │
+│  school_id                │ Integer │ YES      │ 1                          │
+│  employee_id              │ String  │ YES      │ "EMP001"                   │
+│  department               │ String  │ NO       │ "Science"                  │
+│  subject_specialization   │ String  │ NO       │ "Physics"                  │
+│  hire_date                │ Date    │ YES      │ "2018-06-01"               │
+│  years_of_experience      │ Integer │ NO       │ 8                          │
+│  is_certified             │ Boolean │ NO       │ TRUE                       │
+│  employment_status        │ String  │ YES      │ "Permanent"                │
+│  qualifications           │ JSON    │ NO       │ See below                  │
+│  bio                      │ Text    │ NO       │ "Experienced physics..."   │
+│  is_active                │ Boolean │ YES      │ TRUE                       │
+│                                                                             │
+│  EMPLOYMENT_STATUS VALUES:                                                  │
+│  • Permanent    - Regular permanent staff                                   │
+│  • Contractual  - Fixed-term contract                                       │
+│  • Guest        - Guest/Visiting faculty                                    │
+│  • Probation    - On probation period                                       │
+│  • Part-time    - Part-time teacher                                         │
+│                                                                             │
+│  DEPARTMENT VALUES (typical):                                               │
+│  • Science, Mathematics, English, Social Studies, Languages                 │
+│  • Commerce, Humanities, Computer Science, Physical Education               │
+│  • Arts & Music, Special Education, Administration                          │
+│                                                                             │
+│  QUALIFICATIONS (JSON format):                                              │
+│  {                                                                          │
+│    "degrees": [                                                             │
+│      {"degree": "M.Sc.", "subject": "Physics", "university": "Delhi Univ"}, │
+│      {"degree": "B.Ed.", "subject": "Education", "university": "IGNOU"}     │
+│    ],                                                                       │
+│    "certifications": ["CTET", "State TET"]                                  │
+│  }                                                                          │
+│                                                                             │
+│  EXAMPLE ROWS:                                                              │
+│  teacher_id │ employee_id │ department │ specialization │ hire_date        │
+│  ───────────┼─────────────┼────────────┼────────────────┼──────────────────│
+│  1          │ EMP001      │ Science    │ Physics        │ 2018-06-01       │
+│  2          │ EMP002      │ Mathematics│ Mathematics    │ 2015-04-15       │
+│  3          │ EMP003      │ English    │ English Lit    │ 2020-07-01       │
+│  4          │ EMP004      │ Languages  │ Hindi          │ 2012-04-01       │
+│  5          │ EMP005      │ Languages  │ Sanskrit       │ 2019-08-15       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 9: TEACHER-SUBJECT MAPPING                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Which subjects can each teacher teach? (Qualification mapping)             │
+│                                                                             │
+│  Column Name              │ Type    │ Required │ Example                    │
+│  ─────────────────────────┼─────────┼──────────┼────────────────────────────│
+│  id                       │ Integer │ AUTO     │ 1                          │
+│  teacher_id               │ Integer │ YES      │ 1 (Ref→Teacher)            │
+│  subject_id               │ Integer │ YES      │ 5 (Ref→Subject)            │
+│  is_primary               │ Boolean │ YES      │ TRUE                       │
+│  proficiency_level        │ Enum    │ YES      │ "expert"                   │
+│  years_teaching_subject   │ Integer │ NO       │ 6                          │
+│  certification_number     │ String  │ NO       │ "CTET-2020-12345"          │
+│                                                                             │
+│  PROFICIENCY_LEVEL VALUES:                                                  │
+│  • expert        - Expert level (can teach all classes)                     │
+│  • intermediate  - Can teach middle/secondary classes                       │
+│  • basic         - Can teach primary/substitute classes                     │
+│                                                                             │
+│  EXAMPLE ROWS:                                                              │
+│  id │ teacher_id │ subject_id │ is_primary │ proficiency_level             │
+│  ───┼────────────┼────────────┼────────────┼─────────────────────────────  │
+│  1  │ 1          │ 5          │ TRUE       │ expert      (Physics)         │
+│  2  │ 1          │ 26         │ FALSE      │ expert      (Physics Lab)     │
+│  3  │ 2          │ 1          │ TRUE       │ expert      (Math)            │
+│  4  │ 3          │ 4          │ TRUE       │ expert      (English)         │
+│  5  │ 4          │ 14         │ TRUE       │ expert      (Hindi)           │
+│  6  │ 4          │ 15         │ FALSE      │ intermediate (Sanskrit)       │
+│                                                                             │
+│  NOTE: A teacher can teach multiple subjects (e.g., Hindi + Sanskrit).      │
+│  is_primary=TRUE for their main subject.                                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 10: CLASS-SUBJECT MAPPING                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Which subjects are taught to which classes?                                │
+│  (This is separate from who teaches them - that's in the timetable module)  │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  class_id             │ Integer   │ YES      │ 1 (Ref→Class)                │
+│  subject_id           │ Integer   │ YES      │ 1 (Ref→Subject)              │
+│                                                                             │
+│  EXAMPLE (Class 8A gets these subjects):                                    │
+│  class_id │ subject_id                                                      │
+│  ─────────┼─────────────────────────────────────────────────────────────────│
+│  1        │ 1          (Math)                                               │
+│  1        │ 2          (Science)                                            │
+│  1        │ 3          (Social Studies)                                     │
+│  1        │ 4          (English)                                            │
+│  1        │ 14         (Hindi)                                              │
+│  1        │ 16         (Kannada - 3rd language)                             │
+│  1        │ 30         (PE)                                                 │
+│  1        │ 31         (Art)                                                │
+│  1        │ 29         (Computer Lab)                                       │
+│                                                                             │
+│  NOTES:                                                                     │
+│  • Each class-subject pair is one row                                       │
+│  • Different classes can have different subject combinations                │
+│  • For 11-12, subjects depend on the stream                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                    PART C: STUDENT MANAGEMENT (MANDATORY)
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 11: STUDENTS                                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  All student records. Links to Profile via user_id.                         │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  student_id           │ Integer   │ AUTO     │ 1                            │
+│  user_id              │ UUID      │ YES      │ (Ref→Profile)                │
+│  current_class_id     │ Integer   │ YES      │ 1 (Ref→Class)                │
+│  admission_number     │ String    │ YES      │ "2024-001"                   │
+│  roll_number          │ String    │ NO       │ "01"                         │
+│  enrollment_date      │ Date      │ YES      │ "2024-04-01"                 │
+│  academic_status      │ String    │ YES      │ "Active"                     │
+│  proctor_teacher_id   │ Integer   │ NO       │ 5 (Ref→Teacher)              │
+│  notes                │ Text      │ NO       │ "Sports captain"             │
+│  is_active            │ Boolean   │ YES      │ TRUE                         │
+│                                                                             │
+│  --- ADDITIONAL INDIA-SPECIFIC FIELDS (in Profile or extended) ---         │
+│  aadhaar_number       │ String    │ NO       │ "1234-5678-9012"             │
+│  blood_group          │ String    │ NO       │ "B+"                         │
+│  religion             │ String    │ NO       │ "Hindu"                      │
+│  caste_category       │ String    │ NO       │ "General" / "OBC" / "SC/ST"  │
+│  nationality          │ String    │ NO       │ "Indian"                     │
+│  mother_tongue        │ String    │ NO       │ "Hindi"                      │
+│  birth_place          │ String    │ NO       │ "Delhi"                      │
+│  previous_school      │ String    │ NO       │ "XYZ Public School"          │
+│  tc_number            │ String    │ NO       │ "TC-2024-001"                │
+│  transport_opted      │ Boolean   │ NO       │ TRUE                         │
+│  hostel_opted         │ Boolean   │ NO       │ FALSE                        │
+│                                                                             │
+│  ACADEMIC_STATUS VALUES:                                                    │
+│  • Active      - Currently enrolled and attending                           │
+│  • Inactive    - Temporarily inactive                                       │
+│  • Withdrawn   - Left the school (transferred)                              │
+│  • Passed Out  - Completed school (graduated)                               │
+│  • Suspended   - Temporarily suspended                                      │
+│  • Expelled    - Permanently expelled                                       │
+│                                                                             │
+│  CASTE_CATEGORY VALUES (India):                                             │
+│  • General     - General/Unreserved category                                │
+│  • OBC         - Other Backward Classes                                     │
+│  • SC          - Scheduled Caste                                            │
+│  • ST          - Scheduled Tribe                                            │
+│  • EWS         - Economically Weaker Section                                │
+│                                                                             │
+│  BLOOD_GROUP VALUES:                                                        │
+│  • A+, A-, B+, B-, AB+, AB-, O+, O-                                        │
+│                                                                             │
+│  EXAMPLE ROWS:                                                              │
+│  student_id │ admission_no │ roll_no │ current_class_id │ enrollment_date  │
+│  ───────────┼──────────────┼─────────┼──────────────────┼──────────────────│
+│  1          │ 2024-001     │ 01      │ 1 (Class 8A)     │ 2024-04-01       │
+│  2          │ 2024-002     │ 02      │ 1 (Class 8A)     │ 2024-04-01       │
+│  3          │ 2024-003     │ 03      │ 1 (Class 8A)     │ 2024-04-01       │
+│  4          │ 2023-015     │ 01      │ 5 (Class 9A)     │ 2023-04-01       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 12: STUDENT CONTACTS (Parents/Guardians)                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Links students to their parents/guardians.                                 │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  student_id           │ Integer   │ YES      │ 1 (Ref→Student)              │
+│  profile_user_id      │ UUID      │ NO       │ (Ref→Profile if parent login)│
+│  name                 │ String    │ YES      │ "Rakesh Singh"               │
+│  phone                │ String    │ YES      │ "+91-9876543210"             │
+│  email                │ Email     │ NO       │ "rakesh.singh@email.com"     │
+│  relationship_type    │ String    │ YES      │ "Father"                     │
+│  is_emergency_contact │ Boolean   │ YES      │ TRUE                         │
+│  is_active            │ Boolean   │ YES      │ TRUE                         │
+│  custody_notes        │ Text      │ NO       │ "Primary guardian"           │
+│                                                                             │
+│  --- ADDITIONAL PARENT DETAILS (Extended) ---                               │
+│  occupation           │ String    │ NO       │ "Software Engineer"          │
+│  employer             │ String    │ NO       │ "TCS"                        │
+│  annual_income        │ Numeric   │ NO       │ 1200000                      │
+│  education            │ String    │ NO       │ "B.Tech"                     │
+│  office_address       │ Text      │ NO       │ "123 Tech Park..."           │
+│  office_phone         │ String    │ NO       │ "+91-11-26850000"            │
+│                                                                             │
+│  RELATIONSHIP_TYPE VALUES:                                                  │
+│  • Father                                                                   │
+│  • Mother                                                                   │
+│  • Guardian                                                                 │
+│  • Grandfather                                                              │
+│  • Grandmother                                                              │
+│  • Uncle                                                                    │
+│  • Aunt                                                                     │
+│  • Sibling                                                                  │
+│  • Other                                                                    │
+│                                                                             │
+│  EXAMPLE ROWS:                                                              │
+│  id │ student_id │ name           │ phone          │ relationship │ emergency│
+│  ───┼────────────┼────────────────┼────────────────┼──────────────┼──────────│
+│  1  │ 1          │ Rakesh Singh   │ +91-9876543210 │ Father       │ TRUE     │
+│  2  │ 1          │ Sunita Singh   │ +91-9876543211 │ Mother       │ TRUE     │
+│  3  │ 2          │ Amit Verma     │ +91-9876543212 │ Father       │ TRUE     │
+│  4  │ 2          │ Priya Verma    │ +91-9876543213 │ Mother       │ FALSE    │
+│  5  │ 3          │ Ramesh Gupta   │ +91-9876543214 │ Guardian     │ TRUE     │
+│                                                                             │
+│  NOTE: Each student should have at least 2 contacts (typically both parents)│
+│  At least one contact should be marked as emergency contact.                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                   PART D: FEE MANAGEMENT (OPTIONAL)
+================================================================================
+================================================================================
+
+These sheets are required ONLY if using the Fee Management module.
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 13: FEE COMPONENTS                                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Building blocks of fees - each component is a type of charge.              │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  component_name       │ String    │ YES      │ "Tuition Fee"                │
+│  component_type       │ String    │ YES      │ "tuition"                    │
+│  base_amount          │ Decimal   │ NO       │ 50000.00                     │
+│  is_mandatory         │ Boolean   │ YES      │ TRUE                         │
+│  payment_frequency    │ String    │ YES      │ "Annual"                     │
+│                                                                             │
+│  COMPONENT_TYPE VALUES:                                                     │
+│  • tuition         - Basic tuition fee                                      │
+│  • admission       - One-time admission fee                                 │
+│  • development     - Development/building fund                              │
+│  • transport       - School bus/transport                                   │
+│  • lab             - Laboratory charges                                     │
+│  • library         - Library fee                                            │
+│  • sports          - Sports/games fee                                       │
+│  • exam            - Examination fee                                        │
+│  • activity        - Extra-curricular activities                            │
+│  • uniform         - Uniform charges                                        │
+│  • books           - Books and stationery                                   │
+│  • hostel          - Hostel fee                                             │
+│  • mess            - Mess/food charges                                      │
+│  • security        - Refundable security deposit                            │
+│  • late_fee        - Late payment penalty                                   │
+│  • other           - Miscellaneous                                          │
+│                                                                             │
+│  PAYMENT_FREQUENCY VALUES:                                                  │
+│  • One-Time    - Paid once (admission fee, security deposit)                │
+│  • Monthly     - Paid every month                                           │
+│  • Quarterly   - Paid every 3 months (Apr, Jul, Oct, Jan)                   │
+│  • Half-Yearly - Paid twice a year (Apr, Oct)                               │
+│  • Annual      - Paid once a year                                           │
+│                                                                             │
+│  EXAMPLE ROWS (Typical Indian School):                                      │
+│  id │ component_name       │ component_type │ base_amount │ is_mandatory   │
+│  ───┼──────────────────────┼────────────────┼─────────────┼────────────────│
+│  1  │ Admission Fee        │ admission      │ 25000.00    │ TRUE           │
+│  2  │ Tuition Fee          │ tuition        │ 72000.00    │ TRUE           │
+│  3  │ Development Fund     │ development    │ 15000.00    │ TRUE           │
+│  4  │ Computer Lab Fee     │ lab            │ 6000.00     │ TRUE           │
+│  5  │ Science Lab Fee      │ lab            │ 6000.00     │ TRUE           │
+│  6  │ Library Fee          │ library        │ 3000.00     │ TRUE           │
+│  7  │ Sports Fee           │ sports         │ 4000.00     │ TRUE           │
+│  8  │ Exam Fee             │ exam           │ 2000.00     │ TRUE           │
+│  9  │ Transport Fee        │ transport      │ 24000.00    │ FALSE          │
+│  10 │ Hostel Fee           │ hostel         │ 96000.00    │ FALSE          │
+│  11 │ Security Deposit     │ security       │ 10000.00    │ TRUE           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 14: FEE TEMPLATES (Fee Structures)                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Fee structure templates that can be applied to classes/students.           │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  academic_year_id     │ Integer   │ YES      │ 2                            │
+│  name                 │ String    │ YES      │ "Class 6-8 Regular"          │
+│  description          │ String    │ NO       │ "Fee structure for middle..."│
+│  status               │ String    │ YES      │ "Active"                     │
+│  start_date           │ Date      │ NO       │ "2025-04-01"                 │
+│  end_date             │ Date      │ NO       │ "2026-03-31"                 │
+│                                                                             │
+│  STATUS VALUES:                                                             │
+│  • Draft    - Being prepared, not yet active                                │
+│  • Active   - Currently in use                                              │
+│  • Archived - Previous year, no longer active                               │
+│                                                                             │
+│  EXAMPLE ROWS:                                                              │
+│  id │ name                    │ academic_year_id │ status                   │
+│  ───┼─────────────────────────┼──────────────────┼──────────────────────────│
+│  1  │ Class 1-5 Regular       │ 2                │ Active                   │
+│  2  │ Class 6-8 Regular       │ 2                │ Active                   │
+│  3  │ Class 9-10 Regular      │ 2                │ Active                   │
+│  4  │ Class 11-12 Science     │ 2                │ Active                   │
+│  5  │ Class 11-12 Commerce    │ 2                │ Active                   │
+│  6  │ Class 11-12 Humanities  │ 2                │ Active                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 15: FEE TERMS (Payment Schedule)                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Defines when fees are due for each template.                               │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  fee_template_id      │ Integer   │ YES      │ 1 (Ref→FeeTemplate)          │
+│  name                 │ String    │ YES      │ "Term 1 - April-June"        │
+│  due_date             │ Date      │ YES      │ "2025-04-15"                 │
+│  amount               │ Decimal   │ YES      │ 35000.00                     │
+│                                                                             │
+│  TYPICAL INDIAN SCHOOL TERMS:                                               │
+│  • Quarterly: Q1 (Apr-Jun), Q2 (Jul-Sep), Q3 (Oct-Dec), Q4 (Jan-Mar)       │
+│  • Half-Yearly: H1 (Apr-Sep), H2 (Oct-Mar)                                  │
+│  • Annual: Single payment by April                                          │
+│                                                                             │
+│  EXAMPLE ROWS (Quarterly for Template 2):                                   │
+│  id │ fee_template_id │ name                  │ due_date   │ amount         │
+│  ───┼─────────────────┼───────────────────────┼────────────┼────────────────│
+│  1  │ 2               │ Q1 (Apr-Jun)          │ 2025-04-15 │ 28000.00       │
+│  2  │ 2               │ Q2 (Jul-Sep)          │ 2025-07-15 │ 28000.00       │
+│  3  │ 2               │ Q3 (Oct-Dec)          │ 2025-10-15 │ 28000.00       │
+│  4  │ 2               │ Q4 (Jan-Mar)          │ 2026-01-15 │ 28000.00       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 16: DISCOUNTS                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Available discount types that can be applied to students.                  │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  name                 │ String    │ YES      │ "Sibling Discount"           │
+│  description          │ Text      │ NO       │ "10% off for 2nd child..."   │
+│  type                 │ Enum      │ YES      │ "percentage" / "fixed_amount"│
+│  value                │ Decimal   │ YES      │ 10.00 (for %)  or 5000.00    │
+│  is_active            │ Boolean   │ YES      │ TRUE                         │
+│                                                                             │
+│  COMMON DISCOUNT TYPES (India):                                             │
+│  id │ name                      │ type       │ value │ description          │
+│  ───┼───────────────────────────┼────────────┼───────┼──────────────────────│
+│  1  │ Sibling Discount          │ percentage │ 10    │ 2nd child in school  │
+│  2  │ Staff Ward Concession     │ percentage │ 50    │ School staff children│
+│  3  │ Merit Scholarship         │ percentage │ 25    │ Academic excellence  │
+│  4  │ Sports Scholarship        │ percentage │ 20    │ Sports achievement   │
+│  5  │ Single Parent Concession  │ percentage │ 15    │ Single parent family │
+│  6  │ Defense Ward Concession   │ percentage │ 20    │ Armed forces children│
+│  7  │ EWS Scholarship           │ percentage │ 100   │ RTE quota students   │
+│  8  │ Early Payment Discount    │ fixed_amount│ 2000 │ Pay full year early  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 17: CLASS FEE STRUCTURE                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Maps fee components to specific classes with amounts.                      │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  class_id             │ Integer   │ YES      │ 1 (Ref→Class)                │
+│  component_id         │ Integer   │ YES      │ 2 (Ref→FeeComponent)         │
+│  academic_year_id     │ Integer   │ YES      │ 2 (Ref→AcademicYear)         │
+│  amount               │ Decimal   │ YES      │ 72000.00                     │
+│                                                                             │
+│  EXAMPLE (Class 8A fee structure):                                          │
+│  id │ class_id │ component_id │ academic_year_id │ amount                   │
+│  ───┼──────────┼──────────────┼──────────────────┼──────────────────────────│
+│  1  │ 1        │ 2            │ 2                │ 72000.00  (Tuition)      │
+│  2  │ 1        │ 3            │ 2                │ 15000.00  (Development)  │
+│  3  │ 1        │ 4            │ 2                │ 6000.00   (Computer Lab) │
+│  4  │ 1        │ 5            │ 2                │ 6000.00   (Science Lab)  │
+│  5  │ 1        │ 6            │ 2                │ 3000.00   (Library)      │
+│  6  │ 1        │ 7            │ 2                │ 4000.00   (Sports)       │
+│  7  │ 1        │ 8            │ 2                │ 2000.00   (Exam)         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 18: STUDENT FEE ASSIGNMENTS                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Optional fee components assigned to specific students.                     │
+│  (e.g., Transport fee only for students who opted for bus)                  │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  student_id           │ Integer   │ YES      │ 1 (Ref→Student)              │
+│  fee_component_id     │ Integer   │ YES      │ 9 (Transport Fee)            │
+│  is_active            │ Boolean   │ YES      │ TRUE                         │
+│                                                                             │
+│  EXAMPLE (Students with transport):                                         │
+│  id │ student_id │ fee_component_id │ is_active                             │
+│  ───┼────────────┼──────────────────┼───────────────────────────────────────│
+│  1  │ 1          │ 9                │ TRUE    (Student 1 has transport)     │
+│  2  │ 3          │ 9                │ TRUE    (Student 3 has transport)     │
+│  3  │ 5          │ 9                │ TRUE    (Student 5 has transport)     │
+│  4  │ 5          │ 10               │ TRUE    (Student 5 also has hostel)   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                    PART E: EXAMINATIONS (OPTIONAL)
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 19: EXAM TYPES                                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Types of examinations conducted in the school.                             │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  exam_type_id         │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  type_name            │ String    │ YES      │ "Unit Test 1"                │
+│                                                                             │
+│  TYPICAL EXAM TYPES (CBSE Pattern):                                         │
+│  exam_type_id │ type_name                                                   │
+│  ─────────────┼─────────────────────────────────────────────────────────────│
+│  1            │ Unit Test 1 (UT1)                                           │
+│  2            │ Unit Test 2 (UT2)                                           │
+│  3            │ Mid-Term Examination                                        │
+│  4            │ Unit Test 3 (UT3)                                           │
+│  5            │ Unit Test 4 (UT4)                                           │
+│  6            │ Pre-Board Examination                                       │
+│  7            │ Annual/Final Examination                                    │
+│  8            │ Practical Examination                                       │
+│  9            │ Project Assessment                                          │
+│  10           │ Weekly Test                                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 20: HOLIDAYS (India Calendar)                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  National and state holidays for exam scheduling avoidance.                 │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  name                 │ String    │ YES      │ "Republic Day"               │
+│  date                 │ Date      │ YES      │ "2026-01-26"                 │
+│  holiday_type         │ String    │ YES      │ "national" / "state"         │
+│  state                │ String    │ NO       │ "Karnataka" (for state only) │
+│  is_optional          │ Boolean   │ NO       │ FALSE                        │
+│                                                                             │
+│  HOLIDAY_TYPE VALUES:                                                       │
+│  • national         - National holidays (all states)                        │
+│  • state            - State-specific holidays                               │
+│  • school_specific  - School's own holidays                                 │
+│                                                                             │
+│  NATIONAL HOLIDAYS 2026 (Fixed):                                            │
+│  name                   │ date       │ holiday_type                         │
+│  ───────────────────────┼────────────┼──────────────────────────────────────│
+│  Republic Day           │ 2026-01-26 │ national                             │
+│  Independence Day       │ 2026-08-15 │ national                             │
+│  Gandhi Jayanti         │ 2026-10-02 │ national                             │
+│                                                                             │
+│  VARIABLE HOLIDAYS 2026 (Approximate - verify each year):                   │
+│  Holi                   │ 2026-03-14 │ national                             │
+│  Good Friday            │ 2026-04-03 │ national                             │
+│  Mahavir Jayanti        │ 2026-04-11 │ national                             │
+│  Buddha Purnima         │ 2026-05-12 │ national                             │
+│  Eid ul-Fitr            │ 2026-03-21 │ national                             │
+│  Eid ul-Adha            │ 2026-05-28 │ national                             │
+│  Raksha Bandhan         │ 2026-08-21 │ national                             │
+│  Janmashtami            │ 2026-08-24 │ national                             │
+│  Milad un-Nabi          │ 2026-08-27 │ national                             │
+│  Dussehra               │ 2026-10-19 │ national                             │
+│  Diwali                 │ 2026-11-07 │ national                             │
+│  Guru Nanak Jayanti     │ 2026-11-14 │ national                             │
+│  Christmas              │ 2026-12-25 │ national                             │
+│                                                                             │
+│  STATE-SPECIFIC (Example for Karnataka):                                    │
+│  Kannada Rajyotsava     │ 2026-11-01 │ state     │ Karnataka                │
+│  Ugadi                  │ 2026-03-22 │ state     │ Karnataka, AP, Telangana │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                    PART F: E-COMMERCE / STORE (OPTIONAL)
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 21: PRODUCT CATEGORIES                                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Categories for organizing products in the school store.                    │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  category_id          │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  category_name        │ String    │ YES      │ "Uniforms"                   │
+│  description          │ Text      │ NO       │ "School uniforms..."         │
+│  display_order        │ Integer   │ NO       │ 1                            │
+│  icon_url             │ URL       │ NO       │ https://...icon.png          │
+│  is_active            │ Boolean   │ YES      │ TRUE                         │
+│                                                                             │
+│  TYPICAL CATEGORIES:                                                        │
+│  category_id │ category_name     │ display_order                            │
+│  ────────────┼───────────────────┼──────────────────────────────────────────│
+│  1           │ Uniforms          │ 1                                        │
+│  2           │ Books             │ 2                                        │
+│  3           │ Stationery        │ 3                                        │
+│  4           │ Sports Equipment  │ 4                                        │
+│  5           │ Lab Coats & Gear  │ 5                                        │
+│  6           │ Bags & Accessories│ 6                                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 22: PRODUCTS                                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Items available for purchase in the school store.                          │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  product_id           │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  category_id          │ Integer   │ NO       │ 1 (Ref→Category)             │
+│  name                 │ String    │ YES      │ "Summer Uniform Shirt"       │
+│  description          │ Text      │ NO       │ "White cotton shirt..."      │
+│  price                │ Decimal   │ YES      │ 450.00                       │
+│  stock_quantity       │ Integer   │ YES      │ 100                          │
+│  sku                  │ String    │ NO       │ "UNI-SHIRT-WHT-M"            │
+│  image_url            │ URL       │ NO       │ https://...shirt.png         │
+│  manufacturer         │ String    │ NO       │ "School Uniform Co."         │
+│  reorder_level        │ Integer   │ NO       │ 20                           │
+│  reorder_quantity     │ Integer   │ NO       │ 50                           │
+│  is_active            │ Boolean   │ YES      │ TRUE                         │
+│                                                                             │
+│  EXAMPLE PRODUCTS:                                                          │
+│  name                    │ category   │ price  │ stock │ sku                │
+│  ────────────────────────┼────────────┼────────┼───────┼────────────────────│
+│  Summer Shirt (S)        │ Uniforms   │ 450.00 │ 50    │ UNI-SHIRT-S        │
+│  Summer Shirt (M)        │ Uniforms   │ 450.00 │ 75    │ UNI-SHIRT-M        │
+│  Summer Shirt (L)        │ Uniforms   │ 480.00 │ 60    │ UNI-SHIRT-L        │
+│  Winter Sweater (M)      │ Uniforms   │ 850.00 │ 40    │ UNI-SWEAT-M        │
+│  School Tie              │ Uniforms   │ 180.00 │ 100   │ UNI-TIE            │
+│  Notebook (200 pages)    │ Stationery │ 45.00  │ 500   │ STAT-NB-200        │
+│  Geometry Box            │ Stationery │ 120.00 │ 150   │ STAT-GEOBOX        │
+│  NCERT Math Class 10     │ Books      │ 150.00 │ 80    │ BOOK-NCERT-M10     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                   PART G: TIMETABLE MODULE (OPTIONAL)
+================================================================================
+================================================================================
+
+See also: data_format.txt in Timetable folder for detailed timetable-specific
+requirements. This section covers the ERP-integrated data.
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 23: PERIODS MASTER                                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Defines the daily schedule grid (period timings).                          │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  period_number        │ Integer   │ YES      │ 1                            │
+│  period_name          │ String    │ NO       │ "Period 1" or "Assembly"     │
+│  start_time           │ Time      │ YES      │ "08:00"                      │
+│  end_time             │ Time      │ YES      │ "08:45"                      │
+│  duration_minutes     │ Integer   │ YES      │ 45                           │
+│  is_recess            │ Boolean   │ YES      │ FALSE                        │
+│  day_of_week          │ String    │ NO       │ NULL (or specific day)       │
+│  is_active            │ Boolean   │ YES      │ TRUE                         │
+│                                                                             │
+│  EXAMPLE (Typical Indian School Day):                                       │
+│  period_number │ period_name    │ start_time │ end_time │ is_recess         │
+│  ──────────────┼────────────────┼────────────┼──────────┼───────────────────│
+│  0             │ Assembly       │ 07:45      │ 08:00    │ FALSE             │
+│  1             │ Period 1       │ 08:00      │ 08:45    │ FALSE             │
+│  2             │ Period 2       │ 08:45      │ 09:30    │ FALSE             │
+│  3             │ Period 3       │ 09:30      │ 10:15    │ FALSE             │
+│  -             │ Short Break    │ 10:15      │ 10:30    │ TRUE              │
+│  4             │ Period 4       │ 10:30      │ 11:15    │ FALSE             │
+│  5             │ Period 5       │ 11:15      │ 12:00    │ FALSE             │
+│  -             │ Lunch Break    │ 12:00      │ 12:40    │ TRUE              │
+│  6             │ Period 6       │ 12:40      │ 13:25    │ FALSE             │
+│  7             │ Period 7       │ 13:25      │ 14:10    │ FALSE             │
+│  8             │ Period 8       │ 14:10      │ 14:55    │ FALSE             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 24: RESOURCES (Labs, Grounds, Special Rooms)                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Shared resources that need to be scheduled without conflicts.              │
+│                                                                             │
+│  Column Name              │ Type    │ Required │ Example                    │
+│  ─────────────────────────┼─────────┼──────────┼────────────────────────────│
+│  resource_id              │ String  │ YES      │ "LAB-PHY-1"                │
+│  resource_type            │ String  │ YES      │ "Physics Lab"              │
+│  name                     │ String  │ YES      │ "Physics Lab 1"            │
+│  max_simultaneous_capacity│ Integer │ YES      │ 1                          │
+│  capacity_students        │ Integer │ NO       │ 40                         │
+│                                                                             │
+│  See data_format.txt (Timetable) for detailed examples.                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 25: CLASS-SUBJECT-TEACHER MAP (For Timetable)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ⚠️ CRITICAL: This is the core input for timetable generation.              │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  section_id           │ String    │ YES      │ "8A"                         │
+│  subject_id           │ String    │ YES      │ "MATH"                       │
+│  teacher_id           │ String    │ YES      │ "T001"                       │
+│  periods_per_week     │ Integer   │ YES      │ 6                            │
+│                                                                             │
+│  See data_format.txt (Timetable) for detailed format and examples.          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 26: LANGUAGE GROUPS (For Parallel Language Teaching)                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  For schools with 2nd/3rd language choices (Hindi/Sanskrit/Regional).       │
+│                                                                             │
+│  See data_format.txt (Timetable) for detailed format.                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                   PART H: CLUBS & ACTIVITIES (OPTIONAL)
+================================================================================
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 27: CLUBS                                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Extra-curricular clubs and societies.                                      │
+│                                                                             │
+│  Column Name              │ Type    │ Required │ Example                    │
+│  ─────────────────────────┼─────────┼──────────┼────────────────────────────│
+│  id                       │ Integer │ AUTO     │ 1                          │
+│  school_id                │ Integer │ YES      │ 1                          │
+│  name                     │ String  │ YES      │ "Science Club"             │
+│  description              │ Text    │ NO       │ "Explore science..."       │
+│  club_type                │ Enum    │ YES      │ "academic"                 │
+│  teacher_in_charge_id     │ Integer │ YES      │ 5 (Ref→Teacher)            │
+│  assistant_teacher_id     │ Integer │ NO       │ 6 (Ref→Teacher)            │
+│  academic_year_id         │ Integer │ YES      │ 2                          │
+│  meeting_frequency        │ Enum    │ YES      │ "weekly"                   │
+│  max_members              │ Integer │ NO       │ 30                         │
+│  registration_open        │ Boolean │ YES      │ TRUE                       │
+│  is_active                │ Boolean │ YES      │ TRUE                       │
+│                                                                             │
+│  CLUB_TYPE VALUES:                                                          │
+│  • academic    - Debate, Quiz, Science, Math clubs                          │
+│  • sports      - Cricket, Football, Basketball, Chess clubs                 │
+│  • arts        - Music, Dance, Drama, Art clubs                             │
+│  • technical   - Robotics, Coding, Electronics clubs                        │
+│  • social      - NSS, Eco Club, Community Service                           │
+│                                                                             │
+│  MEETING_FREQUENCY VALUES:                                                  │
+│  • weekly, biweekly, monthly                                                │
+│                                                                             │
+│  EXAMPLE CLUBS:                                                             │
+│  name                 │ club_type  │ teacher_in_charge │ meeting_frequency  │
+│  ─────────────────────┼────────────┼───────────────────┼────────────────────│
+│  Science Club         │ academic   │ 5 (Physics Sir)   │ weekly             │
+│  Debate Society       │ academic   │ 3 (English Ma'am) │ weekly             │
+│  Cricket Team         │ sports     │ 10 (PE Sir)       │ biweekly           │
+│  Music Club           │ arts       │ 12 (Music Ma'am)  │ weekly             │
+│  Eco Club             │ social     │ 6 (Bio Ma'am)     │ monthly            │
+│  Robotics Club        │ technical  │ 8 (CS Sir)        │ weekly             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 28: ACHIEVEMENT POINT RULES                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Point system for student achievements (gamification).                      │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example                      │
+│  ─────────────────────┼───────────┼──────────┼──────────────────────────────│
+│  id                   │ Integer   │ AUTO     │ 1                            │
+│  school_id            │ Integer   │ YES      │ 1                            │
+│  achievement_type     │ Enum      │ YES      │ "academic"                   │
+│  category_name        │ String    │ YES      │ "Olympiad"                   │
+│  base_points          │ Integer   │ YES      │ 50                           │
+│  level_multiplier     │ JSON      │ NO       │ {"school":1, "state":2, ...} │
+│  is_active            │ Boolean   │ YES      │ TRUE                         │
+│                                                                             │
+│  ACHIEVEMENT_TYPE VALUES:                                                   │
+│  • academic           - Academic achievements (olympiads, scholarships)     │
+│  • sports             - Sports achievements                                 │
+│  • cultural           - Cultural achievements (dance, music, drama)         │
+│  • leadership         - Leadership roles (prefect, captain)                 │
+│  • community_service  - Social service activities                           │
+│                                                                             │
+│  LEVEL_MULTIPLIER (default):                                                │
+│  {                                                                          │
+│    "school": 1.0,           (School level)                                  │
+│    "district": 1.5,         (District/Zonal level)                          │
+│    "state": 2.0,            (State level)                                   │
+│    "national": 3.0,         (National level)                                │
+│    "international": 5.0     (International level)                           │
+│  }                                                                          │
+│                                                                             │
+│  EXAMPLE RULES:                                                             │
+│  achievement_type │ category_name         │ base_points                     │
+│  ─────────────────┼───────────────────────┼─────────────────────────────────│
+│  academic         │ Olympiad Winner       │ 100                             │
+│  academic         │ Subject Topper        │ 50                              │
+│  academic         │ 100% Attendance       │ 30                              │
+│  sports           │ Competition Winner    │ 80                              │
+│  sports           │ Team Captain          │ 40                              │
+│  cultural         │ Performance           │ 50                              │
+│  leadership       │ School Prefect        │ 60                              │
+│  leadership       │ House Captain         │ 50                              │
+│  community_service│ NSS Camp              │ 40                              │
+│                                                                             │
+│  CALCULATION EXAMPLE:                                                       │
+│  Student wins State-level Science Olympiad                                  │
+│  = base_points (100) × level_multiplier["state"] (2.0) = 200 points         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+================================================================================
+                         DATA SUMMARY & COUNTS
+================================================================================
+================================================================================
+
+For a typical school with:
+- Classes 1-12 with 3 sections each = 36 sections
+- ~1000 students
+- ~50 teachers
+
+Expected data volumes:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Sheet                        │ Expected Rows                               │
+├───────────────────────────────┼─────────────────────────────────────────────┤
+│  PART A: CORE SETUP                                                         │
+│  1. School Master             │ 1                                           │
+│  2. Academic Years            │ 2-3 (current + past)                        │
+│  3. Roles Definition          │ 8 (pre-seeded)                              │
+│  4. User Profiles             │ ~1200 (students + teachers + parents + staff)│
+├───────────────────────────────┼─────────────────────────────────────────────┤
+│  PART B: ACADEMIC STRUCTURE                                                 │
+│  5. Classes/Sections          │ 36                                          │
+│  6. Subjects Master           │ 30-40                                       │
+│  7. Streams                   │ 3-5 (for 11-12 only)                        │
+│  8. Teachers                  │ 50                                          │
+│  9. Teacher-Subject Mapping   │ 80-100                                      │
+│  10. Class-Subject Mapping    │ 300-400 (36 classes × 10 subjects avg)      │
+├───────────────────────────────┼─────────────────────────────────────────────┤
+│  PART C: STUDENT MANAGEMENT                                                 │
+│  11. Students                 │ 1000                                        │
+│  12. Student Contacts         │ 2000-2500 (2-2.5 per student)               │
+├───────────────────────────────┼─────────────────────────────────────────────┤
+│  PART D: FEE MANAGEMENT                                                     │
+│  13. Fee Components           │ 10-15                                       │
+│  14. Fee Templates            │ 5-8                                         │
+│  15. Fee Terms                │ 20-32 (4 terms × 5-8 templates)             │
+│  16. Discounts                │ 5-10                                        │
+│  17. Class Fee Structure      │ 200-300                                     │
+│  18. Student Fee Assignments  │ 200-500 (optional fees)                     │
+├───────────────────────────────┼─────────────────────────────────────────────┤
+│  PART E: EXAMINATIONS                                                       │
+│  19. Exam Types               │ 8-10                                        │
+│  20. Holidays                 │ 25-40                                       │
+├───────────────────────────────┼─────────────────────────────────────────────┤
+│  PART F: E-COMMERCE                                                         │
+│  21. Product Categories       │ 5-8                                         │
+│  22. Products                 │ 50-200                                      │
+├───────────────────────────────┼─────────────────────────────────────────────┤
+│  PART G: TIMETABLE                                                          │
+│  23. Periods Master           │ 10-12                                       │
+│  24. Resources                │ 10-20                                       │
+│  25. Class-Subject-Teacher Map│ 400-500                                     │
+│  26. Language Groups          │ 5-10                                        │
+├───────────────────────────────┼─────────────────────────────────────────────┤
+│  PART H: CLUBS                                                              │
+│  27. Clubs                    │ 10-20                                       │
+│  28. Achievement Point Rules  │ 15-25                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                      MINIMUM VIABLE DATA (MVP)
+================================================================================
+
+To get the ERP running with basic functionality, you need ONLY:
+
+1. School Master (1 row)
+2. Academic Years (1 row - current year)
+3. User Profiles (all users)
+4. Classes/Sections
+5. Subjects Master
+6. Teachers
+7. Students
+8. Student Contacts
+
+All other sheets can be added incrementally as you enable modules.
+
+================================================================================
+                      DATA COLLECTION ORDER
+================================================================================
+
+Recommended order for client onboarding:
+
+PHASE 1: Foundation (Week 1)
+├── School Master
+├── Academic Years
+└── Roles (pre-seeded)
+
+PHASE 2: People (Week 1-2)
+├── User Profiles (all staff first)
+├── Teachers
+├── User Profiles (students)
+├── Students
+└── Student Contacts (parents)
+
+PHASE 3: Academics (Week 2-3)
+├── Subjects Master
+├── Classes/Sections
+├── Streams (if 11-12)
+├── Teacher-Subject Mapping
+└── Class-Subject Mapping
+
+PHASE 4: Operations (Week 3-4)
+├── Periods Master
+├── Exam Types
+├── Holidays
+└── Clubs (optional)
+
+PHASE 5: Finance (Week 4-5)
+├── Fee Components
+├── Fee Templates
+├── Fee Terms
+├── Discounts
+├── Class Fee Structure
+└── Student Fee Assignments
+
+PHASE 6: Additional (As needed)
+├── Products & Categories
+├── Timetable Resources
+├── Achievement Rules
+└── Language Groups
+
+================================================================================
+                           END OF DOCUMENT
+================================================================================

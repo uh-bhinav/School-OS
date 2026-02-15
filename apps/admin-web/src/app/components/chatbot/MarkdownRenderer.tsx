@@ -125,6 +125,38 @@ function cleanupSeparators(text: string): string {
     .replace(/\n[-=]{3,}$/gm, '\n---');
 }
 
+/**
+ * CRITICAL: Strip code blocks, Mermaid diagrams, and ASCII art from LLM responses.
+ * LLMs often output diagrams as text which looks terrible in chat.
+ * These should be handled by actual chart rendering, not displayed as text.
+ */
+function stripCodeBlocksAndDiagrams(text: string): string {
+  let result = text;
+
+  // Remove Mermaid diagrams (```mermaid ... ```)
+  result = result.replace(/```mermaid[\s\S]*?```/gi, '[Chart visualization available]');
+
+  // Remove graph/flowchart text definitions
+  result = result.replace(/```graph[\s\S]*?```/gi, '');
+  result = result.replace(/graph\s+(LR|TD|TB|RL|BT)\s+[\s\S]*?(?=\n\n|\n[A-Z]|$)/gi, '');
+
+  // Remove subgraph blocks
+  result = result.replace(/subgraph[\s\S]*?end/gi, '');
+
+  // Remove ASCII art charts/diagrams (lines with arrows, boxes)
+  result = result.replace(/.*--+>.*\n?/g, '');
+  result = result.replace(/\[[^\]]*\]\s*--+[>\-]/g, '');
+  result = result.replace(/[A-Za-z]+\([^)]*\)\s*--+>\s*[A-Za-z_]+/g, '');
+
+  // Remove large code blocks (more than 5 lines of code usually means diagram/chart)
+  result = result.replace(/```[\s\S]{200,}?```/g, '');
+
+  // Clean up multiple newlines
+  result = result.replace(/\n\s*\n\s*\n+/g, '\n\n');
+
+  return result.trim();
+}
+
 export default function MarkdownRenderer({
   content,
   stripEmojis: forceStripEmojis,
@@ -137,11 +169,13 @@ export default function MarkdownRenderer({
   // Process the content - order matters!
   // 1. First unescape HTML entities
   let processedContent = unescapeHtmlEntities(content);
-  // 2. Normalize newlines and fix formatting
+  // 2. CRITICAL: Strip code blocks, Mermaid, diagrams BEFORE markdown processing
+  processedContent = stripCodeBlocksAndDiagrams(processedContent);
+  // 3. Normalize newlines and fix formatting
   processedContent = normalizeContent(processedContent);
-  // 3. Clean up separators
+  // 4. Clean up separators
   processedContent = cleanupSeparators(processedContent);
-  // 4. Optionally strip emojis
+  // 5. Optionally strip emojis
   if (shouldStripEmojis) {
     processedContent = stripEmojisFromText(processedContent);
   }

@@ -14,7 +14,7 @@ import {
 export const MOCK_CLASS_CO_ATTAINMENT: ClassCOAttainment[] = [
   {
     class_id: 6,
-    class_name: "Class 10 A",
+    class_name: "Grade 10 A",
     exam_id: 1,
     exam_name: "Mid-Term Examination 2025",
     subject_id: 1,
@@ -30,7 +30,7 @@ export const MOCK_CLASS_CO_ATTAINMENT: ClassCOAttainment[] = [
   },
   {
     class_id: 6,
-    class_name: "Class 10 A",
+    class_name: "Grade 10 A",
     exam_id: 1,
     exam_name: "Mid-Term Examination 2025",
     subject_id: 2,
@@ -46,7 +46,7 @@ export const MOCK_CLASS_CO_ATTAINMENT: ClassCOAttainment[] = [
   },
   {
     class_id: 6,
-    class_name: "Class 10 A",
+    class_name: "Grade 10 A",
     exam_id: 1,
     exam_name: "Mid-Term Examination 2025",
     subject_id: 3,
@@ -68,7 +68,7 @@ export const MOCK_STUDENT_CO_ATTAINMENT: StudentCOAttainment[] = [
     student_name: "Aarav Sharma",
     roll_no: "10A01",
     class_id: 6,
-    class_name: "Class 10 A",
+    class_name: "Grade 10 A",
     exam_id: 1,
     exam_name: "Mid-Term Examination 2025",
     subjects: [
@@ -107,7 +107,7 @@ export const MOCK_STUDENT_CO_ATTAINMENT: StudentCOAttainment[] = [
     student_name: "Priya Patel",
     roll_no: "10A02",
     class_id: 6,
-    class_name: "Class 10 A",
+    class_name: "Grade 10 A",
     exam_id: 1,
     exam_name: "Mid-Term Examination 2025",
     subjects: [
@@ -132,7 +132,7 @@ export const MOCK_STUDENT_CO_ATTAINMENT: StudentCOAttainment[] = [
     student_name: "Rohan Gupta",
     roll_no: "10A03",
     class_id: 6,
-    class_name: "Class 10 A",
+    class_name: "Grade 10 A",
     exam_id: 1,
     exam_name: "Mid-Term Examination 2025",
     subjects: [
@@ -167,7 +167,7 @@ export const MOCK_CO_ATTAINMENT: COAttainment[] = [
     student_id: 1001,
     student_name: "Aarav Sharma",
     class_id: 6,
-    class_name: "Class 10 A",
+    class_name: "Grade 10 A",
     exam_id: 1,
     exam_name: "Mid-Term Examination 2025",
     max_marks: 20,
@@ -186,7 +186,7 @@ export const MOCK_CO_ATTAINMENT: COAttainment[] = [
     student_id: 1001,
     student_name: "Aarav Sharma",
     class_id: 6,
-    class_name: "Class 10 A",
+    class_name: "Grade 10 A",
     exam_id: 1,
     exam_name: "Mid-Term Examination 2025",
     max_marks: 15,
@@ -269,7 +269,7 @@ export const getCOAttainmentBySubject = (
       subject_id: subjectId,
       subject_name: subject.name,
       class_id: 6, // Class 10A
-      class_name: "Class 10 A",
+      class_name: "Grade 10 A",
       exam_id: 1,
       exam_name: "Mid-Term Examination 2025",
       max_marks: maxMarks,

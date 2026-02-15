@@ -571,6 +571,23 @@ class TwoPhaseSolver:
                 )
                 break
 
+            # SPECIAL HANDLING: Language sync is the last resort
+            # Show a detailed warning before relaxing it
+            if next_to_relax == "language_sync":
+                self.status.add_log(
+                    "WARNING: About to relax Language Block Synchronization! "
+                    "This is a CRITICAL constraint for Indian schools. "
+                    "Language teachers for the same tier (1st/2nd/3rd language) "
+                    "will NO LONGER be guaranteed to teach simultaneously. "
+                    "Students may not be able to split into language groups. "
+                    "This usually happens when: "
+                    "(1) Not enough language teachers for the number of sections, "
+                    "(2) Teacher availability conflicts with language requirements, "
+                    "(3) Too many constraints on teacher load. "
+                    "Consider reviewing your teacher assignments before accepting this solution.",
+                    "warning",
+                )
+
             self.status.add_log(f"Relaxing constraint: {next_to_relax}")
             relaxed_constraints.append(next_to_relax)
 
@@ -820,6 +837,19 @@ class TwoPhaseSolver:
                 f"Solution found after relaxing {len(relaxation_result.relaxed_constraints)} "
                 f"constraint(s): {', '.join(relaxed_names)}"
             )
+
+            # Special warning for language sync relaxation
+            if "language_sync" in relaxation_result.relaxed_constraints:
+                warnings.append(
+                    "⚠️ CRITICAL: Language Block Synchronization was relaxed! "
+                    "This means language teachers for the same tier (1st/2nd/3rd language) "
+                    "are NOT guaranteed to teach simultaneously. Students may not be able "
+                    "to split into language groups (e.g., Hindi/Kannada/Sanskrit). "
+                    "This typically occurs when there aren't enough language teachers "
+                    "or when teacher availability conflicts with requirements. "
+                    "Please review your language teacher assignments."
+                )
+
             result["warnings"] = warnings
 
         return result

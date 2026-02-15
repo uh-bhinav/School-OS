@@ -35,6 +35,8 @@ import { LeaveManagementRoute, LeaveProxyAssignmentPage } from "./routes/academi
 import TasksPage from "./routes/academics/tasks/TasksPage";
 import { SubjectsPage, SubjectDetailPage } from "./routes/academics/subjects";
 import { COAttainmentPage } from "./routes/academics/obe";
+import ResultsPage from "./routes/academics/results/ResultsPage";
+import AcademicAnalyticsPage from "./routes/academics/analytics/AcademicAnalyticsPage";
 import AnnouncementsPage from "./routes/announcements";
 import CommunicationsPage from "./routes/communications";
 import FeeManagementPage from "./routes/finance";
@@ -47,6 +49,7 @@ import FeeTemplatesPage from "./routes/finance/fee-templates/FeeTemplatesPage";
 import ClassMappingPage from "./routes/finance/class-mapping/ClassMappingPage";
 import StudentOverridesPage from "./routes/finance/overrides/OverridesPage";
 import StudentDiscountsPage from "./routes/finance/student-discounts/StudentDiscountsPage";
+import VouchersPage from "./routes/finance/vouchers/VouchersPage";
 import AlbumsPage from "./routes/media/albums/AlbumsPage";
 import AlbumDetailPage from "./routes/albums/AlbumDetailPage";
 import ProductsPage from "./routes/media/products/ProductsPage";
@@ -351,6 +354,14 @@ const router = createBrowserRouter([
         element: <COAttainmentPage />,
       },
       {
+        path: "academics/results",
+        element: <ResultsPage />,
+      },
+      {
+        path: "academics/analytics",
+        element: <AcademicAnalyticsPage />,
+      },
+      {
         path: "academics/achievements",
         element: <AchievementsPage />,
       },
@@ -405,6 +416,10 @@ const router = createBrowserRouter([
       {
         path: "finance/payments",
         element: <PaymentsPage />,
+      },
+      {
+        path: "finance/vouchers",
+        element: <VouchersPage />,
       },
       {
         path: "finance/discounts",

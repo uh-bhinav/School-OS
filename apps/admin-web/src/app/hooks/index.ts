@@ -1,3 +1,12 @@
+// ============================================================================
+// HOOKS INDEX - Export all custom hooks
+// ============================================================================
+
+// Authentication hooks
+export { useAuth, useUserRole, useSchoolId, useIsAuthenticated } from './useAuth';
+export type { AuthState } from './useAuth';
+
+// Speech and voice hooks
 export { useSpeechRecognition } from './useSpeechRecognition';
 export type { UseSpeechRecognitionOptions, UseSpeechRecognitionReturn } from './useSpeechRecognition';
 

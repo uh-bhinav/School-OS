@@ -14,6 +14,7 @@ The SchoolOS Chatbot is an intelligent AI assistant integrated globally into the
 - **Real-time Loading**: Visual feedback while the assistant processes requests
 - **Error Resilience**: Graceful error handling with retry capabilities
 - **Responsive Design**: Works on mobile, tablet, and desktop
+- **📊 Inline Chart Rendering**: AI-generated visualizations displayed directly in chat messages
 
 ### User Experience
 - **Glassmorphism UI**: Modern, translucent design with backdrop blur
@@ -34,10 +35,12 @@ chatbot/
 ├── ChatDock.tsx              # Main chat container
 ├── SessionSidebar.tsx        # Multi-session management
 ├── MessageList.tsx           # Message bubbles with avatars
+├── ChatChart.tsx             # 📊 NEW: Inline chart visualization
 ├── InputBar.tsx              # Multi-line input with suggestions
 ├── ContextChips.tsx          # Visual context indicators
 ├── EmptyState.tsx            # Onboarding screen
 ├── TooltipHelp.tsx           # Help information
+├── MarkdownRenderer.tsx      # Rich text rendering
 └── styles.css                # Custom animations and theme
 ```
 
@@ -96,8 +99,34 @@ interface ChatState {
   role: "assistant";
   content: string;
   trace?: { module?: string; leaf?: string };
+  // NEW: Optional chart visualization
+  chart?: {
+    base64_image: string;  // PNG encoded as base64
+    title?: string;        // Chart title (for accessibility)
+    chart_type?: string;   // line, bar, pie, scatter, etc.
+  };
 }
 ```
+
+### 📊 Inline Chart Rendering
+
+When the AI assistant determines a visualization would enhance its response, it generates a chart that's rendered inline within the chat message bubble.
+
+**Supported Chart Types** (from backend `graph_tool.py`):
+- Line charts (trends over time)
+- Bar charts (comparisons)
+- Pie charts (distributions)
+- Scatter plots (correlations)
+- Multi-line charts (multiple series)
+- Stacked bar charts
+- Horizontal bar charts
+
+**Frontend Handling** (`ChatChart.tsx`):
+- Validates base64 image data
+- Shows loading skeleton while image loads
+- Provides error fallback if image fails
+- Click to expand for full-screen view
+- Responsive sizing (max-height: 260px mobile, 300px tablet, 360px desktop)
 
 **Headers**:
 - `Authorization: Bearer <JWT>`

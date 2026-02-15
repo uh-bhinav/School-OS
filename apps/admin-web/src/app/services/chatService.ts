@@ -26,6 +26,18 @@ console.log("🔍 Environment variable VITE_ADK_API_URL:", import.meta.env.VITE_
 export type ChatRole = "principal" | "super_admin";
 
 /**
+ * Chart data from backend graph_tool
+ */
+export interface ChartResponse {
+  /** Base64 encoded PNG image */
+  base64_image: string;
+  /** Chart title (optional) */
+  title?: string;
+  /** Chart type: line, bar, pie, scatter, etc. */
+  chart_type?: string;
+}
+
+/**
  * Response from the ADK backend
  */
 export interface AgentResponse {
@@ -33,6 +45,8 @@ export interface AgentResponse {
   agentId: string;
   timestamp: string;
   session_id: string;
+  /** Optional chart visualization */
+  chart?: ChartResponse;
 }
 
 /**

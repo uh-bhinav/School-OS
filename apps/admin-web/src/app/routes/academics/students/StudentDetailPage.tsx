@@ -129,13 +129,22 @@ export default function StudentDetailPage() {
 
       {activeTab === 3 && (
         <Box>
-          <ReportCardPanel studentId={student.student_id} />
+          <ReportCardPanel
+            studentId={student.student_id}
+            studentName={student.full_name}
+            motherName={student.mother_name}
+            fatherName={student.father_name}
+            rollNo={student.roll_number}
+            admissionNo={student.admission_no}
+            dateOfBirth={student.date_of_birth}
+            address={student.address}
+          />
         </Box>
       )}
 
       {activeTab === 4 && (
         <Box>
-          <TimetableMiniView studentId={student.student_id} classId={student.class_id} />
+          <TimetableMiniView studentId={student.student_id} classId={student.class_id} section={student.section} />
         </Box>
       )}
 

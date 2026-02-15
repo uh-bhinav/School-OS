@@ -35,6 +35,8 @@ prometheus-fastapi-instrumentator = "^7.1.0"
 reportlab = "^4.4.4"
 pytest-xdist = "^3.8.0"
 faster-whisper = "^1.2.1"
+matplotlib = "^3.10.8"
+seaborn = "^0.13.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.4.2,<9.0.0"

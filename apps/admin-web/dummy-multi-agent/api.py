@@ -86,6 +86,14 @@ class ChatResponse(BaseModel):
     session_id: str
     agentId: str
     timestamp: str
+    chart: Optional[dict] = None  # Optional chart data for visualizations
+    formatted: Optional[dict] = None  # Optional templated response format
+    governed: Optional[
+        bool
+    ] = None  # NEW: True if response was processed by Response Governor
+    bullets: Optional[
+        list[str]
+    ] = None  # NEW: Structured bullet points for UI rendering
 
 
 class NewSessionRequest(BaseModel):
@@ -133,24 +141,24 @@ async def health_check():
     """Health check endpoint."""
     return HealthResponse(
         status="healthy",
-        version="3.0.0",
+        version="3.1.0",  # Version bump for chart capabilities
         agents=[
             "school_management_agent",
-            "attendance_agent",
-            "marks_agent",
-            "fees_agent",
+            "attendance_agent (charts)",
+            "marks_agent (charts)",
+            "fees_agent (charts)",
             "timetable_agent",
             "hr_agent",
-            "budget_agent",
+            "budget_agent (charts)",
             "email_agent",
         ],
         super_admin_agents=[
-            "group_overview_agent",
-            "group_finance_agent",
-            "group_attendance_agent",
-            "compliance_risk_agent",
-            "group_communication_agent",
-            "schools_overview_agent",
+            "group_overview_agent (charts)",
+            "group_finance_agent (charts)",
+            "group_attendance_agent (charts)",
+            "compliance_risk_agent (charts)",
+            "group_communication_agent (charts)",
+            "schools_overview_agent (charts)",
         ],
     )
 
@@ -218,6 +226,10 @@ async def send_message(request: ChatRequest):
                 session_id=session_id,
                 agentId=response.get("agent_id", "group_overview_agent"),
                 timestamp=datetime.now().isoformat(),
+                chart=response.get("chart"),  # Include chart if present
+                formatted=response.get("formatted"),  # Include templated format
+                governed=response.get("governed"),  # Include governor flag
+                bullets=response.get("bullets"),  # Include extracted bullets
             )
         except Exception as e:
             raise HTTPException(
@@ -245,6 +257,10 @@ async def send_message(request: ChatRequest):
                 session_id=session_id,
                 agentId=response.get("agent_id", "school_management_agent"),
                 timestamp=datetime.now().isoformat(),
+                chart=response.get("chart"),  # Include chart if present
+                formatted=response.get("formatted"),  # Include templated format
+                governed=response.get("governed"),  # Include governor flag
+                bullets=response.get("bullets"),  # Include extracted bullets
             )
         except Exception as e:
             raise HTTPException(

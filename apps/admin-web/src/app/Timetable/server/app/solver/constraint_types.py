@@ -124,41 +124,15 @@ HARD_CORE_CONSTRAINTS = [
 ]
 
 # HARD_RELAXABLE Constraints - Can be relaxed in priority order
-# Priority: lower number = relax first
+# Priority: lower number = relax first (will be tried for relaxation earlier)
+# Language sync has HIGHEST priority (99) - relaxed ONLY as absolute last resort
 HARD_RELAXABLE_CONSTRAINTS = [
-    ConstraintConfig(
-        name="language_sync",
-        display_name="Language Block Synchronization",
-        constraint_type=ConstraintType.HARD_RELAXABLE,
-        default_enabled=False,  # Off by default to avoid infeasibility
-        relaxation_priority=1,  # Relax first
-        config_key="language_sync_enabled",
-        description="Language teachers teaching same sections should be synchronized",
-    ),
-    ConstraintConfig(
-        name="class_teacher_period_1",
-        display_name="Class Teacher in Period 1",
-        constraint_type=ConstraintType.HARD_RELAXABLE,
-        default_enabled=False,  # Off by default
-        relaxation_priority=2,
-        config_key="class_teacher_period_1",
-        description="Class teacher must teach their class in Period 1",
-    ),
-    ConstraintConfig(
-        name="no_subject_twice_daily",
-        display_name="No Subject Twice Daily",
-        constraint_type=ConstraintType.HARD_RELAXABLE,
-        default_enabled=False,  # Off by default
-        relaxation_priority=3,
-        config_key="no_subject_twice_daily",
-        description="A subject should not appear twice in the same day (except blocks)",
-    ),
     ConstraintConfig(
         name="substitution_reserve",
         display_name="Substitution Reserve",
         constraint_type=ConstraintType.HARD_RELAXABLE,
         default_enabled=False,  # Only enable if explicitly set
-        relaxation_priority=4,
+        relaxation_priority=1,  # Relax first - least impactful
         config_key="substitution_reserve_count",
         description="Keep N teachers free each period for substitution",
     ),
@@ -167,7 +141,7 @@ HARD_RELAXABLE_CONSTRAINTS = [
         display_name="Max Consecutive Periods",
         constraint_type=ConstraintType.HARD_RELAXABLE,
         default_enabled=True,
-        relaxation_priority=5,
+        relaxation_priority=2,
         description="Teachers cannot exceed max consecutive periods",
     ),
     ConstraintConfig(
@@ -175,7 +149,7 @@ HARD_RELAXABLE_CONSTRAINTS = [
         display_name="Teacher Daily Load Limits",
         constraint_type=ConstraintType.HARD_RELAXABLE,
         default_enabled=True,
-        relaxation_priority=6,
+        relaxation_priority=3,
         description="Teachers must stay within daily min/max periods",
     ),
     ConstraintConfig(
@@ -183,7 +157,7 @@ HARD_RELAXABLE_CONSTRAINTS = [
         display_name="Teacher Weekly Load Balance",
         constraint_type=ConstraintType.HARD_RELAXABLE,
         default_enabled=True,
-        relaxation_priority=7,
+        relaxation_priority=4,
         description="Teacher's daily loads should be balanced (not 7 one day, 2 next)",
     ),
     ConstraintConfig(
@@ -191,8 +165,19 @@ HARD_RELAXABLE_CONSTRAINTS = [
         display_name="Block Period Integrity",
         constraint_type=ConstraintType.HARD_RELAXABLE,
         default_enabled=True,
-        relaxation_priority=8,  # Relax late, important for labs
+        relaxation_priority=5,
         description="Subjects requiring blocks must get consecutive periods",
+    ),
+    ConstraintConfig(
+        name="language_sync",
+        display_name="Language Block Synchronization",
+        constraint_type=ConstraintType.HARD_RELAXABLE,
+        default_enabled=True,  # ON by default - critical for Indian schools
+        relaxation_priority=99,  # HIGHEST priority - relax ONLY as absolute last resort
+        config_key="language_sync_enabled",
+        description="Language teachers for same tier (1st/2nd/3rd language) must be synchronized. "
+        "When students split into language groups (e.g., Hindi/Kannada/Sanskrit), "
+        "all language teachers for that tier must be available simultaneously.",
     ),
 ]
 
@@ -206,6 +191,32 @@ SOFT_CONSTRAINTS = [
         soft_weight=3,
         config_key="core_morning_only",
         description="Prefer core subjects (Math, Science, etc.) in morning periods",
+    ),
+    ConstraintConfig(
+        name="class_teacher_period_1",
+        display_name="Class Teacher in Period 1",
+        constraint_type=ConstraintType.SOFT,
+        default_enabled=True,
+        soft_weight=6,
+        config_key="class_teacher_period_1",
+        description="Prefer class teacher to teach their class in Period 1",
+    ),
+    ConstraintConfig(
+        name="no_subject_twice_daily",
+        display_name="No Subject Twice Daily",
+        constraint_type=ConstraintType.SOFT,
+        default_enabled=True,
+        soft_weight=4,
+        config_key="no_subject_twice_daily",
+        description="Prefer not scheduling same subject twice in a day (except blocks)",
+    ),
+    ConstraintConfig(
+        name="resource_capacity",
+        display_name="Resource Capacity Soft Limit",
+        constraint_type=ConstraintType.SOFT,
+        default_enabled=True,
+        soft_weight=5,
+        description="Penalize exceeding soft resource capacity limits",
     ),
     ConstraintConfig(
         name="teacher_balance",

@@ -222,9 +222,9 @@ export default function COAttainmentPage() {
 
   // Mock class data
   const mockClasses = [
-    { id: 1, name: "Class 10-A" },
-    { id: 2, name: "Class 10-B" },
-    { id: 3, name: "Class 9-A" },
+    { id: 1, name: "Grade 10-A" },
+    { id: 2, name: "Grade 10-B" },
+    { id: 3, name: "Grade 9-A" },
   ];
 
   // Mock student data
@@ -318,7 +318,7 @@ export default function COAttainmentPage() {
             CO Attainment Dashboard
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Track and analyze Course Outcome attainment across subjects, classes, and students
+            Auto-calculated from question-level marks with CO mapping — read-only analytics view
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
@@ -330,6 +330,16 @@ export default function COAttainmentPage() {
           </IconButton>
         </Box>
       </Box>
+
+      {/* Info Banner */}
+      <Alert severity="info" sx={{ mb: 3 }} icon={<SchoolIcon />}>
+        <Typography variant="body2">
+          <strong>How it works:</strong> CO attainment percentages are automatically computed from question-wise marks
+          entered in the Marks module. Each exam question is mapped to a Course Outcome, and attainment is calculated
+          as the ratio of marks obtained to total marks for each CO. This view is read-only — to update data, enter
+          marks via <strong>Exams → Marks Entry</strong>.
+        </Typography>
+      </Alert>
 
       {/* Subject Selector */}
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -358,9 +368,23 @@ export default function COAttainmentPage() {
       </Paper>
 
       {!selectedSubjectId && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          Please select a subject to view CO attainment data
-        </Alert>
+        <Paper sx={{ p: 4, textAlign: "center", borderRadius: 2, bgcolor: "background.default" }}>
+          <SchoolIcon sx={{ fontSize: 64, color: "primary.light", mb: 2 }} />
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            Select a Subject to Get Started
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 500, mx: "auto", mb: 2 }}>
+            Choose a subject from the dropdown above to view its Course Outcome (CO) attainment analytics.
+            You'll see how well each CO is being met across all students, classes, and individuals.
+          </Typography>
+          <Alert severity="info" sx={{ maxWidth: 500, mx: "auto", textAlign: "left" }}>
+            <Typography variant="body2">
+              <strong>Tip:</strong> CO attainment is auto-calculated from question-level marks. Make sure marks have
+              been entered in <strong>Exams → Marks Entry</strong> and questions are mapped to Course Outcomes for
+              accurate data.
+            </Typography>
+          </Alert>
+        </Paper>
       )}
 
       {selectedSubjectId && (

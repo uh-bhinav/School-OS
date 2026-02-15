@@ -659,6 +659,373 @@ const TEACHER_SCHEDULES: Record<number, Record<DayOfWeek, { period: number; clas
     SAT: [],
     SUN: [],
   },
+  8: { // Vikram Desai - Hindi
+    MON: [
+      { period: 1, classId: 7, section: "A", subject: "Hindi", subjectId: 5 },
+      { period: 4, classId: 8, section: "B", subject: "Hindi", subjectId: 5 },
+      { period: 6, classId: 9, section: "A", subject: "Hindi", subjectId: 5 },
+    ],
+    TUE: [
+      { period: 2, classId: 7, section: "B", subject: "Hindi", subjectId: 5 },
+      { period: 5, classId: 8, section: "A", subject: "Hindi", subjectId: 5 },
+      { period: 7, classId: 10, section: "A", subject: "Hindi", subjectId: 5 },
+    ],
+    WED: [
+      { period: 1, classId: 9, section: "B", subject: "Hindi", subjectId: 5 },
+      { period: 3, classId: 7, section: "A", subject: "Hindi", subjectId: 5 },
+      { period: 6, classId: 10, section: "B", subject: "Hindi", subjectId: 5 },
+    ],
+    THU: [
+      { period: 2, classId: 8, section: "A", subject: "Hindi", subjectId: 5 },
+      { period: 4, classId: 9, section: "A", subject: "Hindi", subjectId: 5 },
+      { period: 8, classId: 7, section: "B", subject: "Hindi", subjectId: 5 },
+    ],
+    FRI: [
+      { period: 1, classId: 10, section: "A", subject: "Hindi", subjectId: 5 },
+      { period: 3, classId: 8, section: "B", subject: "Hindi", subjectId: 5 },
+      { period: 6, classId: 9, section: "B", subject: "Hindi", subjectId: 5 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  9: { // Meera Joshi - Sanskrit
+    MON: [
+      { period: 3, classId: 7, section: "B", subject: "Sanskrit", subjectId: 9 },
+      { period: 5, classId: 8, section: "A", subject: "Sanskrit", subjectId: 9 },
+      { period: 8, classId: 9, section: "A", subject: "Sanskrit", subjectId: 9 },
+    ],
+    TUE: [
+      { period: 1, classId: 7, section: "A", subject: "Sanskrit", subjectId: 9 },
+      { period: 4, classId: 8, section: "B", subject: "Sanskrit", subjectId: 9 },
+      { period: 6, classId: 10, section: "A", subject: "Sanskrit", subjectId: 9 },
+    ],
+    WED: [
+      { period: 2, classId: 8, section: "A", subject: "Sanskrit", subjectId: 9 },
+      { period: 4, classId: 9, section: "B", subject: "Sanskrit", subjectId: 9 },
+      { period: 7, classId: 7, section: "B", subject: "Sanskrit", subjectId: 9 },
+    ],
+    THU: [
+      { period: 1, classId: 10, section: "B", subject: "Sanskrit", subjectId: 9 },
+      { period: 3, classId: 7, section: "A", subject: "Sanskrit", subjectId: 9 },
+      { period: 6, classId: 8, section: "B", subject: "Sanskrit", subjectId: 9 },
+    ],
+    FRI: [
+      { period: 2, classId: 9, section: "A", subject: "Sanskrit", subjectId: 9 },
+      { period: 5, classId: 10, section: "B", subject: "Sanskrit", subjectId: 9 },
+      { period: 8, classId: 7, section: "A", subject: "Sanskrit", subjectId: 9 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  10: { // Suresh Nair - Physical Education
+    MON: [
+      { period: 2, classId: 7, section: "A", subject: "Physical Education", subjectId: 10 },
+      { period: 4, classId: 8, section: "A", subject: "Physical Education", subjectId: 10 },
+      { period: 7, classId: 9, section: "B", subject: "Physical Education", subjectId: 10 },
+    ],
+    TUE: [
+      { period: 3, classId: 10, section: "A", subject: "Physical Education", subjectId: 10 },
+      { period: 5, classId: 7, section: "B", subject: "Physical Education", subjectId: 10 },
+      { period: 8, classId: 8, section: "B", subject: "Physical Education", subjectId: 10 },
+    ],
+    WED: [
+      { period: 1, classId: 9, section: "A", subject: "Physical Education", subjectId: 10 },
+      { period: 4, classId: 10, section: "B", subject: "Physical Education", subjectId: 10 },
+      { period: 6, classId: 7, section: "A", subject: "Physical Education", subjectId: 10 },
+    ],
+    THU: [
+      { period: 2, classId: 8, section: "B", subject: "Physical Education", subjectId: 10 },
+      { period: 5, classId: 9, section: "A", subject: "Physical Education", subjectId: 10 },
+      { period: 7, classId: 10, section: "A", subject: "Physical Education", subjectId: 10 },
+    ],
+    FRI: [
+      { period: 1, classId: 7, section: "B", subject: "Physical Education", subjectId: 10 },
+      { period: 4, classId: 8, section: "A", subject: "Physical Education", subjectId: 10 },
+      { period: 6, classId: 10, section: "B", subject: "Physical Education", subjectId: 10 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  11: { // Lakshmi Iyer - Economics
+    MON: [
+      { period: 1, classId: 9, section: "B", subject: "Economics", subjectId: 11 },
+      { period: 3, classId: 10, section: "A", subject: "Economics", subjectId: 11 },
+      { period: 6, classId: 10, section: "B", subject: "Economics", subjectId: 11 },
+    ],
+    TUE: [
+      { period: 2, classId: 9, section: "A", subject: "Economics", subjectId: 11 },
+      { period: 4, classId: 10, section: "B", subject: "Economics", subjectId: 11 },
+      { period: 7, classId: 9, section: "B", subject: "Economics", subjectId: 11 },
+    ],
+    WED: [
+      { period: 1, classId: 10, section: "A", subject: "Economics", subjectId: 11 },
+      { period: 5, classId: 9, section: "A", subject: "Economics", subjectId: 11 },
+      { period: 8, classId: 10, section: "B", subject: "Economics", subjectId: 11 },
+    ],
+    THU: [
+      { period: 3, classId: 9, section: "B", subject: "Economics", subjectId: 11 },
+      { period: 5, classId: 10, section: "A", subject: "Economics", subjectId: 11 },
+      { period: 7, classId: 9, section: "A", subject: "Economics", subjectId: 11 },
+    ],
+    FRI: [
+      { period: 2, classId: 10, section: "B", subject: "Economics", subjectId: 11 },
+      { period: 4, classId: 9, section: "A", subject: "Economics", subjectId: 11 },
+      { period: 8, classId: 10, section: "A", subject: "Economics", subjectId: 11 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  12: { // Ravi Menon - Commerce
+    MON: [
+      { period: 2, classId: 9, section: "A", subject: "Commerce", subjectId: 12 },
+      { period: 5, classId: 10, section: "B", subject: "Commerce", subjectId: 12 },
+      { period: 7, classId: 10, section: "A", subject: "Commerce", subjectId: 12 },
+    ],
+    TUE: [
+      { period: 1, classId: 9, section: "B", subject: "Commerce", subjectId: 12 },
+      { period: 3, classId: 10, section: "A", subject: "Commerce", subjectId: 12 },
+      { period: 6, classId: 10, section: "B", subject: "Commerce", subjectId: 12 },
+    ],
+    WED: [
+      { period: 2, classId: 9, section: "A", subject: "Commerce", subjectId: 12 },
+      { period: 4, classId: 10, section: "A", subject: "Commerce", subjectId: 12 },
+      { period: 7, classId: 9, section: "B", subject: "Commerce", subjectId: 12 },
+    ],
+    THU: [
+      { period: 1, classId: 10, section: "B", subject: "Commerce", subjectId: 12 },
+      { period: 4, classId: 9, section: "A", subject: "Commerce", subjectId: 12 },
+      { period: 6, classId: 9, section: "B", subject: "Commerce", subjectId: 12 },
+    ],
+    FRI: [
+      { period: 3, classId: 10, section: "A", subject: "Commerce", subjectId: 12 },
+      { period: 5, classId: 9, section: "B", subject: "Commerce", subjectId: 12 },
+      { period: 7, classId: 10, section: "B", subject: "Commerce", subjectId: 12 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  13: { // Sunita Rao - Computer Science
+    MON: [
+      { period: 3, classId: 8, section: "A", subject: "Computer Science", subjectId: 13 },
+      { period: 5, classId: 9, section: "A", subject: "Computer Science", subjectId: 13 },
+      { period: 8, classId: 10, section: "B", subject: "Computer Science", subjectId: 13 },
+    ],
+    TUE: [
+      { period: 2, classId: 8, section: "B", subject: "Computer Science", subjectId: 13 },
+      { period: 4, classId: 10, section: "A", subject: "Computer Science", subjectId: 13 },
+      { period: 7, classId: 9, section: "B", subject: "Computer Science", subjectId: 13 },
+    ],
+    WED: [
+      { period: 1, classId: 10, section: "B", subject: "Computer Science", subjectId: 13 },
+      { period: 3, classId: 9, section: "A", subject: "Computer Science", subjectId: 13 },
+      { period: 6, classId: 8, section: "A", subject: "Computer Science", subjectId: 13 },
+    ],
+    THU: [
+      { period: 2, classId: 9, section: "B", subject: "Computer Science", subjectId: 13 },
+      { period: 5, classId: 10, section: "A", subject: "Computer Science", subjectId: 13 },
+      { period: 8, classId: 8, section: "B", subject: "Computer Science", subjectId: 13 },
+    ],
+    FRI: [
+      { period: 1, classId: 9, section: "A", subject: "Computer Science", subjectId: 13 },
+      { period: 4, classId: 10, section: "B", subject: "Computer Science", subjectId: 13 },
+      { period: 6, classId: 8, section: "B", subject: "Computer Science", subjectId: 13 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  14: { // Manoj Pandey - Political Science
+    MON: [
+      { period: 1, classId: 10, section: "A", subject: "Political Science", subjectId: 14 },
+      { period: 4, classId: 9, section: "B", subject: "Political Science", subjectId: 14 },
+      { period: 7, classId: 10, section: "B", subject: "Political Science", subjectId: 14 },
+    ],
+    TUE: [
+      { period: 2, classId: 10, section: "A", subject: "Political Science", subjectId: 14 },
+      { period: 5, classId: 9, section: "A", subject: "Political Science", subjectId: 14 },
+      { period: 8, classId: 10, section: "B", subject: "Political Science", subjectId: 14 },
+    ],
+    WED: [
+      { period: 3, classId: 9, section: "B", subject: "Political Science", subjectId: 14 },
+      { period: 5, classId: 10, section: "A", subject: "Political Science", subjectId: 14 },
+      { period: 8, classId: 9, section: "A", subject: "Political Science", subjectId: 14 },
+    ],
+    THU: [
+      { period: 1, classId: 10, section: "B", subject: "Political Science", subjectId: 14 },
+      { period: 4, classId: 9, section: "A", subject: "Political Science", subjectId: 14 },
+      { period: 6, classId: 10, section: "A", subject: "Political Science", subjectId: 14 },
+    ],
+    FRI: [
+      { period: 2, classId: 9, section: "B", subject: "Political Science", subjectId: 14 },
+      { period: 5, classId: 10, section: "A", subject: "Political Science", subjectId: 14 },
+      { period: 7, classId: 9, section: "A", subject: "Political Science", subjectId: 14 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  15: { // Pooja Kapoor - Arts & Crafts
+    MON: [
+      { period: 3, classId: 7, section: "A", subject: "Arts & Crafts", subjectId: 15 },
+      { period: 6, classId: 8, section: "B", subject: "Arts & Crafts", subjectId: 15 },
+    ],
+    TUE: [
+      { period: 1, classId: 7, section: "B", subject: "Arts & Crafts", subjectId: 15 },
+      { period: 5, classId: 8, section: "A", subject: "Arts & Crafts", subjectId: 15 },
+    ],
+    WED: [
+      { period: 2, classId: 9, section: "A", subject: "Arts & Crafts", subjectId: 15 },
+      { period: 6, classId: 7, section: "A", subject: "Arts & Crafts", subjectId: 15 },
+    ],
+    THU: [
+      { period: 3, classId: 9, section: "B", subject: "Arts & Crafts", subjectId: 15 },
+      { period: 7, classId: 8, section: "A", subject: "Arts & Crafts", subjectId: 15 },
+    ],
+    FRI: [
+      { period: 4, classId: 7, section: "B", subject: "Arts & Crafts", subjectId: 15 },
+      { period: 8, classId: 8, section: "B", subject: "Arts & Crafts", subjectId: 15 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  16: { // Arun Malik - Music
+    MON: [
+      { period: 4, classId: 7, section: "B", subject: "Music", subjectId: 16 },
+      { period: 7, classId: 8, section: "A", subject: "Music", subjectId: 16 },
+    ],
+    TUE: [
+      { period: 3, classId: 7, section: "A", subject: "Music", subjectId: 16 },
+      { period: 6, classId: 9, section: "B", subject: "Music", subjectId: 16 },
+    ],
+    WED: [
+      { period: 1, classId: 8, section: "B", subject: "Music", subjectId: 16 },
+      { period: 5, classId: 7, section: "B", subject: "Music", subjectId: 16 },
+    ],
+    THU: [
+      { period: 4, classId: 8, section: "A", subject: "Music", subjectId: 16 },
+      { period: 8, classId: 9, section: "A", subject: "Music", subjectId: 16 },
+    ],
+    FRI: [
+      { period: 2, classId: 7, section: "A", subject: "Music", subjectId: 16 },
+      { period: 6, classId: 8, section: "B", subject: "Music", subjectId: 16 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  17: { // Divya Pillai - Environmental Science
+    MON: [
+      { period: 2, classId: 8, section: "B", subject: "Environmental Science", subjectId: 17 },
+      { period: 5, classId: 7, section: "A", subject: "Environmental Science", subjectId: 17 },
+      { period: 8, classId: 9, section: "B", subject: "Environmental Science", subjectId: 17 },
+    ],
+    TUE: [
+      { period: 1, classId: 9, section: "A", subject: "Environmental Science", subjectId: 17 },
+      { period: 4, classId: 7, section: "B", subject: "Environmental Science", subjectId: 17 },
+      { period: 7, classId: 8, section: "A", subject: "Environmental Science", subjectId: 17 },
+    ],
+    WED: [
+      { period: 3, classId: 7, section: "A", subject: "Environmental Science", subjectId: 17 },
+      { period: 6, classId: 9, section: "B", subject: "Environmental Science", subjectId: 17 },
+      { period: 8, classId: 8, section: "B", subject: "Environmental Science", subjectId: 17 },
+    ],
+    THU: [
+      { period: 2, classId: 7, section: "B", subject: "Environmental Science", subjectId: 17 },
+      { period: 5, classId: 8, section: "A", subject: "Environmental Science", subjectId: 17 },
+      { period: 7, classId: 9, section: "A", subject: "Environmental Science", subjectId: 17 },
+    ],
+    FRI: [
+      { period: 1, classId: 8, section: "B", subject: "Environmental Science", subjectId: 17 },
+      { period: 3, classId: 9, section: "A", subject: "Environmental Science", subjectId: 17 },
+      { period: 6, classId: 7, section: "B", subject: "Environmental Science", subjectId: 17 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  18: { // Subhash Bose - Sociology
+    MON: [
+      { period: 1, classId: 10, section: "B", subject: "Sociology", subjectId: 18 },
+      { period: 4, classId: 9, section: "A", subject: "Sociology", subjectId: 18 },
+      { period: 6, classId: 10, section: "A", subject: "Sociology", subjectId: 18 },
+    ],
+    TUE: [
+      { period: 2, classId: 10, section: "B", subject: "Sociology", subjectId: 18 },
+      { period: 5, classId: 9, section: "B", subject: "Sociology", subjectId: 18 },
+      { period: 8, classId: 10, section: "A", subject: "Sociology", subjectId: 18 },
+    ],
+    WED: [
+      { period: 1, classId: 9, section: "A", subject: "Sociology", subjectId: 18 },
+      { period: 4, classId: 10, section: "B", subject: "Sociology", subjectId: 18 },
+      { period: 7, classId: 10, section: "A", subject: "Sociology", subjectId: 18 },
+    ],
+    THU: [
+      { period: 3, classId: 9, section: "B", subject: "Sociology", subjectId: 18 },
+      { period: 6, classId: 10, section: "B", subject: "Sociology", subjectId: 18 },
+      { period: 8, classId: 9, section: "A", subject: "Sociology", subjectId: 18 },
+    ],
+    FRI: [
+      { period: 1, classId: 10, section: "A", subject: "Sociology", subjectId: 18 },
+      { period: 4, classId: 9, section: "B", subject: "Sociology", subjectId: 18 },
+      { period: 7, classId: 10, section: "B", subject: "Sociology", subjectId: 18 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  19: { // Nandini Das - Psychology
+    MON: [
+      { period: 3, classId: 10, section: "A", subject: "Psychology", subjectId: 19 },
+      { period: 6, classId: 9, section: "B", subject: "Psychology", subjectId: 19 },
+      { period: 8, classId: 10, section: "B", subject: "Psychology", subjectId: 19 },
+    ],
+    TUE: [
+      { period: 1, classId: 10, section: "B", subject: "Psychology", subjectId: 19 },
+      { period: 4, classId: 9, section: "A", subject: "Psychology", subjectId: 19 },
+      { period: 6, classId: 10, section: "A", subject: "Psychology", subjectId: 19 },
+    ],
+    WED: [
+      { period: 2, classId: 9, section: "B", subject: "Psychology", subjectId: 19 },
+      { period: 5, classId: 10, section: "A", subject: "Psychology", subjectId: 19 },
+      { period: 7, classId: 10, section: "B", subject: "Psychology", subjectId: 19 },
+    ],
+    THU: [
+      { period: 1, classId: 9, section: "A", subject: "Psychology", subjectId: 19 },
+      { period: 4, classId: 10, section: "B", subject: "Psychology", subjectId: 19 },
+      { period: 6, classId: 10, section: "A", subject: "Psychology", subjectId: 19 },
+    ],
+    FRI: [
+      { period: 3, classId: 9, section: "A", subject: "Psychology", subjectId: 19 },
+      { period: 5, classId: 10, section: "B", subject: "Psychology", subjectId: 19 },
+      { period: 8, classId: 9, section: "B", subject: "Psychology", subjectId: 19 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
+  20: { // Rahul Saxena - Business Studies
+    MON: [
+      { period: 2, classId: 10, section: "A", subject: "Business Studies", subjectId: 20 },
+      { period: 5, classId: 9, section: "B", subject: "Business Studies", subjectId: 20 },
+      { period: 7, classId: 10, section: "B", subject: "Business Studies", subjectId: 20 },
+    ],
+    TUE: [
+      { period: 3, classId: 9, section: "A", subject: "Business Studies", subjectId: 20 },
+      { period: 5, classId: 10, section: "B", subject: "Business Studies", subjectId: 20 },
+      { period: 8, classId: 10, section: "A", subject: "Business Studies", subjectId: 20 },
+    ],
+    WED: [
+      { period: 1, classId: 10, section: "A", subject: "Business Studies", subjectId: 20 },
+      { period: 4, classId: 9, section: "B", subject: "Business Studies", subjectId: 20 },
+      { period: 6, classId: 10, section: "B", subject: "Business Studies", subjectId: 20 },
+    ],
+    THU: [
+      { period: 2, classId: 9, section: "A", subject: "Business Studies", subjectId: 20 },
+      { period: 5, classId: 10, section: "A", subject: "Business Studies", subjectId: 20 },
+      { period: 8, classId: 10, section: "B", subject: "Business Studies", subjectId: 20 },
+    ],
+    FRI: [
+      { period: 1, classId: 9, section: "B", subject: "Business Studies", subjectId: 20 },
+      { period: 3, classId: 10, section: "A", subject: "Business Studies", subjectId: 20 },
+      { period: 6, classId: 9, section: "A", subject: "Business Studies", subjectId: 20 },
+    ],
+    SAT: [],
+    SUN: [],
+  },
 };
 
 // ============================================================================

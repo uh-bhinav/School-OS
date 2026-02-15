@@ -333,18 +333,48 @@ def validate_feasibility(solver_input: dict) -> tuple[bool, list[str], list[dict
     availability_masks = build_all_availability_masks(teachers, period_grid)
 
     # === Check 1: Total required periods vs available slots ===
+    # NOTE: For language tier synchronization, tier-2 and tier-3 languages SHARE slots.
+    # If a section has Hindi, Kannada, Sanskrit (all tier 2), they're taught simultaneously,
+    # so we only count ONE of them (max periods) toward the slot requirement.
     for cls in classes:
         section_id = cls["section_id"]
         subject_teacher_map = cls.get("subject_teacher_map", {})
+        language_block_enabled = cls.get("language_block_enabled", False)
 
         min_required = 0
         max_required = 0
 
+        # Group subjects by language tier for synchronized counting
+        tier_subjects = {}  # {tier: [(subject_id, min, max)]}
+
         for subject_id in subject_teacher_map.keys():
             subject = subject_map.get(subject_id)
             if subject:
-                min_required += subject.get("min_per_week", 0)
-                max_required += subject.get("max_per_week", 0)
+                tier = subject.get("language_tier")
+                # Tier 2 and 3 languages share slots when language_block_enabled
+                if language_block_enabled and tier and tier >= 2:
+                    if tier not in tier_subjects:
+                        tier_subjects[tier] = []
+                    tier_subjects[tier].append(
+                        (
+                            subject_id,
+                            subject.get("min_per_week", 0),
+                            subject.get("max_per_week", 0),
+                        )
+                    )
+                else:
+                    # Non-language or tier-1 (first language) - count normally
+                    min_required += subject.get("min_per_week", 0)
+                    max_required += subject.get("max_per_week", 0)
+
+        # For each tier 2+ group, only count the maximum since they share slots
+        for tier, tier_subjs in tier_subjects.items():
+            # Languages in the same tier are taught simultaneously, so only count once
+            # Use the maximum min_per_week from the tier group
+            tier_min = max(s[1] for s in tier_subjs) if tier_subjs else 0
+            tier_max = max(s[2] for s in tier_subjs) if tier_subjs else 0
+            min_required += tier_min
+            max_required += tier_max
 
         if min_required > total_slots_per_section:
             msg = (

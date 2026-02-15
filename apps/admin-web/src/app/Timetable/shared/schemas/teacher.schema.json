@@ -73,6 +73,16 @@
       "description": "Whether this is a specialist teacher (rare subjects like Sanskrit, Music, Art). Specialist teachers get scheduling priority to ensure their limited hours are accommodated.",
       "default": false
     },
+    "is_language_specialist": {
+      "type": "boolean",
+      "description": "Whether this teacher is a language specialist. Language specialists teach ONLY ONE language and cannot teach other languages. They may teach other non-language subjects. This is typical in Indian schools where a Sanskrit teacher only teaches Sanskrit, not Hindi or Kannada.",
+      "default": false
+    },
+    "primary_language": {
+      "type": "string",
+      "description": "For language specialists, the primary language subject ID they teach. A language specialist can ONLY teach this one language (but may teach other non-language subjects).",
+      "default": null
+    },
     "availability": {
       "type": "object",
       "description": "Teacher availability by day",

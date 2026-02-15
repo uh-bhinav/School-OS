@@ -12,10 +12,14 @@ import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
 
 interface AttendanceRow {
   id: number;
+  sl_no?: number;
   student_id: number;
+  enrollment_no?: string;
   student_name: string;
+  father_name?: string;
   status: string;
   remarks?: string;
+  date?: string;
 }
 
 const getStatusChip = (status: string) => {
@@ -50,19 +54,70 @@ export default function AttendanceTable(props: {
   };
 
   const columns: GridColDef[] = [
-    { field: "student_name", headerName: "Student", flex: 1, minWidth: 200, headerClassName: "table-header" },
+    {
+      field: "sl_no",
+      headerName: "Sl.No",
+      width: 70,
+      headerClassName: "table-header",
+      sortable: false,
+    },
+    {
+      field: "enrollment_no",
+      headerName: "Enrollment Number",
+      width: 180,
+      headerClassName: "table-header",
+    },
+    {
+      field: "student_name",
+      headerName: "Student Name",
+      flex: 1,
+      minWidth: 180,
+      headerClassName: "table-header",
+    },
+    {
+      field: "father_name",
+      headerName: "Father Name",
+      flex: 1,
+      minWidth: 180,
+      headerClassName: "table-header",
+    },
     {
       field: "status",
       headerName: "Status",
-      width: 160,
+      width: 140,
       headerClassName: "table-header",
       renderCell: (params) => getStatusChip(params.value as string),
     },
-    { field: "remarks", headerName: "Remarks", flex: 1, minWidth: 150, headerClassName: "table-header" },
+    {
+      field: "present_days",
+      headerName: "Present Days",
+      width: 120,
+      headerClassName: "table-header",
+      renderCell: (params) => {
+        const status = (params.row as AttendanceRow).status;
+        const isPresent = status === "PRESENT" || status === "LATE";
+        return (
+          <Chip
+            label={isPresent ? "1" : "0"}
+            size="small"
+            color={isPresent ? "success" : "error"}
+            variant="outlined"
+            sx={{ fontWeight: 600 }}
+          />
+        );
+      },
+    },
+    {
+      field: "remarks",
+      headerName: "Remarks",
+      flex: 0.7,
+      minWidth: 120,
+      headerClassName: "table-header",
+    },
     {
       field: "actions",
       headerName: "Actions",
-      width: 120,
+      width: 100,
       sortable: false,
       headerClassName: "table-header",
       renderCell: (params) => (
@@ -162,7 +217,7 @@ export default function AttendanceTable(props: {
             onClick={onExport}
             sx={{ borderRadius: 2, textTransform: "none" }}
           >
-            Export CSV
+            Download Excel
           </Button>
         )}
       </Stack>

@@ -1,0 +1,635 @@
+================================================================================
+                  TIMETABLE GENERATOR - DATA REQUIREMENTS
+                      Client Onboarding Data Sheet
+================================================================================
+
+This document outlines ALL data that must be loaded into the ERP system
+BEFORE the timetable generator can function. These are PRE-REQUISITE DATA
+items - not configurable settings that can be adjusted in the UI.
+
+Note: Constraints (hard/soft), teacher availability, and solver preferences
+are configurable via the timetable frontend and are NOT covered here.
+
+================================================================================
+                            EXCEL SHEET STRUCTURE
+================================================================================
+
+The client should provide data in the following Excel sheets:
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 1: CLASSES (Class Sections Master)                                  │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  Column Name          │ Type      │ Required │ Example          │ Notes    │
+│  ─────────────────────┼───────────┼──────────┼──────────────────┼──────────│
+│  section_id           │ String    │ YES      │ "8A", "10B"      │ Unique ID│
+│  grade                │ Integer   │ YES      │ 8, 10            │ 1-12     │
+│  section_name         │ String    │ YES      │ "A", "B", "C"    │          │
+│  student_count        │ Integer   │ NO       │ 30               │ Optional │
+│  class_teacher_id     │ String    │ NO       │ "T001"           │ Ref→T    │
+│  has_language_block   │ Boolean   │ NO       │ TRUE/FALSE       │ Electives│
+│                                                                            │
+│  EXAMPLE ROWS:                                                             │
+│  section_id │ grade │ section_name │ student_count │ class_teacher_id      │
+│  ───────────┼───────┼──────────────┼───────────────┼───────────────────────│
+│  6A         │ 6     │ A            │ 35            │ T001                  │
+│  6B         │ 6     │ B            │ 32            │ T002                  │
+│  7A         │ 7     │ A            │ 30            │ T005                  │
+│  10A        │ 10    │ A            │ 40            │ T009                  │
+│  10B        │ 10    │ B            │ 38            │ T010                  │
+│                                                                            │
+│  WHY NEEDED:                                                               │
+│  → Defines all sections that need timetables                               │
+│  → Determines total periods to schedule                                    │
+│  → Links to class teacher for Period 1 assignment (if enabled)             │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 2: SUBJECTS (Subject Master)                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example          │ Notes    │
+│  ─────────────────────┼───────────┼──────────┼──────────────────┼──────────│
+│  subject_id           │ String    │ YES      │ "MATH", "ENG"    │ Unique   │
+│  name                 │ String    │ YES      │ "Mathematics"    │ Display  │
+│  short_name           │ String    │ NO       │ "Math"           │ Grid UI  │
+│  category             │ Enum      │ YES      │ See below        │ Important│
+│  min_per_week         │ Integer   │ YES      │ 5                │ Min load │
+│  max_per_week         │ Integer   │ YES      │ 6                │ Max load │
+│  requires_block       │ Boolean   │ NO       │ TRUE/FALSE       │ Lab work │
+│  block_length         │ Integer   │ NO       │ 2                │ 2-4 prds │
+│  requires_resource    │ Boolean   │ NO       │ TRUE/FALSE       │ Lab/Gym  │
+│  resource_type        │ String    │ NO       │ "Physics Lab"    │ If needed│
+│  is_specialist        │ Boolean   │ NO       │ TRUE/FALSE       │ Rare subj│
+│  is_language_block    │ Boolean   │ NO       │ TRUE/FALSE       │ Parallel │
+│                                                                             │
+│  CATEGORY VALUES (pick exactly one):                                        │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  • core       = Main academic subjects (Math, Science, English)             │
+│  • language   = 2nd/3rd language options (Hindi, Kannada, Sanskrit)         │
+│  • leisure    = Non-core subjects (PE, Games, Library)                      │
+│  • lab        = Laboratory subjects (Physics Lab, Chemistry Lab)            │
+│  • arts       = Creative subjects (Art, Music, Dance)                       │
+│  • special    = Assembly, SUPW, Moral Science                               │
+│                                                                             │
+│  EXAMPLE ROWS:                                                              │
+│  subject_id │ name           │ category │ min_per_week │ max_per_week      │
+│  ───────────┼────────────────┼──────────┼──────────────┼───────────────────│
+│  MATH       │ Mathematics    │ core     │ 6            │ 6                 │
+│  ENG        │ English        │ core     │ 6            │ 7                 │
+│  SCI        │ Science        │ core     │ 5            │ 6                 │
+│  SST        │ Social Studies │ core     │ 4            │ 5                 │
+│  HINDI      │ Hindi          │ language │ 4            │ 5                 │
+│  KANNADA    │ Kannada        │ language │ 4            │ 5                 │
+│  SANSKRIT   │ Sanskrit       │ language │ 4            │ 5                 │
+│  PE         │ Physical Ed    │ leisure  │ 2            │ 3                 │
+│  ART        │ Art            │ arts     │ 2            │ 2                 │
+│  MUSIC      │ Music          │ arts     │ 1            │ 2                 │
+│  PHY_LAB    │ Physics Lab    │ lab      │ 2            │ 2                 │
+│  CHEM_LAB   │ Chemistry Lab  │ lab      │ 2            │ 2                 │
+│                                                                             │
+│  FOR LAB/BLOCK SUBJECTS:                                                    │
+│  subject_id │ requires_block │ block_length │ requires_resource │ resource │
+│  ───────────┼────────────────┼──────────────┼───────────────────┼──────────│
+│  PHY_LAB    │ TRUE           │ 2            │ TRUE              │ Phys Lab │
+│  CHEM_LAB   │ TRUE           │ 2            │ TRUE              │ Chem Lab │
+│  PE         │ FALSE          │              │ TRUE              │ Ground   │
+│                                                                             │
+│  WHY NEEDED:                                                                │
+│  → Defines all subjects taught in school                                    │
+│  → Sets period requirements per week                                        │
+│  → Determines scheduling preferences (morning/afternoon)                    │
+│  → Controls block period allocation for labs                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 3: TEACHERS (Teacher Master)                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Column Name              │ Type    │ Required │ Example       │ Notes     │
+│  ─────────────────────────┼─────────┼──────────┼───────────────┼───────────│
+│  teacher_id               │ String  │ YES      │ "T001"        │ Unique    │
+│  name                     │ String  │ YES      │ "Rajesh Kumar"│ Full name │
+│  email                    │ String  │ NO       │ "r.kumar@.."  │ Contact   │
+│  phone                    │ String  │ NO       │ "9876543210"  │ Contact   │
+│  employment_type          │ Enum    │ NO       │ FULL_TIME     │ Capacity  │
+│  subjects_can_teach       │ String  │ YES      │ "MATH,SCI"    │ CSV list  │
+│  min_periods_day          │ Integer │ YES      │ 3             │ Min daily │
+│  max_periods_day          │ Integer │ YES      │ 6             │ Max daily │
+│  min_periods_week         │ Integer │ NO       │ 20            │ Min weekly│
+│  max_periods_week         │ Integer │ NO       │ 35            │ Max weekly│
+│  max_consecutive_periods  │ Integer │ NO       │ 3             │ No breaks │
+│  is_class_teacher_of      │ String  │ NO       │ "10A"         │ Section ID│
+│  is_specialist            │ Boolean │ NO       │ TRUE/FALSE    │ Rare subj │
+│                                                                             │
+│  EMPLOYMENT_TYPE VALUES:                                                    │
+│  • FULL_TIME  = Available all periods (default max: 35-40/week)            │
+│  • PART_TIME  = Limited availability (typical max: 15-20/week)             │
+│  • VISITING   = Very limited (1-2 days/week, specific subjects)            │
+│                                                                             │
+│  EXAMPLE ROWS:                                                              │
+│  teacher_id │ name           │ subjects_can_teach │ min_day │ max_day     │
+│  ───────────┼────────────────┼────────────────────┼─────────┼─────────────│
+│  T001       │ Rajesh Kumar   │ MATH               │ 3       │ 6           │
+│  T002       │ Priya Sharma   │ MATH,SCI           │ 3       │ 6           │
+│  T003       │ Sunil Verma    │ ENG                │ 4       │ 7           │
+│  T004       │ Meera Gupta    │ ENG,SST            │ 3       │ 5           │
+│  T005       │ Suresh Reddy   │ SCI,PHY_LAB        │ 3       │ 6           │
+│  T006       │ Kavitha R      │ SCI,CHEM_LAB       │ 3       │ 6           │
+│  T007       │ Deepak V       │ HINDI              │ 3       │ 5           │
+│  T008       │ Anita Menon    │ KANNADA            │ 3       │ 5           │
+│  T009       │ Ramesh Iyer    │ SANSKRIT           │ 2       │ 4           │
+│  T010       │ Rohit Bhatt    │ PE                 │ 4       │ 8           │
+│  T011       │ Lakshmi N      │ ART                │ 2       │ 6           │
+│  T012       │ Mohan K        │ MUSIC              │ 1       │ 4           │
+│                                                                             │
+│  CAPACITY FORMULA:                                                          │
+│  Total Teacher Capacity = Σ(max_periods_week for all teachers)             │
+│  Total Required Periods = Number of Classes × Periods per Week             │
+│                                                                             │
+│  RULE: Total Teacher Capacity must be ≥ 1.2 × Total Required Periods       │
+│  (20% buffer for constraints to have flexibility)                           │
+│                                                                             │
+│  WHY NEEDED:                                                                │
+│  → Lists all available teaching staff                                       │
+│  → Defines what subjects each teacher can teach                             │
+│  → Sets workload limits to prevent over-scheduling                          │
+│  → Specialist flag gives scheduling priority for rare subjects              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 4: CLASS-SUBJECT-TEACHER MAP (The Core Assignment Sheet)             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ⚠️  THIS IS THE MOST CRITICAL SHEET - MUST BE COMPLETE AND ACCURATE ⚠️    │
+│                                                                             │
+│  This sheet defines WHO teaches WHAT subject to WHICH class.                │
+│  Every class-subject combination must have exactly ONE teacher assigned.    │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example          │ Notes    │
+│  ─────────────────────┼───────────┼──────────┼──────────────────┼──────────│
+│  section_id           │ String    │ YES      │ "10A"            │ Ref→C    │
+│  subject_id           │ String    │ YES      │ "MATH"           │ Ref→S    │
+│  teacher_id           │ String    │ YES      │ "T001"           │ Ref→T    │
+│  periods_per_week     │ Integer   │ NO       │ 6                │ Override │
+│                                                                             │
+│  EXAMPLE ROWS (for a school with 2 sections of Grade 10):                   │
+│  section_id │ subject_id │ teacher_id │ periods_per_week (optional)         │
+│  ───────────┼────────────┼────────────┼─────────────────────────────────────│
+│  10A        │ MATH       │ T001       │ 6                                   │
+│  10A        │ ENG        │ T003       │ 6                                   │
+│  10A        │ SCI        │ T005       │ 5                                   │
+│  10A        │ SST        │ T004       │ 4                                   │
+│  10A        │ HINDI      │ T007       │ 4                                   │
+│  10A        │ PE         │ T010       │ 2                                   │
+│  10A        │ ART        │ T011       │ 2                                   │
+│  10A        │ PHY_LAB    │ T005       │ 2                                   │
+│  ───────────┼────────────┼────────────┼─────────────────────────────────────│
+│  10B        │ MATH       │ T002       │ 6                                   │
+│  10B        │ ENG        │ T003       │ 6                                   │
+│  10B        │ SCI        │ T006       │ 5                                   │
+│  10B        │ SST        │ T004       │ 4                                   │
+│  10B        │ KANNADA    │ T008       │ 4                                   │
+│  10B        │ PE         │ T010       │ 2                                   │
+│  10B        │ MUSIC      │ T012       │ 1                                   │
+│  10B        │ CHEM_LAB   │ T006       │ 2                                   │
+│                                                                             │
+│  VALIDATION RULES:                                                          │
+│  1. Every section must have ALL required subjects assigned                  │
+│  2. Teacher must be qualified to teach the subject (subjects_can_teach)     │
+│  3. Total periods for a teacher across all sections ≤ max_periods_week     │
+│  4. Same subject in a section can only have ONE teacher                     │
+│                                                                             │
+│  COMMON SCENARIOS:                                                          │
+│  • Same teacher teaches same subject to multiple sections                   │
+│    (T001 teaches MATH to 10A, 10B, 10C)                                    │
+│  • Same teacher teaches different subjects to same section                  │
+│    (T005 teaches SCI and PHY_LAB to 10A)                                   │
+│  • Different sections have different language options                       │
+│    (10A has HINDI, 10B has KANNADA, 10C has SANSKRIT)                      │
+│                                                                             │
+│  WHY NEEDED:                                                                │
+│  → This is the CORE input for the timetable solver                         │
+│  → Without this, solver cannot determine teacher-subject-class assignments  │
+│  → This drives the entire constraint satisfaction problem                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 5: RESOURCES (Optional - Labs, Grounds, Special Rooms)               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Column Name              │ Type    │ Required │ Example       │ Notes     │
+│  ─────────────────────────┼─────────┼──────────┼───────────────┼───────────│
+│  resource_id              │ String  │ YES      │ "LAB-PHY-1"   │ Unique    │
+│  resource_type            │ String  │ YES      │ "Physics Lab" │ Category  │
+│  name                     │ String  │ NO       │ "Physics Lab 1"│ Display  │
+│  max_simultaneous_capacity│ Integer │ YES      │ 1             │ Sections  │
+│  capacity_students        │ Integer │ NO       │ 40            │ Students  │
+│                                                                             │
+│  RESOURCE_TYPE VALUES:                                                      │
+│  • Physics Lab, Chemistry Lab, Biology Lab, Computer Lab                    │
+│  • Sports Ground, Indoor Gym, Swimming Pool                                 │
+│  • Music Room, Art Room, Dance Room                                         │
+│  • Library, Auditorium                                                      │
+│                                                                             │
+│  EXAMPLE ROWS:                                                              │
+│  resource_id │ resource_type  │ name              │ max_simultaneous       │
+│  ────────────┼────────────────┼───────────────────┼────────────────────────│
+│  LAB-PHY-1   │ Physics Lab    │ Physics Lab 1     │ 1                      │
+│  LAB-PHY-2   │ Physics Lab    │ Physics Lab 2     │ 1                      │
+│  LAB-CHEM-1  │ Chemistry Lab  │ Chemistry Lab     │ 1                      │
+│  LAB-COMP-1  │ Computer Lab   │ Computer Lab 1    │ 1                      │
+│  LAB-COMP-2  │ Computer Lab   │ Computer Lab 2    │ 1                      │
+│  GRD-MAIN    │ Sports Ground  │ Main Ground       │ 3                      │
+│  GRD-INDOOR  │ Indoor Gym     │ Indoor Sports     │ 2                      │
+│  RM-MUSIC    │ Music Room     │ Music Room        │ 1                      │
+│  RM-ART      │ Art Room       │ Art Studio        │ 2                      │
+│                                                                             │
+│  UNDERSTANDING max_simultaneous_capacity:                                   │
+│  If Physics Lab has capacity 1, only ONE section can have Physics Lab      │
+│  at any given period. If Sports Ground has capacity 3, up to 3 sections    │
+│  can have PE simultaneously.                                                │
+│                                                                             │
+│  LINK TO SUBJECTS:                                                          │
+│  Subjects that require resources must specify resource_type in Subject sheet│
+│  PHY_LAB subject → requires_resource=TRUE, resource_type="Physics Lab"     │
+│                                                                             │
+│  WHY NEEDED:                                                                │
+│  → Prevents resource conflicts (2 classes in same lab)                      │
+│  → Optimizes lab/resource utilization across all sections                   │
+│  → Critical for schools with limited labs/grounds                           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHEET 6: LANGUAGE GROUPS (Optional - For Parallel Language Teaching)       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Used when students in the same grade choose different 2nd/3rd languages    │
+│  and these need to be taught simultaneously (parallel scheduling).          │
+│                                                                             │
+│  Column Name          │ Type      │ Required │ Example          │ Notes    │
+│  ─────────────────────┼───────────┼──────────┼──────────────────┼──────────│
+│  group_id             │ String    │ YES      │ "LG-10"          │ Unique   │
+│  grade                │ Integer   │ YES      │ 10               │ Grade    │
+│  sections_affected    │ String    │ YES      │ "10A,10B,10C"    │ CSV      │
+│  language_1           │ String    │ YES      │ "HINDI"          │ Subject  │
+│  language_1_teacher   │ String    │ YES      │ "T007"           │ Teacher  │
+│  language_2           │ String    │ YES      │ "KANNADA"        │ Subject  │
+│  language_2_teacher   │ String    │ YES      │ "T008"           │ Teacher  │
+│  language_3           │ String    │ NO       │ "SANSKRIT"       │ Subject  │
+│  language_3_teacher   │ String    │ NO       │ "T009"           │ Teacher  │
+│  periods_per_week     │ Integer   │ YES      │ 4                │ Required │
+│                                                                             │
+│  EXAMPLE:                                                                   │
+│  In Grade 10, students choose between Hindi, Kannada, or Sanskrit.          │
+│  When it's language period, all three teachers teach simultaneously:        │
+│  - Hindi group goes to T007                                                 │
+│  - Kannada group goes to T008                                               │
+│  - Sanskrit group goes to T009                                              │
+│                                                                             │
+│  group_id │ grade │ sections_affected │ lang_1  │ T1   │ lang_2  │ T2      │
+│  ─────────┼───────┼───────────────────┼─────────┼──────┼─────────┼─────────│
+│  LG-8     │ 8     │ 8A,8B             │ HINDI   │ T007 │ KANNADA │ T008    │
+│  LG-9     │ 9     │ 9A,9B,9C          │ HINDI   │ T007 │ KANNADA │ T008    │
+│  LG-10    │ 10    │ 10A,10B           │ HINDI   │ T007 │ KANNADA │ T008    │
+│                                                                             │
+│  WHY NEEDED:                                                                │
+│  → Ensures all language options are scheduled at the same time              │
+│  → Prevents conflicts when students split into language groups              │
+│  → Critical for schools with elective language choices                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                         DATA VALIDATION CHECKLIST
+================================================================================
+
+Before importing data, verify the following:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ✓ COMPLETENESS CHECKS                                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  □ Every class section has at least one row in class-subject-teacher map   │
+│  □ Every subject in class-subject-teacher map exists in Subjects sheet     │
+│  □ Every teacher in class-subject-teacher map exists in Teachers sheet     │
+│  □ Every teacher teaching a subject is qualified (subjects_can_teach)      │
+│  □ Every subject requiring resource has matching resource in Resources     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ✓ CAPACITY CHECKS                                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  FORMULA:                                                                   │
+│  Total Periods Required = Σ(periods_per_week × number_of_sections)         │
+│                           for each subject                                  │
+│                                                                             │
+│  Total Teacher Capacity = Σ(max_periods_week) for all teachers             │
+│                                                                             │
+│  REQUIREMENT: Capacity Ratio ≥ 1.2 (20% buffer minimum)                    │
+│                                                                             │
+│  Example Calculation:                                                       │
+│  - 12 class sections × 40 periods/week = 480 periods required              │
+│  - 15 teachers × 35 max periods = 525 capacity                             │
+│  - Ratio = 525/480 = 1.09 ⚠️  TOO TIGHT! Need more teachers or reduce load │
+│                                                                             │
+│  □ Capacity ratio is at least 1.2                                          │
+│  □ No individual teacher is overloaded                                     │
+│  □ Specialist subjects have enough teachers for all sections               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ✓ PERIOD COUNT CHECKS                                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  For each class section:                                                    │
+│  Total min_per_week (all subjects) ≤ Periods available per week            │
+│                                                                             │
+│  Example:                                                                   │
+│  - School has 8 periods/day × 5 days = 40 periods/week                     │
+│  - Section 10A subjects: MATH(6) + ENG(6) + SCI(5) + SST(4) + HINDI(4)    │
+│    + PE(2) + ART(2) + MUSIC(1) + PHY_LAB(2) = 32 periods                  │
+│  - 32 ≤ 40 ✓ OK (8 free periods available for assembly/library/etc.)       │
+│                                                                             │
+│  □ No section has more required periods than available slots               │
+│  □ Each section has reasonable buffer for free periods (5-15%)             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                         MINIMUM DATA SET (MUST HAVE)
+================================================================================
+
+The solver CANNOT run without these:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ABSOLUTE MINIMUM - Solver Will Fail Without These                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. CLASSES (Sheet 1)                                                       │
+│     • section_id, grade, section_name                                       │
+│     • At least 1 class section                                              │
+│                                                                             │
+│  2. SUBJECTS (Sheet 2)                                                      │
+│     • subject_id, name, category                                            │
+│     • min_per_week, max_per_week                                            │
+│     • At least 1 subject                                                    │
+│                                                                             │
+│  3. TEACHERS (Sheet 3)                                                      │
+│     • teacher_id, name                                                      │
+│     • subjects_can_teach                                                    │
+│     • min_periods_day, max_periods_day                                      │
+│     • At least 1 teacher                                                    │
+│                                                                             │
+│  4. CLASS-SUBJECT-TEACHER MAP (Sheet 4)                                     │
+│     • Complete mapping of section → subject → teacher                       │
+│     • Every subject for every class must have a teacher assigned            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                         OPTIONAL BUT RECOMMENDED
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  OPTIONAL DATA - Enhances Quality of Generated Timetable                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  5. RESOURCES (Sheet 5)                                                     │
+│     • Only if subjects require labs/grounds/special rooms                   │
+│     • Prevents scheduling conflicts for shared resources                    │
+│                                                                             │
+│  6. LANGUAGE GROUPS (Sheet 6)                                               │
+│     • Only if school has elective language choices                          │
+│     • Ensures parallel scheduling of language options                       │
+│                                                                             │
+│  7. CLASS TEACHER MAPPING                                                   │
+│     • If you want class teachers in Period 1                                │
+│     • Specified via class_teacher_id in Classes sheet                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                    SAMPLE DATA COUNTS (Reference)
+================================================================================
+
+For a typical school with 6 grades (6-12) and 2 sections per grade:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Expected Row Counts                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Sheet 1 - Classes:     12 rows (6 grades × 2 sections)                    │
+│  Sheet 2 - Subjects:    15-20 rows (all unique subjects)                   │
+│  Sheet 3 - Teachers:    20-30 rows (all teaching staff)                    │
+│  Sheet 4 - Mapping:     120-180 rows (12 classes × 10-15 subjects each)    │
+│  Sheet 5 - Resources:   5-10 rows (if applicable)                          │
+│  Sheet 6 - Lang Groups: 2-4 rows (if applicable)                           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                         QUICK REFERENCE - IDs
+================================================================================
+
+Use consistent ID formats across all sheets:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Recommended ID Formats                                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Section IDs:    "6A", "6B", "7A", "10A", "12B"  (Grade + Section)         │
+│  Subject IDs:    "MATH", "ENG", "SCI", "PHY_LAB" (UPPERCASE, short)        │
+│  Teacher IDs:    "T001", "T002", "T100"          (T + number)              │
+│  Resource IDs:   "LAB-PHY-1", "GRD-MAIN"         (TYPE-NAME-NUM)           │
+│                                                                             │
+│  Rules:                                                                     │
+│  • Use only letters, numbers, underscores, hyphens                          │
+│  • No spaces                                                                │
+│  • Case-sensitive (MATH ≠ math)                                            │
+│  • Keep IDs short but meaningful                                            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                      DATA RELATIONSHIP DIAGRAM
+================================================================================
+
+```
+SCHOOL
+ │
+ ├── CLASSES (sections)
+ │     │
+ │     └──── CLASS-SUBJECT-TEACHER MAP ────┐
+ │                  │                       │
+ │                  ▼                       │
+ │            SUBJECTS ◄────────────────────┘
+ │                  │                       │
+ │                  │ (requires_resource)   │
+ │                  ▼                       │
+ │            RESOURCES                     │
+ │                                          │
+ ├── TEACHERS ◄─────────────────────────────┘
+ │     │
+ │     └── subjects_can_teach → SUBJECTS
+ │
+ └── LANGUAGE GROUPS (optional)
+       │
+       └── Links TEACHERS to parallel language scheduling
+```
+
+================================================================================
+                           COMMON MISTAKES TO AVOID
+================================================================================
+
+1. ❌ Teacher assigned subject they can't teach
+   ✓ Ensure subjects_can_teach includes the subject
+
+2. ❌ Missing class-subject-teacher mapping
+   ✓ Every class must have ALL subjects mapped
+
+3. ❌ Teacher overloaded (assigned more periods than max_periods_week)
+   ✓ Calculate total periods per teacher before importing
+
+4. ❌ Subject requires lab but no resource defined
+   ✓ Define resource in Sheet 5 and link via resource_type
+
+5. ❌ Inconsistent IDs across sheets
+   ✓ Use exact same IDs (case-sensitive) in all references
+
+6. ❌ Total subject periods > available periods per week
+   ✓ Sum of min_per_week for all subjects must be ≤ periods/week
+
+================================================================================
+                               END OF DOCUMENT
+================================================================================
+
+
+================================================================================
+                    SAMPLE DATA: VIDYA MANDIR HIGH SCHOOL
+================================================================================
+
+SCHOOL CONFIGURATION:
+─────────────────────
+  School ID: 1
+  Name: Vidya Mandir High School
+  Academic Year: 2025-2026
+  Start Time: 08:00
+  End Time: 15:30
+  Weekdays: Mon, Tue, Wed, Thu, Fri, Sat
+  Periods per weekday: 9
+  Saturday periods: 4
+  Period duration: 45 minutes
+  Prayer: Yes (30 minutes)
+  Lunch after period: 5 (40 minutes)
+  Recess after period: 3 (20 minutes)
+
+AVAILABLE TIME SLOTS:
+─────────────────────
+  Monday-Friday: 9 periods each = 45 periods
+  Saturday: 4 periods = 4 periods
+  TOTAL: 49 slots per week per section
+
+SUBJECTS (11 total):
+────────────────────
+  ┌────────────┬──────────────────┬──────────┬─────────┬─────────┬───────────────┐
+  │ Subject ID │ Name             │ Category │ Min/Wk  │ Max/Wk  │ Language Tier │
+  ├────────────┼──────────────────┼──────────┼─────────┼─────────┼───────────────┤
+  │ MATH       │ Mathematics      │ core     │ 7       │ 7       │ -             │
+  │ SCI        │ Science          │ core     │ 6       │ 6       │ -             │
+  │ ENG        │ English          │ language │ 6       │ 6       │ Tier 1        │
+  │ SST        │ Social Studies   │ core     │ 5       │ 5       │ -             │
+  │ HINDI      │ Hindi            │ language │ 5       │ 5       │ Tier 2 *      │
+  │ KANNADA    │ Kannada          │ language │ 5       │ 5       │ Tier 2 *      │
+  │ SANSKRIT   │ Sanskrit         │ language │ 5       │ 5       │ Tier 2 *      │
+  │ PHY_LAB    │ Physics Lab      │ lab      │ 2       │ 2       │ -             │
+  │ CHEM_LAB   │ Chemistry Lab    │ lab      │ 2       │ 2       │ -             │
+  │ COMP       │ Computer Science │ leisure  │ 4       │ 4       │ -             │
+  │ PE         │ Physical Ed      │ leisure  │ 4       │ 4       │ -             │
+  │ ART        │ Art & Craft      │ leisure  │ 3       │ 3       │ -             │
+  └────────────┴──────────────────┴──────────┴─────────┴─────────┴───────────────┘
+
+  * TIER 2 LANGUAGE SYNCHRONIZATION:
+    When language_block_enabled=True, Tier 2 languages (HINDI, KANNADA, SANSKRIT)
+    are taught SIMULTANEOUSLY in the same slot. Different teachers teach different
+    student groups in parallel. This means:
+    - They share the same 5 time slots
+    - Only ONE set of 5 slots is needed, not 15 (5+5+5)
+
+PERIOD CALCULATION (with Language Block Synchronization):
+─────────────────────────────────────────────────────────
+  GRADE 6-7 (10 subjects, no labs):
+    Core:     MATH(7) + SCI(6) + SST(5)           = 18 periods
+    Tier 1:   ENG(6)                              =  6 periods
+    Tier 2:   max(HINDI, KANNADA, SANSKRIT)       =  5 periods (shared slots!)
+    Leisure:  PE(4) + COMP(4) + ART(3)            = 11 periods
+    ─────────────────────────────────────────────────────────
+    TOTAL:                                         40 periods ✓ (fits in 49)
+
+  GRADE 8-10 (11 subjects, with labs, no ART):
+    Core:     MATH(7) + SCI(6) + SST(5)           = 18 periods
+    Labs:     PHY_LAB(2) + CHEM_LAB(2)            =  4 periods
+    Tier 1:   ENG(6)                              =  6 periods
+    Tier 2:   max(HINDI, KANNADA, SANSKRIT)       =  5 periods (shared slots!)
+    Leisure:  PE(4) + COMP(4)                     =  8 periods
+    ─────────────────────────────────────────────────────────
+    TOTAL:                                         41 periods ✓ (fits in 49)
+
+CLASSES (10 sections):
+──────────────────────
+  ┌────────────┬───────┬─────────┬─────────────────────┬──────────────────────┐
+  │ Section ID │ Grade │ Section │ Language Block      │ Subjects Assigned    │
+  ├────────────┼───────┼─────────┼─────────────────────┼──────────────────────┤
+  │ 6A         │ 6     │ A       │ Enabled             │ 10 (no labs)         │
+  │ 6B         │ 6     │ B       │ Enabled             │ 10 (no labs)         │
+  │ 7A         │ 7     │ A       │ Enabled             │ 10 (no labs)         │
+  │ 7B         │ 7     │ B       │ Enabled             │ 10 (no labs)         │
+  │ 8A         │ 8     │ A       │ Enabled             │ 11 (with labs)       │
+  │ 8B         │ 8     │ B       │ Enabled             │ 11 (with labs)       │
+  │ 9A         │ 9     │ A       │ Enabled             │ 11 (with labs)       │
+  │ 9B         │ 9     │ B       │ Enabled             │ 11 (with labs)       │
+  │ 10A        │ 10    │ A       │ Enabled             │ 11 (with labs)       │
+  │ 10B        │ 10    │ B       │ Enabled             │ 11 (with labs)       │
+  └────────────┴───────┴─────────┴─────────────────────┴──────────────────────┘
+
+TEACHERS (35 total):
+────────────────────
+  T001-T004:  Mathematics teachers (4)
+  T005-T008:  Science teachers (4)
+  T009-T012:  English teachers (4)
+  T013-T015:  Social Studies teachers (3)
+  T016-T018:  Hindi teachers (3)
+  T019-T021:  Kannada teachers (3)
+  T022-T024:  Sanskrit teachers (3)
+  T025-T027:  PE teachers (3)
+  T028-T030:  Computer teachers (3)
+  T031-T032:  Art teachers (2)
+  T033-T035:  Additional language teachers (3)
+
+LANGUAGE GROUPS (5 sets for 10 sections):
+──────────────────────────────────────────
+  Set 1: Sections 6A, 6B → Hindi(T016), Kannada(T019), Sanskrit(T022)
+  Set 2: Sections 7A, 7B → Hindi(T017), Kannada(T020), Sanskrit(T023)
+  Set 3: Sections 8A, 8B → Hindi(T018), Kannada(T021), Sanskrit(T024)
+  Set 4: Sections 9A, 9B → Hindi(T033), Kannada(T034), Sanskrit(T035)
+  Set 5: Sections 10A, 10B → Hindi(T016), Kannada(T019), Sanskrit(T022)
+
+CRITICAL: LANGUAGE TIER SYNCHRONIZATION
+────────────────────────────────────────
+  When calculating feasibility, Tier 2 languages (HINDI, KANNADA, SANSKRIT)
+  are counted ONCE, not three times, because they share the same time slots.
+
+  This requires:
+  1. `language_block_enabled: true` on each class
+  2. `language_tier: 2` on HINDI, KANNADA, SANSKRIT subjects
+  3. Proper handling in both feasibility check AND solver constraints
+
+================================================================================

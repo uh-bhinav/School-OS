@@ -3,16 +3,71 @@ School Management Multi-Agent System
 =====================================
 A robust demo orchestration using Google Gemini with comprehensive school data.
 Supports: Attendance, Marks, Fees, Timetable, HR, and Budgeting queries.
+Now with visual chart generation capabilities for analytical queries.
+Response Governor enforces concise, software-like outputs.
 """
 
 import os
 import re
 import smtplib
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 from dotenv import load_dotenv
 import google.generativeai as genai
+
+# Import graph helpers for visualization support
+try:
+    from .graph_helpers import (
+        should_generate_graph,
+        build_graph_payload,
+        generate_chart_safe,
+        USE_RESPONSE_TEMPLATES,
+        TEMPLATES_ENABLED,
+        apply_template_to_message,
+    )
+
+    GRAPH_ENABLED = True
+except ImportError:
+    try:
+        from graph_helpers import (
+            should_generate_graph,
+            build_graph_payload,
+            generate_chart_safe,
+            USE_RESPONSE_TEMPLATES,
+            TEMPLATES_ENABLED,
+            apply_template_to_message,
+        )
+
+        GRAPH_ENABLED = True
+    except ImportError:
+        GRAPH_ENABLED = False
+        USE_RESPONSE_TEMPLATES = False
+        TEMPLATES_ENABLED = False
+        logging.warning("Graph helpers not available. Chart generation disabled.")
+
+# Import Response Governor
+try:
+    from .response_governor import (
+        QueryAnalyzer,
+        govern_response,
+    )
+
+    GOVERNOR_ENABLED = True
+except ImportError:
+    try:
+        from response_governor import (
+            QueryAnalyzer,
+            govern_response,
+        )
+
+        GOVERNOR_ENABLED = True
+    except ImportError:
+        GOVERNOR_ENABLED = False
+        logging.warning("Response Governor not available.")
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 env_path = Path(__file__).parent / "manager" / ".env"
@@ -280,11 +335,7 @@ AGENT_DEFINITIONS = {
         ],
         "data": f"{STAFF_DATA}\n\nLEAVE REQUESTS:\n{LEAVE_DATA}",
         "emoji": "👥",
-        "prompt_addition": """
-Focus on HR and staff management.
-Include leave status and balance information.
-For teacher periods, use the periods_per_week column.
-When asked about "most periods" or "most classes assigned", check the periods_per_week field.""",
+        "prompt_addition": """Focus on HR/staff data. Include leave balance. For "most periods" check periods_per_week.""",
     },
     "attendance_agent": {
         "keywords": [
@@ -295,14 +346,18 @@ When asked about "most periods" or "most classes assigned", check the periods_pe
             "attendance percentage",
             "who came",
             "who didn't come",
+            "attendance trend",
+            "attendance comparison",
         ],
         "data": ATTENDANCE_DATA,
         "emoji": "📊",
-        "prompt_addition": """
-Focus on attendance patterns. Calculate attendance percentages when asked.
-Students with attendance below 75% are at risk.
-When asked "who has least attendance", find the student with lowest attendance_pct.
-Include the mail_id column value as email for each student.""",
+        "prompt_addition": """Focus on attendance. Below 75% = at-risk. Include email (mail_id).""",
+        "graph_config": {
+            "supports_charts": True,
+            "default_chart_type": "line",
+            "value_field": "attendance_pct",
+            "category_field": "class_name",
+        },
     },
     "marks_agent": {
         "keywords": [
@@ -313,37 +368,77 @@ Include the mail_id column value as email for each student.""",
             "performance",
             "topper",
             "failed",
+            "failing",
             "lowest",
             "highest",
             "rank",
+            "marks trend",
+            "performance comparison",
+            "low marks",
+            "high marks",
+            "poor performance",
+            "good performance",
+            "below average",
+            "above average",
+            "academic",
+            "result",
+            "results",
+            "percentage",
         ],
         "data": MARKS_DATA,
         "emoji": "📚",
-        "prompt_addition": """
-Focus on academic performance. A+ (90+), A (80-89), B (70-79), C (60-69), D (50-59), F (<50).
-When asked "who scored least/lowest", find the student with minimum marks/percentage.
-When asked "topper", find student with highest marks.""",
+        "prompt_addition": """Focus on academics data. Grades: A+(90+), A(80-89), B(70-79), C(60-69), D(50-59), F(<50).
+IMPORTANT:
+- For "low marks" queries, look for percentage < 50 or grade = 'F' or grade = 'D'
+- For "failed" or "failing" queries, look for grade = 'F' (percentage < 50)
+- Include student_name, subject, and obtained marks in your response
+- When generating chart data, use student names as labels and their marks/percentage as values""",
+        "graph_config": {
+            "supports_charts": True,
+            "default_chart_type": "bar",
+            "value_field": "percentage",
+            "category_field": "class_name",
+        },
     },
     "fees_agent": {
         "keywords": [
             "fee",
+            "fees",
             "payment",
             "pending",
             "paid",
+            "payed",
             "dues",
             "invoice",
             "balance",
             "overdue",
             "hasn't paid",
+            "havent paid",
+            "haven't paid",
+            "not paid",
             "unpaid",
+            "defaulter",
+            "defaulters",
+            "collection trend",
+            "fee comparison",
+            "fee status",
+            "payment status",
+            "tuition",
+            "transport fee",
         ],
         "data": FEES_DATA,
         "emoji": "💰",
-        "prompt_addition": """
-Focus on fee collection status.
-Status meanings: paid (fully paid), pending (due soon), partial (partially paid), overdue (past due date).
-When asked "who hasn't paid", list students with status='pending' or 'overdue' or 'partial'.
-Include the mail_id for sending reminders.""",
+        "prompt_addition": """Focus on fees data. Status values: paid/pending/partial/overdue.
+IMPORTANT:
+- For "who hasn't paid" or "unpaid" queries, look for status='overdue' or status='pending' or balance > 0
+- Include student_name and balance/status in your response
+- Include mail_id for email reminders.""",
+        "graph_config": {
+            "supports_charts": True,
+            "default_chart_type": "bar",
+            "value_field": "amount",
+            "category_field": "class_name",
+        },
     },
     "timetable_agent": {
         "keywords": [
@@ -356,10 +451,7 @@ Include the mail_id for sending reminders.""",
         ],
         "data": TIMETABLE_DATA,
         "emoji": "📅",
-        "prompt_addition": """
-Focus on class schedules and teacher assignments.
-When asked "which teacher has most classes", count periods_per_week or timetable entries per teacher.
-Provide room and timing information.""",
+        "prompt_addition": """Focus on schedules. Include room and timing info.""",
     },
     "budget_agent": {
         "keywords": [
@@ -372,30 +464,117 @@ Provide room and timing information.""",
             "approval",
             "transaction",
             "cost",
+            "budget trend",
+            "expenditure comparison",
         ],
         "data": f"{BUDGET_DATA}\n\nTRANSACTIONS:\n{BUDGET_TRANSACTIONS}",
         "emoji": "📈",
-        "prompt_addition": """
-Focus on budget management and expense tracking.
-Calculate utilization percentage: (spent/allocated) * 100.
-Pending transactions require approval.
-Alert on budgets with utilization > 80%.""",
+        "prompt_addition": """Focus on budget. Utilization = (spent/allocated)*100. Alert if >80%.""",
+        "graph_config": {
+            "supports_charts": True,
+            "default_chart_type": "bar",
+            "value_field": "spent",
+            "category_field": "title",
+        },
     },
 }
 
 
-def detect_agent(query: str) -> tuple[str, dict]:
-    """Detect which agent should handle the query."""
+def detect_agents(query: str) -> list[tuple[str, dict]]:
+    """
+    Detect ALL agents that should handle the query.
+    Returns a list of (agent_id, config) tuples for multi-domain queries.
+    Uses word boundary matching to prevent false positives.
+    """
     query_lower = query.lower()
+    matched_agents = []
+    matched_keywords = {}  # Track which keywords matched for each agent
 
-    # Check each agent's keywords
+    # Check each agent's keywords with word boundary matching
     for agent_id, config in AGENT_DEFINITIONS.items():
         for keyword in config["keywords"]:
-            if keyword in query_lower:
-                return agent_id, config
+            # Use word boundary regex for single/short keywords to prevent false positives
+            # e.g., "hr" should not match "through"
+            if len(keyword) <= 3:
+                # Use word boundary for short keywords
+                pattern = r"\b" + re.escape(keyword) + r"\b"
+                if re.search(pattern, query_lower):
+                    if agent_id not in matched_keywords:
+                        matched_keywords[agent_id] = []
+                        matched_agents.append((agent_id, config))
+                    matched_keywords[agent_id].append(keyword)
+                    break  # Only need one match per agent
+            else:
+                # For longer keywords, substring matching is fine
+                if keyword in query_lower:
+                    if agent_id not in matched_keywords:
+                        matched_keywords[agent_id] = []
+                        matched_agents.append((agent_id, config))
+                    matched_keywords[agent_id].append(keyword)
+                    break  # Only need one match per agent
 
-    # Default to a general response
+    # Log matched agents for debugging
+    if matched_agents:
+        logger.info(
+            f"Query matched agents: {[a[0] for a in matched_agents]} with keywords: {matched_keywords}"
+        )
+
+    return matched_agents
+
+
+def detect_agent(query: str) -> tuple[str, dict]:
+    """Detect which agent should handle the query (primary agent)."""
+    matched = detect_agents(query)
+    if matched:
+        return matched[0]
     return "school_management_agent", None
+
+
+def get_combined_agent_data(
+    matched_agents: list[tuple[str, dict]], query: str
+) -> tuple[str, str, str, dict]:
+    """
+    Combine data from multiple matched agents for multi-domain queries.
+
+    Returns: (combined_data, agent_ids_str, combined_prompt_addition, primary_graph_config)
+    """
+    if not matched_agents:
+        return "", "school_management_agent", "", {}
+
+    if len(matched_agents) == 1:
+        agent_id, config = matched_agents[0]
+        return (
+            config["data"],
+            agent_id,
+            config.get("prompt_addition", ""),
+            config.get("graph_config", {}),
+        )
+
+    # Multiple agents matched - combine their data
+    combined_data_parts = []
+    combined_prompts = []
+    primary_graph_config = {}
+    agent_ids = []
+
+    for agent_id, config in matched_agents:
+        agent_ids.append(agent_id)
+        # Add agent-specific header to data
+        agent_name = agent_id.replace("_agent", "").upper()
+        combined_data_parts.append(f"=== {agent_name} DATA ===\n{config['data']}")
+        if config.get("prompt_addition"):
+            combined_prompts.append(f"For {agent_name}: {config['prompt_addition']}")
+
+        # Use first agent's graph config as primary
+        if not primary_graph_config and config.get("graph_config"):
+            primary_graph_config = config["graph_config"]
+
+    combined_data = "\n\n".join(combined_data_parts)
+    combined_prompt = "\n".join(combined_prompts)
+    agent_ids_str = "+".join(agent_ids)
+
+    logger.info(f"Combined data from agents: {agent_ids}")
+
+    return combined_data, agent_ids_str, combined_prompt, primary_graph_config
 
 
 async def get_agent_response(user_message: str, history: list) -> dict:
@@ -454,8 +633,14 @@ SchoolOS - Smart School Management"""
                 "agent_id": "email_agent",
             }
 
-    # Detect agent
-    agent_id, config = detect_agent(user_message)
+    # Detect all matching agents for multi-domain query support
+    matched_agents = detect_agents(user_message)
+
+    # Get primary agent for single-domain queries
+    if matched_agents:
+        agent_id, config = matched_agents[0]
+    else:
+        agent_id, config = "school_management_agent", None
 
     # Handle greeting - ONLY if no specific agent was detected
     if agent_id == "school_management_agent":
@@ -474,32 +659,33 @@ SchoolOS - Smart School Management"""
             for word in greeting_words
         ):
             return {
-                "message": """👋 **Hello! I'm your School Management Assistant.**
+                "message": """👋 Hello! I'm your School Assistant.
 
-I can help you with:
+I can help with: 📊 Attendance | 📚 Marks | 💰 Fees | 📅 Timetable | 👥 Staff | 📈 Budget
 
-📊 **Attendance** - Check student attendance, late comers, absentees
-📚 **Marks** - View grades, find toppers, identify struggling students
-💰 **Fees** - Payment status, pending dues, overdue invoices
-📅 **Timetable** - Class schedules, teacher assignments, room info
-👥 **HR & Staff** - Employee details, leave requests, salary info
-📈 **Budgeting** - Expense tracking, approvals, budget utilization
-
-**Try asking:**
-- "Who hasn't paid fees this year?"
-- "Who has the least attendance in Grade 5?"
-- "Which teacher has the most classes assigned?"
-- "Show me pending budget approvals"
-
-What would you like to know?""",
+Try: "Who has lowest attendance?" or "Show fee defaulters" """,
                 "agent_id": "school_management_agent",
             }
 
-    # Build prompt with relevant data
-    if config:
+    # Build prompt with relevant data - support multi-agent queries
+    if len(matched_agents) > 1:
+        # Multi-domain query - combine data from all matched agents
+        (
+            relevant_data,
+            agent_id,
+            prompt_addition,
+            graph_config,
+        ) = get_combined_agent_data(matched_agents, user_message)
+        emoji = "🎓"  # Use general emoji for multi-domain queries
+        logger.info(
+            f"Multi-domain query detected, using combined data from: {agent_id}"
+        )
+    elif config:
         relevant_data = config["data"]
-        emoji = config["emoji"]
-        prompt_addition = config["prompt_addition"]
+        emoji = config.get("emoji", "🎓")
+        prompt_addition = config.get("prompt_addition", "")
+        graph_config = config.get("graph_config", {})
+        logger.info(f"Single-domain query detected, using {agent_id}")
     else:
         relevant_data = f"""
 ATTENDANCE: {ATTENDANCE_DATA}
@@ -512,38 +698,389 @@ STAFF: {STAFF_DATA}
 """
         emoji = "🎓"
         prompt_addition = "Provide helpful insights from the available school data."
+        graph_config = {}
 
-    system_prompt = f"""You are a friendly and helpful school management assistant.
-Your job is to analyze school data and provide accurate, actionable insights.
+    # Check if visualization is requested
+    needs_graph = False
+    chart_result = None
 
-CURRENT DATA:
+    # Check if graph is needed based on the query, regardless of agent config
+    if GRAPH_ENABLED:
+        needs_graph = should_generate_graph(user_message)
+        # If graph is needed but current agent doesn't support charts,
+        # still allow graph generation by using fallback chart generation
+        if needs_graph and not graph_config.get("supports_charts", False):
+            logger.info(
+                f"Graph requested but {agent_id} doesn't have chart config, will use fallback"
+            )
+
+    # If graph is needed, add instructions to extract chart data
+    chart_instruction = ""
+    if needs_graph:
+        chart_instruction = """
+
+CHART DATA (MANDATORY FOR THIS QUERY):
+You MUST analyze the DATA provided above and generate chart data that DIRECTLY answers the user's question.
+DO NOT use unrelated data. The chart MUST visualize the EXACT data requested in the QUERY.
+
+Provide chart data as JSON at the END of your text response:
+<CHART_DATA>
+{"chart_type": "bar", "title": "Title That Matches The Query", "labels": ["Name1","Name2"], "values": [value1,value2]}
+</CHART_DATA>
+
+CRITICAL: The title, labels, and values MUST be extracted from the DATA above and MUST directly answer the QUERY.
+Chart types: line, bar, pie, horizontal_bar. Max 10 data points."""
+
+    system_prompt = f"""You are a school data assistant. Output ONLY data, never commentary.
+
+AVAILABLE DATA (USE ONLY THIS DATA - DO NOT INVENT OR HALLUCINATE):
 {relevant_data}
 
-INSTRUCTIONS:
 {prompt_addition}
 
-FORMATTING RULES:
-1. Use emojis to make responses friendly and readable
-2. Format lists with bullet points
-3. Include specific names, values, and email addresses in your response
-4. When showing student/staff info, include their email for follow-up actions
-5. Be concise but thorough
-6. If asked to compare or find min/max, analyze the data carefully
+CRITICAL RULES:
+1. ONLY use data from the AVAILABLE DATA section above
+2. If the requested data is NOT in the AVAILABLE DATA, respond with "• Data not available for this query"
+3. DO NOT make up names, numbers, or any information not in the data
+4. DO NOT mix data from different categories
 
-RECENT CONVERSATION:
-{context}
+STRICT OUTPUT RULES:
+1. MAX 5 bullet points, each under 12 words
+2. NO greetings, NO "here is", NO "based on the data"
+3. NEVER write diagrams, flowcharts, mermaid, or ASCII art
+4. NEVER use ```code blocks``` for any visual representation
+5. Start with the most important fact
+6. Use bullet format: • Item: Value
+{chart_instruction}
 
-USER QUERY: {user_message}
-
-Provide an accurate, helpful response based on the data above."""
+QUERY: {user_message}"""
 
     try:
         model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(system_prompt)
 
-        return {"message": f"{emoji} {response.text}", "agent_id": agent_id}
+        # Safely extract response text with proper error handling
+        response_text = None
+        try:
+            response_text = response.text
+        except ValueError as ve:
+            # Handle case when response.text accessor fails (empty/blocked response)
+            logger.error(f"Response text extraction failed: {ve}")
+            # Check if response was blocked by safety filters
+            if hasattr(response, "candidates") and response.candidates:
+                candidate = response.candidates[0]
+                if hasattr(candidate, "safety_ratings"):
+                    logger.warning(f"Safety ratings: {candidate.safety_ratings}")
+                if hasattr(candidate, "finish_reason"):
+                    logger.warning(f"Finish reason: {candidate.finish_reason}")
+
+            # Provide a fallback response based on the agent type
+            if agent_id == "fees_agent":
+                response_text = "• Fee data query processed\n• Please check specific student records"
+            elif agent_id == "marks_agent":
+                response_text = "• Marks data query processed\n• Please check student performance records"
+            else:
+                response_text = "• Query processed but response was limited\n• Please try a more specific question"
+
+        if not response_text:
+            response_text = (
+                "• Unable to process this query\n• Please try rephrasing your question"
+            )
+
+        # Extract chart data if present and generate chart
+        if needs_graph and GRAPH_ENABLED:
+            chart_result = _extract_and_generate_chart(response_text, agent_id)
+            # Remove chart data tags from response text
+            response_text = re.sub(
+                r"<CHART_DATA>.*?</CHART_DATA>", "", response_text, flags=re.DOTALL
+            ).strip()
+
+        # Apply Response Governor for strict output control (if enabled)
+        logger.info(
+            f"GOVERNOR_ENABLED={GOVERNOR_ENABLED}, GRAPH_ENABLED={GRAPH_ENABLED}"
+        )
+        if GOVERNOR_ENABLED:
+            # Analyze query to determine if graph is required
+            analyzer = QueryAnalyzer()
+            query_info = analyzer.analyze(user_message)
+
+            # If query requires graph but none generated, try fallback chart generation
+            if query_info["requires_graph"] and not chart_result and GRAPH_ENABLED:
+                logger.info(
+                    f"Governor: Query requires graph, trying fallback for {agent_id}"
+                )
+                chart_result = _generate_fallback_chart(
+                    response_text, user_message, agent_id
+                )
+
+            # Apply governor enforcement
+            governed_response = govern_response(
+                raw_response=response_text,
+                query=user_message,
+                agent_id=agent_id,
+                chart=chart_result,
+            )
+
+            # Build final response with governed format
+            result = {
+                "message": governed_response["message"],
+                "agent_id": agent_id,
+                "formatted": governed_response.get("formatted"),
+                "governed": True,  # Mark as governor-processed
+            }
+
+            if governed_response.get("chart"):
+                result["chart"] = governed_response["chart"]
+            if governed_response.get("bullets"):
+                result["bullets"] = governed_response["bullets"]
+
+            return result
+
+        # Fallback: Apply response templates if enabled (legacy path)
+        elif USE_RESPONSE_TEMPLATES and TEMPLATES_ENABLED:
+            template_result = apply_template_to_message(
+                message=response_text,
+                query=user_message,
+                agent_id=agent_id,
+                chart=chart_result,
+            )
+
+            # Build final response with templated format
+            result = {
+                "message": f"{emoji} {template_result['message']}",
+                "agent_id": agent_id,
+                "formatted": template_result.get("formatted"),
+            }
+
+            if template_result.get("chart"):
+                result["chart"] = template_result["chart"]
+        else:
+            # Fallback to raw response
+            result = {"message": f"{emoji} {response_text}", "agent_id": agent_id}
+
+            if chart_result:
+                result["chart"] = chart_result
+
+        return result
+
     except Exception as e:
+        logger.exception(f"Agent response error: {e}")
         return {
             "message": f"❌ I encountered an error: {str(e)}\n\nPlease ensure GOOGLE_API_KEY is set in the .env file.",
             "agent_id": "error",
         }
+
+
+def _extract_and_generate_chart(response_text: str, agent_id: str) -> dict | None:
+    """
+    Extract chart data from LLM response and generate chart.
+
+    Args:
+        response_text: Full LLM response text
+        agent_id: ID of the agent for logging
+
+    Returns:
+        Chart result dict or None if extraction/generation fails
+    """
+    import json
+
+    try:
+        # Extract chart data from tags
+        match = re.search(
+            r"<CHART_DATA>\s*(.*?)\s*</CHART_DATA>", response_text, re.DOTALL
+        )
+        if not match:
+            logger.debug(f"No chart data found in {agent_id} response")
+            return None
+
+        chart_json = match.group(1).strip()
+        chart_data = json.loads(chart_json)
+
+        # Build payload for graph tool
+        payload = build_graph_payload(
+            agent_type=agent_id.replace("_agent", ""),
+            intent=chart_data.get("chart_type", "comparison"),
+            labels=chart_data.get("labels", []),
+            values=chart_data.get("values", []),
+            title=chart_data.get("title", ""),
+            x_label=chart_data.get("x_label", ""),
+            y_label=chart_data.get("y_label", ""),
+            chart_type=chart_data.get("chart_type", "bar"),
+        )
+
+        # Generate chart
+        result, error = generate_chart_safe(payload)
+
+        if error:
+            logger.error(f"Chart generation failed for {agent_id}: {error}")
+            return None
+
+        # Return in format expected by frontend (base64_image key)
+        return {
+            "base64_image": result.get("base64_image"),
+            "chart_type": result.get("chart_type"),
+            "title": chart_data.get("title", ""),
+        }
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse chart JSON from {agent_id}: {e}")
+        return None
+    except Exception as e:
+        logger.exception(f"Chart extraction error for {agent_id}: {e}")
+        return None
+
+
+def _generate_fallback_chart(
+    response_text: str, query: str, agent_id: str
+) -> dict | None:
+    """
+    Generate a chart from response text when LLM didn't provide structured chart data.
+    Extracts numbers and labels from bullet points to create a visualization.
+
+    CRITICAL: Only extract data that is relevant to the agent type and query context.
+
+    Args:
+        response_text: The agent's text response
+        query: Original user query
+        agent_id: Agent identifier
+
+    Returns:
+        Chart result dict or None if generation fails
+    """
+    try:
+        query_lower = query.lower()
+
+        # Validate that we have data relevant to the query
+        # Don't generate charts for unrelated data
+        relevance_keywords = {
+            "marks_agent": [
+                "marks",
+                "score",
+                "grade",
+                "percentage",
+                "obtained",
+                "performance",
+                "low marks",
+                "high marks",
+                "failed",
+                "pass",
+            ],
+            "attendance_agent": [
+                "attendance",
+                "present",
+                "absent",
+                "late",
+                "attendance_pct",
+            ],
+            "fees_agent": ["fee", "paid", "pending", "overdue", "balance", "amount"],
+            "hr_agent": ["staff", "employee", "salary", "leave", "periods"],
+            "budget_agent": ["budget", "expense", "spent", "allocated"],
+        }
+
+        # Check if query matches the agent's domain
+        agent_keywords = relevance_keywords.get(agent_id, [])
+        if not any(kw in query_lower for kw in agent_keywords):
+            logger.warning(
+                f"Query doesn't match {agent_id} domain, skipping fallback chart"
+            )
+            return None
+
+        # Extract name:value or name - value patterns from response
+        patterns = [
+            r"•\s*([^:]+):\s*(\d+(?:\.\d+)?)",  # • Name: 95
+            r"•\s*([^–-]+)\s*[-–]\s*(\d+(?:\.\d+)?)",  # • Name - 95
+            r"(\w+(?:\s+\w+)*)\s*:\s*(\d+(?:\.\d+)?)",  # Name: 95
+            r"(\w+(?:\s+\w+)*)\s+scored?\s+(\d+(?:\.\d+)?)",  # Name scored 95
+        ]
+
+        labels = []
+        values = []
+
+        for pattern in patterns:
+            matches = re.findall(pattern, response_text)
+            if matches and len(matches) >= 2:
+                for match in matches[:10]:  # Limit to 10 items
+                    label = match[0].strip()
+                    try:
+                        value = float(match[1])
+                        # Validate label relevance based on agent type
+                        if label and len(label) < 30:
+                            # Skip labels that look like unrelated HR/staff data
+                            # when we're querying for student data
+                            if agent_id in [
+                                "marks_agent",
+                                "attendance_agent",
+                                "fees_agent",
+                            ]:
+                                staff_terms = [
+                                    "staff",
+                                    "employee",
+                                    "salary",
+                                    "leave",
+                                    "periods per week",
+                                    "active staff",
+                                ]
+                                if any(term in label.lower() for term in staff_terms):
+                                    logger.debug(f"Skipping unrelated label: {label}")
+                                    continue
+                            labels.append(label)
+                            values.append(value)
+                    except ValueError:
+                        continue
+                break  # Use first successful pattern
+
+        if len(labels) < 2:
+            logger.debug(f"Not enough data points extracted for chart: {len(labels)}")
+            return None
+
+        # Determine chart type based on query
+        chart_type = "bar"
+        if "trend" in query_lower or "over time" in query_lower:
+            chart_type = "line"
+        elif "ranking" in query_lower or "top" in query_lower:
+            chart_type = "horizontal_bar"
+        elif "distribution" in query_lower or "breakdown" in query_lower:
+            chart_type = "pie"
+
+        # Generate title from query - make it more specific
+        title_words = query.split()[:6]
+        title = " ".join(word.title() for word in title_words)
+
+        # Ensure title reflects the actual data domain
+        domain_titles = {
+            "marks_agent": "Student Marks Analysis",
+            "attendance_agent": "Attendance Analysis",
+            "fees_agent": "Fee Payment Analysis",
+            "hr_agent": "Staff Analysis",
+            "budget_agent": "Budget Analysis",
+        }
+        if agent_id in domain_titles and len(title) < 10:
+            title = domain_titles[agent_id]
+
+        # Build payload
+        payload = build_graph_payload(
+            agent_type=agent_id.replace("_agent", ""),
+            intent="comparison",
+            labels=labels,
+            values=values,
+            title=title,
+            chart_type=chart_type,
+        )
+
+        # Generate chart
+        result, error = generate_chart_safe(payload)
+
+        if error:
+            logger.error(f"Fallback chart generation failed: {error}")
+            return None
+
+        logger.info(f"Successfully generated fallback chart for {agent_id}")
+        return {
+            "base64_image": result.get("base64_image"),
+            "chart_type": result.get("chart_type"),
+            "title": title,
+        }
+
+    except Exception as e:
+        logger.exception(f"Fallback chart generation error: {e}")
+        return None

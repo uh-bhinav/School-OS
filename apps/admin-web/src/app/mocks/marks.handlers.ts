@@ -293,7 +293,7 @@ export const marksHandlers = [
       id: classId,
       grade: classId,
       section: "A",
-      name: `Class ${classId} A`,
+      name: `Grade ${classId} A`,
       total_students: 40,
       class_teacher_id: 101,
       class_teacher_name: "Mrs. Sharma",

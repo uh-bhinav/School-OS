@@ -1,22 +1,20 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Box, Typography, Button, Snackbar, Alert, Card, CardContent, CardActions } from "@mui/material";
-import { Add as AddIcon, Upload as UploadIcon, TrendingUp as TrendingUpIcon, Assignment as AssignmentIcon } from "@mui/icons-material";
+import { Box, Typography, Button, Snackbar, Alert, ToggleButtonGroup, ToggleButton } from "@mui/material";
+import { Add as AddIcon, Upload as UploadIcon, ListAlt as QuestionIcon, Functions as TotalIcon } from "@mui/icons-material";
 import { MarksFilterBar } from "@/app/components/marks/MarksFilterBar";
 import { KPICards } from "@/app/components/marks/KPICards";
 import { MarksTable } from "@/app/components/marks/MarksTable";
 import { MarkDialog } from "@/app/components/marks/MarkDialog";
+import { QuestionWiseMarkDialog } from "@/app/components/marks/QuestionWiseMarkDialog";
 import { BulkUploadDialog } from "@/app/components/marks/BulkUploadDialog";
-import { StudentProgressChart } from "@/app/components/marks/StudentProgressChart";
-import { ClassPerformanceChart } from "@/app/components/marks/ClassPerformanceChart";
+import { ScoreDistributionChart } from "@/app/components/marks/ScoreDistributionChart";
+import { QuestionDifficultyChart } from "@/app/components/marks/QuestionDifficultyChart";
 import { SummaryCards } from "@/app/components/marks/SummaryCards";
 import { ExportMenu } from "@/app/components/marks/ExportMenu";
 import { useMarksStore } from "@/app/stores/useMarksStore";
 import {
   useMarks,
   useMarksKpi,
-  useClassPerformance,
-  useStudentProgress,
   useCreateMark,
   useUpdateMark,
   useDeleteMark,
@@ -51,7 +49,6 @@ import { Mark } from "@/app/services/marks.schema";
  * - No component changes needed for backend integration
  */
 export default function MarksPage() {
-  const navigate = useNavigate();
   const { classId, section, examId, subjectId } = useMarksStore();
 
   // Build filters object
@@ -69,19 +66,6 @@ export default function MarksPage() {
   const kpiFilters = classId && examId ? { class_id: classId, exam_id: examId } : undefined;
   const { data: kpi, isLoading: kpiLoading } = useMarksKpi(kpiFilters || { class_id: 0, exam_id: 0 });
 
-  // Class performance requires both class_id and exam_id
-  const { data: classPerformance } = useClassPerformance(
-    classId || 0,
-    examId || 0
-  );
-
-  // Student progress - use first student from marks data if available
-  const firstStudentId = marks && marks.length > 0 ? marks[0].student_id : 0;
-  const { data: studentProgress } = useStudentProgress(
-    firstStudentId,
-    subjectId || 0
-  );
-
   // Mutations
   const createMark = useCreateMark();
   const updateMark = useUpdateMark();
@@ -90,8 +74,10 @@ export default function MarksPage() {
 
   // Dialog states
   const [markDialogOpen, setMarkDialogOpen] = useState(false);
+  const [questionDialogOpen, setQuestionDialogOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [selectedMark, setSelectedMark] = useState<Mark | null>(null);
+  const [entryMode, setEntryMode] = useState<"question" | "total">("question");
 
   // Snackbar state
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" as "success" | "error" });
@@ -102,8 +88,12 @@ export default function MarksPage() {
 
   // Handlers
   const handleAddMark = () => {
-    setSelectedMark(null);
-    setMarkDialogOpen(true);
+    if (entryMode === "question") {
+      setQuestionDialogOpen(true);
+    } else {
+      setSelectedMark(null);
+      setMarkDialogOpen(true);
+    }
   };
 
   const handleEditMark = (mark: Mark) => {
@@ -230,56 +220,25 @@ export default function MarksPage() {
         </Box>
       </Box>
 
-      {/* ===================================================================== */}
-      {/* RECOMMENDED WORKFLOW BANNER */}
-      {/* ===================================================================== */}
-      <Card
-        sx={{
-          mb: 3,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-        }}
-      >
-        <CardContent sx={{ pb: 0 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <TrendingUpIcon sx={{ fontSize: 40 }} />
-            <Box>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                📚 Recommended: Question-wise Marks Entry with CO Mapping
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.95 }}>
-                For outcome-based evaluation (OBE), enter marks per question with automatic CO attainment calculation.
-                This is the modern approach for comprehensive assessment and attainment tracking.
-              </Typography>
-            </Box>
-          </Box>
-        </CardContent>
-        <CardActions sx={{ pt: 0, pb: 2, px: 2 }}>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<AssignmentIcon />}
-            onClick={() => navigate('/academics/exams')}
-            sx={{
-              bgcolor: 'white',
-              color: '#667eea',
-              fontWeight: 'bold',
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.9)',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 6px 20px rgba(0,0,0,0.2)'
-              },
-              transition: 'all 0.3s ease'
-            }}
-          >
-            Go to Exams → Subjects → Question-wise Entry
-          </Button>
-          <Typography variant="caption" sx={{ ml: 2, opacity: 0.9 }}>
-            Current view below is for legacy total marks entry
-          </Typography>
-        </CardActions>
-      </Card>
+      {/* Entry Mode Toggle */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+        <Typography variant="body2" color="text.secondary" fontWeight={600}>Entry Mode:</Typography>
+        <ToggleButtonGroup
+          value={entryMode}
+          exclusive
+          onChange={(_, v) => v && setEntryMode(v)}
+          size="small"
+        >
+          <ToggleButton value="question">
+            <QuestionIcon sx={{ mr: 0.5, fontSize: 18 }} />
+            Question-wise Entry
+          </ToggleButton>
+          <ToggleButton value="total">
+            <TotalIcon sx={{ mr: 0.5, fontSize: 18 }} />
+            Total Marks (Legacy)
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
 
       {/* Filters */}
       <Box sx={{ mb: 3 }}>
@@ -301,7 +260,7 @@ export default function MarksPage() {
         />
       </Box>
 
-      {/* Performance Charts */}
+      {/* Analytics Charts */}
       <Box
         sx={{
           display: "grid",
@@ -310,8 +269,8 @@ export default function MarksPage() {
           mb: 3,
         }}
       >
-        <ClassPerformanceChart data={classPerformance} />
-        <StudentProgressChart data={studentProgress} />
+        <ScoreDistributionChart data={marks ?? []} />
+        <QuestionDifficultyChart />
       </Box>
 
       {/* Summary Cards */}
@@ -333,6 +292,13 @@ export default function MarksPage() {
         onSubmit={handleMarkSubmit}
         mark={selectedMark}
         loading={createMark.isPending || updateMark.isPending}
+      />
+
+      <QuestionWiseMarkDialog
+        open={questionDialogOpen}
+        onClose={() => setQuestionDialogOpen(false)}
+        onSubmit={handleMarkSubmit}
+        loading={createMark.isPending}
       />
 
       <BulkUploadDialog

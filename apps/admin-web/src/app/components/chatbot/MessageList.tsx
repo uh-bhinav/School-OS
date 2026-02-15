@@ -4,6 +4,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import EmptyState from "./EmptyState";
 import MarkdownRenderer from "./MarkdownRenderer";
+import ChatChart from "./ChatChart";
 
 export default function MessageList() {
   const { sessions, activeId, isLoading } = useChatStore();
@@ -56,6 +57,10 @@ export default function MessageList() {
             ) : (
               <div className="text-sm md:text-base leading-relaxed">
                 <MarkdownRenderer content={msg.content} />
+                {/* Render inline chart if present */}
+                {msg.chart?.base64_image && (
+                  <ChatChart chart={msg.chart} />
+                )}
               </div>
             )}
             <span

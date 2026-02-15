@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
-import { Box, Card, CardContent, Typography, CircularProgress, Alert, Button, Dialog, DialogTitle, DialogContent, Table, TableBody, TableCell, TableHead, TableRow, Chip } from "@mui/material";
+import { Box, Card, CardContent, Typography, CircularProgress, Alert, Button, Dialog, DialogContent, Table, TableBody, TableCell, TableHead, TableRow, Chip } from "@mui/material";
 import { Download, Visibility } from "@mui/icons-material";
 import { getStudentReportCards } from "@/app/services/student-details.api";
 import type { ReportCard } from "@/app/mockDataProviders/mockStudentReportCard";
 
 interface ReportCardPanelProps {
   studentId: number;
+  studentName?: string;
+  motherName?: string;
+  fatherName?: string;
+  rollNo?: string;
+  admissionNo?: string;
+  dateOfBirth?: string;
+  address?: string;
 }
 
-export default function ReportCardPanel({ studentId }: ReportCardPanelProps) {
+export default function ReportCardPanel({ studentId, studentName, motherName, fatherName, rollNo, admissionNo, dateOfBirth, address }: ReportCardPanelProps) {
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<ReportCard | null>(null);
@@ -180,27 +187,27 @@ export default function ReportCardPanel({ studentId }: ReportCardPanelProps) {
               <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, mb: 3, p: 2, bgcolor: "#f5f5f5", borderRadius: 1 }}>
                 <Box>
                   <Typography variant="body2">
-                    <strong>Name of Student:</strong> DEMO STUDENT
+                    <strong>Name of Student:</strong> {studentName || "—"}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Mother's Name:</strong> DEMO MOTHER
+                    <strong>Mother's Name:</strong> {motherName || "—"}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Father's Name:</strong> DEMO FATHER
+                    <strong>Father's Name:</strong> {fatherName || "—"}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Address:</strong> Demo Address
+                    <strong>Address:</strong> {address || "—"}
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="body2">
-                    <strong>Roll No.:</strong> 001
+                    <strong>Roll No.:</strong> {rollNo || "—"}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Admission No:</strong> 123
+                    <strong>Admission No:</strong> {admissionNo || "—"}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Date of Birth:</strong> 01/01/2015
+                    <strong>Date of Birth:</strong> {dateOfBirth || "—"}
                   </Typography>
                 </Box>
               </Box>

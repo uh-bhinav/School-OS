@@ -1,595 +1,567 @@
-# SchoolOS - Dashboard & Multi-Agent Setup Guide
+# 🎓 SchoolOS - Demo Setup Guide
 
-This guide will help you set up and run the SchoolOS admin dashboard (frontend) and the multi-agent chatbot system (backend) from scratch.
+> A comprehensive guide for teammates to run the SchoolOS demo environment from scratch.
 
 ---
 
 ## 📋 Table of Contents
 
-1. [Prerequisites](#prerequisites)
-2. [System Requirements](#system-requirements)
-3. [Multi-Agent System Setup](#multi-agent-system-setup)
-4. [Frontend Dashboard Setup](#frontend-dashboard-setup)
-5. [Running the Application](#running-the-application)
-6. [Troubleshooting](#troubleshooting)
-7. [Architecture Overview](#architecture-overview)
+1. [Overview](#-overview)
+2. [Prerequisites](#-prerequisites)
+3. [Project Structure](#-project-structure)
+4. [Quick Start (TL;DR)](#-quick-start-tldr)
+5. [Detailed Setup Guide](#-detailed-setup-guide)
+   - [Terminal 1: Backend Server (Port 8000)](#terminal-1-backend-server-port-8000)
+   - [Terminal 2: Frontend Admin Web (Port 5173)](#terminal-2-frontend-admin-web-port-5173)
+   - [Terminal 3: ADK Multi-Agent Chatbot (Port 8004)](#terminal-3-adk-multi-agent-chatbot-port-8004)
+   - [Terminal 4: Timetable Backend Server (Port 8010)](#terminal-4-timetable-backend-server-port-8010)
+   - [Terminal 5: Timetable Frontend (Port 3000)](#terminal-5-timetable-frontend-port-3000)
+6. [Environment Variables](#-environment-variables)
+7. [Using the Application](#-using-the-application)
+8. [Troubleshooting](#-troubleshooting)
+9. [Port Summary](#-port-summary)
 
 ---
 
-## Prerequisites
+## 🌟 Overview
 
-Before you begin, ensure you have the following installed on your system:
+SchoolOS is a comprehensive school management system with:
+
+- **Admin Web Dashboard** - React-based frontend with mock data support
+- **Backend API** - FastAPI server handling authentication and real API calls
+- **ADK Multi-Agent Chatbot** - AI-powered assistant using Google Gemini
+- **Timetable Generator** - Constraint-based scheduler with dedicated frontend/backend
+
+**Demo Mode**: The application runs primarily on the frontend with mock data (MSW - Mock Service Worker). Only authentication and user role recognition require the real backend.
+
+---
+
+## 🔧 Prerequisites
+
+Before you begin, ensure you have the following installed:
 
 ### Required Software
 
-- **Python 3.10+** - For the multi-agent backend
-- **Node.js 18+** - For the frontend dashboard
-- **pnpm** - Package manager for the frontend
-- **Poetry** - Python dependency manager
-- **Git** - Version control
+| Tool | Version | Check Command | Installation |
+|------|---------|---------------|--------------|
+| **Node.js** | 18+ | `node --version` | [nodejs.org](https://nodejs.org) |
+| **pnpm** | 10+ | `pnpm --version` | `npm install -g pnpm` |
+| **Python** | 3.10+ | `python3 --version` | [python.org](https://python.org) |
+| **pip** | Latest | `pip3 --version` | Comes with Python |
 
----
-
-## System Requirements
-
-### Operating System
-- macOS (recommended)
-- Linux
-- Windows (with WSL2)
-
-### Hardware
-- **RAM**: Minimum 8GB (16GB recommended)
-- **Storage**: At least 2GB free space
-- **Internet**: Required for initial setup and Google Gemini API calls
-
----
-
-## Multi-Agent System Setup
-
-The multi-agent system is an AI-powered chatbot orchestration using Google Gemini 2.0-flash, running on port **8004**.
-
-### Step 1: Install Python
-
-Check if Python is installed:
-```bash
-python3 --version
-```
-
-If not installed, download from [python.org](https://www.python.org/downloads/) or use a package manager:
-
-**macOS (using Homebrew):**
-```bash
-brew install python@3.10
-```
-
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt update
-sudo apt install python3.10 python3.10-venv python3-pip
-```
-
-### Step 2: Install Poetry
-
-Poetry is used for Python dependency management.
+### Verify Installation
 
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-Add Poetry to your PATH (add to `~/.zshrc` or `~/.bashrc`):
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Reload your shell:
-```bash
-source ~/.zshrc  # or source ~/.bashrc
-```
-
-Verify installation:
-```bash
-poetry --version
-```
-
-### Step 3: Set Up Google Gemini API Key
-
-The agents use Google Gemini 2.0-flash model. You need an API key:
-
-1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create a new API key
-3. Set it as an environment variable:
-
-```bash
-export GOOGLE_API_KEY="your-api-key-here"
-```
-
-To make it permanent, add to `~/.zshrc` or `~/.bashrc`:
-```bash
-echo 'export GOOGLE_API_KEY="your-api-key-here"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-### Step 4: Navigate to Backend Directory
-
-```bash
-cd /Applications/Projects/SchoolOS/School-OS/backend
-```
-
-### Step 5: Install Python Dependencies
-
-Poetry will create a virtual environment and install all dependencies:
-
-```bash
-poetry install
-```
-
-This will install:
-- FastAPI
-- Uvicorn
-- Google Generative AI SDK
-- Pydantic
-- All other required packages
-
-### Step 6: Verify Agent Files
-
-Ensure the following files exist in the multi-agent directory:
-
-```bash
-ls /Applications/Projects/SchoolOS/School-OS/apps/admin-web/dummy-multi-agent/
-```
-
-You should see:
-- `api.py` - FastAPI server
-- `agents.py` - Agent definitions and logic
-- `agent_router.py` - Session management and routing
-- `requirements.txt` - Python dependencies
-- `README.md` - Agent documentation
-
-### Step 7: Test the Setup
-
-Start the agent server:
-
-```bash
-cd /Applications/Projects/SchoolOS/School-OS/backend
-PYTHONPATH=/Applications/Projects/SchoolOS/School-OS/apps/admin-web/dummy-multi-agent:$PYTHONPATH poetry run uvicorn dummy_multi_agent.api:app --reload --port 8004
-```
-
-You should see:
-```
-🎓 SchoolOS Multi-Agent API Server
-📍 Running on: http://localhost:8004
-📚 API Docs: http://localhost:8004/docs
-
-🤖 Available Agents:
-   • Attendance Agent
-   • Marks Agent
-   • Fees Agent
-   • Timetable Agent
-   • HR Agent
-   • Budget Agent
-   • Email Agent
-```
-
-Test the API:
-```bash
-curl http://localhost:8004/health
+# Run these commands to verify everything is installed
+node --version      # Should show v18.x.x or higher
+pnpm --version      # Should show 10.x.x or higher
+python3 --version   # Should show 3.10.x or higher
+pip3 --version      # Should show pip version
 ```
 
 ---
 
-## Frontend Dashboard Setup
+## 📁 Project Structure
 
-The frontend is built with React, TypeScript, Vite, and Tailwind CSS.
-
-### Step 1: Install Node.js
-
-Check if Node.js is installed:
-```bash
-node --version
+```
+School-OS/
+├── apps/
+│   └── admin-web/                    # Main Admin Dashboard (React + Vite)
+│       ├── src/
+│       │   └── app/
+│       │       └── Timetable/
+│       │           ├── server/       # Timetable Backend (FastAPI)
+│       │           └── frontend/     # Timetable Frontend (React)
+│       └── dummy-multi-agent/        # ADK Chatbot Server
+├── backend/                          # Main Backend Server (FastAPI)
+└── package.json                      # Root package.json (pnpm workspace)
 ```
 
-If not installed, download from [nodejs.org](https://nodejs.org/) (LTS version recommended) or use a package manager:
+---
 
-**macOS (using Homebrew):**
+## ⚡ Quick Start (TL;DR)
+
+If you're in a hurry, here are all 5 terminals you need to run:
+
 ```bash
-brew install node
+# Terminal 1: Backend (Port 8000)
+cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000
+
+# Terminal 2: Frontend (Port 5173)
+cd apps/admin-web && pnpm dev
+
+# Terminal 3: ADK Chatbot (Port 8004)
+cd apps/admin-web/dummy-multi-agent && source venv/bin/activate && uvicorn api:app --reload --port 8004
+
+# Terminal 4: Timetable Server (Port 8010)
+cd apps/admin-web/src/app/Timetable/server && source venv/bin/activate && python -m app.main
+
+# Terminal 5: Timetable Frontend (Port 3000)
+cd apps/admin-web/src/app/Timetable/frontend && npm run dev
 ```
 
-**Linux (Ubuntu/Debian):**
+**First time setup?** Continue reading for detailed step-by-step instructions below.
+
+---
+
+## 📖 Detailed Setup Guide
+
+### Step 0: Clone and Navigate to the Project
+
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
+# If you haven't cloned the repo yet
+git clone <repository-url>
+cd School-OS
+
+# Or if you already have it, make sure you're on the correct branch
+git checkout final/demo
+git pull origin final/demo
 ```
 
-Verify installation:
+---
+
+### Terminal 1: Backend Server (Port 8000)
+
+The main backend server handles authentication, user roles, and real API calls.
+
+#### First Time Setup
+
 ```bash
-node --version  # Should be v18.x or higher
-npm --version
+# Step 1: Navigate to the backend directory
+cd backend
+
+# Step 2: Create a Python virtual environment
+python3 -m venv venv
+
+# Step 3: Activate the virtual environment
+source venv/bin/activate
+# You should see (venv) at the beginning of your terminal prompt
+
+# Step 4: Install all Python dependencies
+pip install -r requirements.txt
+# This might take a few minutes on first run
+
+# Step 5: Verify the .env file exists in the root directory
+# The .env file should already be configured. If not, check with your team lead.
+ls -la ../.env
 ```
 
-### Step 2: Install pnpm
-
-pnpm is a fast, disk space-efficient package manager.
+#### Running the Backend Server
 
 ```bash
-npm install -g pnpm
+# Make sure you're in the backend directory with venv activated
+cd backend
+source venv/bin/activate
+
+# Start the server
+uvicorn app.main:app --reload --port 8000
 ```
 
-Verify installation:
-```bash
-pnpm --version
+#### Expected Output
+
+```
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [xxxxx]
+✅ Database engine initialized
+✅ Supabase client initialized
+INFO:     Application startup complete.
 ```
 
-### Step 3: Navigate to Frontend Directory
+#### Verify It's Running
+
+Open in browser: [http://localhost:8000/docs](http://localhost:8000/docs) - You should see the FastAPI Swagger documentation.
+
+---
+
+### Terminal 2: Frontend Admin Web (Port 5173)
+
+The main React frontend dashboard.
+
+#### First Time Setup
 
 ```bash
-cd /Applications/Projects/SchoolOS/School-OS/apps/admin-web
-```
+# Step 1: Navigate to the root directory (if not already there)
+cd /path/to/School-OS
 
-### Step 4: Install Frontend Dependencies
-
-This will install all required packages (React, TypeScript, Vite, Tailwind, Zustand, etc.):
-
-```bash
+# Step 2: Install ALL dependencies for the entire monorepo
 pnpm install
+# This installs dependencies for all workspaces (may take a few minutes)
 ```
 
-This may take a few minutes. pnpm will:
-- Read `package.json`
-- Download all dependencies
-- Create `node_modules/` directory
-- Generate `pnpm-lock.yaml`
-
-### Step 5: Configure Environment Variables
-
-Create a `.env` file in the `admin-web` directory:
+#### Running the Frontend
 
 ```bash
-cd /Applications/Projects/SchoolOS/School-OS/apps/admin-web
-touch .env
+# Navigate to the admin-web directory
+cd apps/admin-web
+
+# Start the development server
+pnpm dev
 ```
 
-Add the following content to `.env`:
-```env
-# Multi-Agent API URL
-VITE_ADK_API_URL=http://localhost:8004
+#### Expected Output
 
-# Backend API URL (if using main backend)
-VITE_API_URL=http://localhost:8000
 ```
-
-### Step 6: Verify Frontend Structure
-
-Ensure the following directories exist:
-```bash
-ls -la /Applications/Projects/SchoolOS/School-OS/apps/admin-web/src/
-```
-
-You should see:
-- `app/` - Main application code
-- `components/` - React components
-- `stores/` - State management (Zustand)
-- `services/` - API services
-- `mockDataProviders/` - Mock data for testing
-
----
-
-## Running the Application
-
-### Full Stack Startup
-
-You'll need **two terminal windows/tabs**:
-
-#### Terminal 1: Start Multi-Agent Backend
-
-```bash
-cd /Applications/Projects/SchoolOS/School-OS/backend
-PYTHONPATH=/Applications/Projects/SchoolOS/School-OS/apps/admin-web/dummy-multi-agent:$PYTHONPATH poetry run uvicorn dummy_multi_agent.api:app --reload --port 8004
-```
-
-**Expected output:**
-```
-🎓 SchoolOS Multi-Agent API Server
-============================================================
-📍 Running on: http://localhost:8004
-📚 API Docs: http://localhost:8004/docs
-============================================================
-
-🤖 Available Agents:
-   • Attendance Agent - Track student attendance
-   • Marks Agent - Academic performance insights
-   • Fees Agent - Payment status & dues
-   • Timetable Agent - Class schedules
-   • HR Agent - Staff management & leaves
-   • Budget Agent - Expense tracking & approvals
-   • Email Agent - Send notifications
-============================================================
-
-INFO:     Uvicorn running on http://0.0.0.0:8004 (Press CTRL+C to quit)
-INFO:     Started reloader process
-```
-
-#### Terminal 2: Start Frontend Dashboard
-
-```bash
-cd /Applications/Projects/SchoolOS/School-OS/apps/admin-web
-pnpm run dev
-```
-
-**Expected output:**
-```
-  VITE v4.x.x  ready in xxx ms
+  VITE v5.x.x  ready in xxx ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
-  ➜  press h to show help
+  ➜  press h + enter to show help
 ```
 
-### Access the Application
+#### Verify It's Running
 
-1. **Frontend Dashboard**: Open browser to `http://localhost:5173`
-2. **Agent API Docs**: `http://localhost:8004/docs` (interactive API documentation)
-3. **Agent Health Check**: `http://localhost:8004/health`
+Open in browser: [http://localhost:5173](http://localhost:5173) - You should see the SchoolOS login page or dashboard.
 
 ---
 
-## Troubleshooting
+### Terminal 3: ADK Multi-Agent Chatbot (Port 8004)
 
-### Multi-Agent Issues
+The AI-powered chatbot assistant using Google Gemini.
 
-#### Problem: `ModuleNotFoundError: No module named 'google.generativeai'`
-**Solution:**
+#### First Time Setup
+
 ```bash
-cd /Applications/Projects/SchoolOS/School-OS/backend
-poetry install
+# Step 1: Navigate to the dummy-multi-agent directory
+cd apps/admin-web/dummy-multi-agent
+
+# Step 2: Create a Python virtual environment
+python3 -m venv venv
+
+# Step 3: Activate the virtual environment
+source venv/bin/activate
+
+# Step 4: Install Python dependencies
+pip install -r requirements.txt
+
+# Step 5: Verify or create the .env file
+# The .env file should contain your Google API key
+cat .env
+# Should show: GOOGLE_API_KEY=your_api_key_here
+
+# If .env doesn't exist, create it:
+echo "GOOGLE_API_KEY=your_google_api_key_here" > .env
 ```
 
-#### Problem: `google.api_core.exceptions.PermissionDenied: API key not valid`
-**Solution:**
+> ⚠️ **Important**: You need a valid Google API key for the Gemini AI. Get one from [Google AI Studio](https://makersuite.google.com/app/apikey).
+
+#### Running the ADK Chatbot Server
+
 ```bash
-export GOOGLE_API_KEY="your-valid-api-key"
-# Restart the agent server
+# Make sure you're in the dummy-multi-agent directory with venv activated
+cd apps/admin-web/dummy-multi-agent
+source venv/bin/activate
+
+# Start the server
+uvicorn api:app --reload --port 8004
 ```
 
-#### Problem: `Port 8004 already in use`
-**Solution:**
-```bash
-# Kill the process using port 8004
-lsof -ti:8004 | xargs kill -9
-# Restart the server
+#### Expected Output
+
+```
+INFO:     Uvicorn running on http://127.0.0.1:8004 (Press CTRL+C to quit)
+INFO:     Started reloader process [xxxxx]
+INFO:     Application startup complete.
 ```
 
-#### Problem: `ImportError: No module named 'agents'`
-**Solution:** Ensure `PYTHONPATH` is set correctly:
+#### Verify It's Running
+
+Open in browser: [http://localhost:8004/docs](http://localhost:8004/docs) - You should see the Multi-Agent API documentation.
+
+---
+
+### Terminal 4: Timetable Backend Server (Port 8010)
+
+The constraint-based timetable generation backend using Google OR-Tools.
+
+#### First Time Setup
+
 ```bash
-PYTHONPATH=/Applications/Projects/SchoolOS/School-OS/apps/admin-web/dummy-multi-agent:$PYTHONPATH poetry run uvicorn dummy_multi_agent.api:app --reload --port 8004
+# Step 1: Navigate to the timetable server directory
+cd apps/admin-web/src/app/Timetable/server
+
+# Step 2: Create a Python virtual environment
+python3 -m venv venv
+
+# Step 3: Activate the virtual environment
+source venv/bin/activate
+
+# Step 4: Install Python dependencies
+pip install -r requirements.txt
+# This includes OR-Tools which might take a few minutes
+
+# Step 5: (Optional) Create a .env file if needed
+# Copy from .env.example if it exists
+cp .env.example .env
+# Edit .env with your configuration if needed
 ```
 
-### Frontend Issues
+#### Running the Timetable Server
 
-#### Problem: `command not found: pnpm`
-**Solution:**
 ```bash
+# Make sure you're in the server directory with venv activated
+cd apps/admin-web/src/app/Timetable/server
+source venv/bin/activate
+
+# Start the server
+python -m app.main
+# OR alternatively:
+# uvicorn app.main:app --reload --port 8010
+```
+
+#### Expected Output
+
+```
+INFO:     Uvicorn running on http://0.0.0.0:8010 (Press CTRL+C to quit)
+INFO:     Started reloader process [xxxxx]
+INFO:     Application startup complete.
+```
+
+#### Verify It's Running
+
+Open in browser: [http://localhost:8010/docs](http://localhost:8010/docs) - You should see the Timetable Generator API documentation.
+
+---
+
+### Terminal 5: Timetable Frontend (Port 3000)
+
+The React frontend for the timetable generator.
+
+#### First Time Setup
+
+```bash
+# Step 1: Navigate to the timetable frontend directory
+cd apps/admin-web/src/app/Timetable/frontend
+
+# Step 2: Install npm dependencies
+npm install
+# This might take a few minutes
+
+# Step 3: (Optional) Configure environment variables
+# Create .env if it doesn't exist
+echo "VITE_API_BASE_URL=http://localhost:8010" > .env
+echo "VITE_USE_MOCK_API=false" >> .env
+```
+
+#### Running the Timetable Frontend
+
+```bash
+# Make sure you're in the frontend directory
+cd apps/admin-web/src/app/Timetable/frontend
+
+# Start the development server
+npm run dev
+```
+
+#### Expected Output
+
+```
+  VITE v5.x.x  ready in xxx ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose
+```
+
+#### Verify It's Running
+
+Open in browser: [http://localhost:3000](http://localhost:3000) - You should see the Timetable Generator landing page.
+
+---
+
+## 🔐 Environment Variables
+
+### Root `.env` (School-OS/.env)
+
+This file should already exist with Supabase and API configurations:
+
+```bash
+# Supabase Configuration
+SUPABASE_URL=https://xxxxx.supabase.co
+SUPABASE_KEY=your_supabase_key
+DATABASE_URL=your_database_url
+
+# API Keys
+GOOGLE_API_KEY=your_google_api_key
+```
+
+### Admin Web `.env` (apps/admin-web/.env)
+
+```bash
+# Supabase
+VITE_SUPABASE_URL=https://xxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
+
+# Demo Mode - Set to true for mock data
+VITE_DEMO_MODE=true
+
+# Backend API
+VITE_API_BASE_URL=http://localhost:8000/api/v1
+
+# ADK Chatbot
+VITE_ADK_API_URL=http://localhost:8004
+```
+
+### ADK Multi-Agent `.env` (apps/admin-web/dummy-multi-agent/.env)
+
+```bash
+# Google Gemini AI
+GOOGLE_API_KEY=your_google_api_key
+```
+
+---
+
+## 🎮 Using the Application
+
+### Demo Mode Access
+
+With `VITE_DEMO_MODE=true`, you can:
+
+1. **Access the Dashboard** - Navigate to [http://localhost:5173](http://localhost:5173)
+2. **Login** - Use GitHub OAuth or demo credentials (if configured)
+3. **Explore Features** - Most features work with mock data
+4. **Use the Chatbot** - Click the chat icon to interact with the AI assistant
+
+### Available Roles
+
+The application supports multiple roles:
+- **Principal** - School-level administration
+- **Super Admin** - Multi-school group management
+- **Teacher** - Classroom management (separate app)
+- **Parent** - Student monitoring (separate app)
+
+### Key Features to Demo
+
+1. **Dashboard** - Overview of school metrics
+2. **AI Chatbot** - Ask about attendance, marks, fees, timetables, HR, budget
+3. **Timetable Generator** - Create optimized schedules
+4. **Attendance Management**
+5. **Fee Management**
+6. **Staff HR Management**
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### 1. "Command not found: pnpm"
+
+```bash
+# Install pnpm globally
 npm install -g pnpm
+
+# Verify installation
+pnpm --version
 ```
 
-#### Problem: `command not found: node`
-**Solution:** Install Node.js (see Step 1 in Frontend Setup)
+#### 2. "Port already in use"
 
-#### Problem: Port 5173 already in use
-**Solution:**
 ```bash
+# Find what's using the port (e.g., 8000)
+lsof -i :8000
+
 # Kill the process
-lsof -ti:5173 | xargs kill -9
+kill -9 <PID>
+
 # Or use a different port
-pnpm run dev --port 5174
+uvicorn app.main:app --reload --port 8001
 ```
 
-#### Problem: Frontend can't connect to agents
-**Solution:**
-1. Verify agents are running: `curl http://localhost:8004/health`
-2. Check `.env` file has correct `VITE_ADK_API_URL=http://localhost:8004`
-3. Restart frontend: `Ctrl+C` then `pnpm run dev`
-
-#### Problem: `Module not found` errors
-**Solution:**
-```bash
-# Clear node_modules and reinstall
-rm -rf node_modules pnpm-lock.yaml
-pnpm install
-```
-
-#### Problem: TypeScript errors
-**Solution:**
-```bash
-# Clear TypeScript cache
-pnpm run clean
-pnpm run dev
-```
-
-### General Issues
-
-#### Problem: Changes not reflecting
-**Solution:**
-- Both servers run with hot-reload enabled
-- Agent server: Save Python files to auto-reload
-- Frontend: Save TypeScript/React files to auto-reload
-- Hard refresh browser: `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows/Linux)
-
-#### Problem: API returns 500 errors
-**Solution:**
-1. Check agent server logs in Terminal 1
-2. Verify Google API key is valid
-3. Check `/tmp/agent.log` if running with nohup
-4. Visit `http://localhost:8004/docs` to test endpoints manually
-
----
-
-## Architecture Overview
-
-### Multi-Agent System (Port 8004)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                   FastAPI Server (api.py)               │
-│                     Port: 8004                          │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│              Agent Router (agent_router.py)             │
-│          Session Management & Message Routing           │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│                  Agents (agents.py)                     │
-│  ┌───────────────────────────────────────────────────┐  │
-│  │ • school_management_agent (orchestrator)          │  │
-│  │ • attendance_agent (attendance tracking)          │  │
-│  │ • marks_agent (exam results & performance)        │  │
-│  │ • fees_agent (payment management)                 │  │
-│  │ • timetable_agent (scheduling)                    │  │
-│  │ • hr_agent (staff management)                     │  │
-│  │ • budget_agent (expense tracking)                 │  │
-│  │ • email_agent (notifications via Gmail SMTP)      │  │
-│  └───────────────────────────────────────────────────┘  │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     ▼
-          Google Gemini 2.0-flash API
-```
-
-### Frontend Dashboard (Port 5173)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│               React + TypeScript + Vite                 │
-│                     Port: 5173                          │
-│  ┌───────────────────────────────────────────────────┐  │
-│  │ Components:                                       │  │
-│  │  • ChatDock.tsx (main chat interface)            │  │
-│  │  • InputBar.tsx (message input)                  │  │
-│  │  • MessageBubble.tsx (chat messages)             │  │
-│  └───────────────────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────────────────┐  │
-│  │ State Management (Zustand):                      │  │
-│  │  • useChatStore.ts (chat sessions & messages)    │  │
-│  └───────────────────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────────────────┐  │
-│  │ Services:                                        │  │
-│  │  • chatService.ts (API communication)            │  │
-│  └───────────────────────────────────────────────────┘  │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     ▼ HTTP REST API
-┌─────────────────────────────────────────────────────────┐
-│           Multi-Agent Backend (Port 8004)               │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Agent Capabilities
-
-| Agent | Domain | Example Queries |
-|-------|--------|-----------------|
-| **School Management** | Orchestrator & routing | "Route to attendance", "Show all modules" |
-| **Attendance** | Student attendance tracking | "Who has low attendance in 5B?", "Show absentees today" |
-| **Marks** | Exam results & performance | "Who scored lowest in Maths?", "Top 3 students in 9C" |
-| **Fees** | Payment management | "Who hasn't paid fees?", "Show pending dues for Grade 1" |
-| **Timetable** | Class scheduling | "Show 8A's timetable", "Which teacher has most classes?" |
-| **HR** | Staff management | "List Science teachers", "Staff on leave this week" |
-| **Budget** | Expense tracking | "Show Annual Day budget", "Pending approvals" |
-| **Email** | Send notifications | "Email fee reminders", "Send attendance report" |
-
-### Data Flow
-
-1. **User sends message** → Frontend (`InputBar.tsx`)
-2. **Store updates** → `useChatStore` (Zustand)
-3. **API call** → `chatService.ts` → `POST http://localhost:8004/api/chat/send`
-4. **Backend receives** → `api.py` → `agent_router.py`
-5. **Agent detection** → `detect_agent()` identifies relevant agent
-6. **Agent processes** → `get_agent_response()` queries Google Gemini with context
-7. **Response flows back** → Backend → Frontend → UI update
-
----
-
-## Quick Reference Commands
-
-### Start Everything (Copy-Paste Ready)
-
-**Terminal 1 - Agents:**
-```bash
-cd /Applications/Projects/SchoolOS/School-OS/backend && PYTHONPATH=/Applications/Projects/SchoolOS/School-OS/apps/admin-web/dummy-multi-agent:$PYTHONPATH poetry run uvicorn dummy_multi_agent.api:app --reload --port 8004
-```
-
-**Terminal 2 - Frontend:**
-```bash
-cd /Applications/Projects/SchoolOS/School-OS/apps/admin-web && pnpm run dev
-```
-
-### Useful Commands
+#### 3. "Module not found" in Python
 
 ```bash
-# Check if ports are in use
-lsof -i :8004  # Agent backend
-lsof -i :5173  # Frontend
+# Make sure you activated the virtual environment
+source venv/bin/activate
 
-# Kill processes on ports
-lsof -ti:8004 | xargs kill -9
-lsof -ti:5173 | xargs kill -9
-
-# View agent logs (if using nohup)
-tail -f /tmp/agent.log
+# Check if you're in the correct directory
+pwd
 
 # Reinstall dependencies
-cd /Applications/Projects/SchoolOS/School-OS/backend && poetry install
-cd /Applications/Projects/SchoolOS/School-OS/apps/admin-web && pnpm install
-
-# Clear caches
-cd /Applications/Projects/SchoolOS/School-OS/apps/admin-web && rm -rf node_modules pnpm-lock.yaml && pnpm install
+pip install -r requirements.txt
 ```
 
----
+#### 4. "venv not found"
 
-## Environment Variables Reference
-
-### Backend (`~/.zshrc` or `~/.bashrc`)
 ```bash
-export GOOGLE_API_KEY="your-google-gemini-api-key"
-export PYTHONPATH="/Applications/Projects/SchoolOS/School-OS/apps/admin-web/dummy-multi-agent:$PYTHONPATH"
+# Create the virtual environment first
+python3 -m venv venv
+
+# Then activate it
+source venv/bin/activate
 ```
 
-### Frontend (`.env` file in `apps/admin-web/`)
-```env
-VITE_ADK_API_URL=http://localhost:8004
-VITE_API_URL=http://localhost:8000
+#### 5. Frontend not connecting to backend
+
+- Verify all servers are running (check each terminal)
+- Check browser console for CORS errors
+- Ensure `.env` files have correct URLs
+- Try refreshing the page or clearing browser cache
+
+#### 6. Chatbot not responding
+
+- Verify Terminal 3 (ADK server) is running on port 8004
+- Check if `GOOGLE_API_KEY` is set in `.env`
+- Look for errors in the ADK terminal output
+
+#### 7. Timetable generation failing
+
+- Verify Terminal 4 (Timetable server) is running on port 8010
+- Check Terminal 4 for error messages
+- Ensure OR-Tools is properly installed
+
+### Checking Server Health
+
+```bash
+# Backend health check
+curl http://localhost:8000/api/v1/health
+
+# ADK health check
+curl http://localhost:8004/health
+
+# Timetable health check
+curl http://localhost:8010/health
 ```
 
 ---
 
-## Additional Resources
+## 🔌 Port Summary
 
-- **Google Gemini API**: [https://ai.google.dev/](https://ai.google.dev/)
-- **FastAPI Docs**: [https://fastapi.tiangolo.com/](https://fastapi.tiangolo.com/)
-- **React Docs**: [https://react.dev/](https://react.dev/)
-- **Vite Docs**: [https://vitejs.dev/](https://vitejs.dev/)
-- **pnpm Docs**: [https://pnpm.io/](https://pnpm.io/)
-- **Poetry Docs**: [https://python-poetry.org/docs/](https://python-poetry.org/docs/)
-
----
-
-## Support
-
-If you encounter issues not covered in this guide:
-
-1. Check the terminal logs for error messages
-2. Visit API docs at `http://localhost:8004/docs`
-3. Verify all environment variables are set correctly
-4. Ensure all dependencies are installed
-5. Try clearing caches and reinstalling dependencies
+| Service | Port | URL | Purpose |
+|---------|------|-----|---------|
+| Backend API | 8000 | http://localhost:8000 | Authentication, real API calls |
+| Admin Frontend | 5173 | http://localhost:5173 | Main dashboard |
+| ADK Chatbot | 8004 | http://localhost:8004 | AI assistant backend |
+| Timetable Server | 8010 | http://localhost:8010 | Timetable generation API |
+| Timetable Frontend | 3000 | http://localhost:3000 | Timetable UI |
 
 ---
 
-**Version**: 2.0.0
-**Last Updated**: 28 November 2025
-**Maintained by**: SchoolOS Team
+## 📞 Need Help?
+
+If you encounter any issues not covered in this guide:
+
+1. **Check the logs** in each terminal for error messages
+2. **Search existing documentation** in the `docs/` folder
+3. **Ask your team lead** for environment-specific configurations
+4. **Check the Git history** for recent changes that might have broken something
+
+---
+
+## ✅ Checklist Before You Start
+
+Use this checklist to ensure everything is set up correctly:
+
+- [ ] Node.js 18+ installed
+- [ ] pnpm installed globally
+- [ ] Python 3.10+ installed
+- [ ] Repository cloned and on `final/demo` branch
+- [ ] Root `.env` file exists
+- [ ] `apps/admin-web/.env` file configured
+- [ ] `apps/admin-web/dummy-multi-agent/.env` file has `GOOGLE_API_KEY`
+- [ ] All 5 terminals running without errors
+- [ ] Can access http://localhost:5173 in browser
+
+---
+
+**Happy coding! 🚀**
+
+*Last updated: February 2026*

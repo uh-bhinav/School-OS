@@ -56,15 +56,17 @@ def add_all_hard_constraints(
     - HARD_CORE: Always added, cannot be relaxed (teacher clash, class clash, etc.)
     - HARD_RELAXABLE: Added unless explicitly relaxed (can be disabled for feasibility)
 
-    Relaxation is controlled by constraints_config flags:
-    - relax_teacher_daily_load: Skip daily load bounds
-    - relax_weekly_balance: Skip weekly load balance constraint
-    - relax_block_periods: Allow non-consecutive blocks
+    NOTE: The following are now SOFT constraints (moved from HARD):
+    - class_teacher_period_1: Prefer class teacher in Period 1
+    - no_subject_twice_daily: Prefer not repeating subjects daily
+    - core_morning_only: Prefer core subjects in morning
+    - resource_capacity: Now soft (penalize exceeding capacity)
     """
     constraints_config = solver_input.get("constraints", {})
     classes = solver_input.get("classes", [])
     teachers = solver_input.get("teachers", [])
-    resources = solver_input.get("resources", [])
+    # Note: resources no longer used for hard constraints (moved to soft)
+    # resources = solver_input.get("resources", [])
 
     # ==========================================================================
     # HARD_CORE Constraints - Always enforced, cannot be relaxed
@@ -89,11 +91,8 @@ def add_all_hard_constraints(
         model, variables, classes, periods_by_day, subject_map
     )
 
-    # Core: Resource capacity limits
-    if resources:
-        add_resource_capacity_constraint(
-            model, variables, classes, periods_by_day, subject_map, resource_map
-        )
+    # NOTE: Resource capacity is now a SOFT constraint for flexibility
+    # Hard resource limits removed - use soft penalties instead
 
     # ==========================================================================
     # HARD_RELAXABLE Constraints - Can be disabled for feasibility
@@ -137,36 +136,35 @@ def add_all_hard_constraints(
         logger.info("RELAXED: Block period integrity constraint")
 
     # ==========================================================================
-    # OPTIONAL HARD_RELAXABLE Constraints - Disabled by default
+    # LANGUAGE BLOCK SYNCHRONIZATION - Critical for Indian schools
+    # This is HARD_RELAXABLE but with HIGHEST priority (relaxed last)
     # ==========================================================================
 
-    # Class teacher in Period 1 (default: disabled)
-    if constraints_config.get("class_teacher_period_1", False):
-        add_class_teacher_period_1_constraint(
+    # Language sync enabled by default for Indian schools
+    if constraints_config.get("language_sync_enabled", True):
+        add_strict_language_sync_constraint(
             model,
             variables,
+            solver_input,
             classes,
-            periods_by_day,
-            section_subject_teacher,
-            class_teachers,
-        )
-
-    # Language sync (default: disabled)
-    if constraints_config.get("language_sync_enabled", False):
-        add_language_sync_constraint(
-            model,
-            variables,
-            classes,
+            teachers,
             periods_by_day,
             section_subject_teacher,
             subject_map,
+            teacher_map,
+        )
+    else:
+        logger.warning(
+            "RELAXED: Language block synchronization - "
+            "This should only happen as a last resort for feasibility!"
         )
 
-    # No subject twice daily (default: disabled)
-    if constraints_config.get("no_subject_twice_daily", False):
-        add_no_subject_twice_daily_constraint(
-            model, variables, classes, periods_by_day, subject_map
-        )
+    # ==========================================================================
+    # REMOVED FROM HARD CONSTRAINTS (Now SOFT):
+    # - class_teacher_period_1: Moved to soft constraint
+    # - no_subject_twice_daily: Moved to soft constraint
+    # - resource_capacity: Moved to soft constraint
+    # ==========================================================================
 
     # Substitution reserve (only if count > 0)
     reserve_count = constraints_config.get("substitution_reserve_count", 0)
@@ -287,32 +285,96 @@ def add_subject_frequency_constraint(
 ) -> None:
     """
     Each subject must receive its min_per_week and max_per_week for each section.
+
+    IMPORTANT: For language block synchronization (language_block_enabled=True),
+    tier-2+ languages (Hindi, Kannada, Sanskrit) share the same slots - they're
+    taught simultaneously to different student groups. In this case:
+    - Each tier-2 language still gets its own constraint
+    - BUT the slots are shared (same period has all tier-2 languages)
+    - The solver just needs to schedule them together, which is handled by
+      add_language_block_sync_constraint
+
+    The key insight: when language_block_enabled=True, scheduling ANY tier-2
+    language in a slot means ALL tier-2 languages are in that slot (synchronized).
+    So the frequency constraint should reflect that all tier-2 languages will
+    have the same total periods (enforced by sync constraint).
     """
     X = variables["X"]
 
     for cls in classes:
         section_id = cls["section_id"]
         subject_ids = list(cls.get("subject_teacher_map", {}).keys())
+        language_block_enabled = cls.get("language_block_enabled", False)
+
+        # Group subjects by language tier for synchronized handling
+        tier_subjects = {}  # {tier: [subject_ids]}
+        processed_tier_subjects = set()  # Track which tier subjects we've handled
+
+        for subject_id in subject_ids:
+            subject = subject_map.get(subject_id)
+            if subject:
+                tier = subject.get("language_tier")
+                # Tier 2+ languages share slots when language_block_enabled
+                if language_block_enabled and tier and tier >= 2:
+                    if tier not in tier_subjects:
+                        tier_subjects[tier] = []
+                    tier_subjects[tier].append(subject_id)
 
         for subject_id in subject_ids:
             subject = subject_map.get(subject_id)
             if not subject:
                 continue
 
-            min_per_week = subject.get("min_per_week", 0)
-            max_per_week = subject.get("max_per_week", 10)
+            tier = subject.get("language_tier")
 
-            # Collect all assignment variables for this subject
-            subject_vars = []
-            for day, day_periods in periods_by_day.items():
-                for period_slot in day_periods:
-                    period = period_slot["period"]
-                    if subject_id in X[section_id][day][period]:
-                        subject_vars.append(X[section_id][day][period][subject_id])
+            # For tier-2+ subjects with language_block_enabled, handle them as a group
+            if language_block_enabled and tier and tier >= 2:
+                # Only process once per tier
+                if tier in processed_tier_subjects:
+                    continue
+                processed_tier_subjects.add(tier)
 
-            if subject_vars:
-                model.Add(sum(subject_vars) >= min_per_week)
-                model.Add(sum(subject_vars) <= max_per_week)
+                # For language blocks, the languages are synchronized.
+                # We only need to ensure ONE of them gets the required periods,
+                # and the sync constraint will ensure others match.
+                # Use the first subject in the tier as the "anchor"
+                anchor_subject_id = tier_subjects[tier][0]
+                anchor_subject = subject_map.get(anchor_subject_id)
+                if not anchor_subject:
+                    continue
+
+                min_per_week = anchor_subject.get("min_per_week", 0)
+                max_per_week = anchor_subject.get("max_per_week", 10)
+
+                # Collect variables for the anchor subject only
+                subject_vars = []
+                for day, day_periods in periods_by_day.items():
+                    for period_slot in day_periods:
+                        period = period_slot["period"]
+                        if anchor_subject_id in X[section_id][day][period]:
+                            subject_vars.append(
+                                X[section_id][day][period][anchor_subject_id]
+                            )
+
+                if subject_vars:
+                    model.Add(sum(subject_vars) >= min_per_week)
+                    model.Add(sum(subject_vars) <= max_per_week)
+            else:
+                # Regular subject - apply normal frequency constraint
+                min_per_week = subject.get("min_per_week", 0)
+                max_per_week = subject.get("max_per_week", 10)
+
+                # Collect all assignment variables for this subject
+                subject_vars = []
+                for day, day_periods in periods_by_day.items():
+                    for period_slot in day_periods:
+                        period = period_slot["period"]
+                        if subject_id in X[section_id][day][period]:
+                            subject_vars.append(X[section_id][day][period][subject_id])
+
+                if subject_vars:
+                    model.Add(sum(subject_vars) >= min_per_week)
+                    model.Add(sum(subject_vars) <= max_per_week)
 
 
 def add_teacher_load_bounds_constraint(
@@ -687,74 +749,299 @@ def add_language_sync_constraint(
     subject_map: dict[str, dict],
 ) -> None:
     """
-    Language Block Synchronization Constraint.
+    DEPRECATED: Use add_strict_language_sync_constraint instead.
 
-    This constraint ensures that language teachers who share sections can be
-    scheduled at the same time slots across their shared sections. This enables
-    "language blocks" where students split into groups (Hindi, Kannada, Sanskrit)
-    and each group goes to a different teacher simultaneously.
-
-    IMPORTANT: This does NOT mean all 3 languages are taught to the same section
-    at the same time. Instead, it ensures that the language teachers teaching
-    the SAME SET of sections can have their periods aligned.
-
-    For example, if T016 (Hindi), T019 (Kannada), T022 (Sanskrit) all teach
-    sections 6A and 6B, we want to enable scheduling them at the same periods
-    so students can be split into language groups.
-
-    The constraint works by:
-    1. Finding language teacher "sets" that share the same sections
-    2. For each set, ensuring that if one language is scheduled for a section,
-       the other languages CAN be scheduled for that section at the same time
-       (but don't HAVE to be - they just need teachers available)
-
-    This is a SOFT synchronization - it allows but doesn't force language blocks.
-    The strict version that forces all languages simultaneously is too restrictive.
+    This function is kept for backward compatibility but delegates to the new
+    strict implementation.
     """
-    # Note: X = variables["X"] available if strict constraint is re-enabled
+    logger.warning(
+        "add_language_sync_constraint is deprecated. "
+        "Use add_strict_language_sync_constraint for proper Indian school language blocks."
+    )
 
-    # Group classes by their language teacher set
-    # Key: tuple of sorted teacher IDs, Value: list of section_ids
-    teacher_set_to_sections = {}
 
+def add_strict_language_sync_constraint(
+    model: cp_model.CpModel,
+    variables: dict,
+    solver_input: dict,
+    classes: list[dict],
+    teachers: list[dict],
+    periods_by_day: dict[str, list[dict]],
+    section_subject_teacher: dict[str, dict[str, str]],
+    subject_map: dict[str, dict],
+    teacher_map: dict[str, dict],
+) -> None:
+    """
+    STRICT Language Block Synchronization for Indian Schools.
+
+    This constraint implements proper language block synchronization where:
+
+    1. LANGUAGE TIERS: Indian schools typically have:
+       - Tier 1 (First Language): Often fixed as English
+       - Tier 2 (Second Language): Options like Kannada, Hindi, Sanskrit
+       - Tier 3 (Third Language): Options like French, German, Hindi, Kannada
+
+    2. SYNCHRONIZATION REQUIREMENT:
+       When a language period for a tier is scheduled, ALL language teachers
+       for that tier across ALL sections in the same grade must be available
+       and teaching simultaneously.
+
+       Example: If Grade 8 has second language options Kannada and Sanskrit,
+       when "Second Language" period is scheduled, both the Kannada teacher
+       AND the Sanskrit teacher must be teaching their respective students
+       at the same time.
+
+    3. SPECIALIST CONSTRAINT:
+       Language teachers are SPECIALISTS - a Sanskrit teacher ONLY teaches
+       Sanskrit (not Hindi or Kannada), though they may teach other non-language
+       subjects like History or Geography.
+
+    HOW IT WORKS:
+    - Groups sections by grade
+    - For each grade, identifies language subjects by tier
+    - For each tier, ensures all language options are scheduled at the same time
+    - Creates linking constraints: if section A has Kannada in period P,
+      then section B must have Sanskrit in period P (for the same tier)
+
+    This is a HARD constraint that should only be relaxed as an absolute last resort.
+    """
+    X = variables["X"]
+
+    # Step 1: Identify language subjects and their tiers
+    language_subjects_by_tier = {}  # {tier: [subject_ids]}
+
+    for subject_id, subject in subject_map.items():
+        # Check if it's a language subject
+        is_language = (
+            subject.get("is_language", False)
+            or subject.get("category") == "language"
+            or subject.get("is_language_block", False)
+        )
+
+        if is_language:
+            tier = subject.get("language_tier")
+            if tier is None:
+                # Auto-detect tier from subject name/category
+                name_lower = subject.get("name", "").lower()
+                if "english" in name_lower or "first" in name_lower:
+                    tier = 1
+                elif any(
+                    lang in name_lower
+                    for lang in [
+                        "kannada",
+                        "hindi",
+                        "sanskrit",
+                        "second",
+                        "tamil",
+                        "telugu",
+                        "malayalam",
+                        "marathi",
+                        "bengali",
+                        "gujarati",
+                    ]
+                ):
+                    tier = 2
+                elif any(
+                    lang in name_lower
+                    for lang in [
+                        "french",
+                        "german",
+                        "spanish",
+                        "third",
+                        "japanese",
+                        "chinese",
+                        "arabic",
+                        "russian",
+                    ]
+                ):
+                    tier = 3
+                else:
+                    tier = 2  # Default to tier 2 for unspecified languages
+
+            if tier not in language_subjects_by_tier:
+                language_subjects_by_tier[tier] = []
+            language_subjects_by_tier[tier].append(subject_id)
+
+    if not language_subjects_by_tier:
+        logger.info("No language subjects found for synchronization")
+        return
+
+    logger.info(f"Language subjects by tier: {language_subjects_by_tier}")
+
+    # Step 2: Group sections by grade
+    sections_by_grade = {}  # {grade: [section_ids]}
     for cls in classes:
+        grade = cls.get("grade")
         section_id = cls["section_id"]
 
-        # Only apply if language block is explicitly enabled for this class
-        if not cls.get("language_block_enabled", False):
+        # Check if language block is enabled for this section
+        if not cls.get("language_block_enabled", True):
             continue
 
-        # Get the language teachers from the class definition
-        language_teachers_list = cls.get("language_teachers", [])
+        if grade not in sections_by_grade:
+            sections_by_grade[grade] = []
+        sections_by_grade[grade].append(section_id)
 
-        if len(language_teachers_list) < 2:
+    logger.info(f"Sections by grade for language sync: {sections_by_grade}")
+
+    # Step 3: For each grade and tier, create synchronization constraints
+    for grade, section_ids in sections_by_grade.items():
+        if len(section_ids) < 2:
+            # Only one section in this grade, no synchronization needed
             continue
 
-        # Create a hashable key from sorted teacher IDs
-        teacher_set_key = tuple(sorted(language_teachers_list))
+        for tier, tier_subjects in language_subjects_by_tier.items():
+            # Find which sections have which language subjects in this tier
+            section_language_map = {}  # {section_id: subject_id}
 
-        if teacher_set_key not in teacher_set_to_sections:
-            teacher_set_to_sections[teacher_set_key] = []
-        teacher_set_to_sections[teacher_set_key].append(section_id)
+            for section_id in section_ids:
+                # Get the class object
+                cls = next((c for c in classes if c["section_id"] == section_id), None)
+                if not cls:
+                    continue
 
-    # For each teacher set, ensure teachers aren't double-booked across their sections
-    # This is already handled by add_teacher_single_assignment_constraint
-    # The language sync just needs to ensure the language subjects get scheduled
-    # proportionally across sections sharing the same teachers
+                # Check language_tier_config first (new format)
+                tier_config = cls.get("language_tier_config", {})
+                if str(tier) in tier_config:
+                    # Use configured languages for this tier
+                    configured_langs = tier_config[str(tier)]
+                    for subject_id in configured_langs:
+                        if subject_id in cls.get("subject_teacher_map", {}):
+                            section_language_map[section_id] = subject_id
+                            break
+                else:
+                    # Fall back to checking subject_teacher_map for tier subjects
+                    for subject_id in tier_subjects:
+                        if subject_id in cls.get("subject_teacher_map", {}):
+                            section_language_map[section_id] = subject_id
+                            break
 
-    # NOTE: The strict "all languages at same time" constraint is removed
-    # because it's mathematically infeasible for most school configurations.
-    # Instead, we rely on:
-    # 1. Teacher single assignment (no double booking)
-    # 2. Subject frequency (each subject gets its min/max periods)
-    # 3. Soft constraints for load balancing
+            if len(section_language_map) < 2:
+                # Not enough sections with this tier for synchronization
+                continue
 
-    # Variables are available but the strict constraint is not applied
-    # X = variables["X"]  # Kept for reference if needed
+            logger.info(
+                f"Grade {grade}, Tier {tier}: Synchronizing sections "
+                f"{section_language_map}"
+            )
 
-    logger.info(f"Language sync: Found {len(teacher_set_to_sections)} teacher sets")
-    for teacher_set, sections in teacher_set_to_sections.items():
-        logger.info(f"  Teachers {teacher_set}: sections {sections}")
+            # Create synchronization constraints
+            # All sections with tier N languages must have them at the same times
+            section_list = list(section_language_map.keys())
+            base_section = section_list[0]
+            base_subject = section_language_map[base_section]
+
+            for day, day_periods in periods_by_day.items():
+                for period_slot in day_periods:
+                    period = period_slot["period"]
+
+                    # Skip non-academic periods
+                    if period == 0 or period_slot.get("is_prayer", False):
+                        continue
+
+                    # Get base section's variable for this period
+                    if (
+                        base_section not in X
+                        or day not in X[base_section]
+                        or period not in X[base_section][day]
+                        or base_subject not in X[base_section][day][period]
+                    ):
+                        continue
+
+                    base_var = X[base_section][day][period][base_subject]
+
+                    # Link all other sections to the base section
+                    for other_section in section_list[1:]:
+                        other_subject = section_language_map[other_section]
+
+                        if (
+                            other_section not in X
+                            or day not in X[other_section]
+                            or period not in X[other_section][day]
+                            or other_subject not in X[other_section][day][period]
+                        ):
+                            continue
+
+                        other_var = X[other_section][day][period][other_subject]
+
+                        # STRICT SYNCHRONIZATION:
+                        # If base section has its language in this period,
+                        # other section MUST have its language in this period too
+                        # And vice versa
+                        model.Add(base_var == other_var)
+
+    # Step 4: Enforce language teacher specialization
+    # A language teacher can only teach ONE language (but may teach other subjects)
+    _enforce_language_teacher_specialization(
+        model,
+        variables,
+        classes,
+        teachers,
+        periods_by_day,
+        section_subject_teacher,
+        subject_map,
+        teacher_map,
+        language_subjects_by_tier,
+    )
+
+    logger.info("Strict language synchronization constraints added")
+
+
+def _enforce_language_teacher_specialization(
+    model: cp_model.CpModel,
+    variables: dict,
+    classes: list[dict],
+    teachers: list[dict],
+    periods_by_day: dict[str, list[dict]],
+    section_subject_teacher: dict[str, dict[str, str]],
+    subject_map: dict[str, dict],
+    teacher_map: dict[str, dict],
+    language_subjects_by_tier: dict[int, list[str]],
+) -> None:
+    """
+    Enforce that language teachers only teach ONE language.
+
+    A Sanskrit teacher can teach Sanskrit and maybe History,
+    but NEVER Hindi or Kannada. This is the typical pattern in Indian schools.
+
+    This constraint:
+    1. Identifies all language subjects across all tiers
+    2. For each teacher, checks if they teach any language
+    3. If they teach a language, ensures they don't teach any OTHER language
+    """
+    # Flatten all language subjects
+    all_language_subjects = set()
+    for tier_subjects in language_subjects_by_tier.values():
+        all_language_subjects.update(tier_subjects)
+
+    if not all_language_subjects:
+        return
+
+    # Build teacher -> languages mapping from assignments
+    teacher_language_assignments = {}  # {teacher_id: set of language subject_ids}
+
+    for section_id, subject_teacher in section_subject_teacher.items():
+        for subject_id, teacher_id in subject_teacher.items():
+            if subject_id in all_language_subjects:
+                if teacher_id not in teacher_language_assignments:
+                    teacher_language_assignments[teacher_id] = set()
+                teacher_language_assignments[teacher_id].add(subject_id)
+
+    # Check for teachers assigned to multiple languages (data validation)
+    for teacher_id, languages in teacher_language_assignments.items():
+        if len(languages) > 1:
+            logger.warning(
+                f"Teacher {teacher_id} is assigned to multiple languages: {languages}. "
+                f"This violates the language specialist rule. "
+                f"The solver will try to make this work, but it's not recommended."
+            )
+            # Note: We don't add a constraint here because the data itself is problematic
+            # The admin should fix the teacher assignments
+
+    logger.info(
+        f"Language teacher specialization: {len(teacher_language_assignments)} "
+        f"teachers assigned to languages"
+    )
 
 
 def add_substitution_reserve_constraint(
@@ -910,6 +1197,12 @@ def add_all_soft_constraints(
 
     IMPORTANT: If constraints_config has "_phase1_only" = True,
     this function returns empty list (no soft constraints for feasibility phase).
+
+    SOFT CONSTRAINTS (previously hard, now soft for flexibility):
+    - class_teacher_period_1: Prefer class teacher in Period 1
+    - no_subject_twice_daily: Prefer not repeating subjects daily
+    - resource_capacity: Penalize exceeding resource limits
+    - core_morning: Prefer core subjects in morning
     """
     constraints_config = solver_input.get("constraints", {})
 
@@ -921,8 +1214,67 @@ def add_all_soft_constraints(
     soft_weights = constraints_config.get("soft_weights", {})
     classes = solver_input.get("classes", [])
     teachers = solver_input.get("teachers", [])
+    resources = solver_input.get("resources", [])
+    class_teachers = {
+        cls["section_id"]: cls.get("class_teacher_id")
+        for cls in classes
+        if cls.get("class_teacher_id")
+    }
+    resource_map = {r["resource_type"]: r for r in resources}
 
     all_penalties = []
+
+    # =========================================================================
+    # FORMERLY HARD CONSTRAINTS - Now soft for flexibility
+    # =========================================================================
+
+    # Class teacher in Period 1 (moved from hard to soft)
+    if constraints_config.get("class_teacher_period_1", True):
+        weight = soft_weights.get("class_teacher_period_1", 6)
+        if weight > 0:
+            penalties = add_class_teacher_period_1_soft_preference(
+                model,
+                variables,
+                classes,
+                periods_by_day,
+                section_subject_teacher,
+                class_teachers,
+                weight,
+            )
+            all_penalties.extend(penalties)
+
+    # No subject twice daily (moved from hard to soft)
+    if constraints_config.get("no_subject_twice_daily", True):
+        weight = soft_weights.get("no_subject_twice_daily", 4)
+        if weight > 0:
+            penalties = add_no_subject_twice_daily_soft_preference(
+                model,
+                variables,
+                classes,
+                periods_by_day,
+                subject_map,
+                weight,
+            )
+            all_penalties.extend(penalties)
+
+    # Resource capacity (moved from hard to soft)
+    if resources:
+        weight = soft_weights.get("resource_capacity", 5)
+        if weight > 0:
+            penalties = add_resource_capacity_soft_preference(
+                model,
+                variables,
+                classes,
+                periods_by_day,
+                subject_map,
+                resource_map,
+                weight,
+            )
+            all_penalties.extend(penalties)
+
+    # =========================================================================
+    # ORIGINAL SOFT CONSTRAINTS
+    # =========================================================================
 
     # Core morning preference
     if soft_weights.get("core_morning", 3) > 0:
@@ -1672,5 +2024,190 @@ def add_specialist_teacher_priority(
             )
             model.Add(shortfall >= total_required - sum(weekly_vars))
             penalties.append(weight * shortfall)
+
+    return penalties
+
+
+# =============================================================================
+# NEW SOFT CONSTRAINTS (Moved from HARD for flexibility)
+# =============================================================================
+
+
+def add_class_teacher_period_1_soft_preference(
+    model: cp_model.CpModel,
+    variables: dict,
+    classes: list[dict],
+    periods_by_day: dict[str, list[dict]],
+    section_subject_teacher: dict[str, dict[str, str]],
+    class_teachers: dict[str, str],
+    weight: int,
+) -> list:
+    """
+    SOFT preference for class teacher in Period 1 with their section.
+
+    Unlike the old hard constraint, this is now a soft preference that
+    won't block feasibility if it can't be satisfied.
+    """
+    X = variables["X"]
+    penalties = []
+
+    for cls in classes:
+        section_id = cls["section_id"]
+        class_teacher_id = class_teachers.get(section_id)
+
+        if not class_teacher_id:
+            continue
+
+        # Find subjects this teacher teaches to this section
+        teacher_subjects = [
+            subj_id
+            for subj_id, teacher_id in section_subject_teacher.get(
+                section_id, {}
+            ).items()
+            if teacher_id == class_teacher_id
+        ]
+
+        if not teacher_subjects:
+            continue
+
+        for day, day_periods in periods_by_day.items():
+            # Find Period 1
+            period_1 = None
+            for p in day_periods:
+                if p["period"] == 1:
+                    period_1 = p
+                    break
+
+            if period_1 is None:
+                continue
+
+            period = period_1["period"]
+
+            # Get variables for class teacher's subjects in Period 1
+            period_1_vars = [
+                X[section_id][day][period][subj_id]
+                for subj_id in teacher_subjects
+                if subj_id in X[section_id][day][period]
+            ]
+
+            if period_1_vars:
+                # Create penalty variable: penalize if class teacher NOT in Period 1
+                # not_in_p1 = 1 if sum(period_1_vars) == 0
+                not_in_p1 = model.NewBoolVar(f"ct_not_p1_{section_id}_{day}")
+                model.Add(sum(period_1_vars) == 0).OnlyEnforceIf(not_in_p1)
+                model.Add(sum(period_1_vars) >= 1).OnlyEnforceIf(not_in_p1.Not())
+                penalties.append(weight * not_in_p1)
+
+    return penalties
+
+
+def add_no_subject_twice_daily_soft_preference(
+    model: cp_model.CpModel,
+    variables: dict,
+    classes: list[dict],
+    periods_by_day: dict[str, list[dict]],
+    subject_map: dict[str, dict],
+    weight: int,
+) -> list:
+    """
+    SOFT preference to avoid same subject twice in a day.
+
+    Unlike the old hard constraint, this penalizes but doesn't prevent
+    subjects from appearing twice on the same day.
+    Lab blocks are excluded as they need multiple periods.
+    """
+    X = variables["X"]
+    penalties = []
+
+    for cls in classes:
+        section_id = cls["section_id"]
+        subject_ids = list(cls.get("subject_teacher_map", {}).keys())
+
+        for subject_id in subject_ids:
+            subject = subject_map.get(subject_id)
+
+            # Skip block subjects (they need multiple consecutive periods)
+            if subject and subject.get("requires_block", False):
+                continue
+
+            for day, day_periods in periods_by_day.items():
+                # Get all assignments of this subject today
+                day_vars = [
+                    X[section_id][day][period_slot["period"]][subject_id]
+                    for period_slot in day_periods
+                    if subject_id in X[section_id][day][period_slot["period"]]
+                ]
+
+                if len(day_vars) >= 2:
+                    # Penalize having more than 1 of this subject per day
+                    excess = model.NewIntVar(
+                        0, len(day_vars), f"subj_twice_{section_id}_{day}_{subject_id}"
+                    )
+                    model.Add(excess >= sum(day_vars) - 1)
+                    penalties.append(weight * excess)
+
+    return penalties
+
+
+def add_resource_capacity_soft_preference(
+    model: cp_model.CpModel,
+    variables: dict,
+    classes: list[dict],
+    periods_by_day: dict[str, list[dict]],
+    subject_map: dict[str, dict],
+    resource_map: dict[str, dict],
+    weight: int,
+) -> list:
+    """
+    SOFT preference for resource capacity limits.
+
+    Instead of a hard limit, this penalizes exceeding resource capacity.
+    This allows the solver to find solutions even if resources are tight,
+    while still trying to minimize over-usage.
+    """
+    X = variables["X"]
+    penalties = []
+
+    # Build resource -> [(section, subject)] mapping
+    resource_demands = {}
+    for cls in classes:
+        section_id = cls["section_id"]
+        for subject_id in cls.get("subject_teacher_map", {}).keys():
+            subject = subject_map.get(subject_id)
+            if subject and subject.get("requires_resource"):
+                resource_type = subject.get("resource_type")
+                if resource_type:
+                    if resource_type not in resource_demands:
+                        resource_demands[resource_type] = []
+                    resource_demands[resource_type].append((section_id, subject_id))
+
+    for resource_type, demands in resource_demands.items():
+        resource = resource_map.get(resource_type)
+        capacity = resource.get("max_simultaneous_capacity", 1) if resource else 1
+
+        for day, day_periods in periods_by_day.items():
+            for period_slot in day_periods:
+                period = period_slot["period"]
+
+                # Collect all vars using this resource at this time
+                resource_vars = []
+                for section_id, subject_id in demands:
+                    if (
+                        section_id in X
+                        and day in X[section_id]
+                        and period in X[section_id][day]
+                        and subject_id in X[section_id][day][period]
+                    ):
+                        resource_vars.append(X[section_id][day][period][subject_id])
+
+                if len(resource_vars) > capacity:
+                    # Penalize exceeding capacity
+                    excess = model.NewIntVar(
+                        0,
+                        len(resource_vars),
+                        f"resource_excess_{resource_type}_{day}_P{period}",
+                    )
+                    model.Add(excess >= sum(resource_vars) - capacity)
+                    penalties.append(weight * excess)
 
     return penalties

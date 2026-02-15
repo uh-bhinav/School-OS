@@ -182,12 +182,14 @@ export default function InputBar() {
       // Call ADK backend
       const response = await sendMessageToBackend(activeId, messageToSend);
 
-      // Add assistant message
+      // Add assistant message (with optional chart)
       pushMessage(activeId, {
         id: crypto.randomUUID(),
         role: "assistant",
         content: response.message,
         ts: new Date(response.timestamp).getTime(),
+        // Include chart if present in response
+        ...(response.chart?.base64_image && { chart: response.chart }),
       });
     } catch (error) {
       console.error("Error sending message to ADK backend:", error);
