@@ -13,7 +13,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { ChartData } from '@/app/stores/useChatStore';
+import { ChartData, useChatStore } from '@/app/stores/useChatStore';
 
 interface ChatChartProps {
   chart: ChartData;
@@ -65,6 +65,22 @@ export default function ChatChart({ chart, className = '' }: ChatChartProps) {
     setIsExpanded((prev) => !prev);
   }, []);
 
+  const handleChartClick = useCallback((e: React.MouseEvent) => {
+    // Cmd+Click (Mac) or Ctrl+Click (Win/Linux) → push context chip
+    if (e.metaKey || e.ctrlKey) {
+      e.stopPropagation();
+      useChatStore.getState().pushChip({
+        type: "chart_point",
+        key: chart.title || chart.chart_type || "chart",
+        value: chart.chart_type || "analytics",
+        dataset: chart.title || "Chart data",
+      });
+      return;
+    }
+    // Normal click → expand
+    toggleExpand();
+  }, [chart, toggleExpand]);
+
   // Validate chart data
   if (!chart?.base64_image || !isValidBase64Image(chart.base64_image)) {
     return (
@@ -102,15 +118,17 @@ export default function ChatChart({ chart, className = '' }: ChatChartProps) {
           </div>
         )}
 
-        {/* Chart image */}
+        {/* Chart image — Cmd/Ctrl+Click to add as context chip */}
         <img
           src={imageSrc}
           alt={altText}
-          title="Click to expand"
+          title="Click to expand · ⌘+Click to add as context"
+          data-chart={chart.title || chart.chart_type || "chart"}
+          data-value={chart.chart_type || "analytics"}
           className={`chat-chart cursor-pointer transition-transform hover:scale-[1.02] ${isLoading || hasError ? 'hidden' : ''}`}
           onLoad={handleLoad}
           onError={handleError}
-          onClick={toggleExpand}
+          onClick={handleChartClick}
         />
 
         {/* Chart caption/label */}

@@ -24,6 +24,33 @@ export interface Message {
   streaming?: boolean;
   /** Optional chart visualization from AI analytics */
   chart?: ChartData;
+  /** Optional downloadable report metadata */
+  report?: {
+    file_name: string;
+    report_type: string;
+    message: string;
+    file_size?: number;
+  };
+  /** Optional CSV/Excel export metadata */
+  export?: {
+    file_name: string;
+    file_path: string;
+    row_count: number;
+    format: string;
+  };
+  /** Optional email draft awaiting approval */
+  email_draft?: {
+    draft_id: string;
+    recipients: string[];
+    recipient_count: number;
+    subject: string;
+    body: string;
+    context: string;
+    status: string;
+    created_at: string;
+  };
+  /** True when response has a draft pending user action */
+  awaiting_approval?: boolean;
 }
 
 export interface Session {
@@ -167,9 +194,7 @@ export const useChatStore = create<ChatState>()(
 
       setInputFocused(b) {
         set({ inputFocused: b });
-        if (!b) {
-          set({ contextChips: [] });
-        }
+        // Don't clear chips on blur — chips persist until user removes them or sends
       },
 
       renameSession(id, title) {

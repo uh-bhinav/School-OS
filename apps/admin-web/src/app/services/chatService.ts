@@ -38,6 +38,30 @@ export interface ChartResponse {
 }
 
 /**
+ * Email draft returned when approval is needed
+ */
+export interface EmailDraftResponse {
+  draft_id: string;
+  recipients: string[];
+  recipient_count: number;
+  subject: string;
+  body: string;
+  context: string;
+  status: string;
+  created_at: string;
+}
+
+/**
+ * Export metadata returned for CSV/Excel downloads
+ */
+export interface ExportResponse {
+  file_name: string;
+  file_path: string;
+  row_count: number;
+  format: string;
+}
+
+/**
  * Response from the ADK backend
  */
 export interface AgentResponse {
@@ -47,6 +71,19 @@ export interface AgentResponse {
   session_id: string;
   /** Optional chart visualization */
   chart?: ChartResponse;
+  /** Optional downloadable report metadata */
+  report?: {
+    file_name: string;
+    report_type: string;
+    message: string;
+    file_size?: number;
+  };
+  /** Optional CSV/Excel export metadata */
+  export?: ExportResponse;
+  /** Optional email draft awaiting approval */
+  email_draft?: EmailDraftResponse;
+  /** True when response has a draft pending user action */
+  awaiting_approval?: boolean;
 }
 
 /**
@@ -81,7 +118,8 @@ export const getChatRoleFromPath = (): ChatRole => {
 export const sendMessageToBackend = async (
   frontendSessionId: string,
   message: string,
-  role?: ChatRole
+  role?: ChatRole,
+  contextChips?: Array<Record<string, unknown>>
 ): Promise<AgentResponse> => {
   // Auto-detect role from current path if not provided
   const effectiveRole = role || getChatRoleFromPath();
@@ -147,6 +185,7 @@ export const sendMessageToBackend = async (
         message,
         session_id: backendSessionId,
         role: effectiveRole,  // CRITICAL: Pass role to route to correct agents
+        ...(contextChips && contextChips.length > 0 && { context_chips: contextChips }),
       }),
     });
 
@@ -204,4 +243,41 @@ export const checkBackendHealth = async (): Promise<boolean> => {
   } catch {
     return false;
   }
+};
+
+/**
+ * Download an export file (CSV/Excel) from the backend
+ */
+export const downloadExport = (fileName: string): void => {
+  const url = `${API_BASE_URL}/api/exports/download/${encodeURIComponent(fileName)}`;
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
+/**
+ * Approve an email draft — triggers sending
+ */
+export const approveDraft = async (draftId: string): Promise<{ status: string }> => {
+  const response = await fetch(`${API_BASE_URL}/api/drafts/${draftId}/approve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  return response.json();
+};
+
+/**
+ * Reject an email draft — discards it
+ */
+export const rejectDraft = async (draftId: string): Promise<{ status: string }> => {
+  const response = await fetch(`${API_BASE_URL}/api/drafts/${draftId}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  return response.json();
 };

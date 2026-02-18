@@ -67,6 +67,106 @@ except ImportError:
         GOVERNOR_ENABLED = False
         logging.warning("Response Governor not available.")
 
+# Import Graph Intelligence for smarter auto-graph decisions
+try:
+    from .graph_intelligence import graph_decision_pipeline
+
+    GRAPH_INTELLIGENCE_ENABLED = True
+except ImportError:
+    try:
+        from graph_intelligence import graph_decision_pipeline
+
+        GRAPH_INTELLIGENCE_ENABLED = True
+    except ImportError:
+        GRAPH_INTELLIGENCE_ENABLED = False
+        logging.warning(
+            "Graph Intelligence not available. Using legacy graph detection."
+        )
+
+# Import Report Intelligence for downloadable report generation
+try:
+    from .report_intelligence import should_generate_report, resolve_report_data
+    from .report_generator_tool import generate_report as generate_pdf_report
+
+    REPORT_ENABLED = True
+except ImportError:
+    try:
+        from report_intelligence import should_generate_report, resolve_report_data
+        from report_generator_tool import generate_report as generate_pdf_report
+
+        REPORT_ENABLED = True
+    except ImportError:
+        REPORT_ENABLED = False
+        logging.warning(
+            "Report Intelligence not available. Report generation disabled."
+        )
+
+# Import Email Workflow Manager (human-in-the-loop approval)
+try:
+    from .email_workflow_manager import handle_email_workflow
+
+    EMAIL_WORKFLOW_ENABLED = True
+except ImportError:
+    try:
+        from email_workflow_manager import handle_email_workflow
+
+        EMAIL_WORKFLOW_ENABLED = True
+    except ImportError:
+        EMAIL_WORKFLOW_ENABLED = False
+        logging.warning("Email Workflow Manager not available.")
+
+# Import Exam Scheduler Tool (multi-turn scheduling + hall tickets)
+try:
+    from .exam_scheduler_tool import (
+        handle_exam_scheduling,
+        is_exam_scheduling_request,
+        is_hall_ticket_request,
+        exam_workflows,
+    )
+
+    EXAM_SCHEDULER_ENABLED = True
+except ImportError:
+    try:
+        from exam_scheduler_tool import (
+            handle_exam_scheduling,
+            is_exam_scheduling_request,
+            is_hall_ticket_request,
+            exam_workflows,
+        )
+
+        EXAM_SCHEDULER_ENABLED = True
+    except ImportError:
+        EXAM_SCHEDULER_ENABLED = False
+        logging.warning("Exam Scheduler not available.")
+
+# Import Export Generator Tool (CSV/Excel exports)
+try:
+    from .export_generator_tool import export_unpaid_invoices
+
+    EXPORT_ENABLED = True
+except ImportError:
+    try:
+        from export_generator_tool import export_unpaid_invoices
+
+        EXPORT_ENABLED = True
+    except ImportError:
+        EXPORT_ENABLED = False
+        logging.warning("Export Generator not available.")
+
+# Import Context Chip Handler
+try:
+    from .context_chip_handler import enrich_message_with_context, validate_chips
+
+    CONTEXT_CHIPS_ENABLED = True
+except ImportError:
+    try:
+        from context_chip_handler import enrich_message_with_context, validate_chips
+
+        CONTEXT_CHIPS_ENABLED = True
+    except ImportError:
+        CONTEXT_CHIPS_ENABLED = False
+        logging.warning("Context Chip Handler not available.")
+
 logger = logging.getLogger(__name__)
 
 # Load environment variables
@@ -577,64 +677,251 @@ def get_combined_agent_data(
     return combined_data, agent_ids_str, combined_prompt, primary_graph_config
 
 
-async def get_agent_response(user_message: str, history: list) -> dict:
-    """Get response from the appropriate agent based on user query."""
+async def get_agent_response(
+    user_message: str,
+    history: list,
+    context_chips: list = None,
+    session_id: str = None,
+) -> dict:
+    """Get response from the appropriate agent based on user query.
 
-    # Build conversation context
-    context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history[-6:]])
+    Args:
+        user_message: The user's query text
+        history: Conversation history list
+        context_chips: Optional context chips from dashboard Cmd/Ctrl+Click
+        session_id: Session identifier for stateful workflows (email drafts, exam scheduling)
+    """
+
+    # Build query lower for keyword matching
     query_lower = user_message.lower()
 
-    # Check for email request
-    if any(
-        word in query_lower for word in ["email", "send", "mail", "notify", "reminder"]
-    ):
-        # Extract emails from conversation
-        emails = []
-        for msg in history:
-            content = msg.get("content", "")
-            found_emails = re.findall(r"[\w\.-]+@[\w\.-]+\.\w+", content)
-            emails.extend(found_emails)
+    # --- CONTEXT CHIPS: Enrich message with dashboard context ---
+    enriched_message = user_message
+    if context_chips and CONTEXT_CHIPS_ENABLED:
+        validated = validate_chips(context_chips)
+        if validated:
+            enriched_message = enrich_message_with_context(user_message, validated)
+            logger.info(f"Message enriched with {len(validated)} context chips")
 
-        if emails:
-            unique_emails = list(set(emails))
-            # Determine context
-            email_context = "school update"
-            combined_context = context.lower()
-            if "attendance" in combined_context:
-                email_context = "attendance alert"
-            elif "fee" in combined_context or "payment" in combined_context:
-                email_context = "fee payment reminder"
-            elif "marks" in combined_context or "grade" in combined_context:
-                email_context = "academic performance update"
-            elif "leave" in combined_context:
-                email_context = "leave request update"
+    # --- SESSION ID for workflow state ---
+    if not session_id:
+        session_id = f"session_{id(history)}"
 
-            subject = f"School Notification - {email_context.title()}"
-            body = f"""Dear Parent/Guardian,
+    # --- EXAM SCHEDULING: Check for active workflow or new request ---
+    if EXAM_SCHEDULER_ENABLED:
+        # Check if there's an active exam workflow OR this is a new scheduling request
+        if session_id in exam_workflows or is_exam_scheduling_request(user_message):
+            exam_result = handle_exam_scheduling(user_message, history, session_id)
+            if exam_result:
+                return exam_result
 
-This is an automated notification regarding {email_context}.
-
-Based on our recent conversation, we wanted to keep you informed about your ward's status.
-
-Please contact the school administration for more details or any clarifications.
-
-Best regards,
-School Administration
-SchoolOS - Smart School Management"""
-
-            result = send_email(",".join(unique_emails), subject, body)
+        # Standalone hall ticket request (when no active workflow)
+        if is_hall_ticket_request(user_message):
+            # Look for a recently completed schedule in workflow storage
+            # or tell user to schedule first
             return {
-                "message": f"📧 **Email Notification Sent**\n\n{result}\n\n**Recipients:** {', '.join(unique_emails)}\n**Subject:** {subject}",
+                "message": (
+                    "### 🎫 Hall Ticket Generation\n\n"
+                    "To generate hall tickets, please first create an exam schedule.\n\n"
+                    'Say **"Schedule an exam"** to get started, and hall tickets will '
+                    "be automatically generated when the schedule is approved."
+                ),
+                "agent_id": "exam_scheduler_agent",
+            }
+
+    # --- EMAIL WORKFLOW: Check for pending draft or new email request ---
+    if EMAIL_WORKFLOW_ENABLED:
+        email_result = handle_email_workflow(user_message, history, session_id)
+        if email_result:
+            return email_result
+    else:
+        # Fallback: If workflow not available, block direct sends with helpful message
+        email_triggers = [
+            "send email",
+            "email them",
+            "mail them",
+            "send notification",
+            "notify them",
+            "send reminder",
+        ]
+        if any(t in query_lower for t in email_triggers):
+            return {
+                "message": (
+                    "### 📧 Email Service Unavailable\n\n"
+                    "The email workflow module is not loaded. "
+                    "Please restart the server and ensure `email_workflow_manager.py` "
+                    "is in the same directory as `agents.py`."
+                ),
                 "agent_id": "email_agent",
             }
-        else:
-            return {
-                "message": "📧 I couldn't find any email addresses in our conversation. Please first query for student/staff data so I can get the relevant email addresses, then ask me to send the notification.",
-                "agent_id": "email_agent",
-            }
+
+    # From here on, use enriched_message (includes context chip data if any)
+    effective_message = enriched_message
 
     # Detect all matching agents for multi-domain query support
-    matched_agents = detect_agents(user_message)
+    matched_agents = detect_agents(effective_message)
+
+    # --- REPORT GENERATION: Check if user wants a downloadable report ---
+    report_result = None
+    if REPORT_ENABLED:
+        try:
+            report_decision = should_generate_report(user_message)
+            if report_decision["needs_report"]:
+                logger.info(
+                    f"Report requested: type={report_decision['report_type']}, "
+                    f"confidence={report_decision['confidence']}"
+                )
+
+                entity = report_decision["entity"]
+
+                # If no student name found in the current message,
+                # try to extract from conversation history
+                if not entity.get("student_name") and not entity.get("student_id"):
+                    from report_intelligence import extract_entity
+
+                    for msg in reversed(history[-10:]):
+                        content = msg.get("content", "")
+                        hist_entity = extract_entity(content)
+                        if hist_entity.get("student_name"):
+                            entity["student_name"] = hist_entity["student_name"]
+                            logger.info(
+                                f"Extracted student name from history: {entity['student_name']}"
+                            )
+                            break
+                    # Also try simple name matching from prior assistant responses
+                    if not entity.get("student_name"):
+                        import csv as csv_module
+                        import io as io_module
+
+                        reader = csv_module.DictReader(
+                            io_module.StringIO(STUDENTS_DATA.strip())
+                        )
+                        all_student_names = [r.get("student_name", "") for r in reader]
+                        for msg in reversed(history[-10:]):
+                            content = msg.get("content", "")
+                            for sname in all_student_names:
+                                if sname and sname.lower() in content.lower():
+                                    entity["student_name"] = sname
+                                    logger.info(
+                                        f"Matched student name from history: {sname}"
+                                    )
+                                    break
+                            if entity.get("student_name"):
+                                break
+
+                # If still no entity after history search, ask the user
+                if (
+                    not entity.get("student_name")
+                    and not entity.get("student_id")
+                    and not entity.get("class_name")
+                ):
+                    return {
+                        "message": (
+                            "**Please specify a student**\n\n"
+                            "To generate a report card, I need to know which student. "
+                            "You can specify by:\n\n"
+                            "• **Name:** _give me the report card of Aarav Sharma_\n"
+                            "• **Student ID:** _report card for student id 1_\n"
+                            "• **Class:** _class analytics for Grade 5-A_"
+                        ),
+                        "agent_id": matched_agents[0][0]
+                        if matched_agents
+                        else "report_agent",
+                    }
+
+                # Resolve data for the report from inline CSV data
+                report_data = resolve_report_data(
+                    report_type=report_decision["report_type"],
+                    entity=entity,
+                    students_data=STUDENTS_DATA,
+                    marks_data=MARKS_DATA,
+                    attendance_data=ATTENDANCE_DATA,
+                    fees_data=FEES_DATA,
+                )
+
+                if report_data.get("found"):
+                    # Generate the PDF report
+                    pdf_result = generate_pdf_report(
+                        report_type=report_decision["report_type"],
+                        data=report_data,
+                        output_format=report_decision.get("format", "pdf"),
+                    )
+                    if pdf_result.get("status") == "success":
+                        report_result = {
+                            "file_name": pdf_result["file_name"],
+                            "file_path": str(pdf_result.get("file_path", "")),
+                            "report_type": pdf_result["report_type"],
+                            "message": pdf_result["message"],
+                            "file_size": pdf_result.get("file_size", 0),
+                        }
+                        # Return immediately with report + confirmation message
+                        entity_desc = report_decision["entity"].get(
+                            "student_name",
+                            report_decision["entity"].get("class_name", ""),
+                        )
+                        return {
+                            "message": (
+                                f"📄 **Report Generated Successfully**\n\n"
+                                f"• **Type:** {report_decision['report_type'].replace('_', ' ').title()}\n"
+                                f"• **For:** {entity_desc or 'Requested data'}\n"
+                                f"• **File:** {pdf_result['file_name']}\n"
+                                f"• **Size:** {pdf_result.get('file_size', 'N/A')}\n\n"
+                                f"📥 Click the download button to save your report."
+                            ),
+                            "agent_id": matched_agents[0][0]
+                            if matched_agents
+                            else "report_agent",
+                            "report": report_result,
+                        }
+                    else:
+                        logger.warning(f"Report generation failed: {pdf_result}")
+                else:
+                    # Student not found — return a helpful error instead of
+                    # falling through to Gemini (which also won't find them)
+                    entity_desc = (
+                        entity.get("student_name")
+                        or entity.get("class_name")
+                        or f"student_id={entity.get('student_id')}"
+                    )
+                    # Build a list of available student names for suggestion
+                    import csv as csv_module
+                    import io as io_module
+
+                    reader = csv_module.DictReader(
+                        io_module.StringIO(STUDENTS_DATA.strip())
+                    )
+                    all_names = [r.get("student_name", "") for r in reader]
+                    # Find close matches if possible
+                    suggestions = []
+                    if entity.get("student_name"):
+                        search_parts = entity["student_name"].lower().split()
+                        for n in all_names:
+                            if any(p in n.lower() for p in search_parts):
+                                suggestions.append(n)
+                    suggestion_text = ""
+                    if suggestions:
+                        suggestion_text = (
+                            "\n\n**Did you mean one of these students?**\n"
+                            + "\n".join(f"• {s}" for s in suggestions[:5])
+                        )
+                    else:
+                        suggestion_text = (
+                            "\n\n**Available students include:**\n"
+                            + "\n".join(f"• {s}" for s in all_names[:8])
+                        )
+                    return {
+                        "message": (
+                            f"**Student Not Found**\n\n"
+                            f"No student matching **{entity_desc}** was found "
+                            f"in the school records."
+                            f"{suggestion_text}"
+                        ),
+                        "agent_id": matched_agents[0][0]
+                        if matched_agents
+                        else "report_agent",
+                    }
+        except Exception as e:
+            logger.exception(f"Report generation error: {e}")
 
     # Get primary agent for single-domain queries
     if matched_agents:
@@ -675,7 +962,7 @@ Try: "Who has lowest attendance?" or "Show fee defaulters" """,
             agent_id,
             prompt_addition,
             graph_config,
-        ) = get_combined_agent_data(matched_agents, user_message)
+        ) = get_combined_agent_data(matched_agents, effective_message)
         emoji = "🎓"  # Use general emoji for multi-domain queries
         logger.info(
             f"Multi-domain query detected, using combined data from: {agent_id}"
@@ -706,7 +993,20 @@ STAFF: {STAFF_DATA}
 
     # Check if graph is needed based on the query, regardless of agent config
     if GRAPH_ENABLED:
-        needs_graph = should_generate_graph(user_message)
+        if GRAPH_INTELLIGENCE_ENABLED:
+            # Use smarter graph intelligence scoring
+            from graph_intelligence import should_auto_graph
+
+            auto_graph_result = should_auto_graph(effective_message)
+            needs_graph = auto_graph_result["needs_graph"]
+            if needs_graph:
+                logger.info(
+                    f"Graph Intelligence: score={auto_graph_result['score']:.2f}, "
+                    f"type={auto_graph_result['chart_type']}, "
+                    f"reason={auto_graph_result['reasoning']}"
+                )
+        else:
+            needs_graph = should_generate_graph(effective_message)
         # If graph is needed but current agent doesn't support charts,
         # still allow graph generation by using fallback chart generation
         if needs_graph and not graph_config.get("supports_charts", False):
@@ -731,7 +1031,7 @@ Provide chart data as JSON at the END of your text response:
 CRITICAL: The title, labels, and values MUST be extracted from the DATA above and MUST directly answer the QUERY.
 Chart types: line, bar, pie, horizontal_bar. Max 10 data points."""
 
-    system_prompt = f"""You are a school data assistant. Output ONLY data, never commentary.
+    system_prompt = f"""You are a school data assistant. Provide thorough, well-structured answers.
 
 AVAILABLE DATA (USE ONLY THIS DATA - DO NOT INVENT OR HALLUCINATE):
 {relevant_data}
@@ -740,20 +1040,40 @@ AVAILABLE DATA (USE ONLY THIS DATA - DO NOT INVENT OR HALLUCINATE):
 
 CRITICAL RULES:
 1. ONLY use data from the AVAILABLE DATA section above
-2. If the requested data is NOT in the AVAILABLE DATA, respond with "• Data not available for this query"
+2. If the requested data is NOT in the AVAILABLE DATA, say "Data not available for this query"
 3. DO NOT make up names, numbers, or any information not in the data
-4. DO NOT mix data from different categories
+4. DO NOT mix data from different categories unless the user explicitly asks for cross-domain info
 
-STRICT OUTPUT RULES:
-1. MAX 5 bullet points, each under 12 words
-2. NO greetings, NO "here is", NO "based on the data"
-3. NEVER write diagrams, flowcharts, mermaid, or ASCII art
-4. NEVER use ```code blocks``` for any visual representation
-5. Start with the most important fact
-6. Use bullet format: • Item: Value
+FORMATTING RULES (VERY IMPORTANT — responses must be easy to read):
+1. Use proper markdown with REAL line breaks between sections
+2. Use ### headings to separate major sections
+3. Use **bold** ONLY for names, labels, and key values — NOT for entire sentences
+4. Use bullet points (• or -) for lists, one item per line
+5. Leave a blank line between paragraphs and between sections
+6. Use tables (| col | col |) when presenting structured data with 3+ columns
+7. Keep sentences in normal (non-bold) text — bold is for emphasis only
+8. Be detailed and thorough — include all relevant data points
+9. NO greetings (hi, hello, hey)
+10. NO suggestions about what else you can help with
+11. NO filler phrases ("here is", "based on the data", "I found", "let me")
+12. NEVER write diagrams, flowcharts, mermaid, or ASCII art
+13. NEVER use ```code blocks``` for visual representation
+
+Example of GOOD formatting:
+### Attendance Summary
+
+**Aarav Sharma** — 92% attendance (Present: 46, Absent: 4)
+**Priya Patel** — 88% attendance (Present: 44, Absent: 6)
+
+### Students Below 85%
+
+- **Rahul Kumar**: 78% — needs improvement
+- **Neha Singh**: 72% — critical
+
+Overall class average: 85.3%
 {chart_instruction}
 
-QUERY: {user_message}"""
+QUERY: {effective_message}"""
 
     try:
         model = genai.GenerativeModel("gemini-2.5-flash")
@@ -795,6 +1115,44 @@ QUERY: {user_message}"""
                 r"<CHART_DATA>.*?</CHART_DATA>", "", response_text, flags=re.DOTALL
             ).strip()
 
+            # If LLM didn't provide chart data, use Graph Intelligence pipeline
+            if not chart_result and GRAPH_INTELLIGENCE_ENABLED:
+                logger.info(
+                    "LLM chart extraction failed, using Graph Intelligence pipeline"
+                )
+                try:
+                    gi_result = graph_decision_pipeline(
+                        query=effective_message,
+                        response_text=response_text,
+                        agent_id=agent_id,
+                        existing_chart=None,
+                    )
+                    if gi_result["should_graph"] and gi_result.get("chart_params"):
+                        params = gi_result["chart_params"]
+                        if params.get("labels") and params.get("values"):
+                            payload = build_graph_payload(
+                                agent_type=agent_id.replace("_agent", ""),
+                                intent="comparison",
+                                labels=params["labels"],
+                                values=params["values"],
+                                title=params.get("title", ""),
+                                x_label=params.get("x_label", ""),
+                                y_label=params.get("y_label", ""),
+                                chart_type=gi_result.get("chart_type", "bar"),
+                            )
+                            result_chart, error = generate_chart_safe(payload)
+                            if not error and result_chart:
+                                chart_result = {
+                                    "base64_image": result_chart.get("base64_image"),
+                                    "chart_type": result_chart.get("chart_type"),
+                                    "title": params.get("title", ""),
+                                }
+                                logger.info(
+                                    "Graph Intelligence pipeline generated chart successfully"
+                                )
+                except Exception as gi_err:
+                    logger.warning(f"Graph Intelligence pipeline error: {gi_err}")
+
         # Apply Response Governor for strict output control (if enabled)
         logger.info(
             f"GOVERNOR_ENABLED={GOVERNOR_ENABLED}, GRAPH_ENABLED={GRAPH_ENABLED}"
@@ -802,7 +1160,7 @@ QUERY: {user_message}"""
         if GOVERNOR_ENABLED:
             # Analyze query to determine if graph is required
             analyzer = QueryAnalyzer()
-            query_info = analyzer.analyze(user_message)
+            query_info = analyzer.analyze(effective_message)
 
             # If query requires graph but none generated, try fallback chart generation
             if query_info["requires_graph"] and not chart_result and GRAPH_ENABLED:
@@ -810,13 +1168,13 @@ QUERY: {user_message}"""
                     f"Governor: Query requires graph, trying fallback for {agent_id}"
                 )
                 chart_result = _generate_fallback_chart(
-                    response_text, user_message, agent_id
+                    response_text, effective_message, agent_id
                 )
 
             # Apply governor enforcement
             governed_response = govern_response(
                 raw_response=response_text,
-                query=user_message,
+                query=effective_message,
                 agent_id=agent_id,
                 chart=chart_result,
             )
@@ -833,6 +1191,41 @@ QUERY: {user_message}"""
                 result["chart"] = governed_response["chart"]
             if governed_response.get("bullets"):
                 result["bullets"] = governed_response["bullets"]
+            if report_result:
+                result["report"] = report_result
+
+            # --- EXPORT: Auto-generate CSV for fees/finance queries ---
+            if EXPORT_ENABLED and agent_id == "fees_agent":
+                try:
+                    export_keywords = [
+                        "unpaid",
+                        "defaulter",
+                        "pending",
+                        "overdue",
+                        "export",
+                        "download",
+                        "csv",
+                        "excel",
+                        "list all",
+                        "fee status",
+                    ]
+                    if any(kw in query_lower for kw in export_keywords):
+                        export_result = export_unpaid_invoices(FEES_DATA)
+                        if export_result.get("status") == "success":
+                            result["export"] = {
+                                "file_name": export_result["file_name"],
+                                "file_path": str(export_result.get("file_path", "")),
+                                "row_count": export_result.get("row_count", 0),
+                                "format": "csv",
+                            }
+                            result["message"] += (
+                                f"\n\n📥 **Export Ready**\n"
+                                f"• File: {export_result['file_name']}\n"
+                                f"• Rows: {export_result.get('row_count', 'N/A')}\n"
+                                f"Click the download button to save the CSV."
+                            )
+                except Exception as exp_err:
+                    logger.warning(f"Export generation error: {exp_err}")
 
             return result
 
@@ -840,7 +1233,7 @@ QUERY: {user_message}"""
         elif USE_RESPONSE_TEMPLATES and TEMPLATES_ENABLED:
             template_result = apply_template_to_message(
                 message=response_text,
-                query=user_message,
+                query=effective_message,
                 agent_id=agent_id,
                 chart=chart_result,
             )
@@ -854,12 +1247,16 @@ QUERY: {user_message}"""
 
             if template_result.get("chart"):
                 result["chart"] = template_result["chart"]
+            if report_result:
+                result["report"] = report_result
         else:
             # Fallback to raw response
             result = {"message": f"{emoji} {response_text}", "agent_id": agent_id}
 
             if chart_result:
                 result["chart"] = chart_result
+            if report_result:
+                result["report"] = report_result
 
         return result
 

@@ -7,9 +7,10 @@ import PersonIcon from "@mui/icons-material/Person";
 import { AnimatePresence, motion } from "framer-motion";
 
 export default function ContextChips() {
-  const { contextChips, removeChip, inputFocused } = useChatStore();
+  const { contextChips, removeChip } = useChatStore();
 
-  if (contextChips.length === 0 || !inputFocused) return null;
+  // Always show chips when they exist (like Claude/ChatGPT attachment pills)
+  if (contextChips.length === 0) return null;
 
   const getIcon = (type: string) => {
     switch (type) {

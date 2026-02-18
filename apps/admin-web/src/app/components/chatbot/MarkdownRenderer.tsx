@@ -78,6 +78,19 @@ function normalizeContent(text: string): string {
   result = result.replace(/\\r\\n/g, '\n');
   result = result.replace(/\\r/g, '\n');
 
+  // FIX: Convert "* " at start of lines to "- " for reliable markdown lists
+  // (Markdown * can be confused with bold/emphasis)
+  result = result.replace(/^(\s*)\* /gm, '$1- ');
+
+  // FIX: Convert "• " bullet characters to "- " for standard markdown lists
+  result = result.replace(/^(\s*)• /gm, '$1- ');
+
+  // FIX: Ensure double newline before headings (### needs blank line above)
+  result = result.replace(/([^\n])\n(#{1,6}\s)/g, '$1\n\n$2');
+
+  // FIX: Ensure double newline before list blocks (- item needs blank line above non-list)
+  result = result.replace(/([^\n-])\n(\s*- )/g, '$1\n\n$2');
+
   // Ensure headings have newlines before them (### needs to be at start of line)
   result = result.replace(/([^\n])(#{1,6}\s)/g, '$1\n\n$2');
 
@@ -90,6 +103,10 @@ function normalizeContent(text: string): string {
   // Ensure --- separators are on their own lines
   result = result.replace(/([^\n])(---)/g, '$1\n\n$2');
   result = result.replace(/(---)([^\n])/g, '$1\n\n$2');
+
+  // FIX: Ensure tables have blank lines around them
+  result = result.replace(/([^\n])(\n\|)/g, '$1\n\n|');
+  result = result.replace(/(\|\n)([^\n|])/g, '$1\n$2');
 
   // Clean up excessive newlines (more than 2 consecutive)
   result = result.replace(/\n{3,}/g, '\n\n');

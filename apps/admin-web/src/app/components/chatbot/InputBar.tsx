@@ -164,6 +164,10 @@ export default function InputBar() {
 
     console.log("✅ Proceeding with send...");
 
+    // Grab context chips before clearing
+    const chips = useChatStore.getState().contextChips;
+    const chipPayload = chips.length > 0 ? chips.map(c => ({ ...c }) as Record<string, unknown>) : undefined;
+
     const userMsg = {
       id: crypto.randomUUID(),
       role: "user" as const,
@@ -173,16 +177,18 @@ export default function InputBar() {
 
     pushMessage(activeId, userMsg);
     setInput("");
+    // Clear context chips after attaching to the message
+    useChatStore.getState().clearChips();
     // Reset speech transcript after sending
     resetTranscript();
     setLoading(true);
 
     try {
       console.log("📞 Calling sendMessageToBackend...");
-      // Call ADK backend
-      const response = await sendMessageToBackend(activeId, messageToSend);
+      // Call ADK backend with context chips
+      const response = await sendMessageToBackend(activeId, messageToSend, undefined, chipPayload);
 
-      // Add assistant message (with optional chart)
+      // Add assistant message (with optional chart, report, export, email draft)
       pushMessage(activeId, {
         id: crypto.randomUUID(),
         role: "assistant",
@@ -190,6 +196,14 @@ export default function InputBar() {
         ts: new Date(response.timestamp).getTime(),
         // Include chart if present in response
         ...(response.chart?.base64_image && { chart: response.chart }),
+        // Include report metadata if present in response
+        ...(response.report && { report: response.report }),
+        // Include export file info if present
+        ...(response.export && { export: response.export }),
+        // Include email draft for approval workflow
+        ...(response.email_draft && { email_draft: response.email_draft }),
+        // Flag if awaiting user approval
+        ...(response.awaiting_approval && { awaiting_approval: true }),
       });
     } catch (error) {
       console.error("Error sending message to ADK backend:", error);

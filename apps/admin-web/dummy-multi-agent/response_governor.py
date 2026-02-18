@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 # CONFIGURATION
 # ============================================================================
 
-MAX_LINES = 15  # Increased: Allow more content for comprehensive responses
-MAX_WORDS_PER_LINE = 30  # Increased: Allow fuller sentences per bullet point
-MAX_BULLETS = 8  # Increased: Allow more bullet points for detailed responses
+MAX_LINES = 50  # Allow comprehensive responses
+MAX_WORDS_PER_LINE = 80  # Allow full sentences and paragraphs
+MAX_BULLETS = 25  # Allow detailed bullet lists
 
 # ============================================================================
 # PROHIBITED CONTENT
@@ -25,58 +25,27 @@ MAX_BULLETS = 8  # Increased: Allow more bullet points for detailed responses
 
 PROHIBITED_PHRASES = [
     r"\bhello\b",
-    r"\bhi\b",
-    r"\bhey\b",
-    r"\bhere is\b",
-    r"\bhere are\b",
-    r"\bi can\b",
+    r"\bhi there\b",
+    r"\bhey there\b",
+    r"\bi can help\b",
     r"\bi cannot\b",
     r"\bi can\'t\b",
-    r"\byou can\b",
-    r"\bthis shows\b",
-    r"\bbased on\b",
-    r"\boverall\b",
-    r"\bin conclusion\b",
     r"\blet me\b",
     r"\bi\'ve analyzed\b",
     r"\bi have analyzed\b",
-    r"\bi found\b",
-    r"\baccording to\b",
-    r"\bplease note\b",
-    r"\bit appears\b",
-    r"\bwe can see\b",
-    r"\bas we can see\b",
-    r"\bthe data shows\b",
-    r"\binterestingly\b",
-    r"\bnotably\b",
-    r"\bbasically\b",
-    r"\bessentially\b",
-    r"\bactually\b",
-    r"\bhowever\b",
-    r"\btherefore\b",
-    r"\bmoreover\b",
-    r"\bfurthermore\b",
-    r"\badditionally\b",
-    r"\bin summary\b",
-    r"\bto summarize\b",
-    r"\bin other words\b",
-    r"\bthat being said\b",
-    r"\bhaving said that\b",
-    r"\bwith that in mind\b",
+    r"\bhappy to help\b",
+    r"\bglad to assist\b",
+    r"\bfeel free\b",
+    r"\bdon\'t hesitate\b",
+    r"\blet me know\b",
     r"\bit\'s worth noting\b",
     r"\bit should be noted\b",
-    r"\bas mentioned\b",
     r"\bas you can see\b",
     r"\bif you look at\b",
     r"\bwhen we look at\b",
     r"\btaking a look at\b",
     r"\bupon analysis\b",
     r"\bafter analyzing\b",
-    r"\bhappy to help\b",
-    r"\bglad to assist\b",
-    r"\bfeel free\b",
-    r"\bdon\'t hesitate\b",
-    r"\blet me know\b",
 ]
 
 PROHIBITED_EMOJIS = re.compile(
@@ -543,14 +512,14 @@ class ResponseGovernor:
     @staticmethod
     def enforce(response: Dict[str, Any], query: str = "") -> Dict[str, Any]:
         """
-        Enforce all governance rules on response.
+        Enforce governance rules on response while preserving markdown formatting.
 
         Args:
             response: Raw response dict
             query: Original user query
 
         Returns:
-            Governed response dict with pretty formatting
+            Governed response dict with preserved rich formatting
         """
         message = response.get("message", "")
         chart = response.get("chart")
@@ -558,47 +527,47 @@ class ResponseGovernor:
         # CRITICAL: First strip any code blocks, Mermaid, diagrams
         message = ResponseGovernor.strip_code_blocks(message)
 
-        # Strip prohibited content (emojis, filler phrases)
+        # Strip prohibited content (greetings, chatbot phrases) but NOT markdown
         message = ResponseGovernor.strip_prohibited(message)
 
         # Check if graph was required but not provided
         if ResponseGovernor.requires_graph(query) and not chart:
             logger.warning(f"Graph required but not generated for query: {query}")
 
-        # CRITICAL: Split inline bullets (• Item1 • Item2 → separate lines)
-        # This handles LLM responses that put all bullets on one line
-        message = re.sub(r"\s*•\s*", "\n• ", message)  # Split on bullet markers
-        message = re.sub(r"^\n• ", "• ", message)  # Remove leading newline
+        # Clean up excessive whitespace while preserving paragraph breaks
+        message = re.sub(r"\n{3,}", "\n\n", message)
+        message = message.strip()
 
-        # Also handle numbered lists that might be inline
-        message = re.sub(r"\s+(\d+)\.\s+", r"\n\1. ", message)
-        message = re.sub(r"^\n(\d+)\. ", r"\1. ", message)
-
-        # Split into lines and clean
+        # Split into lines for validation
         lines = message.split("\n")
         clean_lines = []
 
         for line in lines:
-            line = line.strip()
-            if not line:
+            stripped = line.strip()
+            # Keep blank lines for paragraph separation
+            if not stripped:
+                if clean_lines and clean_lines[-1] != "":
+                    clean_lines.append("")
                 continue
-            clean_lines.append(line)
+            clean_lines.append(stripped)
 
-            # Enforce max lines
-            if len(clean_lines) >= MAX_LINES:
+            # Enforce max lines (generous limit)
+            if len([ln for ln in clean_lines if ln]) >= MAX_LINES:
                 break
 
-        # Format as pretty bullet points with newlines
-        governed_message = ResponseGovernor.format_as_pretty_bullets(clean_lines)
+        # Rejoin preserving paragraph structure
+        governed_message = "\n".join(clean_lines).strip()
 
-        # Build formatted structure
+        # Extract bullets for structured UI rendering
         bullets = ResponseGovernor.extract_bullets(governed_message)
 
-        # Get title from first non-bullet line (if any)
+        # Get title from first non-bullet line
         title_line = ""
-        for line in clean_lines[:3]:  # Check first 3 lines for title
-            if not re.match(r"^[•\-\*→·]\s*", line) and not re.match(
-                r"^\d+\.\s*", line
+        for line in clean_lines[:3]:
+            if (
+                line
+                and not re.match(r"^[•\-\*→·]\s*", line)
+                and not re.match(r"^\d+\.\s*", line)
             ):
                 title_line = line
                 break

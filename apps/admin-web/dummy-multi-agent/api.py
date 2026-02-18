@@ -12,8 +12,10 @@ ROLE-BASED ORCHESTRATION:
 from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, Literal
+from pathlib import Path
 import uvicorn
 
 # Principal orchestration imports (EXISTING - DO NOT MODIFY)
@@ -74,11 +76,13 @@ class ChatRequest(BaseModel):
         role: User role determines which orchestration to use
               - "principal" → Existing principal agents (DEFAULT)
               - "super_admin" → New super admin group-level agents
+        context_chips: Optional context chips from Cmd/Ctrl+Click on dashboard
     """
 
     message: str
     session_id: Optional[str] = None
     role: Literal["principal", "super_admin"] = "principal"  # DEFAULT: principal
+    context_chips: Optional[list[dict]] = None  # NEW: Dashboard context chips
 
 
 class ChatResponse(BaseModel):
@@ -90,10 +94,20 @@ class ChatResponse(BaseModel):
     formatted: Optional[dict] = None  # Optional templated response format
     governed: Optional[
         bool
-    ] = None  # NEW: True if response was processed by Response Governor
-    bullets: Optional[
-        list[str]
-    ] = None  # NEW: Structured bullet points for UI rendering
+    ] = None  # True if response was processed by Response Governor
+    bullets: Optional[list[str]] = None  # Structured bullet points for UI rendering
+    report: Optional[
+        dict
+    ] = None  # Downloadable report metadata (file_name, report_type, message)
+    export: Optional[
+        dict
+    ] = None  # NEW: CSV/Excel export metadata (file_name, row_count, format)
+    email_draft: Optional[
+        dict
+    ] = None  # NEW: Email draft for approval (draft_id, to, subject, body, status)
+    awaiting_approval: Optional[
+        bool
+    ] = None  # NEW: True if response contains a draft awaiting user approval
 
 
 class NewSessionRequest(BaseModel):
@@ -226,10 +240,14 @@ async def send_message(request: ChatRequest):
                 session_id=session_id,
                 agentId=response.get("agent_id", "group_overview_agent"),
                 timestamp=datetime.now().isoformat(),
-                chart=response.get("chart"),  # Include chart if present
-                formatted=response.get("formatted"),  # Include templated format
-                governed=response.get("governed"),  # Include governor flag
-                bullets=response.get("bullets"),  # Include extracted bullets
+                chart=response.get("chart"),
+                formatted=response.get("formatted"),
+                governed=response.get("governed"),
+                bullets=response.get("bullets"),
+                report=response.get("report"),
+                export=response.get("export"),
+                email_draft=response.get("email_draft"),
+                awaiting_approval=response.get("awaiting_approval"),
             )
         except Exception as e:
             raise HTTPException(
@@ -250,7 +268,9 @@ async def send_message(request: ChatRequest):
 
         try:
             # Process through existing principal orchestration
-            response = await process_message(session_id, request.message)
+            response = await process_message(
+                session_id, request.message, context_chips=request.context_chips
+            )
 
             return ChatResponse(
                 message=response["message"],
@@ -261,6 +281,10 @@ async def send_message(request: ChatRequest):
                 formatted=response.get("formatted"),  # Include templated format
                 governed=response.get("governed"),  # Include governor flag
                 bullets=response.get("bullets"),  # Include extracted bullets
+                report=response.get("report"),  # Include report if generated
+                export=response.get("export"),  # NEW: CSV/Excel export
+                email_draft=response.get("email_draft"),  # NEW: Email draft
+                awaiting_approval=response.get("awaiting_approval"),  # NEW: Draft flag
             )
         except Exception as e:
             raise HTTPException(
@@ -287,6 +311,213 @@ async def get_history(session_id: str):
 
     history = get_session_history(session_id)
     return {"session_id": session_id, "role": "principal", "history": history}
+
+
+# ============================================================================
+# REPORT DOWNLOAD ENDPOINTS
+# ============================================================================
+
+REPORTS_DIR = Path(__file__).parent / "generated_reports"
+
+
+@app.get("/api/reports/download/{file_name}")
+async def download_report(file_name: str):
+    """
+    Download a generated PDF report by file name.
+
+    The file_name is returned in the ChatResponse.report.file_name field
+    after a report generation request.
+    """
+    file_path = REPORTS_DIR / file_name
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # Security: ensure the resolved path is within the reports directory
+    if not file_path.resolve().is_relative_to(REPORTS_DIR.resolve()):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return FileResponse(
+        path=str(file_path),
+        filename=file_name,
+        media_type="application/pdf",
+    )
+
+
+@app.get("/api/reports/list")
+async def list_reports():
+    """List all generated reports available for download."""
+    if not REPORTS_DIR.exists():
+        return {"reports": []}
+
+    reports = []
+    for f in sorted(
+        REPORTS_DIR.glob("*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True
+    ):
+        stat = f.stat()
+        reports.append(
+            {
+                "file_name": f.name,
+                "size_bytes": stat.st_size,
+                "created": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            }
+        )
+
+    return {"reports": reports[:50]}  # Limit to 50 most recent
+
+
+# ============================================================================
+# EXPORT DOWNLOAD ENDPOINTS (CSV/Excel)
+# ============================================================================
+
+EXPORTS_DIR = Path(__file__).parent / "generated_exports"
+
+
+@app.get("/api/exports/download/{file_name}")
+async def download_export(file_name: str):
+    """
+    Download a generated CSV/Excel export by file name.
+
+    The file_name is returned in the ChatResponse.export.file_name field
+    after an export generation request.
+    """
+    file_path = EXPORTS_DIR / file_name
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Export file not found")
+
+    # Security: ensure the resolved path is within the exports directory
+    if not file_path.resolve().is_relative_to(EXPORTS_DIR.resolve()):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Determine media type from extension
+    suffix = file_path.suffix.lower()
+    media_types = {
+        ".csv": "text/csv",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".xls": "application/vnd.ms-excel",
+    }
+    media_type = media_types.get(suffix, "application/octet-stream")
+
+    return FileResponse(
+        path=str(file_path),
+        filename=file_name,
+        media_type=media_type,
+    )
+
+
+@app.get("/api/exports/list")
+async def list_exports():
+    """List all generated exports available for download."""
+    if not EXPORTS_DIR.exists():
+        return {"exports": []}
+
+    exports = []
+    for f in sorted(
+        EXPORTS_DIR.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True
+    ):
+        if f.suffix.lower() in (".csv", ".xlsx", ".xls"):
+            stat = f.stat()
+            exports.append(
+                {
+                    "file_name": f.name,
+                    "size_bytes": stat.st_size,
+                    "format": f.suffix.lstrip("."),
+                    "created": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                }
+            )
+
+    return {"exports": exports[:50]}
+
+
+# ============================================================================
+# EMAIL DRAFT APPROVAL ENDPOINTS
+# ============================================================================
+
+
+class DraftActionRequest(BaseModel):
+    """Request for draft approval/rejection/edit actions."""
+
+    session_id: Optional[str] = None
+    edited_subject: Optional[str] = None
+    edited_body: Optional[str] = None
+    edited_to: Optional[str] = None
+
+
+@app.post("/api/drafts/{draft_id}/approve")
+async def approve_draft(draft_id: str, request: Optional[DraftActionRequest] = None):
+    """Approve an email draft and send it."""
+    try:
+        from email_workflow_manager import (
+            approve_draft as do_approve,
+            send_approved_draft,
+        )
+    except ImportError:
+        raise HTTPException(status_code=501, detail="Email workflow not available")
+
+    result = do_approve(draft_id)
+    if result.get("error"):
+        raise HTTPException(status_code=404, detail=result["error"])
+
+    # Actually send the approved draft
+    send_result = send_approved_draft(draft_id)
+    return {"status": "sent", "detail": send_result}
+
+
+@app.post("/api/drafts/{draft_id}/reject")
+async def reject_draft(draft_id: str, request: Optional[DraftActionRequest] = None):
+    """Reject an email draft."""
+    try:
+        from email_workflow_manager import reject_draft as do_reject
+    except ImportError:
+        raise HTTPException(status_code=501, detail="Email workflow not available")
+
+    result = do_reject(draft_id)
+    if result.get("error"):
+        raise HTTPException(status_code=404, detail=result["error"])
+
+    return {"status": "rejected", "detail": result}
+
+
+@app.post("/api/drafts/{draft_id}/edit")
+async def edit_draft(draft_id: str, request: DraftActionRequest):
+    """Edit an email draft before approving."""
+    try:
+        from email_workflow_manager import update_draft
+    except ImportError:
+        raise HTTPException(status_code=501, detail="Email workflow not available")
+
+    edits = {}
+    if request.edited_subject:
+        edits["subject"] = request.edited_subject
+    if request.edited_body:
+        edits["body"] = request.edited_body
+    if request.edited_to:
+        edits["to"] = request.edited_to
+
+    if not edits:
+        raise HTTPException(status_code=400, detail="No edits provided")
+
+    result = update_draft(draft_id, edits)
+    if result.get("error"):
+        raise HTTPException(status_code=404, detail=result["error"])
+
+    return {"status": "updated", "detail": result}
+
+
+@app.get("/api/drafts/{draft_id}")
+async def get_draft(draft_id: str):
+    """Get the current state of an email draft."""
+    try:
+        from email_workflow_manager import get_pending_draft
+    except ImportError:
+        raise HTTPException(status_code=501, detail="Email workflow not available")
+
+    draft = get_pending_draft(draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+
+    return {"draft": draft}
 
 
 # ============================================================================

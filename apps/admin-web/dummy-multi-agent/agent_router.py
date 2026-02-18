@@ -67,10 +67,15 @@ def add_to_history(session_id, role, content):
     history.append({"role": role, "content": content})
 
 
-async def process_message(session_id, user_message):
+async def process_message(session_id, user_message, context_chips=None):
     """
     Process user message through the agent system.
     Validates templated responses before returning.
+
+    Args:
+        session_id: Unique session identifier
+        user_message: The user's query text
+        context_chips: Optional list of context chips from frontend dashboard
     """
     from agents import get_agent_response
 
@@ -80,8 +85,10 @@ async def process_message(session_id, user_message):
     # Get conversation history for context
     history = get_session_history(session_id)
 
-    # Get response from agents
-    response = await get_agent_response(user_message, history)
+    # Get response from agents (pass session_id and context_chips)
+    response = await get_agent_response(
+        user_message, history, context_chips=context_chips, session_id=session_id
+    )
 
     # Validate templated response if available
     if USE_RESPONSE_TEMPLATES and TEMPLATES_ENABLED:
