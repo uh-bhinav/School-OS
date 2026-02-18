@@ -68,6 +68,11 @@ import InsightCard from '../../components/dashboard/InsightCard';
 import ChartWrapper from '../../components/dashboard/ChartWrapper';
 import KeyInsightsSummary from '../../components/dashboard/KeyInsightsSummary';
 
+// Import AI Operations dashboard widgets
+import AgentStatusBar from '../../components/agentops/AgentStatusBar';
+import AIMetricCards from '../../components/agentops/AIMetricCards';
+import LiveFeedWidget from '../../components/agentops/LiveFeedWidget';
+
 // Import mock data (to be replaced with real API calls)
 import {
   mockKeyInsights,
@@ -243,6 +248,12 @@ export default function Dashboard() {
           />
         </Stack>
       </Box>
+
+      {/* ── ACADION AI — Agent Status Bar ── */}
+      <AgentStatusBar />
+
+      {/* AI Metric Cards */}
+      <AIMetricCards />
 
       {/* Key Insights Summary */}
       <KeyInsightsSummary
@@ -624,6 +635,9 @@ export default function Dashboard() {
           </ChartWrapper>
         </Grid>
       </Grid>
+
+      {/* ── AI Live Feed Widget ── */}
+      <LiveFeedWidget />
     </Box>
   );
 }

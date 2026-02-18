@@ -69,6 +69,13 @@ import DepartmentDetailPage from "./routes/hr/departments/DepartmentDetailPage";
 import StaffWallPage from "./routes/hr/staff-wall/StaffWallPage";
 import StaffAttendancePage from "./routes/hr/attendance/StaffAttendancePage";
 
+// AI Operations Module imports
+import CommandCenter from "./routes/ai-ops/CommandCenter";
+import LiveFeed from "./routes/ai-ops/LiveFeed";
+import AccountabilityHub from "./routes/ai-ops/AccountabilityHub";
+import EscalationBoard from "./routes/ai-ops/EscalationBoard";
+import AgentSettings from "./routes/ai-ops/AgentSettings";
+
 // Budget Module imports
 import BudgetDashboardPage from "./routes/finance/budgets/BudgetDashboardPage";
 import BudgetListPage from "./routes/finance/budgets/BudgetListPage";
@@ -527,6 +534,29 @@ const router = createBrowserRouter([
       {
         path: "hr/attendance",
         element: <StaffAttendancePage />,
+      },
+      // ======================================================================
+      // AI OPERATIONS ROUTES (Agentic Layer)
+      // ======================================================================
+      {
+        path: "ai-ops/command-center",
+        element: <CommandCenter />,
+      },
+      {
+        path: "ai-ops/live-feed",
+        element: <LiveFeed />,
+      },
+      {
+        path: "ai-ops/accountability",
+        element: <AccountabilityHub />,
+      },
+      {
+        path: "ai-ops/escalations",
+        element: <EscalationBoard />,
+      },
+      {
+        path: "ai-ops/agent-settings",
+        element: <AgentSettings />,
       },
     ],
   },

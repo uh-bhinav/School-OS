@@ -1,0 +1,454 @@
+AcadionAI
+Agentic Layer — Frontend Demo Guide
+Complete UI Specification for Every Screen, Component, and Interaction
+
+
+1. Design Philosophy for the Demo
+
+The demo has one job: make a principal or franchise head feel, within 60 seconds, that AcadionAI is actively running their school rather than waiting to be used. Every UI decision must serve this single purpose.
+
+The difference between a passive ERP and an agentic one must be viscerally obvious from the moment the dashboard loads. The school is not waiting for the principal to do something. Things are already happening. The AI is already working.
+
+1.1 The Core Visual Philosophy
+
+Your UI must communicate three things simultaneously that no traditional school ERP communicates:
+
+Liveness — the system is running right now, not waiting. Animated pulse indicators, real-time counters, and live activity feeds make this tangible.
+
+Authority — the AI has taken real actions, not just generated suggestions. Every card that shows an agent's work must show 'Action Taken' not 'Recommendation Made'.
+
+Scale — for franchise demos, the system is managing multiple schools simultaneously, not just one. Cross-school views make the scope feel enormous.
+
+Demo Mindset
+When a principal sees the dashboard, they should feel mild anxiety that things are happening without them — then immediate relief that the AI is handling it correctly. That tension and resolution is the emotional arc of the demo. Design toward it.
+
+
+1.2 Visual Language and Style
+
+The AcadionAI agentic dashboard should feel like mission control, not like a school register. The aesthetic is: dark-mode capable, data-dense but not cluttered, with clear visual hierarchy distinguishing active agent activity from passive data display. Specific choices:
+
+Element | Design Direction
+Color Palette | Deep navy and slate as base, with vivid teal and electric blue as agent-activity accent colors. Status colors must be saturated and distinct: green for resolved, amber for in-progress, red for escalated, blue for AI-initiated.
+Typography | A confident sans-serif for UI labels and data (something with character — not Inter or Roboto). A slightly warmer serif or slab font for headings to give gravitas. Monospace for timestamps and IDs to feel technical.
+Agent Activity Indicators | Animated — pulsing rings for active agents, ripple effects for new actions, smooth number counters for stats. Nothing blinks or flickers — smooth, professional animations only.
+Cards and Panels | Slightly elevated with subtle shadow. Left border color-coded by category (teal for academic, blue for operations, orange for revenue, purple for governance, red for accountability). This makes categories instantly distinguishable at a glance.
+Data Tables | Alternating row shading, sortable columns, status badges with color fill rather than text-only. Hovering a row should reveal a quick-action strip.
+Notifications and Alerts | Slide in from the right as a toast panel. Stack gracefully. Include an agent icon showing which agent triggered the action.
+
+
+2. Navigation Architecture
+
+The navigation must make the agentic layer feel like a first-class citizen of the product, not an add-on. The sidebar structure should clearly separate the traditional ERP modules from the new AI Operations layer, while making the AI layer feel more prominent.
+
+2.1 Sidebar Structure
+
+The sidebar has two distinct zones separated by a visible divider:
+
+Zone 1: School Management (Traditional ERP)
+Dashboard — overview of the school
+Students — student records and profiles
+Teachers — staff management
+Timetable — schedule management
+Attendance — records
+Fees — payment management
+Admissions — inquiry and enrollment
+Reports — static reporting
+
+Zone 2: AI Operations (The Agentic Layer — visually prominent)
+This zone should have a subtle background differentiation — slightly darker or with a faint gradient — and carry an 'AI' badge or lightning bolt icon prefix to immediately signal this is the new capability layer.
+Agent Command Center — master view of all running agents
+Live Action Feed — real-time stream of all agent actions
+Accountability Hub — staff accountability scores and verification
+Escalation Board — all open and resolved escalations
+Agent Settings — configure thresholds and rules per agent
+Franchise View — (super admin only) cross-school intelligence
+
+Sidebar Liveness Indicator
+The AI Operations zone header in the sidebar should carry a small animated green pulse dot that indicates the agent system is active. When hovering over it, a tooltip reads 'Agents running — last cycle 3 minutes ago'. This is always visible and communicates that the system is alive even when the admin is working in the traditional ERP zone.
+
+
+2.2 Global Header Bar
+
+The top header bar has three additions for the agentic layer that are persistent across every page:
+
+Agent Activity Badge — a small pill in the top right showing '14 actions today' with a subtle animated ring. Clicking it opens a drawer with the full live action feed.
+Active Agents Counter — a compact display showing '7 agents active' with a pulsing dot. Clicking opens the Agent Command Center.
+Last Run Timestamp — showing 'Last agent cycle: 4 min ago' in a muted text. Confirms to the principal that the system is continuously running.
+
+
+3. The Main Dashboard — Redesigned
+
+The main dashboard is the first thing any user sees after login. For the demo, this must immediately communicate agentic activity. It should feel like a war room overview, not a spreadsheet summary.
+
+3.1 Dashboard Layout
+
+The dashboard uses a three-zone layout from top to bottom:
+
+Zone A: Agent Status Bar (Full Width, Top)
+A horizontal strip directly below the header, spanning the full width. This is exclusive to the agentic layer and is the most prominent new element on the page. It shows the status of all 17 agents in a compact horizontal card row, each agent represented by a small tile containing:
+- Agent name in two to three words (e.g., 'Attendance Agent', 'Timetable Agent')
+- A status indicator: animated green pulse for 'Active and monitoring', amber pulse for 'Action in progress', grey for 'Scheduled — next run in X min'
+- A micro-stat showing the most important metric for that agent: e.g., '3 warnings sent today', '2 substitutes assigned', '1 escalation open'
+- Clicking any tile navigates to that agent's dedicated detail view
+The agent tiles scroll horizontally if they overflow. On the demo this strip is the most animated part of the page — the pulsing indicators and micro-stat counters incrementing create a strong impression of continuous activity.
+
+Zone B: Key Metrics Row
+Four large metric cards in a horizontal row showing school-wide stats that the agentic layer is directly influencing. Each card shows a number, a trend arrow, and a one-line attribution:
+- Students Requiring Intervention: e.g. '12' with '↓ 3 resolved today by Student Success Agent'
+- Attendance Below Threshold: e.g. '8 students' with '↑ 2 parent meetings scheduled by Attendance Agent'
+- Fees Overdue: e.g. '₹2.4L' with '↓ 3 reminders sent today by Fee Agent'
+- Open Escalations: e.g. '5' with '2 resolved in last 24h by Escalation Agent'
+The attribution line under each metric is critical. It directly connects the number to the agent that handled it. This is what makes the principal understand the AI is doing operational work.
+
+Zone C: Three-Column Content Area
+Below the metrics row, the dashboard splits into three columns:
+- Left column (40% width): Live Action Feed — a scrolling timeline of the last 20 agent actions, each showing the agent name, what it did, who it affected, and the timestamp. New actions slide in from the top with a smooth animation. This is the heartbeat of the demo.
+- Center column (35% width): Today's Highlights — 4 to 5 cards summarizing the most significant agent decisions of the day. Unlike the feed which shows all actions, this surface only the important ones. Each card has a clear action label and an 'undo' or 'review' button to show the admin has oversight.
+- Right column (25% width): Agent Health — a compact status panel showing each agent category (Academic, Operations, Revenue, Governance, Accountability) with a health score and the last run time. A small sparkline graph shows activity volume over the past 8 hours.
+
+
+4. The Agent Command Center
+
+This is the flagship screen of the agentic layer — the screen you will spend the most time on during a demo. It gives a complete overview of all agents in the system, their current state, and recent activity.
+
+4.1 Page Header
+
+The page header for the Command Center must immediately establish authority. It should include:
+- A large heading: 'AI Operations Command Center'
+- A subtitle: 'AcadionAI is autonomously managing [School Name]'s operations'
+- A live stats strip showing today's totals: 'X actions taken · Y issues resolved · Z escalations handled · running since [school start time]'
+- A 'Run All Agents Now' button — for the demo this manually triggers the simulated agent cycle. This is your killer demo moment — you click it and things start happening on screen.
+
+4.2 Agent Cards Grid
+
+The main body of the Command Center is a grid of agent cards — one per agent, organized into category rows with clear section headers. Each card is a self-contained summary of one agent's identity, current state, and recent activity.
+
+Agent Card Anatomy
+Every agent card contains these elements from top to bottom:
+
+Card Header: Left-bordered accent color matching the category. Agent icon (unique per agent — not generic). Agent name. Status badge (Active / Monitoring / Scheduled).
+
+Goal Statement: One sentence in italics describing what this agent is responsible for. E.g., 'Ensures no student falls below attendance threshold without intervention.'
+
+What It Monitors: Three to four bullet points in a compact, tight font listing the key data signals this agent watches.
+
+Activity Strip: A mini bar chart or sparkline showing agent activity volume over the past 7 days. This makes agents that have been busy visually distinct from quieter ones.
+
+Recent Actions: The last 2 to 3 actions this agent took, shown as a compact feed. Each entry: timestamp + one-line action description. E.g., '09:14 — Sent attendance warning to parents of 3 students in Class 8B'.
+
+Footer: Two buttons — 'View Full History' and 'Configure Thresholds'. Both functional in the demo with appropriate screens behind them.
+
+Demo Tip: The Most Impactful Agent Cards
+During a demo to a principal, lead with the Accountability Agent cards (Classroom Delivery Verification, Escalation Chain, Accountability Score). These speak directly to their stated pain point of staff accountability. The Timetable Operations Agent and Admissions Conversion Agent also perform strongly as attention-getters.
+
+
+4.3 Category Section Headers
+
+Between agent card groups, full-width section headers divide the categories. Each section header includes:
+- Category name and icon (e.g., graduation cap for Academic, building for Operations)
+- Total agent count in category
+- Category-level summary stat (e.g., 'Academic Agents: 14 interventions this week')
+- Expand/collapse toggle to show or hide all agents in that category
+
+
+5. The Live Action Feed
+
+The Live Action Feed is a dedicated full-page view of every action every agent has taken, presented as a chronological timeline. This is the transparency layer — it answers the question 'what has the AI actually been doing?'
+
+5.1 Feed Layout
+
+The page splits into a two-panel layout:
+
+Left Panel — Filter and Summary (30% width)
+- Filter by agent type: checkboxes for all 17 agents, grouped by category
+- Filter by action type: Notification Sent, Escalation Triggered, Timetable Updated, Schedule Created, Score Updated, etc.
+- Filter by date range: Today, This Week, Custom
+- Filter by entity: search for a specific student, teacher, or class
+- Summary stats for current filter: total actions, actions by category breakdown shown as a horizontal bar chart
+
+Right Panel — Timeline Feed (70% width)
+A vertically scrolling timeline with a visible date/time axis on the left side. Each entry in the feed is a feed card containing:
+- Timestamp — precise to the minute
+- Agent identity badge — icon + agent name with category color
+- Action type label — e.g., 'PARENT NOTIFICATION', 'SUBSTITUTE ASSIGNED', 'ESCALATION CREATED'
+- Action description — one to two sentences explaining what was done and why. E.g., 'Sent attendance warning to parent of Aryan Sharma (Class 9A). Student has missed 6 of the last 20 school days (70% attendance), below the 80% threshold.'
+- Entity tags — clickable chips for the affected student, teacher, or class that link to their profile
+- Outcome indicator — 'Action Taken' (solid green badge) for completed actions, 'Pending Response' (amber) for actions awaiting a response, 'Resolved' (teal) for completed chains
+- Expand arrow — clicking reveals the agent's full reasoning: what data it saw, what threshold was crossed, what alternatives it considered, what it chose
+
+5.2 New Action Animation
+
+For the demo, simulated new actions arrive every 30 to 60 seconds. Each new action slides in at the top of the feed with a brief highlight animation — the card background briefly glows the agent's category color before settling to its resting state. A counter in the header increments with each new action. This makes the system feel alive during the demo.
+
+
+6. The Accountability Hub
+
+The Accountability Hub is one of your most differentiating screens because it directly addresses the pain point principals mentioned: 'How do I know if people are doing their job?' This screen makes staff performance visible, objective, and AI-monitored.
+
+6.1 Page Layout
+
+The Accountability Hub has three sections stacked vertically:
+
+Section 1: School Accountability Overview
+A full-width summary banner at the top showing:
+- Overall school accountability health score as a large number (e.g., 78/100) with a trend indicator showing the change from last month
+- A horizontal breakdown bar showing the distribution: percentage of staff in high (green), medium (amber), and low (red) accountability bands
+- Three spotlight cards: Top Performer this month (name, role, score), Most Improved (name, role, change), and Attention Needed (anonymized in real product, but named in demo for impact)
+
+Section 2: Staff Accountability Leaderboard
+A sortable table listing all teaching and administrative staff. This is the core of the screen. Each row contains:
+- Staff name and profile photo thumbnail
+- Role and subject/department
+- Composite accountability score shown as both a number and a small horizontal bar colored green/amber/red
+- Component score breakdown on hover — a mini tooltip showing the five score components (task completion, student performance, attendance, escalation frequency, admin compliance) as individual small bars
+- Trend indicator — up arrow, down arrow, or flat line with the change magnitude
+- Last verified timestamp — when the Classroom Delivery Verification Agent last confirmed this teacher's work
+- Status badge — 'On Track', 'Needs Attention', 'Escalated'
+- Quick action buttons on hover: 'View Details', 'View Flagged Actions', 'Schedule Review'
+
+Section 3: Classroom Delivery Verification Panel
+A dedicated subsection showing the Classroom Delivery Verification Agent's monitoring in real time. This is the MyGate equivalent you described — proof that teaching is happening as planned. Layout:
+- A grid of class tiles — one per active class in the school — showing the class name, current period, assigned teacher, and verification status
+- Each tile has a status color: Green = lesson plan submitted + attendance marked + on schedule. Amber = lesson plan pending or attendance not yet marked. Red = repeated delays detected by the agent.
+- Clicking a class tile opens a drill-down panel showing the specific checklist: lesson plan upload status with timestamp, attendance marking time, assignment issuance log, syllabus progress versus target
+- A 'Flagged This Week' section at the bottom listing all instances where the agent detected delivery issues, with the escalation status of each
+
+Demo Script Suggestion for Accountability Hub
+Navigate to the Accountability Hub and point at a staff member with a declining trend. Say: 'Without AcadionAI, the principal would have no idea this teacher's performance has been declining for 3 weeks. They'd find out in the annual review — after students have already suffered. Our system detected it in week 1 and has already scheduled a review.' This is the pitch moment for this screen.
+
+
+7. The Escalation Board
+
+The Escalation Board visualizes the Escalation Chain Agent's work — all open and historical escalations, their current level, and the chain of actions taken. This screen demonstrates that the system enforces accountability without the principal having to chase anyone manually.
+
+7.1 Escalation Board Layout
+
+The page uses a Kanban-style column layout with columns representing escalation levels:
+
+Column | Contents
+Detected (Level 0) | Issues that have been flagged but the responsible party has not yet been contacted. These are fresh — detected in the last few hours. Shown in light amber.
+HOD Notified (Level 1) | Issues where the Head of Department has been automatically notified. Waiting for resolution within 24 hours. Shown in amber.
+Principal Notified (Level 2) | Issues that have escalated past the HOD. The principal has been notified. Shown in orange.
+Franchise Flagged (Level 3) | Issues that have reached franchise-level visibility due to persistence or repeated violations. Shown in red. For franchise demos this column carries the most weight.
+Resolved | Closed escalations with resolution timestamp. Shown in green. Important to show — it demonstrates the system closes loops, not just opens them.
+
+7.2 Escalation Card Anatomy
+
+Each card in the Kanban board contains:
+- Issue type label with a category icon: e.g., 'ATTENDANCE BREACH', 'LESSON PLAN OVERDUE', 'FEE DEFAULT'
+- Entity: student name, teacher name, or class — whoever the issue is about
+- Trigger summary: one line explaining what triggered the escalation. E.g., 'Absent 12 of last 20 days (60% attendance)'
+- Time in current level: e.g., 'At Level 1 for 18 hours'
+- Escalation timeline: a compact vertical timeline showing the progression — detected at T+0, HOD notified at T+24h, etc. — so you can see the chain of events
+- Next action indicator: e.g., 'Escalates to Level 2 in 6 hours if not resolved'
+- Assigned to: who is responsible for resolving it
+- Action buttons: 'Mark Resolved', 'Override Escalation', 'Add Note'
+
+7.3 Escalation Statistics Header
+
+Above the Kanban board, a statistics strip shows:
+- Total open escalations today
+- Average resolution time this week
+- Escalations by category breakdown — a small pie or donut chart
+- 'Escalation velocity' indicator: is the number of new escalations going up or down compared to last week? A falling escalation rate is a positive signal that the school is improving.
+
+
+8. Individual Agent Detail Pages
+
+Clicking 'View Full History' or the agent name from anywhere in the UI navigates to that agent's dedicated detail page. Each agent detail page follows a consistent three-section structure.
+
+8.1 Universal Agent Detail Page Structure
+
+Section 1: Agent Identity Header
+- Large agent name and icon
+- Goal statement in prominent text
+- Current status: Active / Scheduled / Paused with last run time
+- Key stat spotlight: the single most important number for this agent today (e.g., for the Timetable Agent: '4 disruptions resolved today')
+- 'Configure' button linking to threshold settings for this agent
+
+Section 2: What This Agent Monitors
+A visual 'monitoring panel' showing all the data signals this agent watches, with current values:
+- Each monitored metric shown as a mini card with its current value, the threshold, and a small trend line
+- Metrics that are currently within normal range are shown in green/neutral
+- Metrics that are approaching a threshold are shown in amber with a warning indicator
+- Metrics that have breached a threshold are shown in red — and if the agent has already acted, a 'Resolved by AI' badge appears
+
+Section 3: Action History
+A chronological table of all actions this agent has taken, filterable by date range. Columns: timestamp, action type, entity affected, action taken, outcome, status. Each row is expandable to show the full agent reasoning.
+
+8.2 Agent-Specific Screens Worth Highlighting in Demo
+
+Timetable Operations Agent Detail
+This agent gets a special visual: a mini live timetable grid showing the current day's schedule. Periods where the agent has made interventions (substitute assigned, schedule adjusted) are highlighted in blue with a small AI badge. Hovering a highlighted period shows the intervention details. This is visually compelling and immediately understandable.
+
+Accountability Score Agent Detail
+Shows the score formula visually — a weighted breakdown bar showing how the five components combine into the final score. Below it, a scatter plot with all staff plotted by score vs. trend direction. Hovering a dot shows the staff member's name and stats. This visualization is powerful in a demo because it shows the AI has a systematic, objective framework — not subjective judgment.
+
+Admissions Conversion Agent Detail
+Shows a pipeline funnel: Inquiry → Contacted → Tour Scheduled → Application → Enrolled. Each stage shows how many prospects are currently in it and how many have been progressed by the AI (vs. manually). A 'Conversion Rate' metric at the top shows the overall funnel efficiency. For a principal or owner, this screen directly translates to revenue impact.
+
+
+9. Agent Configuration Screen
+
+The Agent Configuration screen lets admins customize the thresholds and rules each agent operates on. This screen is important for the demo because it demonstrates that the AI is not a black box — the school is in control of how it behaves.
+
+9.1 Configuration Page Layout
+
+A two-panel layout:
+- Left panel (30%): A list of all agents grouped by category. Each has an enable/disable toggle and a configuration completeness indicator (e.g., '5/7 parameters configured').
+- Right panel (70%): The selected agent's configuration form, showing all configurable parameters with their current values, defaults, and explanatory text for each parameter.
+
+9.2 Configuration Parameters by Agent
+
+Every agent's configuration panel should show parameters using appropriate input types — sliders for percentages, number inputs for day counts, toggles for on/off behaviors. The key parameters to show for each category:
+
+Agent | Key Configurable Parameters
+Attendance Enforcement | Warning threshold % (default 80), First warning delay (days), Parent notification language (English/Hindi/Other), Escalation timing
+Student Success Intervention | Grade drop trigger % (default 10), Consecutive test threshold, Intervention type (extra class / parent meeting / both)
+Escalation Chain | Level 1 trigger hours (default 24), Level 2 trigger hours (default 48), Franchise trigger (violation count, default 3), Escalation channels (SMS / Email / App)
+Accountability Score | Component weights (5 sliders summing to 100%), Scoring period (30/60/90 days), Public visibility settings (who sees scores)
+Fee Revenue Protection | Overdue days before first reminder (default 7), Reminder frequency, Escalation to management threshold (amount or days)
+Admissions Conversion | Follow-up interval (hours), Auto-assign to counsellor toggle, High-probability applicant threshold, Tour scheduling automation toggle
+
+9.3 Configuration Audit Trail
+
+Below each agent's configuration form, a compact changelog shows: who changed what parameter, when, and from what value to what value. This is important for franchise oversight — the HQ can see if a school has disabled or weakened an agent's thresholds.
+
+
+10. Franchise Super Admin View
+
+For demos to franchise owners or education group management, the Super Admin view is your most powerful differentiator. Nothing in the current school ERP market offers cross-school agentic intelligence at this level.
+
+10.1 Franchise Dashboard
+
+The franchise dashboard replaces the single-school dashboard when logged in as a super admin. Its layout:
+
+Top: Network Health Overview
+- Total schools active: e.g., '47 schools'
+- Network-wide agent activity today: e.g., '2,847 agent actions across the network'
+- Schools needing attention: highlighted count with a 'Review' button
+- Network accountability score: average across all schools
+
+Center: School Comparison Heatmap
+A grid or table of all schools with color-coded health indicators across five dimensions — Academic, Operations, Revenue, Compliance, Accountability. Each cell is a colored square: green (healthy), amber (needs attention), red (critical). This is a genuinely powerful visualization. A franchise owner can see the health of 50 schools in a single glance. Hovering a red cell shows a tooltip with the specific issue.
+
+Bottom: Network-Wide Escalation Summary
+A table showing all active Level 3 escalations across all schools — issues that have been flagged to franchise level. This is the most urgent section for HQ to review. Each row links to the specific school's escalation board.
+
+10.2 Cross-School Drill-Down
+
+Clicking any school in the heatmap opens a school-level panel that slides in from the right without leaving the franchise dashboard. This panel is a condensed version of the single-school agent command center, showing the most important metrics and recent AI actions for that school. The principal of that school can be contacted directly from this panel.
+
+Franchise Demo Impact
+When demoing to a franchise owner, open the school comparison heatmap with all 47 schools visible. Point to a red cell and say: 'Without AcadionAI, you would have no idea this school is in trouble until their results come out. Our system detected it this morning and has already escalated to your operations team.' This is the single most impactful demo moment for franchise buyers.
+
+
+11. Simulating the Agentic Layer in the Demo
+
+Since the demo is frontend-only with no ADK backend, you need a simulation layer that makes everything feel real. The simulation must be convincing, controllable, and impressive. Here is the complete approach:
+
+11.1 The Simulation Engine
+
+When the demo server starts, a periodic interval function fires every 30 to 60 seconds. This is your simulated agent cycle. Each cycle:
+- Picks 2 to 4 agent types at random from a weighted pool (some agents act more frequently than others — timetable and attendance agents should fire more often than compliance agents)
+- For each selected agent type, picks 1 to 3 pre-written action scenarios from a hardcoded scenario library
+- Pushes the new actions into a global in-memory state array
+- All components that display live data subscribe to this state and re-render when new actions arrive
+- Counters increment, feed cards slide in, status badges update
+
+11.2 The Scenario Library
+
+Pre-write 8 to 12 realistic scenarios for each agent. These should be specific and detailed enough to feel real. Examples:
+
+Agent | Sample Scenario Text
+Attendance Enforcement | Sent attendance warning to parent of Priya Mehta (Class 7C). Student has attended 14 of 20 days this month (70%). Warning escalated to HOD after no response within 24 hours.
+Timetable Operations | Assigned Ms. Kavita Sharma as substitute for Period 3 (Mathematics, Class 9A) following Mr. Rajan's absence notification at 08:47. Students and substitute notified via app.
+Classroom Delivery Verification | Flagged: Mr. Ahmed has not uploaded lesson plan for 3 consecutive days (Mon–Wed). Attendance marking was also 47 minutes late on Tuesday. Escalation created to HOD.
+Admissions Conversion | Followed up with Rohan Kapoor's parents (inquiry submitted 3 days ago, no response to initial contact). Scheduled campus tour for Saturday 10:00 AM. Inquiry moved from 'Cold' to 'Warm' status.
+Fee Revenue Protection | Sent second fee reminder to 8 families in Class 6. Outstanding fees total ₹48,000. 3 families have partial payment history — flagged as medium risk. Management notified.
+Escalation Chain | Issue escalated to Principal: Teacher workload imbalance detected for 5th consecutive week. Ms. Priya Singh has 32 teaching periods vs. school average of 24. Automatic rebalancing review scheduled.
+Student Success Intervention | Scheduled additional support sessions for 4 students in Class 10B following Mathematics unit test results. Average class score: 58%. Individual practice assignments generated and shared with students via app.
+Accountability Score Update | Weekly accountability scores updated for all 42 teaching staff. 3 teachers moved to 'Needs Attention' band. 5 teachers improved from Amber to Green. Full report available in Accountability Hub.
+
+11.3 The Manual Trigger Button
+
+The 'Run All Agents Now' button in the Command Center is your demo control. When clicked:
+- A loading animation plays for 2 to 3 seconds — a progress bar labeled 'Running agent cycle...' with individual agent names appearing as they 'complete'
+- After the animation, 5 to 8 new actions fire simultaneously across multiple agents
+- The live feed floods with new cards
+- The dashboard counters all update
+- A success notification appears: 'Agent cycle complete — 7 actions taken across 5 agents'
+
+This button exists so you can trigger impressive activity on demand during the demo rather than waiting for the automatic interval. Use it when you want to make a point, when the room goes quiet, or when you want to show a specific agent scenario.
+
+11.4 Notification System for Demo
+
+During the demo, simulated notifications appear in the top-right corner as toast cards. Each notification is from a specific agent and shows the category color, agent name, and a one-line action summary. Notifications stack (up to 3 visible at once) and auto-dismiss after 6 seconds. Clicking a notification navigates to the relevant screen.
+
+
+12. Changes to Existing ERP Screens
+
+The agentic layer doesn't just add new screens — it enriches every existing ERP screen with agent-driven insights. Here are the specific additions to your existing module screens:
+
+12.1 Student Profile Page
+
+Add an 'AI Monitoring' section to every student profile. This section shows:
+- Active flags from any agent (e.g., 'Attendance Agent: below 80% threshold — monitoring', 'Student Success Agent: Math performance declining — intervention triggered')
+- A mini timeline of all agent actions taken regarding this student in the last 30 days
+- Current dropout risk score from the Dropout Prevention Agent (displayed as Low / Medium / High with the factors contributing to it)
+- A small chart showing attendance and performance trends together, so the correlation is visible
+
+12.2 Teacher Profile Page
+
+Add an 'AI Performance Monitoring' section to every teacher profile:
+- Current accountability score with component breakdown
+- Classroom Delivery Verification status — last 5 days' checklist completion shown as a simple calendar with color-coded days
+- Workload balance indicator: current teaching load vs. school average, flagged if significantly above or below
+- Agent action history: all times an agent has acted regarding this teacher
+
+12.3 Attendance Module
+
+Add to the attendance management page:
+- An 'AI Watchlist' section at the top listing students currently being monitored by the Attendance Enforcement Agent, with their current attendance percentage and the next scheduled action
+- Color-coding on the attendance register that the agent uses to flag at-risk students
+- A parent communication log showing which warnings have been sent by the agent and whether they have been acknowledged
+
+12.4 Timetable Module
+
+Add to the timetable view:
+- An 'AI Adjustments Today' section showing all changes the Timetable Operations Agent has made today — substitutions, room changes, period swaps
+- Visual markers on the timetable grid for agent-managed periods (a small AI badge on periods where a substitute was assigned)
+- A 'Potential Disruptions' panel showing upcoming periods the agent has flagged as at-risk based on teacher leave data
+
+12.5 Fee Management Module
+
+Add to the fee module:
+- An 'AI Collection Status' panel showing the Fee Revenue Protection Agent's current activity: how many families are in each reminder stage, total outstanding amount being monitored, predicted collection for the month
+- Risk scores next to each family row: Low / Medium / High default probability based on historical payment patterns
+- A communication history column showing which automated reminders the agent has already sent
+
+12.6 Admissions Module
+
+Add to the admissions pipeline:
+- AI priority scoring for each inquiry — a probability score showing how likely this prospect is to enroll, calculated by the Admissions Conversion Agent
+- An 'AI Follow-up Status' column showing whether the agent is managing this prospect's follow-up or if a counsellor needs to step in
+- Automated activity log per inquiry showing all AI-initiated touchpoints
+
+Every change described here is achievable as a pure frontend simulation in your demo. The key principle throughout: every existing screen should have at least one visible AI contribution, so the impression is that the AI is everywhere in the product — not confined to a single 'AI module'. This is what makes the pitch feel complete.
+
+
+13. Demo Flow and Presentation Script
+
+Here is a recommended demo flow for a 15-minute pitch to a principal or franchise owner, mapped to specific screens:
+
+Time | Screen | What to Say/Show
+0:00–1:30 | Main Dashboard | Login and land on the dashboard. Point to the Agent Status Bar immediately. 'From the moment we load, you can see 7 agents are actively monitoring your school right now. This is not a dashboard you come to for reports — this is a system that is running your operations while you focus on what matters.'
+1:30–3:00 | Live Action Feed | Navigate to the feed. 'Here is everything the AI has done today. Not suggestions — actions. It assigned a substitute at 9:14 AM before you even knew the teacher was absent. It sent 3 fee reminders this morning. It scheduled an extra class for 4 struggling students.' Let the feed scroll.
+3:00–5:00 | Agent Command Center | Open the Command Center. Click 'Run All Agents Now'. Watch the activity flood in. 'Every 15 minutes, the entire system runs. Without you asking. Without you clicking anything. It monitors, decides, and acts.'
+5:00–7:00 | Accountability Hub | Navigate to the Accountability Hub. Point to a declining staff member's score. 'This teacher's score has been declining for 3 weeks. The system detected it, flagged it to the HOD, and has already scheduled a review. You found out about it this morning — not in the annual review.'
+7:00–9:00 | Escalation Board | Open the Escalation Board. Point to open escalations. 'Every issue that needs human attention is here, automatically escalated through the right chain. No chasing. The AI chases for you.'
+9:00–11:00 | Franchise View (if applicable) | Switch to franchise dashboard if relevant. Open the school heatmap. 'If you manage multiple schools, this is what changes everything. You can see the health of every school in one view. This red cell here — that school has a compliance issue. The AI flagged it this morning.'
+11:00–13:00 | Configuration Screen | Open configuration to show control. 'You set the rules. You decide the thresholds. The AI enforces them. This is not a black box — it is your rules, applied consistently at scale.'
+13:00–15:00 | Back to Dashboard | Return to dashboard. Let the simulation run for 30 seconds showing new notifications coming in. 'While we've been talking, the system has taken 4 more actions. That is AcadionAI. Not a tool you use. A system that works for you.'
+
+The final line — 'Not a tool you use. A system that works for you.' — is your positioning anchor. Every UI decision in this guide is in service of making that line feel true from the first second of the demo.

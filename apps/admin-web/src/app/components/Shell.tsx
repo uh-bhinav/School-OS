@@ -55,11 +55,22 @@ import {
   AccountBalance,
   Search as SearchIcon,
   MenuBook,
+  // AI Operations icons
+  SmartToy as SmartToyIcon,
+  Hub as HubIcon,
+  DynamicFeed as DynamicFeedIcon,
+  Leaderboard as LeaderboardIcon,
+  ReportProblem as ReportProblemIcon,
+  Tune as TuneIcon,
+  FiberManualRecord as FiberManualRecordIcon,
+  BoltOutlined as BoltIcon,
+  AccessTime as AccessTimeIcon,
 } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useConfigStore } from "../stores/useConfigStore";
 import { supabase } from "../services/supabase";
+import { useSimulationStore } from "../../lib/agentSimulation";
 import { ConfigRoot } from "../providers/ConfigProvider"; // ✅ Import ConfigProvider
 
 // School logo - fallback if not available from config
@@ -346,6 +357,22 @@ export function Shell() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
 
+  // Simulation store selectors
+  const totalActionsToday = useSimulationStore((s) => s.totalActionsToday);
+  const escalations = useSimulationStore((s) => s.escalations);
+  const lastRunTime = useSimulationStore((s) => s.lastRunTime);
+  const agentStatuses = useSimulationStore((s) => s.agentStatuses);
+
+  const activeAgentCount = agentStatuses.filter((a) => a.isActive).length;
+  const openEscalationCount = escalations.filter((e) => e.column !== 'resolved').length;
+
+  const formatLastRun = (d: Date) => {
+    const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
+  };
+
   // Use config logo only if it's a valid non-null URL, otherwise use fallback
   const configLogo = cfg?.branding?.logo?.primary_url;
   const logo = (configLogo && typeof configLogo === 'string' && configLogo.startsWith('http'))
@@ -448,6 +475,68 @@ export function Shell() {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             {displayName}
           </Typography>
+
+          {/* ── AI Status Indicators ── */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mr: 2 }}>
+            {/* Actions Today Badge */}
+            <Box
+              onClick={() => navigate('/ai-ops/live-feed')}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 2,
+                bgcolor: 'rgba(255,255,255,0.15)',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
+              }}
+            >
+              <BoltIcon sx={{ fontSize: 16, color: '#fbbf24' }} />
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#fff', fontSize: '0.75rem' }}>
+                {totalActionsToday}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.65rem' }}>
+                actions
+              </Typography>
+            </Box>
+
+            {/* Active Agents Pill */}
+            <Box
+              onClick={() => navigate('/ai-ops/command-center')}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 2,
+                bgcolor: 'rgba(255,255,255,0.15)',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
+              }}
+            >
+              <SmartToyIcon sx={{ fontSize: 16, color: '#34d399' }} />
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#fff', fontSize: '0.75rem' }}>
+                {activeAgentCount}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.65rem' }}>
+                agents
+              </Typography>
+            </Box>
+
+            {/* Last Run Time */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, opacity: 0.7 }}>
+              <AccessTimeIcon sx={{ fontSize: 14, color: '#fff' }} />
+              <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.65rem' }}>
+                {formatLastRun(lastRunTime)}
+              </Typography>
+            </Box>
+          </Box>
+
           <IconButton color="inherit" onClick={handleProfileMenuOpen}>
             <AccountCircleIcon />
           </IconButton>
@@ -650,6 +739,87 @@ export function Shell() {
                 </Box>
               );
             })}
+          </List>
+
+          {/* ── AI OPERATIONS SECTION ── */}
+          <Divider sx={{ mx: 2, my: 1.5 }} />
+          <Box sx={{ px: 2, pb: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FiberManualRecordIcon
+                sx={{
+                  fontSize: 10,
+                  color: '#34d399',
+                  animation: 'pulse-glow 2s infinite',
+                  '@keyframes pulse-glow': {
+                    '0%, 100%': { opacity: 1, filter: 'drop-shadow(0 0 2px #34d399)' },
+                    '50%': { opacity: 0.5, filter: 'drop-shadow(0 0 6px #34d399)' },
+                  },
+                }}
+              />
+              <Typography
+                variant="overline"
+                sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1.5, color: 'text.secondary' }}
+              >
+                AI OPERATIONS
+              </Typography>
+            </Box>
+          </Box>
+          <List dense>
+            {[
+              { key: 'ai-command', label: 'Command Center', icon: <HubIcon fontSize="small" />, path: '/ai-ops/command-center', badge: activeAgentCount },
+              { key: 'ai-feed', label: 'Live Feed', icon: <DynamicFeedIcon fontSize="small" />, path: '/ai-ops/live-feed', badge: totalActionsToday },
+              { key: 'ai-accountability', label: 'Accountability Hub', icon: <LeaderboardIcon fontSize="small" />, path: '/ai-ops/accountability' },
+              { key: 'ai-escalations', label: 'Escalation Board', icon: <ReportProblemIcon fontSize="small" />, path: '/ai-ops/escalations', badge: openEscalationCount },
+              { key: 'ai-settings', label: 'Agent Settings', icon: <TuneIcon fontSize="small" />, path: '/ai-ops/agent-settings' },
+            ].map((item) => (
+              <ListItemButton
+                key={item.key}
+                onClick={() => navigate(item.path)}
+                selected={location.pathname === item.path}
+                sx={{
+                  mx: 1,
+                  borderRadius: 1,
+                  py: 0.75,
+                  '&.Mui-selected': {
+                    backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.12),
+                    color: (theme) => theme.palette.primary.main,
+                    '&:hover': {
+                      backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.18),
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: (theme) => theme.palette.primary.main,
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{ fontSize: '0.85rem' }}
+                />
+                {item.badge !== undefined && item.badge > 0 && (
+                  <Box
+                    sx={{
+                      minWidth: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      bgcolor: item.key === 'ai-escalations' ? 'error.main' : 'primary.main',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      px: 0.5,
+                    }}
+                  >
+                    {item.badge}
+                  </Box>
+                )}
+              </ListItemButton>
+            ))}
           </List>
         </Box>
       </Drawer>
